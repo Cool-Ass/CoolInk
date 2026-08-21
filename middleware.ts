@@ -8,6 +8,19 @@ const PUBLIC_ADMIN_PATHS = ["/admin/login", "/api/admin/login"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // A switchable, public-facing construction screen. The admin and API
+  // remain available so content and the studio workflow can keep moving
+  // while visitors see a focused, intentional holding page.
+  const isBuildMode = process.env.SITE_BUILD_MODE === "true";
+  const isInternalRoute =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/budujemy");
+
+  if (isBuildMode && !isInternalRoute) {
+    return NextResponse.rewrite(new URL("/budujemy", request.url));
+  }
+
   const isAdminArea =
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
   if (!isAdminArea) return NextResponse.next();
@@ -39,5 +52,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };
