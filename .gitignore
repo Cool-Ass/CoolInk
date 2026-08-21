@@ -1,0 +1,17 @@
+node_modules
+.next
+.npm-cache
+out
+.env*.local
+.DS_Store
+*.log
+
+# database
+/prisma/dev.db
+/prisma/dev.db-journal
+
+# uploads
+/public/uploads
+
+# env
+.env

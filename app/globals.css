@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-black: #0a0908;
+  --color-ink-charcoal: #131211;
+  --color-ink-gold: #c99a4a;
+  --color-ink-gold-bright: #e0b869;
+  --color-ink-white: #f3f1ec;
+  --color-ink-grey: #9a9691;
+
+  --font-display: var(--font-anton), "Arial Narrow", sans-serif;
+  --font-body: var(--font-jost), "Helvetica Neue", sans-serif;
+  --font-signature: var(--font-dancing), cursive;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  background-color: var(--color-ink-black);
+  color: var(--color-ink-white);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-ink-gold);
+  color: var(--color-ink-black);
+}
+
+/* Textured display headline: base white fill + grain layered via background-blend */
+.headline-texture {
+  font-family: var(--font-display);
+  color: transparent;
+  background-image:
+    linear-gradient(180deg, #f5f3ee 0%, #e7e3da 55%, #d9d4c8 100%),
+    url("/images/texture-bg.jpg");
+  background-size: cover, 340% 340%;
+  background-position: center, 22% 30%;
+  background-blend-mode: normal, overlay;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.gold-underline {
+  background: linear-gradient(90deg, var(--color-ink-gold) 0%, transparent 100%);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 6 Q 20 2 45 5 T 100 4 L 100 10 L 0 10 Z' fill='black'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 6 Q 20 2 45 5 T 100 4 L 100 10 L 0 10 Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.nav-link {
+  position: relative;
+  letter-spacing: 0.08em;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 2px;
+  background: var(--color-ink-gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+
+.nav-link:hover::after,
+.nav-link[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+.magnetic-btn {
+  transition: transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), background-color 0.25s ease, color 0.25s ease;
+}
+
+.reveal-up {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal-up.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Page builder live-preview canvas: content must always be visible while
+   editing. New modules are added dynamically via React state and never
+   get picked up by the one-time scroll observer that drives .reveal-up
+   elsewhere on the site, so force everything visible inside the canvas. */
+.builder-canvas .reveal-up,
+.builder-canvas .hero-fade,
+.builder-canvas .hero-reveal,
+.builder-canvas .hero-portrait {
+  opacity: 1 !important;
+  transform: none !important;
+  clip-path: inset(0 0 0% 0) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal-up {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.portrait-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 18%,
+    black 100%
+  ),
+  radial-gradient(ellipse 85% 90% at 60% 40%, black 55%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 18%,
+    black 100%
+  ),
+  radial-gradient(ellipse 85% 90% at 60% 40%, black 55%, transparent 100%);
+  mask-composite: intersect;
+}

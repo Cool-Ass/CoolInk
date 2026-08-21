@@ -1,0 +1,206 @@
+// Prisma schema for the CoolInk CMS.
+//
+// The live CRM runs on Supabase PostgreSQL. DATABASE_URL is kept only in
+// the local .env file and is never exposed to the browser.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// CMS-authored pages, built from an ordered list of modules (see
+/// lib/modules.ts) and rendered generically by <ModuleRenderer>.
+///
+/// `modules` is the working/draft copy — edited live in the page builder.
+/// `publishedModules` is the last-published snapshot actually shown to
+/// visitors, so draft edits never affect the live site until "Opublikuj".
+/// `content` is kept only as a legacy fallback for pages created before
+/// the modular builder existed (rendered as plain text if `modules` is
+/// empty and the page has no published module snapshot either).
+model Page {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  excerpt          String?
+  content          String   @default("")
+  coverImage       String?
+  modules          String   @default("[]")
+  publishedModules String?
+  status           String   @default("draft") // "draft" | "published" | "unpublished"
+  isHomepage       Boolean  @default(false)
+  showInNav        Boolean  @default(true)
+  navOrder         Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Portfolio / gallery items shown on the public Portfolio section
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  category    String?
+  tags        String?  // comma-separated
+  order       Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Uploaded media library, backing Page.coverImage / PortfolioItem.imageUrl,
+/// module image fields, and anything else uploaded via /admin/media
+model Media {
+  id        String   @id @default(cuid())
+  filename  String
+  url       String
+  width     Int?
+  height    Int?
+  size      Int?
+  mimeType  String?
+  alt       String?
+  createdAt DateTime @default(now())
+}
+
+/// Flat key/value store for GLOBAL site content only — things reused in
+/// more than one place (branding, contact details, footer note). Page-
+/// specific copy (hero heading, about text, etc.) lives in Page.modules
+/// instead. See lib/content.ts for the full default shape.
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Custom nav links (in addition to auto-included published Pages)
+model NavItem {
+  id        String   @id @default(cuid())
+  label     String
+  href      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// Messages submitted through the public contact form. They are intentionally
+/// kept separate from CMS content so the form works without a mail provider.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// CRM profile. Client login/authentication will be connected in the client-app phase;
+/// it is intentionally separate from AdminUser so client data never shares admin access.
+model Client {
+  id          String          @id @default(cuid())
+  supabaseUserId String?      @unique
+  firstName   String
+  lastName    String
+  email       String          @unique
+  phone       String?
+  birthDate   DateTime?
+  notes       String?
+  tags        String          @default("") // temporary CSV; normalized tags follow with staff roles
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  projects    TattooProject[]
+  acceptances DocumentAcceptance[]
+}
+
+/// Versioned studio documents: consent, preparation, aftercare and policies.
+model StudioDocument {
+  id          String               @id @default(cuid())
+  title       String
+  slug        String               @unique
+  content     String
+  category    String               @default("other") // consent | preparation | aftercare | policy | other
+  version     Int                  @default(1)
+  published   Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  acceptances DocumentAcceptance[]
+}
+
+model DocumentAcceptance {
+  id         String         @id @default(cuid())
+  clientId   String
+  documentId String
+  client     Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  document   StudioDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version    Int
+  acceptedAt DateTime       @default(now())
+  @@unique([clientId, documentId, version])
+}
+
+/// A tattoo brief is the central operational record. Appointments, deposits,
+/// client messages and documents will attach to this entity in later phases.
+model TattooProject {
+  id                String         @id @default(cuid())
+  clientId          String
+  client            Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title             String
+  description       String
+  styles            String         @default("")
+  placement         String?
+  size              String?
+  colorPreference   String?
+  estimatedPrice    Int?
+  finalPrice        Int?
+  status            String         @default("inquiry") // inquiry | reviewing | accepted | scheduled | completed | cancelled
+  preferredDateNote String?
+  internalNotes     String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  images            ProjectImage[]
+  appointments      Appointment[]
+}
+
+/// Appointments are kept separately from a project because a larger tattoo
+/// can require several sessions. Availability blocks use the same time range model.
+model Appointment {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startsAt    DateTime
+  endsAt      DateTime
+  status      String        @default("requested") // requested | confirmed | deposit_required | deposit_paid | completed | cancelled | no_show
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model ProjectImage {
+  id        String        @id @default(cuid())
+  projectId String
+  project   TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url       String
+  caption   String?
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+}
