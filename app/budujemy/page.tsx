@@ -35,7 +35,7 @@ export default function ConstructionPage() {
           WKRÓTCE ODKRYJESZ WIĘCEJ
           <span className="h-px w-8 bg-ink-gold/60" />
         </div>
-
+        <p></p>
         <div className="mx-auto mb-8 flex h-14 w-14 items-center justify-center rounded-full border border-ink-gold/60 text-2xl text-ink-gold shadow-[0_0_45px_rgba(201,154,74,0.16)]">
           P
         </div>
