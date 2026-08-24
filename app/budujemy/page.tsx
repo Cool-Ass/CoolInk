@@ -27,10 +27,10 @@ export default function ConstructionPage() {
         </h1>
         <div className="gold-underline mx-auto my-8 h-2 w-28" />
         <p className="mx-auto max-w-md text-base leading-relaxed text-ink-grey sm:text-lg">
-          Dopracowuję nową przestrzeń. Wróć za chwilę — będzie warto.
+          Dopracowuję przestrzeń. Wróć za chwilę — będzie warto.
         </p>
 
-        <div className="mt-12 flex items-center justify-center gap-3 text-[10px] font-semibold tracking-[0.22em] text-ink-grey">
+        <div className="mb-8 mt-12 flex items-center justify-center gap-3 text-[10px] font-semibold tracking-[0.22em] text-ink-grey">
           <span className="h-px w-8 bg-ink-gold/60" />
           WKRÓTCE ODKRYJESZ WIĘCEJ
           <span className="h-px w-8 bg-ink-gold/60" />
