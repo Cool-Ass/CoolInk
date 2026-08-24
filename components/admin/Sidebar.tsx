@@ -4,19 +4,36 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/admin", label: "Panel główny", exact: true },
-  { href: "/admin/clients", label: "Klienci / CRM" },
-  { href: "/admin/calendar", label: "Kalendarz wizyt" },
-  { href: "/admin/documents", label: "Dokumenty i zgody" },
-  { href: "/admin/pages", label: "Strony" },
-  { href: "/admin/portfolio", label: "Portfolio / Galeria" },
-  { href: "/admin/media", label: "Obrazy / Media" },
-  { href: "/admin/messages", label: "Wiadomości" },
-  { href: "/admin/content", label: "Treści globalne" },
-  { href: "/admin/navigation", label: "Nawigacja" },
-  { href: "/admin/settings", label: "Ustawienia" },
-];
+const SECTIONS = [
+  {
+    label: "PANEL GŁÓWNY",
+    links: [{ href: "/admin", label: "Przegląd", exact: true }],
+  },
+  {
+    label: "STRONA",
+    links: [
+      { href: "/admin/pages", label: "Strony i builder" },
+      { href: "/admin/portfolio", label: "Portfolio / Galeria" },
+      { href: "/admin/media", label: "Obrazy / Media" },
+      { href: "/admin/content", label: "Treści globalne" },
+      { href: "/admin/navigation", label: "Nawigacja" },
+    ],
+  },
+  {
+    label: "WIZYTY I KLIENCI",
+    links: [
+      { href: "/admin/calendar", label: "Kalendarz i dostępność" },
+      { href: "/admin/availability", label: "Godziny, dni wolne i promocje" },
+      { href: "/admin/clients", label: "Klienci / CRM" },
+      { href: "/admin/messages", label: "Zgłoszenia i wiadomości" },
+      { href: "/admin/documents", label: "Dokumenty i zgody" },
+    ],
+  },
+  {
+    label: "USTAWIENIA",
+    links: [{ href: "/admin/settings", label: "Ustawienia ogólne" }],
+  },
+] as const;
 
 export default function Sidebar({
   logoUrl = "/images/logo-white.jpg",
@@ -39,25 +56,34 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-6">
-        {LINKS.map((link) => {
-          const active = link.exact
-            ? pathname === link.href
-            : pathname.startsWith(link.href);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-3 py-2.5 text-[13px] tracking-[0.03em] transition-colors ${
-                active
-                  ? "border-l-2 border-ink-gold bg-ink-gold/10 text-ink-gold"
-                  : "border-l-2 border-transparent text-ink-grey hover:text-ink-white"
-              }`}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
+      <nav className="flex flex-1 flex-col gap-6 px-3 py-6">
+        {SECTIONS.map((section) => (
+          <div key={section.label}>
+            <p className="px-3 pb-2 text-[10px] font-semibold tracking-[0.16em] text-ink-grey/70">
+              {section.label}
+            </p>
+            <div className="flex flex-col gap-1">
+              {section.links.map((link) => {
+                const active = ("exact" in link && link.exact)
+                  ? pathname === link.href
+                  : pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-3 py-2.5 text-[13px] tracking-[0.03em] transition-colors ${
+                      active
+                        ? "border-l-2 border-ink-gold bg-ink-gold/10 text-ink-gold"
+                        : "border-l-2 border-transparent text-ink-grey hover:text-ink-white"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="border-t border-ink-white/10 px-6 py-5">

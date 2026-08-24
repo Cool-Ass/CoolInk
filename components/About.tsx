@@ -65,7 +65,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.1} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src="/images/crops/about-main.jpg"
+                  src={content.mainImage}
                   alt="Szczegółowa realistyczna praca tatuażu"
                   fill
                   className="object-cover"
@@ -79,7 +79,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.22} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src="/images/crops/about-gun.jpg"
+                  src={content.detailImage1}
                   alt="Maszynka do tatuażu w dłoni artysty"
                   fill
                   className="object-cover"
@@ -93,7 +93,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.16} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src="/images/crops/about-back.jpg"
+                  src={content.detailImage2}
                   alt="Precyzyjny tatuaż dotwork na plecach"
                   fill
                   className="object-cover"
@@ -107,7 +107,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.26} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src="/images/crops/about-process.jpg"
+                  src={content.detailImage3}
                   alt="Zbliżenie na proces tatuowania"
                   fill
                   className="object-cover"

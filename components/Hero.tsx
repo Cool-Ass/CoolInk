@@ -59,7 +59,7 @@ export default function Hero({
       <div className="absolute inset-0 overflow-hidden">
         <Parallax speed={0.08} className="absolute inset-x-0 -top-[8%] h-[116%]">
           <Image
-            src="/images/texture-bg.jpg"
+            src={content.backgroundImage}
             alt=""
             fill
             priority
@@ -76,7 +76,7 @@ export default function Hero({
         <div className="portrait-fade relative h-full w-full">
           <Parallax speed={0.12} className="absolute inset-x-0 -top-[10%] h-[120%]">
             <Image
-              src="/images/portrait.jpg"
+              src={content.portraitImage}
               alt="Portret artysty tatuażu CoolInk"
               fill
               priority

@@ -14,6 +14,7 @@ export async function middleware(request: NextRequest) {
   const isBuildMode = process.env.SITE_BUILD_MODE === "true";
   const isInternalRoute =
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/app") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/budujemy");
 

@@ -103,6 +103,24 @@ body {
   clip-path: inset(0 0 0% 0) !important;
 }
 
+.document-rich-text h2,
+.document-rich-text h3,
+.document-rich-text h4 {
+  margin: 1.25rem 0 0.65rem;
+  color: var(--color-ink-white);
+  font-family: var(--font-display);
+}
+
+.document-rich-text h2 { font-size: 1.5rem; }
+.document-rich-text h3 { font-size: 1.25rem; }
+.document-rich-text p { margin: 0.75rem 0; }
+.document-rich-text ul,
+.document-rich-text ol { margin: 0.75rem 0; padding-left: 1.35rem; }
+.document-rich-text ul { list-style: disc; }
+.document-rich-text ol { list-style: decimal; }
+.document-rich-text blockquote { margin: 1rem 0; border-left: 2px solid var(--color-ink-gold); padding-left: 1rem; color: var(--color-ink-white); }
+.document-rich-text a { color: var(--color-ink-gold); text-decoration: underline; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

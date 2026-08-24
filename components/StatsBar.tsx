@@ -1,3 +1,5 @@
+import { defaultModuleData, type StatsModuleData } from "@/lib/modules";
+
 const STATS = [
   {
     value: "5+",
@@ -21,7 +23,8 @@ const STATS = [
   },
 ];
 
-export default function StatsBar() {
+export default function StatsBar({ content = defaultModuleData("stats") as unknown as StatsModuleData }: { content?: StatsModuleData }) {
+  const stats = STATS.map((stat, index) => ({ ...stat, ...(content.items?.[index] || {}) }));
   return (
     <section className="relative border-y border-ink-white/10 bg-ink-black">
       <div className="mx-auto flex max-w-[1536px] items-stretch gap-6 px-6 py-8 md:px-10 lg:gap-14 lg:px-16">
@@ -33,8 +36,8 @@ export default function StatsBar() {
         </div>
 
         <div className="grid flex-1 grid-cols-2 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="flex items-center gap-4">
+          {stats.map((stat, index) => (
+            <div key={`${stat.label}-${index}`} className="flex items-center gap-4">
               <svg
                 viewBox="0 0 24 24"
                 className="h-9 w-9 shrink-0 text-ink-gold"

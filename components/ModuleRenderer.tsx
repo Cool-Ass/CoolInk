@@ -47,7 +47,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     case "about":
       return <About content={withDefaults("about", mod.data)} />;
     case "stats":
-      return <StatsBar />;
+      return <StatsBar content={withDefaults("stats", mod.data)} />;
     case "ctaBar": {
       const data = withDefaults("ctaBar", mod.data) as CtaBarModuleData;
       return (

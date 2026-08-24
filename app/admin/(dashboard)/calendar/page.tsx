@@ -1,4 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import NewAppointmentForm from "@/components/admin/NewAppointmentForm";
+import AdminCalendar from "@/components/admin/AdminCalendar";
+
 export const dynamic = "force-dynamic";
-export default async function CalendarPage() { const [appointments, projects] = await Promise.all([prisma.appointment.findMany({ include: { project: { include: { client: true } } }, where: { endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }), prisma.tattooProject.findMany({ where: { status: { in: ["inquiry", "reviewing", "accepted", "scheduled"] } }, include: { client: true }, orderBy: { updatedAt: "desc" } })]); return <div className="flex flex-col gap-8"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-[11px] tracking-[0.16em] text-ink-gold">TERMINARZ</p><h1 className="mt-2 font-display text-3xl text-ink-white">Wizyty</h1><p className="mt-2 text-sm text-ink-grey">System sprawdza kolizje terminów przed zapisaniem wizyty.</p></div><NewAppointmentForm projects={projects} /></div><div className="divide-y divide-ink-white/10 border border-ink-white/10">{appointments.length === 0 ? <p className="p-10 text-center text-sm text-ink-grey">Brak nadchodzących wizyt.</p> : appointments.map((appointment) => <article key={appointment.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-base text-ink-white">{appointment.project.client.firstName} {appointment.project.client.lastName} <span className="text-ink-grey">—</span> {appointment.project.title}</p><p className="mt-1 text-sm text-ink-grey">{appointment.startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })} – {appointment.endsAt.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}</p>{appointment.notes && <p className="mt-2 text-xs text-ink-grey">{appointment.notes}</p>}</div><span className="text-[11px] tracking-[0.08em] text-ink-gold">{appointment.status}</span></article>)}</div></div>; }
+
+export default async function CalendarPage() {
+  const from = new Date();
+  from.setMonth(from.getMonth() - 1);
+  const [appointments, projects, blocks, workingHours] = await Promise.all([
+    prisma.appointment.findMany({ include: { project: { include: { client: true } } }, where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
+    prisma.tattooProject.findMany({ where: { status: { in: ["inquiry", "reviewing", "accepted", "scheduled"] } }, include: { client: true }, orderBy: { updatedAt: "desc" } }),
+    prisma.availabilityBlock.findMany({ where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
+    prisma.workingHours.findMany({ orderBy: { weekday: "asc" } }),
+  ]);
+
+  return <div className="flex flex-col gap-8">
+    <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-[11px] tracking-[0.16em] text-ink-gold">WIZYTY I DOSTĘPNOŚĆ</p><h1 className="mt-2 font-display text-3xl text-ink-white">Kalendarz wizyt</h1><p className="mt-2 max-w-2xl text-sm text-ink-grey">Dane klientów widzisz tylko Ty. Klient zobaczy wyłącznie bezpieczny widok dostępności.</p></div><NewAppointmentForm projects={projects} /></div>
+    <div className="grid gap-3 sm:grid-cols-3"><div className="border border-ink-white/10 p-4"><p className="text-[11px] tracking-[0.12em] text-ink-grey">ZAPLANOWANE WIZYTY</p><p className="mt-2 font-display text-3xl text-ink-white">{appointments.length}</p></div><div className="border border-ink-white/10 p-4"><p className="text-[11px] tracking-[0.12em] text-ink-grey">WYŁĄCZONE TERMINY</p><p className="mt-2 font-display text-3xl text-ink-white">{blocks.length}</p></div><div className="border border-ink-white/10 p-4"><p className="text-[11px] tracking-[0.12em] text-ink-grey">NOWE ZGŁOSZENIA</p><p className="mt-2 font-display text-3xl text-ink-white">{projects.filter((project) => ["inquiry", "reviewing"].includes(project.status)).length}</p></div></div>
+    <AdminCalendar appointments={appointments.map((appointment) => ({ id: appointment.id, startsAt: appointment.startsAt.toISOString(), endsAt: appointment.endsAt.toISOString(), status: appointment.status, notes: appointment.notes, clientName: `${appointment.project.client.firstName} ${appointment.project.client.lastName}`, projectTitle: appointment.project.title }))} blocks={blocks.map((block) => ({ id: block.id, startsAt: block.startsAt.toISOString(), endsAt: block.endsAt.toISOString(), reason: block.reason }))} workingHours={workingHours.map((item) => ({ weekday: item.weekday, enabled: item.enabled, startsAt: item.startsAt, endsAt: item.endsAt }))} />
+  </div>;
+}

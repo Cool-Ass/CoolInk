@@ -46,10 +46,10 @@ function renderFields(
           <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={4} />
           <TextField label="Etykieta głównego przycisku" value={d.primaryBtnLabel} onChange={(v) => onChange({ ...d, primaryBtnLabel: v })} />
           <TextField label="Etykieta przycisku wideo" value={d.secondaryBtnLabel} onChange={(v) => onChange({ ...d, secondaryBtnLabel: v })} />
-          <p className="text-[11px] leading-relaxed text-ink-grey/70">
-            Zdjęcie w tle Hero i portret artysty pochodzą z globalnych zasobów motywu — podmień je w
-            /public/images, jeśli chcesz je zmienić trwale.
-          </p>
+          <FieldGroup title="ZDJĘCIA HERO">
+            <ImageUploadField label="Tekstura / zdjęcie tła" value={d.backgroundImage} onChange={(v) => onChange({ ...d, backgroundImage: v })} />
+            <ImageUploadField label="Portret po prawej" value={d.portraitImage} onChange={(v) => onChange({ ...d, portraitImage: v })} />
+          </FieldGroup>
         </>
       );
     }
@@ -63,16 +63,20 @@ function renderFields(
           <TextareaField label="Tekst / historia" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={6} />
           <TextField label="Podpis — imię" value={d.signatureName} onChange={(v) => onChange({ ...d, signatureName: v })} />
           <TextField label="Podpis — rola" value={d.signatureRole} onChange={(v) => onChange({ ...d, signatureRole: v })} />
+          <FieldGroup title="KOLAŻ ZDJĘĆ">
+            <ImageUploadField label="Duże zdjęcie" value={d.mainImage} onChange={(v) => onChange({ ...d, mainImage: v })} />
+            <ImageUploadField label="Małe zdjęcie 1" value={d.detailImage1} onChange={(v) => onChange({ ...d, detailImage1: v })} />
+            <ImageUploadField label="Małe zdjęcie 2" value={d.detailImage2} onChange={(v) => onChange({ ...d, detailImage2: v })} />
+            <ImageUploadField label="Małe zdjęcie 3" value={d.detailImage3} onChange={(v) => onChange({ ...d, detailImage3: v })} />
+          </FieldGroup>
         </>
       );
     }
-    case "stats":
-      return (
-        <p className="text-[13px] leading-relaxed text-ink-grey">
-          Ten moduł pokazuje stałe liczby (lata doświadczenia, klienci, zaangażowanie, projekty) w
-          ustalonym stylu wizualnym — nie wymaga dodatkowych ustawień.
-        </p>
-      );
+    case "stats": {
+      const d = withDefaults("stats", module.data);
+      const items = Array.from({ length: 4 }, (_, index) => d.items[index] || { value: "", label: "" });
+      return <><p className="text-[12px] leading-relaxed text-ink-grey">Wpisz własne liczby i opisy. Układ oraz ikony zachowają styl strony.</p><FieldGroup title="STATYSTYKI">{items.map((item, index) => <div key={index} className="grid grid-cols-3 gap-2"><TextField label={`Liczba ${index + 1}`} value={item.value} onChange={(v) => onChange({ ...d, items: items.map((current, i) => i === index ? { ...current, value: v } : current) })} /><div className="col-span-2"><TextField label={`Opis ${index + 1}`} value={item.label} onChange={(v) => onChange({ ...d, items: items.map((current, i) => i === index ? { ...current, label: v } : current) })} /></div></div>)}</FieldGroup></>;
+    }
     case "ctaBar": {
       const d = withDefaults("ctaBar", module.data);
       return (

@@ -195,6 +195,33 @@ model AvailabilityBlock {
   createdAt DateTime @default(now())
 }
 
+/// Repeating opening hours for the booking calendar. `weekday` follows JS:
+/// 0 = Sunday, 1 = Monday … 6 = Saturday.
+model WorkingHours {
+  id        String   @id @default(cuid())
+  weekday   Int      @unique
+  enabled   Boolean  @default(true)
+  startsAt  String   @default("10:00")
+  endsAt    String   @default("19:00")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Promotions can cover a single day or a complete date range. They are
+/// deliberately independent from appointments so they can be safely shown
+/// to the client without exposing any appointment data.
+model Promotion {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  badge       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model ProjectImage {
   id        String        @id @default(cuid())
   projectId String

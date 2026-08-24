@@ -43,6 +43,8 @@ export interface HeroModuleData {
   body: string;
   primaryBtnLabel: string;
   secondaryBtnLabel: string;
+  backgroundImage: string;
+  portraitImage: string;
 }
 
 export interface AboutModuleData {
@@ -52,11 +54,14 @@ export interface AboutModuleData {
   body: string;
   signatureName: string;
   signatureRole: string;
+  mainImage: string;
+  detailImage1: string;
+  detailImage2: string;
+  detailImage3: string;
 }
 
 export interface StatsModuleData {
-  // Uses the built-in stat icons/copy — nothing page-specific to configure yet.
-  _placeholder?: never;
+  items: { value: string; label: string }[];
 }
 
 export interface CtaBarModuleData {
@@ -297,6 +302,8 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         body: "Tworzymy unikalne tatuaże w najwyższej jakości.\nIndywidualne projekty. Realizm. Detal.\nSztuka, która zostaje na zawsze.",
         primaryBtnLabel: "UMÓW WIZYTĘ",
         secondaryBtnLabel: "OBEJRZYJ SHOWREEL",
+        backgroundImage: "/images/texture-bg.jpg",
+        portraitImage: "/images/portrait.jpg",
       } satisfies HeroModuleData;
     case "about":
       return {
@@ -306,9 +313,13 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         body: "Nazywam się Patryk i od 5 lat tworzę tatuaże,\nktóre zostają z ludźmi na zawsze.\nSpecjalizuję się w realizmie, szkicu i coverach.\nKażdy projekt to dla mnie nowe wyzwanie\ni okazja, żeby zamienić pomysł w coś wyjątkowego.",
         signatureName: "Patryk",
         signatureRole: "COOLINK TATTOO STUDIO",
+        mainImage: "/images/crops/about-main.jpg",
+        detailImage1: "/images/crops/about-gun.jpg",
+        detailImage2: "/images/crops/about-back.jpg",
+        detailImage3: "/images/crops/about-process.jpg",
       } satisfies AboutModuleData;
     case "stats":
-      return {};
+      return { items: [{ value: "5+", label: "LAT DOŚWIADCZENIA" }, { value: "1000+", label: "ZADOWOLONYCH KLIENTÓW" }, { value: "100%", label: "ZAANGAŻOWANIA" }, { value: "1/1", label: "INDYWIDUALNE PROJEKTY" }] } satisfies StatsModuleData;
     case "ctaBar":
       return {
         title1: "SZUKASZ ARTYSTY,",
