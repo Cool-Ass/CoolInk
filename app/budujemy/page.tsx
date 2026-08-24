@@ -25,13 +25,13 @@ export default function ConstructionPage() {
           TRYB BUDOWY
         </p>
         <h1 className="headline-texture text-6xl leading-[0.88] sm:text-8xl md:text-9xl">
-          ZAPRASZAMY
+          ZAPRASZAM
           <br />
           WKRÓTCE.
         </h1>
         <div className="gold-underline mx-auto my-8 h-2 w-28" />
         <p className="mx-auto max-w-md text-base leading-relaxed text-ink-grey sm:text-lg">
-          Dopracowujemy nową przestrzeń CoolInk. Wróć za chwilę — będzie warto.
+          Dopracowuję nową przestrzeń CoolInk. Wróć za chwilę — będzie warto.
         </p>
 
         <div className="mt-12 flex items-center justify-center gap-3 text-[10px] font-semibold tracking-[0.22em] text-ink-grey">
