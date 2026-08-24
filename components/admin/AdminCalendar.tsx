@@ -1,105 +1,18 @@
 "use client";
-
 import { useMemo, useState } from "react";
-
-export type CalendarAppointment = {
-  id: string;
-  startsAt: string;
-  endsAt: string;
-  status: string;
-  notes: string | null;
-  clientName: string;
-  projectTitle: string;
-};
-
-export type CalendarBlock = { id: string; startsAt: string; endsAt: string; reason: string | null };
-
-const DAYS = ["PN", "WT", "ŚR", "CZ", "PT", "SB", "ND"];
-const MONTHS = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
-type WorkingDay = { weekday: number; enabled: boolean; startsAt: string; endsAt: string };
-
-function startOfDay(date: Date) { const value = new Date(date); value.setHours(0, 0, 0, 0); return value; }
-function sameDay(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
-function isWeekend(date: Date) { return date.getDay() === 0; }
-
-export default function AdminCalendar({ appointments, blocks, workingHours }: { appointments: CalendarAppointment[]; blocks: CalendarBlock[]; workingHours: WorkingDay[] }) {
-  const today = startOfDay(new Date());
-  const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
-  const [selectedDay, setSelectedDay] = useState(today);
-
-  const weeks = useMemo(() => {
-    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const firstWeekday = (first.getDay() + 6) % 7;
-    const gridStart = new Date(first);
-    gridStart.setDate(first.getDate() - firstWeekday);
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(gridStart);
-      date.setDate(gridStart.getDate() + index);
-      return date;
-    });
-  }, [cursor]);
-
-  const appointmentsForDay = appointments.filter((appointment) => sameDay(new Date(appointment.startsAt), selectedDay));
-  const blocksForDay = blocks.filter((block) => sameDay(new Date(block.startsAt), selectedDay));
-  const selectedRule = workingHours.find((item) => item.weekday === selectedDay.getDay());
-  const isWorkingDay = selectedRule ? selectedRule.enabled : !isWeekend(selectedDay);
-  const startHour = Number((selectedRule?.startsAt || "10:00").split(":")[0]);
-  const endHour = Number((selectedRule?.endsAt || "19:00").split(":")[0]);
-  const hours = Array.from({ length: Math.max(endHour - startHour, 0) }, (_, index) => startHour + index);
-
-  function previousMonth() { setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1)); }
-  function nextMonth() { setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1)); }
-  function selectDay(date: Date) { setSelectedDay(startOfDay(date)); if (date.getMonth() !== cursor.getMonth()) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }
-
-  return (
-    <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="border border-ink-white/10 bg-ink-charcoal/30 p-4 sm:p-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <button type="button" onClick={previousMonth} aria-label="Poprzedni miesiąc" className="h-10 w-10 border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold">←</button>
-          <div className="text-center"><p className="font-display text-2xl text-ink-white">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</p><p className="mt-1 text-[11px] tracking-[0.12em] text-ink-grey">KLIKNIJ DZIEŃ, ABY ZOBACZYĆ GODZINY</p></div>
-          <button type="button" onClick={nextMonth} aria-label="Następny miesiąc" className="h-10 w-10 border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold">→</button>
-        </div>
-        <div className="grid grid-cols-7 border-l border-t border-ink-white/10">
-          {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 bg-ink-black/30 px-2 py-3 text-center text-[10px] font-semibold tracking-[0.12em] text-ink-grey">{day}</div>)}
-          {weeks.map((date) => {
-            const dayAppointments = appointments.filter((appointment) => sameDay(new Date(appointment.startsAt), date));
-            const dayBlocks = blocks.filter((block) => sameDay(new Date(block.startsAt), date));
-            const muted = date.getMonth() !== cursor.getMonth();
-            const rule = workingHours.find((item) => item.weekday === date.getDay());
-            const working = rule ? rule.enabled : !isWeekend(date);
-            const available = working && dayBlocks.length === 0;
-            return <button key={date.toISOString()} type="button" onClick={() => selectDay(date)} className={`min-h-24 border-b border-r border-ink-white/10 p-2 text-left transition-colors sm:min-h-28 ${sameDay(date, selectedDay) ? "bg-ink-gold/10 ring-1 ring-inset ring-ink-gold" : "hover:bg-ink-white/5"} ${muted ? "opacity-35" : ""}`}>
-              <span className={`inline-flex h-6 w-6 items-center justify-center text-xs ${sameDay(date, today) ? "rounded-full bg-ink-gold text-ink-black" : "text-ink-white"}`}>{date.getDate()}</span>
-              <div className="mt-2 flex flex-col gap-1">
-                {dayAppointments.slice(0, 2).map((appointment) => <span key={appointment.id} className="truncate bg-red-500/15 px-1.5 py-1 text-[10px] text-red-200">{appointment.clientName} · {new Date(appointment.startsAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}</span>)}
-                {dayAppointments.length > 2 && <span className="text-[10px] text-ink-grey">+{dayAppointments.length - 2} wizyty</span>}
-                {dayBlocks.length > 0 && <span className="truncate bg-ink-white/10 px-1.5 py-1 text-[10px] text-ink-grey">NIEDOSTĘPNY</span>}
-                {available && <span className="truncate bg-emerald-500/15 px-1.5 py-1 text-[10px] text-emerald-300">{dayAppointments.length ? "WOLNE GODZINY" : "WOLNY TERMIN"}</span>}
-              </div>
-            </button>;
-          })}
-        </div>
-      </div>
-
-      <aside className="border border-ink-white/10 bg-ink-charcoal/40 p-5">
-        <p className="text-[11px] tracking-[0.15em] text-ink-gold">PLAN DNIA</p>
-        <h2 className="mt-2 font-display text-2xl text-ink-white">{selectedDay.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</h2>
-        {!isWorkingDay ? <p className="mt-5 border border-ink-white/10 p-4 text-sm text-ink-grey">Ten dzień jest oznaczony jako wolny. Godziny pracy zmienisz w dostępności.</p> : (
-          <div className="mt-5 flex flex-col gap-2">
-            {hours.map((hour) => {
-              const slotStart = new Date(selectedDay); slotStart.setHours(hour, 0, 0, 0);
-              const slotEnd = new Date(slotStart); slotEnd.setHours(hour + 1);
-              const appointment = appointmentsForDay.find((item) => new Date(item.startsAt) < slotEnd && new Date(item.endsAt) > slotStart);
-              const blocked = blocksForDay.find((item) => new Date(item.startsAt) < slotEnd && new Date(item.endsAt) > slotStart);
-              return <div key={hour} className={`flex min-h-12 items-center gap-3 border px-3 py-2 ${appointment ? "border-red-500/30 bg-red-500/10" : blocked ? "border-ink-white/10 bg-ink-black/20" : "border-emerald-500/20 bg-emerald-500/5"}`}>
-                <time className="w-11 text-xs text-ink-grey">{String(hour).padStart(2, "0")}:00</time>
-                {appointment ? <div className="min-w-0"><p className="truncate text-sm text-ink-white">{appointment.clientName}</p><p className="truncate text-[11px] text-red-200">{appointment.projectTitle}</p></div> : blocked ? <p className="text-xs text-ink-grey">{blocked.reason || "Niedostępny"}</p> : <p className="text-xs tracking-[0.08em] text-emerald-300">WOLNY TERMIN</p>}
-              </div>;
-            })}
-          </div>
-        )}
-        <p className="mt-5 text-xs leading-relaxed text-ink-grey">Klient zobaczy wyłącznie wolny termin albo czerwony znacznik zajętości — bez danych innych osób.</p>
-      </aside>
-    </section>
-  );
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/ToastProvider";
+export type CalendarAppointment={id:string;startsAt:string;endsAt:string;status:string;notes:string|null;clientName:string;projectTitle:string}; export type CalendarBlock={id:string;startsAt:string;endsAt:string;reason:string|null};
+type Hours={weekday:number;enabled:boolean;startsAt:string;endsAt:string}; type Client={id:string;firstName:string;lastName:string;email:string;projects:{id:string;title:string}[]};
+const DAYS=["PN","WT","ŚR","CZ","PT","SB","ND"], MONTHS=["styczeń","luty","marzec","kwiecień","maj","czerwiec","lipiec","sierpień","wrzesień","październik","listopad","grudzień"];
+const day=(d:Date)=>{const x=new Date(d);x.setHours(0,0,0,0);return x}; const same=(a:Date,b:Date)=>a.toDateString()===b.toDateString(); const label=(d:Date)=>d.toLocaleTimeString("pl-PL",{hour:"2-digit",minute:"2-digit"}); const local=(d:Date)=>{const p=(n:number)=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
+export default function AdminCalendar({appointments,blocks,workingHours,clients}:{appointments:CalendarAppointment[];blocks:CalendarBlock[];workingHours:Hours[];clients:Client[]}){
+ const router=useRouter(),{showToast}=useToast(),today=day(new Date()); const [cursor,setCursor]=useState(new Date(today.getFullYear(),today.getMonth(),1)),[selected,setSelected]=useState(today),[editing,setEditing]=useState<CalendarAppointment|null>(null),[newSlot,setNewSlot]=useState<Date|null>(null),[clientId,setClientId]=useState(""),[projectId,setProjectId]=useState(""),[note,setNote]=useState(""),[busy,setBusy]=useState(false),[settings,setSettings]=useState(false),[reason,setReason]=useState("Dzień wolny"),[promo,setPromo]=useState("");
+ const dates=useMemo(()=>{const f=new Date(cursor),s=new Date(f);s.setDate(f.getDate()-((f.getDay()+6)%7));return Array.from({length:42},(_,i)=>{const d=new Date(s);d.setDate(s.getDate()+i);return d})},[cursor]); const items=appointments.filter(x=>same(new Date(x.startsAt),selected)); const blocksDay=blocks.filter(x=>same(new Date(x.startsAt),selected)); const slots=Array.from({length:48},(_,i)=>{const d=new Date(selected);d.setMinutes(i*30,0,0);return d}); const client=clients.find(x=>x.id===clientId);
+ const chooseDay=(d:Date)=>{setSelected(day(d));if(d.getMonth()!==cursor.getMonth())setCursor(new Date(d.getFullYear(),d.getMonth(),1))}; const close=()=>{setEditing(null);setNewSlot(null);setClientId("");setProjectId("");setNote("")};
+ async function saveExisting(){if(!editing)return;setBusy(true);try{const s=new Date(editing.startsAt),e=new Date(editing.endsAt);const r=await fetch(`/api/admin/appointments/${editing.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({startsAt:s,endsAt:e,notes:note})}),j=await r.json();if(!r.ok)throw Error(j.error);showToast("Wizyta zaktualizowana.");close();router.refresh()}catch(e){showToast(e instanceof Error?e.message:"Nie udało się zapisać.","error")}finally{setBusy(false)}}
+ async function remove(){if(!editing||!confirm("Usunąć tę wizytę?"))return;setBusy(true);try{const r=await fetch(`/api/admin/appointments/${editing.id}`,{method:"DELETE"}),j=await r.json();if(!r.ok)throw Error(j.error);showToast("Wizyta usunięta.");close();router.refresh()}catch(e){showToast(e instanceof Error?e.message:"Nie udało się usunąć.","error")}finally{setBusy(false)}}
+ async function create(){if(!newSlot||!projectId)return;setBusy(true);const end=new Date(newSlot);end.setMinutes(end.getMinutes()+30);try{const r=await fetch("/api/admin/appointments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({projectId,startsAt:newSlot,endsAt:end,notes:note})}),j=await r.json();if(!r.ok)throw Error(j.error);showToast("Wizyta zaplanowana.");close();router.refresh()}catch(e){showToast(e instanceof Error?e.message:"Nie udało się zapisać.","error")}finally{setBusy(false)}}
+ async function addSetting(kind:"block"|"promotion"){setBusy(true);const end=new Date(selected);end.setHours(23,59,59,999);try{const body=kind==="block"?{kind,startsAt:selected,endsAt:end,reason}:{kind,title:promo,startsAt:selected,endsAt:end};const r=await fetch("/api/admin/availability",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw Error(j.error);showToast(kind==="block"?"Dzień oznaczony jako wolny.":"Promocja dodana.");setPromo("");router.refresh()}catch(e){showToast(e instanceof Error?e.message:"Nie udało się zapisać.","error")}finally{setBusy(false)}}
+ return <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]"><div className="border border-ink-white/10 bg-ink-charcoal/30 p-4 sm:p-6"><div className="mb-6 flex items-center justify-between"><button onClick={()=>setCursor(new Date(cursor.getFullYear(),cursor.getMonth()-1,1))} className="border border-ink-white/15 px-3 py-2">←</button><div className="text-center"><h2 className="font-display text-2xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2><p className="text-[10px] tracking-widest text-ink-grey">WYBIERZ DZIEŃ</p></div><button onClick={()=>setCursor(new Date(cursor.getFullYear(),cursor.getMonth()+1,1))} className="border border-ink-white/15 px-3 py-2">→</button></div><div className="grid grid-cols-7 border-l border-t border-ink-white/10">{DAYS.map(x=><div key={x} className="border-b border-r border-ink-white/10 py-2 text-center text-[10px] text-ink-grey">{x}</div>)}{dates.map(d=>{const list=appointments.filter(x=>same(new Date(x.startsAt),d)),blocked=blocks.some(x=>same(new Date(x.startsAt),d));return <button key={d.toISOString()} onClick={()=>chooseDay(d)} className={`min-h-24 border-b border-r border-ink-white/10 p-2 text-left ${same(d,selected)?"bg-ink-gold/10 ring-1 ring-inset ring-ink-gold":"hover:bg-ink-white/5"} ${d.getMonth()!==cursor.getMonth()?"opacity-35":""}`}><b>{d.getDate()}</b>{list.slice(0,2).map(x=><span key={x.id} className="mt-2 block truncate bg-red-500/15 px-1 text-[10px] text-red-200">{x.clientName} · {label(new Date(x.startsAt))}</span>)}{blocked?<span className="mt-2 block text-[9px] text-ink-grey">NIEDOSTĘPNY</span>:<span className="mt-2 block text-[9px] text-emerald-300">WOLNE SLOTY</span>}</button>})}</div></div><aside className="border border-ink-white/10 bg-ink-charcoal/40 p-5"><p className="text-[11px] tracking-widest text-ink-gold">PLAN DNIA</p><h2 className="mt-2 font-display text-2xl">{selected.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long"})}</h2><button onClick={()=>setSettings(!settings)} className="mt-3 text-xs text-ink-gold">{settings?"UKRYJ USTAWIENIA DNIA":"USTAWIENIA DNIA: GODZINY, WOLNE, PROMO"}</button>{settings&&<div className="mt-3 space-y-3 border border-ink-white/10 p-3 text-xs"><p className="text-ink-grey">Godziny pracy: {workingHours.find(x=>x.weekday===selected.getDay())?.enabled?`${workingHours.find(x=>x.weekday===selected.getDay())?.startsAt}–${workingHours.find(x=>x.weekday===selected.getDay())?.endsAt}`:"dzień wolny"}. Zmienisz je w Dostępność i promocje.</p><div className="flex gap-2"><input value={reason} onChange={e=>setReason(e.target.value)} className="min-w-0 flex-1 border border-ink-white/20 bg-transparent px-2 py-2"/><button disabled={busy} onClick={()=>addSetting("block")} className="border border-red-400/50 px-2 text-red-200">WOLNY</button></div><div className="flex gap-2"><input value={promo} onChange={e=>setPromo(e.target.value)} placeholder="Nazwa promocji" className="min-w-0 flex-1 border border-ink-white/20 bg-transparent px-2 py-2"/><button disabled={busy||!promo} onClick={()=>addSetting("promotion")} className="border border-ink-gold px-2 text-ink-gold">PROMO</button></div></div>}<div className="mt-5 max-h-[570px] space-y-2 overflow-y-auto">{slots.map(s=>{const e=new Date(s);e.setMinutes(e.getMinutes()+30);const a=items.find(x=>new Date(x.startsAt)<e&&new Date(x.endsAt)>s),b=blocksDay.find(x=>new Date(x.startsAt)<e&&new Date(x.endsAt)>s);return a?<button key={s.toISOString()} onClick={()=>{setEditing(a);setNote(a.notes||"")}} className="flex w-full gap-3 border border-red-500/30 bg-red-500/10 px-3 py-2 text-left"><time className="w-11 text-xs text-ink-grey">{label(s)}</time><span><b className="block text-sm">{a.clientName}</b><small className="text-red-200">{a.projectTitle} · edytuj</small></span></button>:b?<div key={s.toISOString()} className="flex gap-3 border border-ink-white/10 px-3 py-2"><time className="w-11 text-xs text-ink-grey">{label(s)}</time><small>{b.reason||"Niedostępny"}</small></div>:<button key={s.toISOString()} onClick={()=>setNewSlot(s)} className="flex w-full gap-3 border border-emerald-500/20 px-3 py-2 text-left text-emerald-300 hover:bg-emerald-500/10"><time className="w-11 text-xs text-ink-grey">{label(s)}</time><small>+ umów wizytę</small></button>})}</div></aside>{(editing||newSlot)&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-black/80 p-4"><div className="w-full max-w-lg border border-ink-white/20 bg-ink-charcoal p-6"><div className="flex justify-between"><h3 className="font-display text-2xl">{editing?"Edytuj wizytę":"Nowa wizyta"}</h3><button onClick={close}>✕</button></div>{editing?<><label className="mt-5 block text-xs text-ink-grey">OD<input type="datetime-local" step="1800" value={local(new Date(editing.startsAt))} onChange={e=>setEditing({...editing,startsAt:new Date(e.target.value).toISOString()})} className="mt-2 w-full border border-ink-white/20 bg-transparent p-2"/></label><label className="mt-4 block text-xs text-ink-grey">DO<input type="datetime-local" step="1800" value={local(new Date(editing.endsAt))} onChange={e=>setEditing({...editing,endsAt:new Date(e.target.value).toISOString()})} className="mt-2 w-full border border-ink-white/20 bg-transparent p-2"/></label></>:<label className="mt-5 block text-xs text-ink-grey">KLIENT / PROJEKT<select value={clientId} onChange={e=>{setClientId(e.target.value);setProjectId("")}} className="mt-2 w-full border border-ink-white/20 bg-ink-black p-2"><option value="">Wybierz klienta</option>{clients.map(c=><option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}</select><select value={projectId} onChange={e=>setProjectId(e.target.value)} className="mt-2 w-full border border-ink-white/20 bg-ink-black p-2"><option value="">Wybierz projekt</option>{client?.projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>}<label className="mt-4 block text-xs text-ink-grey">NOTATKA<textarea value={note} onChange={e=>setNote(e.target.value)} className="mt-2 w-full border border-ink-white/20 bg-transparent p-2"/></label><div className="mt-5 flex gap-3"><button disabled={busy} onClick={editing?saveExisting:create} className="border border-ink-gold px-4 py-2 text-ink-gold">ZAPISZ</button>{editing&&<button disabled={busy} onClick={remove} className="border border-red-400 px-4 py-2 text-red-200">USUŃ</button>}<button onClick={close} className="text-xs text-ink-grey">Anuluj</button></div></div></div>}</section>;
 }

@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+export async function PATCH(request: Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;const b=await request.json().catch(()=>null);const firstName=String(b?.firstName??"").trim(),lastName=String(b?.lastName??"").trim(),email=String(b?.email??"").trim().toLowerCase();if(!firstName||!lastName||!email.includes("@"))return NextResponse.json({error:"Uzupełnij imię, nazwisko i e-mail."},{status:400});try{return NextResponse.json({client:await prisma.client.update({where:{id},data:{firstName,lastName,email,phone:String(b?.phone??"").trim()||null,tags:String(b?.tags??"").trim()}})})}catch{return NextResponse.json({error:"Nie udało się zapisać danych klienta."},{status:409})}}
+export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;await prisma.client.delete({where:{id}}).catch(()=>null);return NextResponse.json({ok:true})}

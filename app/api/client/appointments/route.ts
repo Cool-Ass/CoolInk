@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const projectId = String(body?.projectId ?? "");
   const startsAt = new Date(String(body?.startsAt ?? ""));
   const endsAt = new Date(String(body?.endsAt ?? ""));
-  if (!projectId || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) return NextResponse.json({ error: "Wybierz poprawny termin." }, { status: 400 });
+  if (!projectId || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt || startsAt.getMinutes() % 30 !== 0 || endsAt.getTime() - startsAt.getTime() !== 30 * 60 * 1000) return NextResponse.json({ error: "Wybierz 30-minutowy termin rozpoczynający się o pełnej lub wpół do." }, { status: 400 });
   const project = await prisma.tattooProject.findFirst({ where: { id: projectId, clientId: client.id } });
   if (!project) return NextResponse.json({ error: "Nie znaleziono Twojego projektu." }, { status: 404 });
   const [collision, blocked, workingHours] = await Promise.all([

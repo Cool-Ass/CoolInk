@@ -39,6 +39,10 @@ export default function ClientAccountForm() {
       {message && <p className="border border-ink-gold/40 bg-ink-gold/5 px-3 py-2 text-sm text-ink-grey">{message}</p>}
       <button disabled={loading} className="w-full border border-ink-gold bg-ink-gold px-5 py-3 text-xs font-medium tracking-[0.1em] text-ink-black disabled:opacity-50">{loading ? "CHWILA…" : mode === "login" ? "WEJDŹ DO KONTA" : "UTWÓRZ BEZPIECZNE KONTO"}</button>
     </form>
+    <div className="mt-6 border-t border-ink-white/15 pt-5">
+      <p className="text-center text-[10px] tracking-[0.12em] text-ink-grey">LUB KONTYNUUJ PRZEZ</p>
+      <div className="mt-3"><a href="/api/client/auth/oauth?provider=google" className="block border border-ink-white/20 px-3 py-3 text-center text-xs hover:border-ink-gold">KONTYNUUJ Z GOOGLE</a></div>
+    </div>
     <p className="mt-5 text-center text-xs leading-relaxed text-ink-grey">Konto pozwala śledzić projekty, wizyty i przesłane inspiracje.</p>
   </section>;
 }

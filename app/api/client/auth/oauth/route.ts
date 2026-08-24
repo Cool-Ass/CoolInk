@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server";
+import { getSupabaseConfig } from "@/lib/clientAuth";
+export async function GET(request:Request){const provider=new URL(request.url).searchParams.get("provider");if(provider!=="google"&&provider!=="apple")return NextResponse.json({error:"Nieobsługiwany dostawca."},{status:400});const {url,key}=getSupabaseConfig(),redirect=`${new URL(request.url).origin}/app/auth/callback`;const target=new URL(`${url}/auth/v1/authorize`);target.searchParams.set("provider",provider);target.searchParams.set("redirect_to",redirect);target.searchParams.set("apikey",key);return NextResponse.redirect(target)}
