@@ -130,11 +130,11 @@ export interface SpacerModuleData {
 }
 
 /** Neutral, reusable builder widgets. They do not carry any Coolink homepage copy. */
-export interface HeadingModuleData { text: string; level: "h1" | "h2" | "h3"; alignment: "left" | "center"; }
+export interface HeadingModuleData { text: string; level: "h1" | "h2" | "h3"; alignment: "left" | "center"; icon?: string; }
 export interface TextModuleData { text: string; alignment: "left" | "center"; }
 export interface ImageModuleData { image: string; alt: string; caption: string; }
 export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center"; style: "primary" | "outline"; }
-export interface DividerModuleData { style: "line" | "gold" | "space"; }
+export interface DividerModuleData { style: "line" | "gold" | "space"; icon?: string; }
 export interface GalleryModuleData { image1: string; image2: string; image3: string; }
 export type ColumnWidgetType = "heading" | "text" | "image" | "button" | "divider" | "spacer";
 export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; }
@@ -384,7 +384,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "spacer":
       return { size: "md" } satisfies SpacerModuleData;
     case "heading":
-      return { text: "Nowy nagłówek", level: "h2", alignment: "left" } satisfies HeadingModuleData;
+      return { text: "Nowy nagłówek", level: "h2", alignment: "left", icon: "" } satisfies HeadingModuleData;
     case "text":
       return { text: "Wpisz tutaj swoją treść.", alignment: "left" } satisfies TextModuleData;
     case "image":
@@ -392,7 +392,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "button":
       return { label: "Dowiedz się więcej", href: "#", alignment: "left", style: "primary" } satisfies ButtonModuleData;
     case "divider":
-      return { style: "line" } satisfies DividerModuleData;
+      return { style: "line", icon: "" } satisfies DividerModuleData;
     case "gallery":
       return { image1: "", image2: "", image3: "" } satisfies GalleryModuleData;
     case "columns":

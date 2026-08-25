@@ -240,6 +240,7 @@ function renderFields(
       const d = withDefaults("heading", module.data);
       return <>
         <TextField label="Treść nagłówka" value={d.text} onChange={(v) => onChange({ ...d, text: v })} />
+        <ImageUploadField label="Ikona nad nagłówkiem (SVG / PNG, opcjonalnie)" value={d.icon || ""} onChange={(v) => onChange({ ...d, icon: v })} />
         <SelectField label="Rozmiar / poziom" value={d.level} onChange={(v) => onChange({ ...d, level: v })} options={[{ value: "h1", label: "Duży (H1)" }, { value: "h2", label: "Średni (H2)" }, { value: "h3", label: "Mały (H3)" }]} />
         <SelectField label="Wyrównanie" value={d.alignment} onChange={(v) => onChange({ ...d, alignment: v })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Wyśrodkowane" }]} />
       </>;
@@ -270,7 +271,7 @@ function renderFields(
     }
     case "divider": {
       const d = withDefaults("divider", module.data);
-      return <SelectField label="Rodzaj separatora" value={d.style} onChange={(v) => onChange({ ...d, style: v })} options={[{ value: "line", label: "Delikatna linia" }, { value: "gold", label: "Złota linia" }, { value: "space", label: "Sam odstęp" }]} />;
+      return <><SelectField label="Rodzaj separatora" value={d.style} onChange={(v) => onChange({ ...d, style: v })} options={[{ value: "line", label: "Delikatna linia" }, { value: "gold", label: "Złota linia" }, { value: "space", label: "Sam odstęp" }]} /><ImageUploadField label="Ikona separatora (SVG / PNG, opcjonalnie)" value={d.icon || ""} onChange={(v) => onChange({ ...d, icon: v })} /></>;
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);

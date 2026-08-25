@@ -9,7 +9,7 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     case "heading": {
       const d = withDefaults("heading", module.data);
       const Tag = d.level;
-      return <section className={`px-6 py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}><Tag className="font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
+      return <section className={`px-6 py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <img src={d.icon} alt="" className={`mb-4 h-10 w-10 object-contain ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
     }
     case "text": {
       const d = withDefaults("text", module.data);
@@ -26,7 +26,7 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     }
     case "divider": {
       const d = withDefaults("divider", module.data);
-      return d.style === "space" ? <div className="h-12" /> : <div className="px-6 py-8 md:px-12"><div className={`h-px ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} /></div>;
+      return <div className="px-6 py-8 md:px-12">{d.icon && <img src={d.icon} alt="" className="mx-auto mb-4 h-9 w-9 object-contain" />}{d.style === "space" ? <div className="h-12" /> : <div className={`h-px ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} />}</div>;
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);
