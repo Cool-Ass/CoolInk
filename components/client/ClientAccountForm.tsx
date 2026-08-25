@@ -5,11 +5,18 @@ import { useRouter } from "next/navigation";
 
 type Mode = "login" | "register";
 
-export default function ClientAccountForm() {
+const oauthMessages: Record<string, string> = {
+  oauth_session: "Sesja logowania wygasła. Spróbuj ponownie w jednej karcie przeglądarki.",
+  oauth_exchange: "Nie udało się dokończyć połączenia z Google. Spróbuj ponownie za chwilę.",
+  oauth_profile: "Nie udało się pobrać danych konta Google. Spróbuj ponownie.",
+  oauth_database: "Konto Google zostało potwierdzone, ale zapis profilu jest chwilowo niedostępny. Spróbuj ponownie za moment.",
+};
+
+export default function ClientAccountForm({ oauthError }: { oauthError?: string }) {
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(oauthError ? (oauthMessages[oauthError] ?? "Nie udało się dokończyć logowania przez Google.") : "");
   const router = useRouter();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
