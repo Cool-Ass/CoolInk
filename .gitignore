@@ -1,10 +1,12 @@
 node_modules
 .next
 .npm-cache
+.npm-runtime-cache
 out
 .env*.local
 .DS_Store
 *.log
+*.tsbuildinfo
 
 # database
 /prisma/dev.db

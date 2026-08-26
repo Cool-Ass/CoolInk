@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
+import { activityMessage } from "@/lib/projectWorkflow";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const requestedProjectId = String(body?.projectId ?? ""); const requestedClientId = String(body?.clientId ?? ""); const startsAt = new Date(String(body?.startsAt ?? "")); const endsAt = new Date(String(body?.endsAt ?? ""));
-  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt || startsAt.getMinutes() % 30 !== 0 || endsAt.getTime() - startsAt.getTime() !== 30 * 60 * 1000) return NextResponse.json({ error: "Wybierz 30-minutowy termin rozpoczynający się o pełnej lub wpół do." }, { status: 400 });
+  if (!validAppointmentRange(startsAt, endsAt)) return NextResponse.json({ error: "Wybierz termin co 30 minut, o długości od 30 minut do 12 godzin." }, { status: 400 });
   let project = requestedProjectId ? await prisma.tattooProject.findUnique({ where: { id: requestedProjectId } }) : null;
   if (!project) {
     let clientId = requestedClientId;
@@ -19,9 +21,15 @@ export async function POST(request: Request) {
     }
     project = await prisma.tattooProject.create({ data: { clientId, title: String(body?.projectTitle ?? "").trim() || "Wizyta umówiona ręcznie", description: "Wizyta dodana z kalendarza admina.", status: "scheduled" } });
   }
-  const [collision, blocked] = await Promise.all([prisma.appointment.findFirst({ where: { status: { notIn: ["cancelled", "no_show"] }, startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }), prisma.availabilityBlock.findFirst({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } })]);
-  if (collision || blocked) return NextResponse.json({ error: "Ten termin jest niedostępny. Wybierz inny zakres." }, { status: 409 });
-  const appointment = await prisma.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "confirmed", notes: String(body?.notes ?? "").trim() || null } });
-  await prisma.tattooProject.update({ where: { id: project.id }, data: { status: "scheduled" } });
+  const conflict = await bookingConflict(startsAt, endsAt, undefined, !Boolean(body?.ignoreBuffer));
+  if (conflict.appointment || conflict.block) return NextResponse.json({ error: "Ten termin jest niedostępny. Wybierz inny zakres." }, { status: 409 });
+  const rawPrice = body?.price;
+  const price = rawPrice === undefined || rawPrice === "" ? null : Number(rawPrice);
+  const validPrice = typeof price === "number" && Number.isInteger(price) && price >= 0 ? price : null;
+  const appointment = await prisma.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "confirmed", notes: String(body?.notes ?? "").trim() || null, price: validPrice } });
+  await prisma.$transaction([
+    prisma.tattooProject.update({ where: { id: project.id }, data: { status: "confirmed" } }),
+    prisma.projectActivity.create({ data: { projectId: project.id, type: "appointment_confirmed", message: activityMessage("appointment_confirmed", startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })), visibility: "admin" } }),
+  ]);
   return NextResponse.json({ appointment }, { status: 201 });
 }

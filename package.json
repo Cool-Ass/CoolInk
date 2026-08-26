@@ -2,16 +2,25 @@
   "name": "coolink-tattoo-studio",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:security:audit": "node scripts/auditTestDatabaseSecurity.cjs",
+    "db:security:verify": "node scripts/verifyTestRls.cjs",
+    "db:security:http-verify": "node scripts/verifyTestHttpSecurity.cjs",
+    "test:smoke:rls": "node scripts/verifyTestAppSmoke.cjs",
+    "test:smoke:admin": "node scripts/verifyTestAdminSmoke.cjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -21,17 +30,19 @@
     "gsap": "^3.12.5",
     "jose": "^5.9.6",
     "lenis": "^1.1.14",
-    "next": "^15.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "sharp": "^0.33.5"
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.7.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.3",
     "postcss": "^8.4.47",
     "prisma": "^5.20.0",
     "tailwindcss": "^4.0.0",

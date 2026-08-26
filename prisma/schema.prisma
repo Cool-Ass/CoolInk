@@ -124,6 +124,7 @@ model Client {
   updatedAt   DateTime        @updatedAt
   projects    TattooProject[]
   acceptances DocumentAcceptance[]
+  notifications ClientNotification[]
 }
 
 /// Versioned studio documents: consent, preparation, aftercare and policies.
@@ -165,13 +166,18 @@ model TattooProject {
   colorPreference   String?
   estimatedPrice    Int?
   finalPrice        Int?
-  status            String         @default("inquiry") // inquiry | reviewing | accepted | scheduled | completed | cancelled
+  status            String         @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
   preferredDateNote String?
   internalNotes     String?
+  depositStatus     String         @default("not_required") // not_required | awaiting | paid | refunded | forfeited
+  depositAmount     Int?
+  depositPaidAt     DateTime?
+  depositPaymentMethod String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   images            ProjectImage[]
   appointments      Appointment[]
+  activities        ProjectActivity[]
 }
 
 /// Appointments are kept separately from a project because a larger tattoo
@@ -184,8 +190,42 @@ model Appointment {
   endsAt      DateTime
   status      String        @default("requested") // requested | confirmed | deposit_required | deposit_paid | completed | cancelled | no_show
   notes       String?
+  price       Int?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+}
+
+/// Permanent, ordered history of meaningful actions taken on a tattoo project.
+/// Internal events stay private; client-visible events may be surfaced in the portal.
+model ProjectActivity {
+  id        String        @id @default(cuid())
+  projectId String
+  project   TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  visibility String       @default("admin") // admin | client
+  createdAt DateTime      @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+/// In-app delivery of business events. Future push and e-mail adapters can
+/// consume the same event type without duplicating workflow logic.
+model ClientNotification {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type          String
+  title         String
+  body          String
+  href          String?
+  projectId     String?
+  appointmentId String?
+  readAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([clientId, readAt, createdAt])
+  @@index([projectId, createdAt])
 }
 
 model AvailabilityBlock {

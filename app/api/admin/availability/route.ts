@@ -11,24 +11,27 @@ const defaultHours = Array.from({ length: 7 }, (_, weekday) => ({
 }));
 
 export async function GET() {
-  const [hours, blocks, promotions] = await Promise.all([
+  const [hours, blocks, promotions, buffer] = await Promise.all([
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }),
     prisma.promotion.findMany({ where: { endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }),
+    prisma.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } }),
   ]);
-  return NextResponse.json({ hours: hours.length ? hours : defaultHours, blocks, promotions });
+  return NextResponse.json({ hours: hours.length ? hours : defaultHours, blocks, promotions, bufferMinutes: Number(buffer?.value) || 30 });
 }
 
 export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const hours: HoursPayload[] = Array.isArray(body?.hours) ? body.hours : [];
+  const bufferMinutes = Number(body?.bufferMinutes);
   if (hours.length !== 7) return NextResponse.json({ error: "Uzupełnij godziny dla każdego dnia tygodnia." }, { status: 400 });
+  if (!Number.isInteger(bufferMinutes) || bufferMinutes < 0 || bufferMinutes > 240 || bufferMinutes % 5 !== 0) return NextResponse.json({ error: "Bufor ustaw od 0 do 240 minut, co 5 minut." }, { status: 400 });
 
-  await prisma.$transaction(hours.map((item) => prisma.workingHours.upsert({
+  await prisma.$transaction([...hours.map((item) => prisma.workingHours.upsert({
     where: { weekday: Number(item.weekday) },
     update: { enabled: Boolean(item.enabled), startsAt: String(item.startsAt), endsAt: String(item.endsAt) },
     create: { weekday: Number(item.weekday), enabled: Boolean(item.enabled), startsAt: String(item.startsAt), endsAt: String(item.endsAt) },
-  })));
+  })), prisma.siteSetting.upsert({ where: { key: "booking_buffer_minutes" }, update: { value: String(bufferMinutes) }, create: { key: "booking_buffer_minutes", value: String(bufferMinutes) } })]);
   return NextResponse.json({ ok: true });
 }
 

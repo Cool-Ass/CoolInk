@@ -322,7 +322,11 @@ const COLUMN_WIDGETS: ColumnWidgetType[] = ["heading", "text", "image", "button"
 
 function ColumnEditor({ label, widgets, onChange }: { label: string; widgets: ColumnWidget[]; onChange: (widgets: ColumnWidget[]) => void }) {
   function add(type: ColumnWidgetType) {
-    onChange([...widgets, { id: `col_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, type, data: defaultModuleData(type) }]);
+    const nextId = widgets.reduce((highest, widget) => {
+      const match = widget.id.match(/^col_(\d+)$/);
+      return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0) + 1;
+    onChange([...widgets, { id: `col_${nextId}`, type, data: defaultModuleData(type) }]);
   }
   return <div className="border border-ink-white/15 p-3">
     <p className="mb-3 text-[12px] text-ink-white">{label}</p>

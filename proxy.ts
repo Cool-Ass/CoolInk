@@ -5,8 +5,15 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 // and the API route that issues one).
 const PUBLIC_ADMIN_PATHS = ["/admin/login", "/api/admin/login"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/") && ["POST", "PATCH", "PUT", "DELETE"].includes(request.method)) {
+    const origin = request.headers.get("origin");
+    if (origin && origin !== request.nextUrl.origin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const length = Number(request.headers.get("content-length") ?? "0");
+    if (Number.isFinite(length) && length > 1_500_000) return NextResponse.json({ error: "Żądanie jest zbyt duże." }, { status: 413 });
+  }
 
   // A switchable, public-facing construction screen. The admin and API
   // remain available so content and the studio workflow can keep moving

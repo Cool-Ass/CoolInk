@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 
 const MAX_NAME_LENGTH = 120;
 const MAX_EMAIL_LENGTH = 254;
@@ -11,6 +12,9 @@ function clean(value: unknown, maxLength: number) {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const limit = rateLimit(request, "contact", 5, 60 * 60 * 1000);
+  if (!limit.allowed) return tooManyRequests(limit);
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Nieprawidłowe dane formularza." }, { status: 400 });
