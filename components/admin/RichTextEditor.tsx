@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-type Command = "bold" | "italic" | "underline" | "strikeThrough" | "insertUnorderedList" | "insertOrderedList" | "formatBlock" | "createLink" | "removeFormat";
+type Command = "bold" | "italic" | "underline" | "strikeThrough" | "insertUnorderedList" | "insertOrderedList" | "formatBlock" | "createLink" | "removeFormat" | "justifyLeft" | "justifyCenter" | "justifyRight" | "undo" | "redo" | "backColor" | "foreColor";
 
 function textToHtml(value: string) {
   if (!value.trim() || /<\/?[a-z][\s\S]*>/i.test(value)) return value;
@@ -35,10 +35,17 @@ export default function RichTextEditor({ value, onChange, label = "TREŚĆ" }: {
       <ToolbarButton label="S" title="Przekreślenie" onClick={() => run("strikeThrough")} />
       <span className="mx-1 h-7 w-px bg-ink-white/15" />
       <ToolbarButton label="H2" title="Nagłówek" onClick={() => run("formatBlock", "h2")} />
+      <ToolbarButton label="H3" title="Mniejszy nagłówek" onClick={() => run("formatBlock", "h3")} />
       <ToolbarButton label="¶" title="Akapit" onClick={() => run("formatBlock", "p")} />
       <ToolbarButton label="• Lista" title="Lista punktowana" onClick={() => run("insertUnorderedList")} />
       <ToolbarButton label="1. Lista" title="Lista numerowana" onClick={() => run("insertOrderedList")} />
       <ToolbarButton label="Link" title="Dodaj link" onClick={addLink} />
+      <ToolbarButton label="←" title="Wyrównaj do lewej" onClick={() => run("justifyLeft")} />
+      <ToolbarButton label="↔" title="Wyśrodkuj" onClick={() => run("justifyCenter")} />
+      <ToolbarButton label="→" title="Wyrównaj do prawej" onClick={() => run("justifyRight")} />
+      <ToolbarButton label="↶" title="Cofnij" onClick={() => run("undo")} />
+      <ToolbarButton label="↷" title="Ponów" onClick={() => run("redo")} />
+      <ToolbarButton label="☺" title="Dodaj emoji" onClick={() => { editorRef.current?.focus(); document.execCommand("insertText", false, "✨"); onChange(editorRef.current?.innerHTML ?? ""); }} />
       <ToolbarButton label="Wyczyść" title="Usuń formatowanie zaznaczenia" onClick={() => run("removeFormat")} />
     </div>
     <p className="px-3 pt-3 text-[10px] tracking-[0.12em] text-ink-grey">{label} · zaznacz fragment tekstu, aby go sformatować</p>

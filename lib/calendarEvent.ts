@@ -14,7 +14,7 @@ export function appointmentIcs(input: { id: string; startsAt: Date; endsAt: Date
 }
 
 export function googleCalendarUrl(input: { startsAt: Date; endsAt: Date }) {
-  const dates = `${utcStamp(input.startsAt)}/${utcStamp(input.endsAt)}`;
-  const params = new URLSearchParams({ action: "TEMPLATE", text: "Wizyta — CoolInk Tattoo Studio", dates, location: LOCATION, details: "Wizyta w CoolInk Tattoo Studio. Szczegóły wizyty znajdziesz na swoim koncie klienta." });
+  const dates = `${localStamp(input.startsAt)}/${localStamp(input.endsAt)}`;
+  const params = new URLSearchParams({ action: "TEMPLATE", text: "Wizyta — CoolInk Tattoo Studio", dates, ctz: TZ, location: LOCATION, details: "Wizyta w CoolInk Tattoo Studio. Szczegóły wizyty znajdziesz na swoim koncie klienta." });
   return `https://calendar.google.com/calendar/render?${params}`;
 }

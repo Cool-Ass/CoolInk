@@ -1,18 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BackgroundControls from "@/components/admin/builder/BackgroundControls";
+import IconPicker from "@/components/admin/builder/IconPicker";
+import GalleryEditor from "@/components/admin/builder/GalleryEditor";
 import { TextField, TextareaField, SelectField, FieldGroup } from "@/components/admin/builder/fields";
-import { defaultModuleData, withDefaults, MODULE_LABELS, type ColumnWidget, type ColumnWidgetType, type Module } from "@/lib/modules";
+import { defaultModuleData, withDefaults, MODULE_LABELS, type ColumnWidget, type ColumnWidgetType, type Module, type ModuleStyle } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
 
 interface Props {
   module: Module;
   onChange: (data: Record<string, unknown>) => void;
+  onStyleChange: (style: ModuleStyle) => void;
   onClose: () => void;
   portfolioItems: PortfolioWork[];
 }
 
-export default function ModuleSettingsSidebar({ module, onChange, onClose, portfolioItems }: Props) {
+export default function ModuleSettingsSidebar({ module, onChange, onStyleChange, onClose, portfolioItems }: Props) {
+  const [tab, setTab] = useState<"content" | "style" | "advanced">("content");
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3 border-b border-ink-white/10 pb-4">
@@ -25,7 +31,10 @@ export default function ModuleSettingsSidebar({ module, onChange, onClose, portf
         </button>
       </div>
 
-      {renderFields(module, onChange, portfolioItems)}
+      <div className="grid grid-cols-3 border border-ink-white/15 p-1 text-[10px] tracking-[0.08em]">{(["content", "style", "advanced"] as const).map((item) => <button key={item} type="button" onClick={() => setTab(item)} className={`px-2 py-2 transition-colors ${tab === item ? "bg-ink-gold/15 text-ink-gold" : "text-ink-grey hover:text-ink-white"}`}>{item === "content" ? "TREŚĆ" : item === "style" ? "STYL" : "ZAAWANS."}</button>)}</div>
+      {tab === "content" && renderFields(module, onChange, portfolioItems)}
+      {tab === "style" && <BackgroundControls value={module.style} onChange={onStyleChange} />}
+      {tab === "advanced" && <div className="flex flex-col gap-4"><TextField label="Anchor ID (opcjonalnie)" value={module.style?.anchorId ?? ""} onChange={(anchorId) => onStyleChange({ ...module.style, anchorId })} placeholder="np. kontakt" /><TextField label="Klasa CSS (opcjonalnie)" value={module.style?.cssClass ?? ""} onChange={(cssClass) => onStyleChange({ ...module.style, cssClass })} placeholder="np. moja-sekcja" /><p className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-3 py-2 text-[12px] text-ink-grey">Te pola są opcjonalne. Nie dodajemy tu surowego CSS, aby strona pozostała bezpieczna.</p></div>}
     </div>
   );
 }
@@ -240,7 +249,7 @@ function renderFields(
       const d = withDefaults("heading", module.data);
       return <>
         <TextField label="Treść nagłówka" value={d.text} onChange={(v) => onChange({ ...d, text: v })} />
-        <ImageUploadField label="Ikona nad nagłówkiem (SVG / PNG, opcjonalnie)" value={d.icon || ""} onChange={(v) => onChange({ ...d, icon: v })} />
+        <IconPicker label="IKONA NAD NAGŁÓWKIEM" value={d.icon || ""} onChange={(v) => onChange({ ...d, icon: v })} />
         <SelectField label="Rozmiar / poziom" value={d.level} onChange={(v) => onChange({ ...d, level: v })} options={[{ value: "h1", label: "Duży (H1)" }, { value: "h2", label: "Średni (H2)" }, { value: "h3", label: "Mały (H3)" }]} />
         <SelectField label="Wyrównanie" value={d.alignment} onChange={(v) => onChange({ ...d, alignment: v })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Wyśrodkowane" }]} />
       </>;
@@ -265,8 +274,11 @@ function renderFields(
       return <>
         <TextField label="Tekst przycisku" value={d.label} onChange={(v) => onChange({ ...d, label: v })} />
         <TextField label="Dokąd prowadzi" value={d.href} onChange={(v) => onChange({ ...d, href: v })} placeholder="/kontakt lub #kontakt" />
+        <IconPicker label="IKONA PRZYCISKU" value={d.icon} onChange={(icon) => onChange({ ...d, icon })} />
+        <SelectField label="Pozycja ikony" value={d.iconPosition ?? "left"} onChange={(iconPosition) => onChange({ ...d, iconPosition })} options={[{ value: "left", label: "Po lewej" }, { value: "right", label: "Po prawej" }]} />
         <SelectField label="Styl" value={d.style} onChange={(v) => onChange({ ...d, style: v })} options={[{ value: "primary", label: "Złote wypełnienie" }, { value: "outline", label: "Złoty obrys" }]} />
-        <SelectField label="Wyrównanie" value={d.alignment} onChange={(v) => onChange({ ...d, alignment: v })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Wyśrodkowane" }]} />
+        <SelectField label="Wyrównanie" value={d.alignment} onChange={(v) => onChange({ ...d, alignment: v })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Wyśrodkowane" }, { value: "right", label: "Do prawej" }]} />
+        <SelectField label="Szerokość" value={d.width ?? "auto"} onChange={(width) => onChange({ ...d, width })} options={[{ value: "auto", label: "Dopasowana" }, { value: "full", label: "Pełna szerokość" }]} />
       </>;
     }
     case "divider": {
@@ -275,12 +287,7 @@ function renderFields(
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);
-      return <>
-        <p className="text-[12px] leading-relaxed text-ink-grey">Wybierz do trzech zdjęć. Puste pola nie pojawią się na gotowej stronie.</p>
-        <ImageUploadField label="Zdjęcie 1" value={d.image1} onChange={(v) => onChange({ ...d, image1: v })} />
-        <ImageUploadField label="Zdjęcie 2" value={d.image2} onChange={(v) => onChange({ ...d, image2: v })} />
-        <ImageUploadField label="Zdjęcie 3" value={d.image3} onChange={(v) => onChange({ ...d, image3: v })} />
-      </>;
+      return <GalleryEditor value={d} onChange={onChange} />;
     }
     case "columns": {
       const d = withDefaults("columns", module.data);

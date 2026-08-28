@@ -248,6 +248,39 @@ model WorkingHours {
   updatedAt DateTime @updatedAt
 }
 
+/// Explicit availability created by the studio. Unlike WorkingHours this is a
+/// concrete, editable term and unlike AvailabilityBlock it never blocks time.
+model AvailableSlot {
+  id          String   @id @default(cuid())
+  startsAt    DateTime
+  endsAt      DateTime
+  title       String?
+  description String?
+  color       String   @default("#10B981")
+  icon        String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startsAt, endsAt])
+  @@index([isPublic, startsAt, endsAt])
+}
+
+/// A date-specific opening-hours exception. Weekly WorkingHours remains the
+/// source of truth; this model is only used when one date needs different
+/// hours or must be explicitly closed.
+model WorkingHoursOverride {
+  id         String   @id @default(cuid())
+  date       DateTime @unique
+  enabled    Boolean  @default(true)
+  startsAt   String   @default("10:00")
+  endsAt     String   @default("19:00")
+  breakStart String?
+  breakEnd   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 /// Promotions can cover a single day or a complete date range. They are
 /// deliberately independent from appointments so they can be safely shown
 /// to the client without exposing any appointment data.
@@ -258,9 +291,35 @@ model Promotion {
   startsAt    DateTime
   endsAt      DateTime
   badge       String?
+  color       String   @default("#C99A4A")
+  icon        String?
+  promoCode   String?
+  ctaLabel    String?
+  ctaUrl      String?
+  isPublic    Boolean  @default(true)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+/// Internal or public calendar items which are not client appointments.
+/// Labels stay on the event itself to avoid an extra lookup table until the
+/// studio actually needs reusable event taxonomies.
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  allDay      Boolean  @default(false)
+  color       String   @default("#6B7280")
+  icon        String?
+  label       String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startsAt, endsAt])
 }
 
 model ProjectImage {

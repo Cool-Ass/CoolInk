@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
+import { IconPreview } from "@/components/admin/builder/IconPicker";
 import { defaultModuleData, withDefaults, type ColumnWidget, type Module } from "@/lib/modules";
 
 export default function BuilderWidgets({ module, showEmpty = false }: { module: Module; showEmpty?: boolean }) {
@@ -9,7 +10,7 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     case "heading": {
       const d = withDefaults("heading", module.data);
       const Tag = d.level;
-      return <section className={`px-6 py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <img src={d.icon} alt="" className={`mb-4 h-10 w-10 object-contain ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
+      return <section className={`px-6 py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`mb-4 h-10 w-10 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
     }
     case "text": {
       const d = withDefaults("text", module.data);
@@ -22,7 +23,7 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     }
     case "button": {
       const d = withDefaults("button", module.data);
-      return <div className={`px-6 py-8 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}><a href={d.href} className={`inline-flex border px-5 py-3 text-sm tracking-[0.08em] ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.label}</a></div>;
+      return <div className={`px-6 py-8 md:px-12 ${d.alignment === "center" ? "text-center" : d.alignment === "right" ? "text-right" : "text-left"}`}><a href={d.href} className={`inline-flex items-center justify-center gap-2 border px-5 py-3 text-sm tracking-[0.08em] transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold ${d.width === "full" ? "w-full" : ""} ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.icon && d.iconPosition !== "right" && <IconPreview name={d.icon} />}{d.label}{d.icon && d.iconPosition === "right" && <IconPreview name={d.icon} />}</a></div>;
     }
     case "divider": {
       const d = withDefaults("divider", module.data);
@@ -30,10 +31,18 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);
-      const images = [d.image1, d.image2, d.image3];
+      const images = d.images?.length ? d.images : [d.image1, d.image2, d.image3];
       const renderImages = showEmpty ? images : images.filter(Boolean);
       if (renderImages.length === 0 && !showEmpty) return null;
-      return <div className="grid grid-cols-1 gap-3 px-6 py-8 sm:grid-cols-3 md:px-12">{renderImages.map((image, index) => image ? <div key={index} className="relative aspect-square overflow-hidden bg-ink-charcoal"><Image src={image} alt={`Zdjęcie galerii ${index + 1}`} fill className="object-cover" sizes="33vw" /></div> : <div key={index} className="flex aspect-square items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-center text-xs text-ink-grey">Zdjęcie {index + 1}</div>)}</div>;
+      const gap = d.gap === "lg" ? "gap-6" : d.gap === "sm" ? "gap-2" : "gap-3";
+      const radius = d.radius === "lg" ? "rounded-2xl" : d.radius === "md" ? "rounded-xl" : d.radius === "sm" ? "rounded-md" : "";
+      const galleryColumns = d.columns ?? { desktop: 3, tablet: 2, mobile: 1 };
+      const layoutStyle = {
+        "--builder-gallery-columns-mobile": String(galleryColumns.mobile),
+        "--builder-gallery-columns-tablet": String(galleryColumns.tablet),
+        "--builder-gallery-columns-desktop": String(galleryColumns.desktop),
+      } as CSSProperties & Record<"--builder-gallery-columns-mobile" | "--builder-gallery-columns-tablet" | "--builder-gallery-columns-desktop", string>;
+      return <div style={layoutStyle} className={`px-6 py-8 md:px-12 ${d.layout === "masonry" ? "builder-gallery-masonry" : "builder-gallery-grid grid"} ${gap}`}>{renderImages.map((image, index) => image ? <div key={index} className={`relative mb-3 aspect-square overflow-hidden bg-ink-charcoal ${radius}`}><Image src={image} alt={`Zdjęcie galerii ${index + 1}`} fill className="object-cover" sizes="33vw" /></div> : <div key={index} className="flex aspect-square items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-center text-xs text-ink-grey">Zdjęcie {index + 1}</div>)}</div>;
     }
     case "columns": {
       const d = withDefaults("columns", module.data);

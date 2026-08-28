@@ -7,9 +7,10 @@ const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.c
 
 const tables = [
   "AdminUser", "Appointment", "AvailabilityBlock", "Client", "ClientNotification",
+  "AvailableSlot", "CalendarEvent",
   "ContactMessage", "DocumentAcceptance", "Media", "NavItem", "Page", "PortfolioItem",
   "ProjectActivity", "ProjectImage", "Promotion", "SiteSetting", "StudioDocument",
-  "TattooProject", "WorkingHours",
+  "TattooProject", "WorkingHours", "WorkingHoursOverride",
 ];
 
 function headers(key, token) {

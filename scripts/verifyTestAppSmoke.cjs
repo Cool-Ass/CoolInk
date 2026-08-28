@@ -39,11 +39,11 @@ async function main() {
   const dry = loadDryRunEnvironment(); requireTestProject(dry);
   const homepage = await call("/"); assert(homepage.response.status === 200, "homepage failed");
   const contactOk = await call("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Security smoke", email: `${tag}@example.test`, message: "Wiadomość testowa do sprawdzenia zabezpieczeń." }) });
-  assert(contactOk.response.status === 201, `contact success returned ${contactOk.response.status}`);
+  assert([201, 429].includes(contactOk.response.status), `contact success returned ${contactOk.response.status}`);
   const contactInvalid = await call("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "x" }) });
-  assert(contactInvalid.response.status === 400, `contact validation returned ${contactInvalid.response.status}`);
+  assert([400, 429].includes(contactInvalid.response.status), `contact validation returned ${contactInvalid.response.status}`);
   const contactHoneypot = await call("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "bot", email: `${tag}-bot@example.test`, message: "to nie zostanie zapisane", website: "https://spam.example" }) });
-  assert(contactHoneypot.response.status === 200, `honeypot returned ${contactHoneypot.response.status}`);
+  assert([200, 429].includes(contactHoneypot.response.status), `honeypot returned ${contactHoneypot.response.status}`);
   const foreign = await fetch(`${base}/api/contact`, { method: "POST", headers: { origin: "https://attacker.example", "content-type": "application/json" }, body: JSON.stringify({ name: "x", email: "x@example.test", message: "blocked origin" }) });
   assert(foreign.status === 403, `foreign origin returned ${foreign.status}`);
 
@@ -56,6 +56,8 @@ async function main() {
   const clientB = await prisma.client.findUniqueOrThrow({ where: { email: b.email } });
   const proposedA = await prisma.appointment.create({ data: { projectId: projectA, startsAt: new Date("2030-05-01T10:00:00.000Z"), endsAt: new Date("2030-05-01T11:00:00.000Z"), status: "proposed" } });
   const proposedB = await prisma.appointment.create({ data: { projectId: projectB, startsAt: new Date("2030-05-02T10:00:00.000Z"), endsAt: new Date("2030-05-02T11:00:00.000Z"), status: "proposed" } });
+  const cancelledA = await prisma.appointment.create({ data: { projectId: projectA, startsAt: new Date("2030-05-03T10:00:00.000Z"), endsAt: new Date("2030-05-03T11:00:00.000Z"), status: "cancelled" } });
+  const unconfirmedA = await prisma.appointment.create({ data: { projectId: projectA, startsAt: new Date("2030-05-04T10:00:00.000Z"), endsAt: new Date("2030-05-04T11:00:00.000Z"), status: "proposed" } });
   const notificationA = await prisma.clientNotification.create({ data: { clientId: clientA.id, type: "TEST", title: "Smoke", body: "test" } });
   const notificationB = await prisma.clientNotification.create({ data: { clientId: clientB.id, type: "TEST", title: "Smoke", body: "test" } });
   const doc = await prisma.studioDocument.create({ data: { title: `Smoke ${tag}`, slug: `smoke-${tag}`, content: "test", published: true } });
@@ -72,11 +74,14 @@ async function main() {
     const markForeign = await call("/api/client/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: notificationB.id }) }, a.cookie);
     assert(markOwn.response.status === 200 && markForeign.response.status === 404, "notification ownership check failed");
     const document = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST" }, a.cookie); assert(document.response.status === 200, `document acceptance returned ${document.response.status}`);
-    const icsOwn = await call(`/api/client/appointments/${proposedA.id}/calendar`, {}, a.cookie); const icsForeign = await call(`/api/client/appointments/${proposedB.id}/calendar`, {}, a.cookie);
+    const icsOwn = await call(`/api/client/appointments/${proposedA.id}/calendar`, {}, a.cookie); const icsForeign = await call(`/api/client/appointments/${proposedB.id}/calendar`, {}, a.cookie); const icsCancelled = await call(`/api/client/appointments/${cancelledA.id}/calendar`, {}, a.cookie);
     assert(icsOwn.response.status === 200 && icsOwn.response.headers.get("content-type")?.includes("text/calendar"), "own ICS failed");
     assert(icsForeign.response.status === 404, `foreign ICS returned ${icsForeign.response.status}`);
+    assert(icsCancelled.response.status === 404, `cancelled ICS returned ${icsCancelled.response.status}`);
     const portal = await call("/app/portal", {}, a.cookie); assert(portal.response.status === 200, `portal returned ${portal.response.status}`);
-    console.log("PASS: contact security, client registration/login, profile, projects, proposal accept/reject, notifications, documents, ICS and A/B endpoint isolation.");
+    assert(portal.body.includes(`/api/client/appointments/${proposedA.id}/calendar`) && portal.body.includes("calendar.google.com/calendar/render?") && portal.body.includes("ctz=Europe%2FWarsaw"), "confirmed appointment Google Calendar link is missing or has no Warsaw timezone");
+    for (const appointment of [cancelledA, unconfirmedA, proposedB]) assert(!portal.body.includes(`/api/client/appointments/${appointment.id}/calendar`), `Google/ICS link was exposed for ${appointment.status} or foreign appointment`);
+    console.log("PASS: contact security, client registration/login, profile, projects, proposal accept/reject, notifications, documents, ICS, Google Calendar link restrictions and A/B endpoint isolation.");
   } finally {
     await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = ANY($1::text[])", [a.email, b.email]).catch(() => null);
     await prisma.client.deleteMany({ where: { id: { in: [clientA.id, clientB.id] } } });

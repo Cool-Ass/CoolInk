@@ -12,14 +12,19 @@ interface MediaItem {
 
 export default function MediaPickerModal({
   onSelect,
+  onSelectMany,
   onClose,
+  multiple = false,
 }: {
   onSelect: (url: string) => void;
+  onSelectMany?: (urls: string[]) => void;
   onClose: () => void;
+  multiple?: boolean;
 }) {
   const [media, setMedia] = useState<MediaItem[] | null>(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/media")
@@ -46,7 +51,7 @@ export default function MediaPickerModal({
         <div className="flex items-center justify-between gap-4 border-b border-ink-white/10 px-6 py-4">
           <div>
             <p className="text-[14px] tracking-[0.05em] text-ink-white">Wybierz zdjęcie</p>
-            <p className="mt-1 text-[11px] text-ink-grey">Kliknij obraz, aby od razu użyć go w tej sekcji.</p>
+            <p className="mt-1 text-[11px] text-ink-grey">{multiple ? "Zaznacz zdjęcia i dodaj je jednym kliknięciem." : "Kliknij obraz, aby od razu użyć go w tej sekcji."}</p>
           </div>
           <button
             onClick={onClose}
@@ -80,8 +85,8 @@ export default function MediaPickerModal({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => onSelect(item.url)}
-                  className="group relative aspect-square overflow-hidden border border-ink-white/10 transition-colors hover:border-ink-gold"
+                  onClick={() => multiple ? setSelected((prev) => prev.includes(item.url) ? prev.filter((url) => url !== item.url) : [...prev, item.url]) : onSelect(item.url)}
+                  className={`group relative aspect-square overflow-hidden border transition-all hover:-translate-y-0.5 hover:border-ink-gold ${selected.includes(item.url) ? "border-ink-gold ring-1 ring-ink-gold" : "border-ink-white/10"}`}
                   title={`Wybierz: ${item.filename}`}
                 >
                   <Image
@@ -99,6 +104,7 @@ export default function MediaPickerModal({
             </div>
           )}
         </div>
+        {multiple && <div className="flex items-center justify-between border-t border-ink-white/10 px-6 py-4"><p className="text-[12px] text-ink-grey">Wybrano: {selected.length}</p><button type="button" disabled={selected.length === 0} onClick={() => onSelectMany?.(selected)} className="border border-ink-gold px-4 py-2 text-[11px] tracking-[0.08em] text-ink-gold disabled:opacity-40">DODAJ WYBRANE</button></div>}
       </div>
     </div>
   );

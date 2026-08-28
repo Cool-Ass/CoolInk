@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
 import StatsBar from "@/components/StatsBar";
@@ -16,9 +17,20 @@ import {
   MODULE_LABELS,
   withDefaults,
   type Module,
+  type ModuleStyle,
   type CtaBarModuleData,
   type PortfolioModuleData,
 } from "@/lib/modules";
+
+function moduleVisualStyle(mod: Module): CSSProperties | undefined {
+  const style = mod.style;
+  if (!style || (!style.backgroundColor && !style.backgroundImage)) return undefined;
+  return { backgroundColor: style.backgroundColor || undefined, backgroundImage: style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : undefined, backgroundSize: style.backgroundSize || "cover", backgroundPosition: "center" };
+}
+
+function radiusClass(radius?: ModuleStyle["radius"]) {
+  return radius === "lg" ? "rounded-2xl" : radius === "md" ? "rounded-xl" : radius === "sm" ? "rounded-md" : "";
+}
 
 export interface ModuleRendererGlobals {
   instagramUrl?: string;
@@ -106,8 +118,12 @@ export default function ModuleRenderer({
       {visible.map((mod, i) => {
         const content = renderModule(mod, portfolioWorks, globals, editable);
 
+        const visualStyle = moduleVisualStyle(mod);
+        const styleClass = `${radiusClass(mod.style?.radius)} ${mod.style?.cssClass ?? ""}`;
+        const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
+
         if (!editable) {
-          return <div key={mod.id}>{content}</div>;
+          return <div key={mod.id} id={mod.style?.anchorId} className={`relative overflow-hidden ${styleClass}`} style={visualStyle}>{overlay}<div className="relative">{content}</div></div>;
         }
 
         const isSelected = selectedId === mod.id;
@@ -132,7 +148,9 @@ export default function ModuleRenderer({
               e.stopPropagation();
               onSelect?.(mod.id);
             }}
-            className={`group/mod relative cursor-pointer outline outline-2 outline-offset-[-2px] transition-all ${
+            id={mod.style?.anchorId}
+            style={visualStyle}
+            className={`group/mod relative cursor-pointer overflow-hidden outline outline-2 outline-offset-[-2px] transition-all ${styleClass} ${
               isSelected
                 ? "outline-ink-gold"
                 : "outline-transparent hover:outline-ink-gold/40"
@@ -200,7 +218,7 @@ export default function ModuleRenderer({
 
             {/* FAQ is deliberately interactive in the builder preview, so its
                 accessibility buttons remain usable while the whole module is selected. */}
-            <div className={editable && mod.type !== "faq" ? "pointer-events-none" : ""}>{content}</div>
+            {overlay}<div className={`relative ${editable && mod.type !== "faq" ? "pointer-events-none" : ""}`}>{content}</div>
           </div>
         );
       })}

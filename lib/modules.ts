@@ -32,6 +32,20 @@ export interface ModuleBase {
   hidden?: boolean;
 }
 
+/** Optional visual layer shared by every module. Older Page.modules simply omit it. */
+export interface ModuleStyle {
+  backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundSize?: "cover" | "contain" | "auto";
+  overlayColor?: string;
+  overlayOpacity?: number;
+  radius?: "none" | "sm" | "md" | "lg";
+  padding?: "sm" | "md" | "lg";
+  cssClass?: string;
+  anchorId?: string;
+  hiddenOn?: { desktop?: boolean; tablet?: boolean; mobile?: boolean };
+}
+
 export interface ModuleOf<T> extends ModuleBase {
   data: T;
 }
@@ -133,9 +147,9 @@ export interface SpacerModuleData {
 export interface HeadingModuleData { text: string; level: "h1" | "h2" | "h3"; alignment: "left" | "center"; icon?: string; }
 export interface TextModuleData { text: string; alignment: "left" | "center"; }
 export interface ImageModuleData { image: string; alt: string; caption: string; }
-export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center"; style: "primary" | "outline"; }
+export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center" | "right"; style: "primary" | "outline"; icon?: string; iconPosition?: "left" | "right"; width?: "auto" | "full"; }
 export interface DividerModuleData { style: "line" | "gold" | "space"; icon?: string; }
-export interface GalleryModuleData { image1: string; image2: string; image3: string; }
+export interface GalleryModuleData { image1: string; image2: string; image3: string; images?: string[]; layout?: "grid" | "masonry"; columns?: { desktop: number; tablet: number; mobile: number }; gap?: "sm" | "md" | "lg"; radius?: "none" | "sm" | "md" | "lg"; lightbox?: boolean; }
 export type ColumnWidgetType = "heading" | "text" | "image" | "button" | "divider" | "spacer";
 export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; }
 export interface ColumnsModuleData { layout: "two" | "three"; columns: ColumnWidget[][]; background: "transparent" | "charcoal" | "gold"; padding: "sm" | "md" | "lg"; }
@@ -200,6 +214,7 @@ export interface Module {
   type: ModuleType;
   hidden?: boolean;
   data: Record<string, unknown>;
+  style?: ModuleStyle;
 }
 
 /** Polish display labels for every module type, used throughout the builder UI. */
@@ -390,11 +405,11 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "image":
       return { image: "", alt: "", caption: "" } satisfies ImageModuleData;
     case "button":
-      return { label: "Dowiedz się więcej", href: "#", alignment: "left", style: "primary" } satisfies ButtonModuleData;
+      return { label: "Dowiedz się więcej", href: "#", alignment: "left", style: "primary", icon: "", iconPosition: "left", width: "auto" } satisfies ButtonModuleData;
     case "divider":
       return { style: "line", icon: "" } satisfies DividerModuleData;
     case "gallery":
-      return { image1: "", image2: "", image3: "" } satisfies GalleryModuleData;
+      return { image1: "", image2: "", image3: "", images: [], layout: "grid", columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: "md", radius: "none", lightbox: true } satisfies GalleryModuleData;
     case "columns":
       return {
         layout: "two",

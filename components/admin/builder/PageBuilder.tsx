@@ -10,7 +10,7 @@ import PageSettingsModal, {
   type PageSettingsValues,
 } from "@/components/admin/builder/PageSettingsModal";
 import { useToast } from "@/components/admin/ToastProvider";
-import { createModule, type Module, type ModuleType } from "@/lib/modules";
+import { createModule, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
 
 export interface BuilderPage {
@@ -74,6 +74,10 @@ export default function PageBuilder({
 
   function updateModule(id: string, data: Record<string, unknown>) {
     setModules((prev) => prev.map((m) => (m.id === id ? { ...m, data } : m)));
+  }
+
+  function updateModuleStyle(id: string, style: ModuleStyle) {
+    setModules((prev) => prev.map((m) => (m.id === id ? { ...m, style } : m)));
   }
 
   function moveModule(id: string, direction: "up" | "down") {
@@ -260,6 +264,7 @@ export default function PageBuilder({
               <ModuleSettingsSidebar
                 module={selectedModule}
                 onChange={(data) => updateModule(selectedModule.id, data)}
+                onStyleChange={(style) => updateModuleStyle(selectedModule.id, style)}
                 onClose={() => setSelectedId(null)}
                 portfolioItems={portfolioItems}
               />

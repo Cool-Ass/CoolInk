@@ -17,14 +17,17 @@ export default async function ClientPortalPage() {
   const current = await getCurrentClient();
   if (!current) redirect("/app");
 
-  const [client, documents, appointments, blocks, hours, promotions, notifications] = await Promise.all([
+  const [client, documents, appointments, blocks, hours, overrides, availableSlots, promotions, notifications, buffer] = await Promise.all([
     prisma.client.findUniqueOrThrow({ where: { id: current.id }, include: { projects: { include: { appointments: { orderBy: { startsAt: "asc" } }, images: true }, orderBy: { updatedAt: "desc" } } } }),
     prisma.studioDocument.findMany({ where: { published: true }, orderBy: { updatedAt: "desc" }, include: { acceptances: { where: { clientId: current.id }, select: { id: true, version: true } } } }),
     prisma.appointment.findMany({ where: { status: { notIn: ["cancelled", "no_show"] }, endsAt: { gte: new Date() } }, select: { startsAt: true, endsAt: true } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: new Date() } }, select: { startsAt: true, endsAt: true } }),
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" }, select: { weekday: true, enabled: true, startsAt: true, endsAt: true } }),
-    prisma.promotion.findMany({ where: { active: true, endsAt: { gte: new Date() } }, select: { id: true, title: true, description: true, badge: true, startsAt: true, endsAt: true } }),
+    prisma.workingHoursOverride.findMany({ where: { date: { gte: new Date() } }, select: { date: true, enabled: true, startsAt: true, endsAt: true } }),
+    prisma.availableSlot.findMany({ where: { isPublic: true, endsAt: { gte: new Date() } }, select: { startsAt: true, endsAt: true, isPublic: true } }),
+    prisma.promotion.findMany({ where: { active: true, isPublic: true, endsAt: { gte: new Date() } }, select: { id: true, title: true, description: true, badge: true, startsAt: true, endsAt: true } }),
     prisma.clientNotification.findMany({ where: { clientId: current.id }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } }),
   ]);
 
   const clientDocuments = documents.map((document) => ({ ...document, accepted: document.acceptances.some((acceptance) => acceptance.version === document.version) }));
@@ -58,7 +61,7 @@ export default async function ClientPortalPage() {
 
         <section id="terminy" className="scroll-mt-6 mt-10">
           <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] tracking-[0.18em] text-ink-gold">KROK 1</p><h2 className="mt-2 font-display text-3xl">Wybierz termin.</h2></div><span className="border border-emerald-500/30 px-3 py-2 text-[10px] tracking-[0.08em] text-emerald-300">WOLNE GODZINY CO 30 MIN</span></div>
-          <ClientBookingCalendar projects={client.projects.map((project) => ({ id: project.id, title: project.title }))} busy={appointments.map((item) => ({ startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} blocks={blocks.map((item) => ({ startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} hours={hours} promotions={promotions.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} />
+          <ClientBookingCalendar projects={client.projects.map((project) => ({ id: project.id, title: project.title }))} busy={appointments.map((item) => ({ startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} blocks={blocks.map((item) => ({ startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} hours={hours} overrides={overrides.map((item) => ({ ...item, date: item.date.toISOString() }))} availableSlots={availableSlots.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} bufferMinutes={Number(buffer?.value) || 30} promotions={promotions.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() }))} />
         </section>
         <div id="powiadomienia" className="scroll-mt-6"><ClientNotifications initial={notifications.map((notification) => ({ ...notification, createdAt: notification.createdAt.toISOString(), readAt: notification.readAt?.toISOString() ?? null }))} /></div>
 
