@@ -1,5 +1,10 @@
 export type CalendarItemKind = "appointment" | "freeTerm" | "workingHours" | "dayOff" | "promotion" | "event";
 
+/** Cancelled records are audit history, not operational calendar entries. */
+export function isOperationalCalendarAppointment(status: string) {
+  return status !== "cancelled";
+}
+
 export function startOfLocalDay(value: Date) {
   const date = new Date(value);
   date.setHours(0, 0, 0, 0);
@@ -118,7 +123,7 @@ export function resolveAvailableRanges({
     .map((slot) => ({ startsAt: new Date(Math.max(slot.startsAt.getTime(), dayStart.getTime())), endsAt: new Date(Math.min(slot.endsAt.getTime(), dayEnd.getTime())) }));
   const candidates = [...base, ...explicit];
   const occupied = appointments
-    .filter((appointment) => appointment.status !== "cancelled")
+    .filter((appointment) => isOperationalCalendarAppointment(appointment.status ?? "confirmed"))
     .map((appointment) => ({
       startsAt: new Date(appointment.startsAt.getTime() - bufferMinutes * 60_000),
       endsAt: new Date(appointment.endsAt.getTime() + bufferMinutes * 60_000),

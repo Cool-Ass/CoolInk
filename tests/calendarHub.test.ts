@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { effectiveWorkingHours, isHexColor, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
+import { effectiveWorkingHours, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
 import { isValidIconName } from "../lib/icons";
 
 describe("Calendar Hub selection", () => {
+  it("keeps cancelled appointments in history but excludes them from the operational calendar", () => {
+    expect(isOperationalCalendarAppointment("confirmed")).toBe(true);
+    expect(isOperationalCalendarAppointment("proposed")).toBe(true);
+    expect(isOperationalCalendarAppointment("completed")).toBe(true);
+    expect(isOperationalCalendarAppointment("no_show")).toBe(true);
+    expect(isOperationalCalendarAppointment("cancelled")).toBe(false);
+  });
   it("creates an inclusive multi-day range", () => {
     expect(selectedDateRange(new Date(2026, 7, 10), new Date(2026, 7, 12)).map(localDateKey)).toEqual(["2026-08-10", "2026-08-11", "2026-08-12"]);
   });

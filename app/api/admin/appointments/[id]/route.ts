@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
 
 interface Params { params: Promise<{ id: string }>; }
 
 export async function PATCH(request: Request, { params }: Params) {
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params; const body = await request.json().catch(() => null);
   const appointment = await prisma.appointment.findUnique({ where: { id }, include: { project: { select: { clientId: true } } } });
   if (!appointment) return NextResponse.json({ error: "Wizyta nie istnieje." }, { status: 404 });
@@ -18,11 +20,12 @@ export async function PATCH(request: Request, { params }: Params) {
   const rawPrice = body?.price; const price = rawPrice === undefined || rawPrice === "" ? appointment.price : Number(rawPrice);
   if (price !== null && (!Number.isInteger(price) || price < 0)) return NextResponse.json({ error: "Cena musi być liczbą całkowitą większą lub równą zero." }, { status: 400 });
   const changed = startsAt.getTime() !== appointment.startsAt.getTime() || endsAt.getTime() !== appointment.endsAt.getTime() || status !== appointment.status;
-  const updated = await prisma.$transaction(async (tx) => { const item = await tx.appointment.update({ where: { id }, data: { startsAt, endsAt, status, price, notes: typeof body?.notes === "string" ? body.notes.trim() || null : appointment.notes } }); if (changed) { const message = status !== appointment.status ? `Zmieniono status wizyty na: ${status}.` : `Zmieniono termin wizyty na ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`; await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: "appointment_updated", message, visibility: "admin" } }); if (["confirmed", "cancelled", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: "Aktualizacja wizyty", body: message, href: "/app/portal" } }); } return item; });
+  const updated = await prisma.$transaction(async (tx) => { const item = await tx.appointment.update({ where: { id }, data: { startsAt, endsAt, status, price, notes: typeof body?.notes === "string" ? body.notes.trim() || null : appointment.notes } }); if (changed) { const cancelled = status === "cancelled" && appointment.status !== "cancelled"; const message = cancelled ? "Wizyta została anulowana przez studio." : status !== appointment.status ? `Zmieniono status wizyty na: ${status}.` : `Zmieniono termin wizyty na ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`; await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: cancelled ? "appointment_cancelled" : "appointment_updated", message, visibility: "admin" } }); if (cancelled) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal" } }); else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: "Aktualizacja wizyty", body: message, href: "/app/portal" } }); } return item; });
   return NextResponse.json({ appointment: updated });
 }
 
 export async function DELETE(_: Request, { params }: Params) {
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params; const appointment = await prisma.appointment.findUnique({ where: { id }, include: { project: { select: { clientId: true } } } });
   if (!appointment) return NextResponse.json({ error: "Wizyta nie istnieje." }, { status: 404 });
   await prisma.$transaction([prisma.appointment.update({ where: { id }, data: { status: "cancelled" } }), prisma.projectActivity.create({ data: { projectId: appointment.projectId, type: "appointment_cancelled", message: "Wizyta została anulowana przez studio.", visibility: "admin" } }), prisma.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal" } })]);

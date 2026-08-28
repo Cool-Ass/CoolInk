@@ -58,8 +58,14 @@ async function main() {
     assert(noShowResult.response.status === 200, `no-show returned ${noShowResult.response.status}`);
 
     const cancelled = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date("2034-01-16T10:00:00.000Z"), endsAt: new Date("2034-01-16T11:00:00.000Z"), status: "confirmed" } });
-    const cancelResult = await call(`/api/admin/appointments/${cancelled.id}`, { method: "DELETE" }, cookie);
+    // Calendar Hub cancels through the normal status workflow — it must not
+    // delete the appointment record used by client/project history.
+    const cancelResult = await call(`/api/admin/appointments/${cancelled.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "cancelled" }) }, cookie);
     assert(cancelResult.response.status === 200, `cancel returned ${cancelResult.response.status}`);
+    const cancelledHistory = await prisma.appointment.findUnique({ where: { id: cancelled.id } });
+    assert(cancelledHistory?.status === "cancelled", "cancelled appointment was not preserved in history");
+    const cancellationNotification = await prisma.clientNotification.count({ where: { appointmentId: cancelled.id, type: "APPOINTMENT_CANCELLED" } });
+    assert(cancellationNotification === 1, `cancellation notification duplicated or missing (${cancellationNotification})`);
 
     const activities = await prisma.projectActivity.groupBy({ by: ["type"], where: { projectId: project.id }, _count: { _all: true } });
     const count = (type) => activities.find((item) => item.type === type)?._count._all || 0;

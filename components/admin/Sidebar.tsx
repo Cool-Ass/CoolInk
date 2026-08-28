@@ -23,7 +23,6 @@ const SECTIONS = [
     label: "WIZYTY I KLIENCI",
     links: [
       { href: "/admin/calendar", label: "Kalendarz i dostępność" },
-      { href: "/admin/availability", label: "Godziny, dni wolne i promocje" },
       { href: "/admin/clients", label: "Klienci / CRM" },
       { href: "/admin/messages", label: "Zgłoszenia i wiadomości" },
       { href: "/admin/documents", label: "Dokumenty i zgody" },
