@@ -6,6 +6,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import StatusBadge from "@/components/ui/StatusBadge";
 import InspirationPreview from "@/components/client/InspirationPreview";
 import ClientAppointmentModal from "@/components/client/ClientAppointmentModal";
+import ProjectChat from "@/components/projects/ProjectChat";
 
 type Appointment = {
   id: string;
@@ -22,6 +23,14 @@ type Project = {
   next: string;
   appointments: Appointment[];
   images: { id: string; url: string; caption: string | null }[];
+  messages: {
+    id: string;
+    author: string;
+    body: string;
+    createdAt: string;
+    readAt: string | null;
+    attachment: { id: string; caption: string | null; url: string } | null;
+  }[];
 };
 
 export default function ClientProjectCards({
@@ -131,6 +140,11 @@ export default function ClientProjectCards({
                 <InspirationPreview images={selected.images} />
               </div>
             </section>
+            <ProjectChat
+              projectId={selected.id}
+              initial={selected.messages}
+              role="client"
+            />
           </div>
         </AppModal>
       )}

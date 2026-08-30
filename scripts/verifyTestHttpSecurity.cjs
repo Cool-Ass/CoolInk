@@ -9,7 +9,7 @@ const tables = [
   "AdminUser", "Appointment", "AvailabilityBlock", "Client", "ClientNotification",
   "AvailableSlot", "CalendarEvent",
   "ContactMessage", "DocumentAcceptance", "Media", "NavItem", "Page", "PortfolioItem",
-  "ProjectActivity", "ProjectImage", "Promotion", "SiteSetting", "StudioDocument",
+  "ProjectActivity", "ProjectImage", "ProjectMessage", "Promotion", "SiteSetting", "StudioDocument",
   "TattooProject", "WorkingHours", "WorkingHoursOverride",
 ];
 

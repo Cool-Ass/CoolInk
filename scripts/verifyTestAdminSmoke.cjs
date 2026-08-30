@@ -38,6 +38,13 @@ async function main() {
     const settings = await call(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "scheduled", internalNotes: "Prywatna notatka testowa", estimatedPrice: 600, finalPrice: 750, depositStatus: "paid", depositAmount: 150, depositPaymentMethod: "BLIK" }) }, cookie);
     assert(settings.response.status === 200, `project edit returned ${settings.response.status}`);
 
+    const message = await call(`/api/admin/projects/${project.id}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: "Prywatna wiadomość testowa 🙂" }) }, cookie);
+    assert(message.response.status === 201, `admin message returned ${message.response.status}`);
+    const history = await call(`/api/admin/projects/${project.id}/messages`, {}, cookie);
+    assert(history.response.status === 200 && JSON.parse(history.body).messages.some((item) => item.body === "Prywatna wiadomość testowa 🙂"), "admin message history is unavailable");
+    const messageNotification = await prisma.clientNotification.count({ where: { clientId: client.id, projectId: project.id, type: "PROJECT_MESSAGE" } });
+    assert(messageNotification === 1, `message notification duplicated or missing (${messageNotification})`);
+
     const proposal = await call(`/api/admin/projects/${project.id}/proposed-appointment`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: "2034-01-10T10:00:00.000Z", endsAt: "2034-01-10T11:00:00.000Z", note: "Propozycja testowa" }) }, cookie);
     assert(proposal.response.status === 201, `proposal returned ${proposal.response.status}`);
     const proposed = JSON.parse(proposal.body).appointment;
@@ -72,7 +79,11 @@ async function main() {
     assert(count("appointment_proposed") === 1, "proposal activity is not exactly one");
     assert(count("appointment_cancelled") === 1, "cancellation activity is not exactly one");
     assert(count("appointment_updated") >= 3, "expected appointment update activities were not recorded");
-    console.log("PASS: admin login, dashboard/pages, clients, project pricing/deposit/note, proposal, multi-session, edit, completed, no-show, cancel, and activity-log cardinality.");
+    const deleted = await call(`/api/admin/projects/${project.id}`, { method: "DELETE" }, cookie);
+    assert(deleted.response.status === 200, `project deletion returned ${deleted.response.status}`);
+    assert(!await prisma.tattooProject.findUnique({ where: { id: project.id } }), "project was not fully deleted");
+    assert(await prisma.projectMessage.count({ where: { projectId: project.id } }) === 0, "project messages survived deletion");
+    console.log("PASS: admin login, dashboard/pages, private project messages, project deletion cascade, pricing/deposit/note, proposal, multi-session, edit, completed, no-show, cancel, and activity-log cardinality.");
   } finally {
     await prisma.adminUser.delete({ where: { id: admin.id } }).catch(() => null);
     await prisma.client.delete({ where: { id: client.id } }).catch(() => null);

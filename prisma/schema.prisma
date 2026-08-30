@@ -178,6 +178,7 @@ model TattooProject {
   images            ProjectImage[]
   appointments      Appointment[]
   activities        ProjectActivity[]
+  messages          ProjectMessage[]
 }
 
 /// Appointments are kept separately from a project because a larger tattoo
@@ -330,4 +331,22 @@ model ProjectImage {
   caption   String?
   order     Int           @default(0)
   createdAt DateTime      @default(now())
+  message   ProjectMessage? @relation("ProjectMessageAttachment")
+}
+
+/// Private conversation connected to one tattoo project. Messages are served
+/// only by authenticated Next.js endpoints, never through the public Data API.
+model ProjectMessage {
+  id           String         @id @default(cuid())
+  projectId    String
+  project      TattooProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author       String         // client | admin
+  body         String         @default("")
+  attachmentId String?        @unique
+  attachment   ProjectImage?  @relation("ProjectMessageAttachment", fields: [attachmentId], references: [id], onDelete: SetNull)
+  readAt       DateTime?
+  createdAt    DateTime       @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([projectId, author, readAt])
 }
