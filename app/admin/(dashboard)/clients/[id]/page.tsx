@@ -45,6 +45,7 @@ export default async function ClientProfile({
           {client.firstName} {client.lastName}
         </h1>
       </div>
+      <div className="flex flex-wrap items-center gap-2 border-y border-ink-white/10 py-3 text-xs"><a href="/admin/calendar" className="border border-ink-gold px-3 py-2 text-ink-gold">WIZYTA</a><a href="#projekty" className="border border-ink-white/15 px-3 py-2">PROJEKT</a><a href="#wiadomosci" className="border border-ink-white/15 px-3 py-2">NAPISZ WIADOMOŚĆ</a><div className="ml-auto flex gap-3 text-ink-grey"><a href="#podsumowanie">PODSUMOWANIE</a><a href="#projekty">PROJEKTY</a><a href="#wizyty">WIZYTY</a><a href="#wiadomosci">WIADOMOŚCI</a><a href="#historia">HISTORIA</a></div></div>
       <ClientManager
         client={{
           id: client.id,
@@ -55,7 +56,7 @@ export default async function ClientProfile({
           tags: client.tags,
         }}
       />
-      <section>
+      <section id="projekty">
         <h2 className="font-display text-2xl">Projekty i zgłoszenia</h2>
         <div className="mt-5 space-y-5">
           {client.projects.map((project) => (
@@ -80,9 +81,9 @@ export default async function ClientProfile({
                   depositPaymentMethod={project.depositPaymentMethod}
                 />
               </div>
-              <div className="mt-6 grid gap-5 xl:grid-cols-2">
+              <div id="wizyty" className="mt-6 grid gap-5 xl:grid-cols-2">
                 <ProjectSessionsManager sessions={project.appointments} />
-                <section className="border-t border-ink-white/10 pt-5">
+                <section id="historia" className="border-t border-ink-white/10 pt-5">
                   <p className="text-[11px] tracking-widest text-ink-gold">
                     HISTORIA AKTYWNOŚCI
                   </p>
@@ -110,7 +111,7 @@ export default async function ClientProfile({
                   </div>
                 </section>
               </div>
-              <div className="mt-6">
+              <div id="wiadomosci" className="mt-6">
                 <ProjectChat
                   projectId={project.id}
                   role="admin"

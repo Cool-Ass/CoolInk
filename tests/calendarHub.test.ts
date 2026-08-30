@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveWorkingHours, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
+import { calendarDayStatus, effectiveWorkingHours, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
 import { isValidIconName } from "../lib/icons";
 
 describe("Calendar Hub selection", () => {
@@ -62,10 +62,37 @@ describe("Calendar Hub selection", () => {
     expect(resolveAvailableRanges({ ...input, publicOnly: false })).toHaveLength(2);
   });
 
-  it("uses recurring working hours when no explicit slot or date override exists", () => {
+  it("keeps a default weekday gray and not bookable", () => {
+    const date = new Date(2026, 7, 26);
+    expect(calendarDayStatus(date, [], [])).toBe("default");
+    expect(resolveAvailableRanges({ date, recurring: [], overrides: [], slots: [], blocks: [], appointments: [], bufferMinutes: 0, publicOnly: true })).toEqual([]);
+  });
+
+  it("never turns working hours into public availability", () => {
     const date = new Date(2026, 7, 26); // Wednesday
     const ranges = resolveAvailableRanges({ date, recurring: [{ weekday: 3, enabled: true, startsAt: "10:00", endsAt: "18:00" }], overrides: [], slots: [], blocks: [], appointments: [], bufferMinutes: 0, publicOnly: true });
-    expect(ranges.map((range) => [range.startsAt.getHours(), range.endsAt.getHours()])).toEqual([[10, 18]]);
+    expect(calendarDayStatus(date, [], [])).toBe("default");
+    expect(ranges).toEqual([]);
+  });
+
+  it("uses explicit availability as a green, client-visible range", () => {
+    const date = new Date(2026, 7, 26);
+    const slots = [{ startsAt: new Date(2026, 7, 26, 10), endsAt: new Date(2026, 7, 26, 18), isPublic: true }];
+    expect(calendarDayStatus(date, slots, [])).toBe("available");
+    expect(resolveAvailableRanges({ date, recurring: [], overrides: [], slots, blocks: [], appointments: [], bufferMinutes: 0, publicOnly: true }).map((range) => [range.startsAt.getHours(), range.endsAt.getHours()])).toEqual([[10, 18]]);
+  });
+
+  it("keeps Sunday red by default, permits an explicit available override, and restores red after clear", () => {
+    const sunday = new Date(2026, 7, 30);
+    const slot = { startsAt: new Date(2026, 7, 30, 11), endsAt: new Date(2026, 7, 30, 18), isPublic: true };
+    expect(calendarDayStatus(sunday, [], [])).toBe("unavailable");
+    expect(calendarDayStatus(sunday, [slot], [])).toBe("available");
+    expect(calendarDayStatus(sunday, [], [])).toBe("unavailable");
+  });
+
+  it("lets an explicit unavailable state override a weekday", () => {
+    const date = new Date(2026, 7, 26);
+    expect(calendarDayStatus(date, [], [{ startsAt: new Date(2026, 7, 26), endsAt: new Date(2026, 7, 27) }])).toBe("unavailable");
   });
 
   it("keeps bulk operations atomic when a member fails", async () => {

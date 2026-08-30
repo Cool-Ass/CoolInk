@@ -60,16 +60,17 @@ export type AvailabilityBlock = { startsAt: Date; endsAt: Date };
 export type ExplicitAvailableSlot = { startsAt: Date; endsAt: Date; isPublic?: boolean };
 export type TimeRange = { startsAt: Date; endsAt: Date };
 
-const minutes = (value: string) => {
-  const [hours, minutesPart] = value.split(":").map(Number);
-  return hours * 60 + minutesPart;
-};
+export type CalendarDayStatus = "default" | "available" | "unavailable";
 
-function atTime(date: Date, value: string) {
-  const result = startOfLocalDay(date);
-  const total = minutes(value);
-  result.setMinutes(total, 0, 0);
-  return result;
+/**
+ * Visual day status used by both calendar surfaces. A Sunday is unavailable
+ * by default, but an explicit available slot is an intentional admin override.
+ */
+export function calendarDayStatus(date: Date, slots: ExplicitAvailableSlot[], blocks: AvailabilityBlock[]): CalendarDayStatus {
+  const day = { startsAt: startOfLocalDay(date), endsAt: new Date(startOfLocalDay(date).getTime() + 24 * 60 * 60 * 1000) };
+  if (blocks.some((block) => overlaps(day, block))) return "unavailable";
+  if (slots.some((slot) => overlaps(day, slot))) return "available";
+  return date.getDay() === 0 ? "unavailable" : "default";
 }
 
 function overlaps(a: TimeRange, b: TimeRange) {
@@ -87,7 +88,8 @@ function subtractRange(source: TimeRange, occupied: TimeRange) {
 /**
  * Single availability resolver shared by the calendar surfaces. The ordering
  * is deliberate: a hard day block wins, appointments consume their buffer,
- * explicit slots extend ordinary opening hours but never bypass a hard block.
+ * and only explicit slots are availability. Working hours are operational
+ * configuration only: they must never make a day bookable for a client.
  */
 export function resolveAvailableRanges({
   date,
@@ -113,15 +115,15 @@ export function resolveAvailableRanges({
   const day = { startsAt: dayStart, endsAt: dayEnd };
   if (blocks.some((block) => overlaps(day, block))) return [] as TimeRange[];
 
-  const hours = effectiveWorkingHours(date, recurring, overrides);
-  const base: TimeRange[] = hours.enabled && minutes(hours.startsAt) < minutes(hours.endsAt)
-    ? [{ startsAt: atTime(date, hours.startsAt), endsAt: atTime(date, hours.endsAt) }]
-    : [];
+  // Keep these inputs in the public resolver signature so older callers stay
+  // compatible, but deliberately do not turn them into availability.
+  void recurring;
+  void overrides;
   const explicit = slots
     .filter((slot) => !publicOnly || slot.isPublic !== false)
     .filter((slot) => overlaps(day, slot))
     .map((slot) => ({ startsAt: new Date(Math.max(slot.startsAt.getTime(), dayStart.getTime())), endsAt: new Date(Math.min(slot.endsAt.getTime(), dayEnd.getTime())) }));
-  const candidates = [...base, ...explicit];
+  const candidates = explicit;
   const occupied = appointments
     .filter((appointment) => isOperationalCalendarAppointment(appointment.status ?? "confirmed"))
     .map((appointment) => ({

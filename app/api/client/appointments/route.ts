@@ -18,8 +18,20 @@ export async function POST(request: Request) {
   if (!projectId || !validAppointmentRange(startsAt, endsAt)) return NextResponse.json({ error: "Wybierz termin rozpoczynający się o pełnej lub wpół do, o długości od 30 minut do 12 godzin." }, { status: 400 });
   const project = await prisma.tattooProject.findFirst({ where: { id: projectId, clientId: client.id } });
   if (!project) return NextResponse.json({ error: "Nie znaleziono Twojego projektu." }, { status: 404 });
-  const [conflict, workingHours] = await Promise.all([bookingConflict(startsAt, endsAt), prisma.workingHours.findUnique({ where: { weekday: startsAt.getDay() } })]);
-  if (workingHours && (!workingHours.enabled || startsAt.toTimeString().slice(0, 5) < workingHours.startsAt || endsAt.toTimeString().slice(0, 5) > workingHours.endsAt)) return NextResponse.json({ error: "Ten termin jest poza godzinami przyjęć." }, { status: 409 });
+  // Working hours are a studio-side planning aid, not public availability.
+  // A client may request only an exact range explicitly published as free.
+  const [conflict, publishedSlot] = await Promise.all([
+    bookingConflict(startsAt, endsAt),
+    prisma.availableSlot.findFirst({
+      where: {
+        isPublic: true,
+        startsAt: { lte: startsAt },
+        endsAt: { gte: endsAt },
+      },
+      select: { id: true },
+    }),
+  ]);
+  if (!publishedSlot) return NextResponse.json({ error: "Ten dzień nie został udostępniony jako wolny termin." }, { status: 409 });
   if (conflict.appointment || conflict.block) return NextResponse.json({ error: `Ten termin nie jest już dostępny. Uwzględniam też ${conflict.bufferMinutes}-minutowy bufor między wizytami.` }, { status: 409 });
   const appointment = await prisma.appointment.create({ data: { projectId, startsAt, endsAt, status: "requested" } });
   await prisma.$transaction([

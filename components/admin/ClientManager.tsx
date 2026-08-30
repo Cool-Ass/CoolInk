@@ -66,7 +66,7 @@ export default function ClientManager({ client }: { client: Client }) {
     }
   };
   return (
-    <section className="border border-ink-white/15 bg-ink-charcoal/20 p-5 sm:p-6">
+    <section id="podsumowanie" className="border border-ink-white/15 bg-ink-charcoal/20 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] tracking-widest text-ink-gold">

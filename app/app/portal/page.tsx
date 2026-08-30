@@ -15,6 +15,13 @@ export const dynamic = "force-dynamic";
 export default async function ClientPortalPage() {
   const current = await getCurrentClient();
   if (!current) redirect("/app");
+  const clientId = current.id;
+  const [startClient, nextAppointment, projectCount] = await Promise.all([
+    prisma.client.findUniqueOrThrow({ where: { id: clientId }, select: { firstName: true, projects: { where: { status: { not: "cancelled" } }, select: { id: true, title: true, status: true }, orderBy: { updatedAt: "desc" }, take: 3 } } }),
+    prisma.appointment.findFirst({ where: { project: { clientId }, status: { notIn: ["cancelled", "no_show"] }, startsAt: { gte: new Date() } }, include: { project: { select: { title: true } } }, orderBy: { startsAt: "asc" } }),
+    prisma.tattooProject.count({ where: { clientId } }),
+  ]);
+  return <div><p className="text-[11px] tracking-[.2em] text-ink-gold">STREFA KLIENTA</p><h1 className="mt-2 font-display text-4xl sm:text-6xl">Cześć, {startClient.firstName}.</h1><p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-grey">Twoje zgłoszenia i kalendarz w jednym miejscu.</p><section className="mt-8"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] tracking-[.18em] text-ink-gold">TWOJE ZGŁOSZENIA</p><h2 className="mt-2 font-display text-3xl">{projectCount ? "Co dzieje się z projektami" : "Zacznij od zgłoszenia"}</h2></div><Link href="/app/portal/projects" className="text-xs text-ink-gold">WSZYSTKIE →</Link></div><div className="mt-4 grid gap-3 md:grid-cols-3">{startClient.projects.length ? startClient.projects.map((project) => <Link key={project.id} href="/app/portal/projects" className="border border-ink-white/15 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><p className="text-sm">{project.title}</p><p className="mt-2 text-xs text-ink-grey">{CLIENT_STATUS[project.status as keyof typeof CLIENT_STATUS]?.next ?? "Sprawdź szczegóły projektu."}</p></Link>) : <Link href="/app/new-project" className="border border-dashed border-ink-gold/50 p-5 text-sm text-ink-gold">NOWE ZGŁOSZENIE →</Link>}</div></section><section className="mt-10 border border-ink-white/15 bg-ink-charcoal/30 p-5"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] tracking-[.18em] text-ink-gold">KALENDARZ</p><h2 className="mt-2 font-display text-3xl">{nextAppointment ? "Najbliższa wizyta" : "Sprawdź dostępność"}</h2>{nextAppointment ? <p className="mt-2 text-sm text-ink-grey">{nextAppointment.project.title} · {nextAppointment.startsAt.toLocaleString("pl-PL", { dateStyle: "long", timeStyle: "short" })}</p> : <p className="mt-2 text-sm text-ink-grey">Terminy oznaczone na zielono są dostępne.</p>}</div><Link href="/app/portal/calendar" className="border border-ink-gold px-4 py-2.5 text-xs text-ink-gold hover:bg-ink-gold hover:text-ink-black">OTWÓRZ KALENDARZ</Link></div></section></div>;
   const now = new Date();
   const [
     client,
@@ -25,11 +32,12 @@ export default async function ClientPortalPage() {
     overrides,
     slots,
     promotions,
+    events,
     notifications,
     buffer,
   ] = await Promise.all([
     prisma.client.findUniqueOrThrow({
-      where: { id: current.id },
+      where: { id: clientId },
       include: {
         projects: {
           include: {
@@ -50,7 +58,7 @@ export default async function ClientPortalPage() {
       orderBy: { updatedAt: "desc" },
       include: {
         acceptances: {
-          where: { clientId: current.id },
+          where: { clientId },
           select: { version: true },
         },
       },
@@ -85,12 +93,17 @@ export default async function ClientPortalPage() {
         title: true,
         description: true,
         badge: true,
+        color: true,
         startsAt: true,
         endsAt: true,
       },
     }),
+    prisma.calendarEvent.findMany({
+      where: { isPublic: true, endsAt: { gte: now } },
+      select: { id: true, title: true, label: true, description: true, startsAt: true, endsAt: true, color: true },
+    }),
     prisma.clientNotification.findMany({
-      where: { clientId: current.id },
+      where: { clientId },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
@@ -234,11 +247,11 @@ export default async function ClientPortalPage() {
               <p className="text-[10px] tracking-[.14em] text-amber-200">
                 WYMAGA TWOJEJ UWAGI
               </p>
-              <p className="mt-2 text-sm">{actionProject.title}</p>
+              <p className="mt-2 text-sm">{actionProject!.title}</p>
               <p className="mt-1 text-sm text-ink-grey">
                 {
                   CLIENT_STATUS[
-                    actionProject.status as keyof typeof CLIENT_STATUS
+                    actionProject!.status as keyof typeof CLIENT_STATUS
                   ]?.next
                 }
               </p>
@@ -273,6 +286,11 @@ export default async function ClientPortalPage() {
               }))}
               bufferMinutes={Number(buffer?.value) || 30}
               promotions={promotions.map((item) => ({
+                ...item,
+                startsAt: item.startsAt.toISOString(),
+                endsAt: item.endsAt.toISOString(),
+              }))}
+              events={events.map((item) => ({
                 ...item,
                 startsAt: item.startsAt.toISOString(),
                 endsAt: item.endsAt.toISOString(),

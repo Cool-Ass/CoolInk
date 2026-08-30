@@ -6,11 +6,16 @@ import { usePathname } from "next/navigation";
 
 export const ADMIN_SECTIONS = [
   {
-    label: "PANEL GŁÓWNY",
-    links: [{ href: "/admin", label: "Przegląd", exact: true }],
+    label: "STUDIO",
+    links: [
+      { href: "/admin", label: "Dziś", exact: true },
+      { href: "/admin/calendar", label: "Kalendarz" },
+      { href: "/admin/clients", label: "Klienci" },
+      { href: "/admin/messages", label: "Wiadomości" },
+    ],
   },
   {
-    label: "STRONA",
+    label: "STRONA / CMS",
     links: [
       { href: "/admin/pages", label: "Strony i builder" },
       { href: "/admin/portfolio", label: "Portfolio / Galeria" },
@@ -19,15 +24,7 @@ export const ADMIN_SECTIONS = [
       { href: "/admin/navigation", label: "Nawigacja" },
     ],
   },
-  {
-    label: "WIZYTY I KLIENCI",
-    links: [
-      { href: "/admin/calendar", label: "Kalendarz i dostępność" },
-      { href: "/admin/clients", label: "Klienci / CRM" },
-      { href: "/admin/messages", label: "Zgłoszenia i wiadomości" },
-      { href: "/admin/documents", label: "Dokumenty i zgody" },
-    ],
-  },
+  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty" }] },
   {
     label: "USTAWIENIA",
     links: [{ href: "/admin/settings", label: "Ustawienia ogólne" }],

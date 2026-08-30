@@ -6,7 +6,7 @@ import { isHexColor, rangeCanFit, resolveAvailableRanges } from "@/lib/calendarH
 import { sanitizeRichText } from "@/lib/richText";
 import { isValidIconName } from "@/lib/icons";
 
-type CalendarKind = "dayOff" | "freeTerm" | "promotion" | "event" | "workingHours";
+type CalendarKind = "dayOff" | "freeTerm" | "promotion" | "event" | "workingHours" | "clearStatus";
 const text = (value: unknown) => String(value ?? "").trim();
 const toDate = (value: unknown) => new Date(String(value ?? ""));
 const validRange = (from: Date, to: Date) => !Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime()) && from < to;
@@ -95,6 +95,19 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const denied = await adminOnly(); if (denied) return denied;
   const { searchParams } = new URL(request.url); const kind = searchParams.get("kind") as CalendarKind | null; const id = searchParams.get("id"); const ids = searchParams.getAll("id").filter(Boolean);
+  if (kind === "clearStatus") {
+    const dates = searchParams.getAll("date").map(toDate).filter((date) => !Number.isNaN(date.getTime()));
+    if (!dates.length) return NextResponse.json({ error: "Wybierz co najmniej jeden dzień." }, { status: 400 });
+    await prisma.$transaction(async (tx) => Promise.all(dates.map((value) => {
+      const start = new Date(value); start.setHours(0, 0, 0, 0);
+      const end = new Date(start); end.setDate(end.getDate() + 1);
+      return Promise.all([
+        tx.availableSlot.deleteMany({ where: { startsAt: { gte: start, lt: end } } }),
+        tx.availabilityBlock.deleteMany({ where: { startsAt: { gte: start, lt: end } } }),
+      ]);
+    })));
+    return NextResponse.json({ ok: true });
+  }
   if (!id || !kind) return NextResponse.json({ error: "Brakuje danych elementu." }, { status: 400 });
   if (ids.length > 1) {
     if (kind === "dayOff") await prisma.$transaction((tx) => Promise.all(ids.map((item) => tx.availabilityBlock.delete({ where: { id: item } }))));
