@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
-const SECTIONS = [
+export const ADMIN_SECTIONS = [
   {
     label: "PANEL GŁÓWNY",
     links: [{ href: "/admin", label: "Przegląd", exact: true }],
@@ -56,7 +56,7 @@ export default function Sidebar({
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 px-3 py-6">
-        {SECTIONS.map((section) => (
+        {ADMIN_SECTIONS.map((section) => (
           <div key={section.label}>
             <p className="px-3 pb-2 text-[10px] font-semibold tracking-[0.16em] text-ink-grey/70">
               {section.label}

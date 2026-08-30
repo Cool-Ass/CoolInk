@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AppButton from "@/components/ui/AppButton";
 
 export default function AppointmentResponse({ appointmentId }: { appointmentId: string }) {
   const router = useRouter();
   const [saving, setSaving] = useState<"accept" | "reject" | null>(null);
   const [message, setMessage] = useState("");
+  const [pendingResponse, setPendingResponse] = useState<"accept" | "reject" | null>(null);
 
   async function respond(response: "accept" | "reject") {
     setSaving(response); setMessage("");
@@ -20,5 +23,5 @@ export default function AppointmentResponse({ appointmentId }: { appointmentId: 
     finally { setSaving(null); }
   }
 
-  return <div className="mt-4"><p className="text-xs leading-relaxed text-ink-grey">Czy ten termin Ci pasuje?</p><div className="mt-3 flex flex-wrap gap-3"><button disabled={!!saving} onClick={() => respond("accept")} className="border border-ink-gold bg-ink-gold px-4 py-2.5 text-xs tracking-[0.08em] text-ink-black disabled:opacity-50">{saving === "accept" ? "ZAPIS…" : "AKCEPTUJĘ TERMIN"}</button><button disabled={!!saving} onClick={() => respond("reject")} className="border border-ink-white/25 px-4 py-2.5 text-xs tracking-[0.08em] text-ink-grey hover:text-ink-white disabled:opacity-50">TERMIN MI NIE PASUJE</button></div>{message && <p role="status" className="mt-3 text-xs text-ink-gold">{message}</p>}</div>;
+  return <div className="mt-4"><p className="text-xs leading-relaxed text-ink-grey">Czy ten termin Ci pasuje?</p><div className="mt-3 flex flex-wrap gap-3"><AppButton variant="primary" disabled={!!saving} onClick={() => setPendingResponse("accept")}>AKCEPTUJĘ TERMIN</AppButton><AppButton variant="ghost" disabled={!!saving} onClick={() => setPendingResponse("reject")}>TERMIN MI NIE PASUJE</AppButton></div>{message && <p role="status" className="mt-3 text-xs text-ink-gold">{message}</p>}{pendingResponse && <ConfirmModal message={pendingResponse === "accept" ? "Potwierdzić zaproponowany termin?" : "Odrzucić ten termin? Wrócimy z kolejną propozycją."} onCancel={() => setPendingResponse(null)} onConfirm={() => { const responseValue = pendingResponse; setPendingResponse(null); void respond(responseValue); }} pending={!!saving} pendingLabel="ZAPIS…" />}</div>;
 }
