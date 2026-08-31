@@ -3,31 +3,31 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { CalendarDays, FileText, Globe2, Image as ImageIcon, LayoutDashboard, Mail, PanelsTopLeft, Settings, Users } from "lucide-react";
 
 export const ADMIN_SECTIONS = [
   {
     label: "STUDIO",
     links: [
-      { href: "/admin", label: "Dziś", exact: true },
-      { href: "/admin/calendar", label: "Kalendarz" },
-      { href: "/admin/clients", label: "Klienci" },
-      { href: "/admin/messages", label: "Wiadomości" },
+      { href: "/admin", label: "Dziś", icon: LayoutDashboard, exact: true },
+      { href: "/admin/calendar", label: "Kalendarz", icon: CalendarDays },
+      { href: "/admin/clients", label: "Klienci", icon: Users },
     ],
   },
   {
     label: "STRONA / CMS",
     links: [
-      { href: "/admin/pages", label: "Strony i builder" },
-      { href: "/admin/portfolio", label: "Portfolio / Galeria" },
-      { href: "/admin/media", label: "Obrazy / Media" },
-      { href: "/admin/content", label: "Treści globalne" },
-      { href: "/admin/navigation", label: "Nawigacja" },
+      { href: "/admin/pages", label: "Strony i builder", icon: PanelsTopLeft },
+      { href: "/admin/portfolio", label: "Portfolio / Galeria", icon: ImageIcon },
+      { href: "/admin/media", label: "Obrazy / Media", icon: ImageIcon },
+      { href: "/admin/content", label: "Treści globalne", icon: Globe2 },
+      { href: "/admin/navigation", label: "Nawigacja", icon: Globe2 },
     ],
   },
-  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty" }] },
+  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/messages", label: "Wiadomości", icon: Mail }] },
   {
     label: "USTAWIENIA",
-    links: [{ href: "/admin/settings", label: "Ustawienia ogólne" }],
+    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings }],
   },
 ] as const;
 
@@ -60,6 +60,7 @@ export default function Sidebar({
             </p>
             <div className="flex flex-col gap-1">
               {section.links.map((link) => {
+                const Icon = link.icon;
                 const active = ("exact" in link && link.exact)
                   ? pathname === link.href
                   : pathname.startsWith(link.href);
@@ -67,13 +68,13 @@ export default function Sidebar({
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`px-3 py-2.5 text-[13px] tracking-[0.03em] transition-colors ${
+                    className={`flex items-center gap-3 px-3 py-2.5 text-[13px] tracking-[0.03em] transition-colors ${
                       active
                         ? "border-l-2 border-ink-gold bg-ink-gold/10 text-ink-gold"
                         : "border-l-2 border-transparent text-ink-grey hover:text-ink-white"
                     }`}
                   >
-                    {link.label}
+                    <Icon className="h-4 w-4" />{link.label}
                   </Link>
                 );
               })}

@@ -12,7 +12,7 @@ const oauthMessages: Record<string, string> = {
   oauth_database: "Konto Google zostało potwierdzone, ale zapis profilu jest chwilowo niedostępny. Spróbuj ponownie za moment.",
 };
 
-export default function ClientAccountForm({ oauthError }: { oauthError?: string }) {
+export default function ClientAccountForm({ oauthError, returnTo = "/app/portal" }: { oauthError?: string; returnTo?: string }) {
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -28,7 +28,7 @@ export default function ClientAccountForm({ oauthError }: { oauthError?: string 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Nie udało się wykonać tej operacji.");
       if (result.needsEmailConfirmation) { setMessage("Sprawdź skrzynkę e-mail i potwierdź adres. Potem zaloguj się tutaj."); return; }
-      router.push("/app/portal"); router.refresh();
+      router.push(returnTo); router.refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Wystąpił nieoczekiwany błąd."); }
     finally { setLoading(false); }
   }
@@ -49,9 +49,9 @@ export default function ClientAccountForm({ oauthError }: { oauthError?: string 
     </form>
     <div className="mt-6 border-t border-ink-white/15 pt-5">
       <p className="text-center text-[10px] tracking-[0.12em] text-ink-grey">LUB KONTYNUUJ PRZEZ</p>
-      <div className="mt-3"><a href="/api/client/auth/oauth?provider=google" aria-label="Zaloguj się przez Google" title="Zaloguj się przez Google" className="flex h-11 items-center justify-center border border-ink-white/20 text-ink-white hover:border-ink-gold" ><svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5"><path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.39-.18-2.05H12v3.88h5.24a4.48 4.48 0 0 1-1.94 2.94v2.52h3.14c1.84-1.69 2.91-4.18 2.91-7.29Z"/><path fill="#34A853" d="M12 21.78c2.63 0 4.84-.87 6.45-2.36l-3.14-2.52c-.87.58-1.99.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.29v2.6A9.75 9.75 0 0 0 12 21.78Z"/><path fill="#FBBC05" d="M6.53 13.79A5.87 5.87 0 0 1 6.22 12c0-.62.11-1.22.31-1.79v-2.6H3.29A9.78 9.78 0 0 0 2.25 12c0 1.58.38 3.08 1.04 4.39l3.24-2.6Z"/><path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.27 14.63 2.22 12 2.22a9.75 9.75 0 0 0-8.71 5.39l3.24 2.6C7.3 7.9 9.46 6.18 12 6.18Z"/></svg></a></div>
+      <div className="mt-3"><a href={`/api/client/auth/oauth?provider=google&returnTo=${encodeURIComponent(returnTo)}`} aria-label="Zaloguj się przez Google" title="Zaloguj się przez Google" className="flex h-11 items-center justify-center border border-ink-white/20 text-ink-white hover:border-ink-gold" ><svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5"><path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.39-.18-2.05H12v3.88h5.24a4.48 4.48 0 0 1-1.94 2.94v2.52h3.14c1.84-1.69 2.91-4.18 2.91-7.29Z"/><path fill="#34A853" d="M12 21.78c2.63 0 4.84-.87 6.45-2.36l-3.14-2.52c-.87.58-1.99.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.29v2.6A9.75 9.75 0 0 0 2.25 12c0 1.58.38 3.08 1.04 4.39l3.24-2.6Z"/><path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.27 14.63 2.22 12 2.22a9.75 9.75 0 0 0-8.71 5.39l3.24 2.6C7.3 7.9 9.46 6.18 12 6.18Z"/></svg></a></div>
     </div>
-    <p className="mt-5 text-center text-xs leading-relaxed text-ink-grey">Konto pozwala śledzić projekty, wizyty i przesłane inspiracje.</p>
+    <p className="mt-5 text-center text-xs leading-relaxed text-ink-grey">Tworząc konto potwierdzasz zapoznanie się z <a className="text-ink-gold underline" href="/polityka-prywatnosci">Polityką prywatności</a>.</p>
   </section>;
 }
 

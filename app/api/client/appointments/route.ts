@@ -15,9 +15,9 @@ export async function POST(request: Request) {
   const projectId = String(body?.projectId ?? "");
   const startsAt = new Date(String(body?.startsAt ?? ""));
   const endsAt = new Date(String(body?.endsAt ?? ""));
-  if (!projectId || !validAppointmentRange(startsAt, endsAt)) return NextResponse.json({ error: "Wybierz termin rozpoczynający się o pełnej lub wpół do, o długości od 30 minut do 12 godzin." }, { status: 400 });
-  const project = await prisma.tattooProject.findFirst({ where: { id: projectId, clientId: client.id } });
-  if (!project) return NextResponse.json({ error: "Nie znaleziono Twojego projektu." }, { status: 404 });
+  if (!validAppointmentRange(startsAt, endsAt)) return NextResponse.json({ error: "Wybierz termin rozpoczynający się o pełnej lub wpół do, o długości od 30 minut do 12 godzin." }, { status: 400 });
+  const description = String(body?.description ?? "").trim().slice(0, 5000);
+  if (!projectId && description.length < 12) return NextResponse.json({ error: "Opisz swój pomysł w co najmniej 12 znakach." }, { status: 400 });
   // Working hours are a studio-side planning aid, not public availability.
   // A client may request only an exact range explicitly published as free.
   const [conflict, publishedSlot] = await Promise.all([
@@ -33,10 +33,19 @@ export async function POST(request: Request) {
   ]);
   if (!publishedSlot) return NextResponse.json({ error: "Ten dzień nie został udostępniony jako wolny termin." }, { status: 409 });
   if (conflict.appointment || conflict.block) return NextResponse.json({ error: `Ten termin nie jest już dostępny. Uwzględniam też ${conflict.bufferMinutes}-minutowy bufor między wizytami.` }, { status: 409 });
-  const appointment = await prisma.appointment.create({ data: { projectId, startsAt, endsAt, status: "requested" } });
-  await prisma.$transaction([
-    prisma.tattooProject.update({ where: { id: projectId }, data: { status: "awaiting_confirmation" } }),
-    prisma.projectActivity.create({ data: { projectId, type: "appointment_requested", message: activityMessage("appointment_requested", startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })), visibility: "admin" } }),
-  ]);
-  return NextResponse.json({ appointment }, { status: 201 });
+  const ownedProject = projectId ? await prisma.tattooProject.findFirst({ where: { id: projectId, clientId: client.id }, select: { id: true } }) : null;
+  if (projectId && !ownedProject) return NextResponse.json({ error: "Nie znaleziono Twojej wizyty." }, { status: 404 });
+  const projectTitle = String(body?.title ?? "").trim().slice(0, 160) || "Nowa wizyta tatuażu";
+  const styles = Array.isArray(body?.styles) ? body.styles.filter((item: unknown): item is string => typeof item === "string").slice(0, 8).join(", ") : "";
+  const placement = String(body?.placement ?? "").trim().slice(0, 120) || null;
+  const size = String(body?.size ?? "").trim().slice(0, 120) || null;
+  const notes = String(body?.notes ?? "").trim().slice(0, 1000);
+  const result = await prisma.$transaction(async (tx) => {
+    const project = ownedProject ? await tx.tattooProject.update({ where: { id: ownedProject.id }, data: { status: "awaiting_confirmation" } }) : await tx.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description, styles, placement, size, preferredDateNote: startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" }), status: "awaiting_confirmation", activities: { create: { type: "project_created", message: activityMessage("project_created"), visibility: "admin" } } } });
+    const appointment = await tx.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "requested", notes: notes || null } });
+    await tx.projectActivity.create({ data: { projectId: project.id, type: "appointment_requested", message: activityMessage("appointment_requested", startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })), visibility: "admin" } });
+    await tx.clientNotification.create({ data: { clientId: client.id, type: "appointment_requested", title: "Prośba o wizytę wysłana", body: "Studio sprawdzi szczegóły oraz wybrany termin i wróci z odpowiedzią.", href: "/app/portal/projects", projectId: project.id, appointmentId: appointment.id } });
+    return { appointment, projectId: project.id };
+  });
+  return NextResponse.json(result, { status: 201 });
 }

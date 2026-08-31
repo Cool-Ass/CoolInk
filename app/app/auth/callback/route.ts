@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { clientCookieOptions, CLIENT_ACCESS_COOKIE, CLIENT_REFRESH_COOKIE, getSupabaseConfig, supabaseAuth } from "@/lib/clientAuth";
+import { isClientProfileComplete, safeClientReturnTo } from "@/lib/clientProfile";
 const COOKIE = "coolink_oauth_verifier";
+const RETURN_TO_COOKIE = "coolink_oauth_return_to";
 
 function returnToLogin(request: NextRequest, error: string) {
   return NextResponse.redirect(new URL(`/app?error=${error}`, request.url));
@@ -9,6 +11,7 @@ function returnToLogin(request: NextRequest, error: string) {
 
 export async function GET(request: NextRequest) {
   const code = new URL(request.url).searchParams.get("code"), verifier = request.cookies.get(COOKIE)?.value;
+  const returnTo = safeClientReturnTo(request.cookies.get(RETURN_TO_COOKIE)?.value);
   if (!code || !verifier) return returnToLogin(request, "oauth_session");
 
   let session: { access_token?: string; refresh_token?: string };
@@ -34,15 +37,18 @@ export async function GET(request: NextRequest) {
 
   const email = user.email.toLowerCase(), meta = user.user_metadata || {};
   try {
-    await prisma.client.upsert({ where: { email }, update: { supabaseUserId: user.id }, create: { email, supabaseUserId: user.id, firstName: String(meta.first_name || ""), lastName: String(meta.last_name || "") } });
+    const fullName = String(meta.full_name || meta.name || "").trim().split(/\s+/);
+    const client = await prisma.client.upsert({ where: { email }, update: { supabaseUserId: user.id }, create: { email, supabaseUserId: user.id, firstName: String(meta.first_name || fullName[0] || ""), lastName: String(meta.last_name || fullName.slice(1).join(" ") || ""), avatarUrl: typeof meta.avatar_url === "string" ? meta.avatar_url : null } });
+    const target = isClientProfileComplete(client) ? returnTo : `/app/complete-profile?returnTo=${encodeURIComponent(returnTo)}`;
+    const response = NextResponse.redirect(new URL(target, request.url));
+    response.cookies.set(CLIENT_ACCESS_COOKIE, session.access_token, clientCookieOptions);
+    response.cookies.set(CLIENT_REFRESH_COOKIE, session.refresh_token, clientCookieOptions);
+    response.cookies.set(COOKIE, "", { path: "/app/auth", maxAge: 0 });
+    response.cookies.set(RETURN_TO_COOKIE, "", { path: "/app/auth", maxAge: 0 });
+    return response;
   } catch (error) {
     console.error("Google OAuth client upsert failed", error);
     return returnToLogin(request, "oauth_database");
   }
 
-  const response = NextResponse.redirect(new URL("/app/complete-profile", request.url));
-  response.cookies.set(CLIENT_ACCESS_COOKIE, session.access_token, clientCookieOptions);
-  response.cookies.set(CLIENT_REFRESH_COOKIE, session.refresh_token, clientCookieOptions);
-  response.cookies.set(COOKIE, "", { path: "/app/auth", maxAge: 0 });
-  return response;
 }

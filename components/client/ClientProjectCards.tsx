@@ -44,16 +44,16 @@ export default function ClientProjectCards({
     title: string;
   } | null>(null);
   return (
-    <section id="projekty" className="mt-14 scroll-mt-6">
+    <section id="wizyty" className="mt-2 scroll-mt-6">
       <p className="text-[11px] tracking-[.18em] text-ink-gold">
-        TWOJE ZGŁOSZENIA
+        MOJE WIZYTY
       </p>
-      <h2 className="mt-2 font-display text-3xl">Projekty i wizyty.</h2>
+      <h2 className="mt-2 font-display text-3xl">Wszystko o Twoich wizytach.</h2>
       {projects.length === 0 ? (
         <div className="mt-5">
           <EmptyState
-            title="Jeszcze nie masz projektu"
-            description="Gdy studio zacznie pracę nad Twoim zgłoszeniem, zobaczysz je tutaj."
+            title="Nie masz jeszcze wizyty"
+            description="Wybierz zielony wolny termin na ekranie Start, aby wysłać prośbę o wizytę."
           />
         </div>
       ) : (
@@ -92,14 +92,14 @@ export default function ClientProjectCards({
       {selected && (
         <AppModal
           title={selected.title}
-          subtitle="Szczegóły projektu"
+          subtitle="Szczegóły wizyty i tatuażu"
           size="lg"
           onClose={() => setSelected(null)}
         >
           <div className="space-y-6">
             <section>
               <p className="text-[10px] tracking-widest text-ink-gold">
-                PODSUMOWANIE
+                PODSUMOWANIE WIZYTY
               </p>
               <div className="mt-2">
                 <StatusBadge status={selected.status} />

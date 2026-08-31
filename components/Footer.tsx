@@ -41,6 +41,7 @@ export default function Footer({
         <p className="text-[12px] tracking-[0.05em] text-ink-grey/70">
           © {new Date().getFullYear()} {text}
         </p>
+        <a href="/polityka-prywatnosci" className="text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">POLITYKA PRYWATNOŚCI</a>
       </div>
     </footer>
   );
