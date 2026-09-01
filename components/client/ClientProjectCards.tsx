@@ -6,7 +6,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import StatusBadge from "@/components/ui/StatusBadge";
 import InspirationPreview from "@/components/client/InspirationPreview";
 import ClientAppointmentModal from "@/components/client/ClientAppointmentModal";
-import ProjectChat from "@/components/projects/ProjectChat";
+import { imageSource } from "@/lib/imageSource";
 
 type Appointment = {
   id: string;
@@ -21,6 +21,10 @@ type Project = {
   description: string;
   status: string;
   next: string;
+  estimatedPrice: number | null;
+  finalPrice: number | null;
+  depositStatus: string;
+  depositAmount: number | null;
   appointments: Appointment[];
   images: { id: string; url: string; caption: string | null }[];
   messages: {
@@ -44,30 +48,31 @@ export default function ClientProjectCards({
     title: string;
   } | null>(null);
   return (
-    <section id="wizyty" className="mt-2 scroll-mt-6">
+    <section id="projekty" className="mt-2 scroll-mt-6">
       <p className="text-[11px] tracking-[.18em] text-ink-gold">
-        MOJE WIZYTY
+        PROJEKTY / ZGŁOSZENIA
       </p>
-      <h2 className="mt-2 font-display text-3xl">Wszystko o Twoich wizytach.</h2>
+      <h2 className="mt-2 font-display text-3xl">Twoje projekty.</h2>
       {projects.length === 0 ? (
         <div className="mt-5">
           <EmptyState
-            title="Nie masz jeszcze wizyty"
+            title="Nie masz jeszcze projektu"
             description="Wybierz zielony wolny termin na ekranie Start, aby wysłać prośbę o wizytę."
           />
         </div>
       ) : (
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          {projects.map((project) => (
-            <button
+          {projects.map((project) => {
+            const previewSource = imageSource(project.images[0]?.url);
+            return <button
               key={project.id}
               type="button"
               onClick={() => setSelected(project)}
               className="overflow-hidden border border-ink-white/15 bg-ink-charcoal/30 text-left transition-colors hover:border-ink-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-gold"
             >
-              {project.images[0] && (
+              {previewSource && (
                 <img
-                  src={project.images[0].url}
+                  src={previewSource}
                   alt="Inspiracja projektu"
                   className="aspect-[2/1] w-full object-cover"
                 />
@@ -84,15 +89,16 @@ export default function ClientProjectCards({
                   {project.appointments.length}{" "}
                   {project.appointments.length === 1 ? "sesja" : "sesje"}
                 </p>
+                {(project.estimatedPrice || project.finalPrice || project.depositAmount) && <p className="mt-2 text-xs text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : `Zadatek: ${project.depositAmount} zł`}</p>}
               </div>
-            </button>
-          ))}
+            </button>;
+          })}
         </div>
       )}
       {selected && (
         <AppModal
           title={selected.title}
-          subtitle="Szczegóły wizyty i tatuażu"
+          subtitle="Szczegóły projektu"
           size="lg"
           onClose={() => setSelected(null)}
         >
@@ -106,6 +112,7 @@ export default function ClientProjectCards({
               </div>
               <p className="mt-3 text-sm text-ink-grey">{selected.next}</p>
             </section>
+            <section className="border-y border-ink-white/10 py-5"><p className="text-[10px] tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{selected.estimatedPrice ? `${selected.estimatedPrice} zł` : "W trakcie ustalania"}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" ? "Niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || selected.depositStatus}`}</p></div></div></section>
             <section>
               <p className="text-[10px] tracking-widest text-ink-gold">SESJE</p>
               {selected.appointments.length ? (
@@ -140,11 +147,6 @@ export default function ClientProjectCards({
                 <InspirationPreview images={selected.images} />
               </div>
             </section>
-            <ProjectChat
-              projectId={selected.id}
-              initial={selected.messages}
-              role="client"
-            />
           </div>
         </AppModal>
       )}

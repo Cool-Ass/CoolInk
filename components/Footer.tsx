@@ -1,6 +1,7 @@
 import Image from "next/image";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { CORE_NAV_LINKS, type NavLink } from "@/lib/nav";
+import { imageSource } from "@/lib/imageSource";
 
 export default function Footer({
   navLinks = CORE_NAV_LINKS,
@@ -11,19 +12,14 @@ export default function Footer({
   text?: string;
   logoUrl?: string;
 }) {
+  const logoSource = imageSource(logoUrl);
   return (
     <footer className="relative overflow-hidden border-t border-ink-white/10 bg-ink-black">
       <CalligraphyBackground opacity={0.04} position="60% 20%" />
 
       <div className="relative mx-auto flex max-w-[1536px] flex-col gap-8 px-6 py-12 md:flex-row md:items-center md:justify-between md:px-10 lg:px-16">
         <a href="/#home" className="relative h-12 w-36 shrink-0">
-          <Image
-            src={logoUrl}
-            alt="CoolInk Tattoo Studio — logo"
-            fill
-            className="object-contain mix-blend-screen opacity-90"
-            sizes="144px"
-          />
+          {logoSource ? <Image src={logoSource} alt="CoolInk Tattoo Studio — logo" fill className="object-contain mix-blend-screen opacity-90" sizes="144px" /> : <span className="flex h-full items-center font-display text-lg tracking-[0.08em] text-ink-white">COOLINK</span>}
         </a>
 
         <nav className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[12px] tracking-[0.1em] text-ink-grey">

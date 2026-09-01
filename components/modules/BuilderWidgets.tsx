@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import { IconPreview } from "@/components/admin/builder/IconPicker";
 import { defaultModuleData, withDefaults, type ColumnWidget, type Module } from "@/lib/modules";
+import { imageSource } from "@/lib/imageSource";
 
 export default function BuilderWidgets({ module, showEmpty = false }: { module: Module; showEmpty?: boolean }) {
   switch (module.type) {
@@ -18,8 +19,9 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     }
     case "image": {
       const d = withDefaults("image", module.data);
-      if (!d.image && !showEmpty) return null;
-      return <figure className="px-6 py-8 md:px-12">{d.image ? <div className="relative aspect-[16/9] overflow-hidden bg-ink-charcoal"><Image src={d.image} alt={d.alt} fill className="object-cover" sizes="100vw" /></div> : <div className="flex aspect-[16/9] items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wybierz zdjęcie w panelu po prawej</div>}{d.caption && <figcaption className="mt-2 text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
+      const source = imageSource(d.image);
+      if (!source && !showEmpty) return null;
+      return <figure className="px-6 py-8 md:px-12">{source ? <div className="relative aspect-[16/9] overflow-hidden bg-ink-charcoal"><Image src={source} alt={d.alt} fill className="object-cover" sizes="100vw" /></div> : <div className="flex aspect-[16/9] items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wybierz zdjęcie w panelu po prawej</div>}{d.caption && <figcaption className="mt-2 text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
     }
     case "button": {
       const d = withDefaults("button", module.data);
@@ -27,12 +29,13 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     }
     case "divider": {
       const d = withDefaults("divider", module.data);
-      return <div className="px-6 py-8 md:px-12">{d.icon && <img src={d.icon} alt="" className="mx-auto mb-4 h-9 w-9 object-contain" />}{d.style === "space" ? <div className="h-12" /> : <div className={`h-px ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} />}</div>;
+      const source = imageSource(d.icon);
+      return <div className="px-6 py-8 md:px-12">{source && <img src={source} alt="" className="mx-auto mb-4 h-9 w-9 object-contain" />}{d.style === "space" ? <div className="h-12" /> : <div className={`h-px ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} />}</div>;
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);
       const images = d.images?.length ? d.images : [d.image1, d.image2, d.image3];
-      const renderImages = showEmpty ? images : images.filter(Boolean);
+      const renderImages = showEmpty ? images.map((image) => imageSource(image)) : images.map((image) => imageSource(image)).filter((image): image is string => Boolean(image));
       if (renderImages.length === 0 && !showEmpty) return null;
       const gap = d.gap === "lg" ? "gap-6" : d.gap === "sm" ? "gap-2" : "gap-3";
       const radius = d.radius === "lg" ? "rounded-2xl" : d.radius === "md" ? "rounded-xl" : d.radius === "sm" ? "rounded-md" : "";

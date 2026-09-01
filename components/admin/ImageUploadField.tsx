@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef, useState, type ChangeEvent } from "react";
 import { useToast } from "@/components/admin/ToastProvider";
 import MediaPickerModal from "@/components/admin/MediaPickerModal";
+import { imageSource } from "@/lib/imageSource";
 
 export default function ImageUploadField({
   value,
@@ -18,6 +19,7 @@ export default function ImageUploadField({
   const [uploading, setUploading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const { showToast } = useToast();
+  const previewSource = imageSource(value);
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -43,9 +45,9 @@ export default function ImageUploadField({
     <div className="flex flex-col gap-3">
       <label className="text-[12px] tracking-[0.12em] text-ink-grey">{label}</label>
 
-      {value && (
+      {previewSource && (
         <div className="relative h-40 w-full max-w-xs overflow-hidden border border-ink-white/15 bg-ink-charcoal">
-          <Image src={value} alt="" fill className="object-cover" sizes="320px" />
+          <Image src={previewSource} alt="" fill className="object-cover" sizes="320px" />
           <button
             type="button"
             onClick={() => {

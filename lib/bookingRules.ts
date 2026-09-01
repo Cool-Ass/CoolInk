@@ -23,9 +23,10 @@ export async function bookingConflict(startsAt: Date, endsAt: Date, excludeAppoi
   const bufferMinutes = includeBuffer ? await getBookingBufferMinutes() : 0;
   const bufferedStart = new Date(startsAt.getTime() - bufferMinutes * 60_000);
   const bufferedEnd = new Date(endsAt.getTime() + bufferMinutes * 60_000);
-  const [appointment, block] = await Promise.all([
+  const [appointment, block, externalBusy] = await Promise.all([
     prisma.appointment.findFirst({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, startsAt: { lt: bufferedEnd }, endsAt: { gt: bufferedStart } } }),
     prisma.availabilityBlock.findFirst({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }),
+    prisma.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", calendarEvent: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }, select: { id: true } }),
   ]);
-  return { appointment, block, bufferMinutes };
+  return { appointment, block: block || externalBusy, bufferMinutes };
 }

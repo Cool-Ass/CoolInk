@@ -1,5 +1,6 @@
 import { getCurrentAdmin } from "@/lib/auth";
 import ChangePasswordForm from "@/components/admin/ChangePasswordForm";
+import GoogleCalendarIntegration from "@/components/admin/GoogleCalendarIntegration";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function SettingsPage() {
         <p className="mb-2 text-[13px] font-medium tracking-[0.3em] text-ink-gold">USTAWIENIA</p>
         <h1 className="font-display text-3xl text-ink-white">Konto</h1>
       </div>
+      <GoogleCalendarIntegration />
 
       <div className="border border-ink-white/10 bg-ink-charcoal/30 p-6">
         <p className="text-[12px] tracking-[0.1em] text-ink-grey">ZALOGOWANO JAKO</p>

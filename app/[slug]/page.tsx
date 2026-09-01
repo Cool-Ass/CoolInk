@@ -11,6 +11,7 @@ import { getSiteContent } from "@/lib/content";
 import { getPublishedPortfolioWorks } from "@/lib/portfolio";
 import type { Module } from "@/lib/modules";
 import { parseModules } from "@/lib/pageModules";
+import { imageSource } from "@/lib/imageSource";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function CmsPage({ params }: Props) {
   ]);
 
   const modules = parseModules(page.publishedModules);
+  const coverImage = imageSource(page.coverImage);
   const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl };
 
   return (
@@ -77,10 +79,10 @@ export default async function CmsPage({ params }: Props) {
 
             <div className="gold-underline mt-5 h-3 w-56 md:w-64" aria-hidden />
 
-            {page.coverImage && (
+            {coverImage && (
               <div className="relative mt-10 aspect-[16/9] w-full overflow-hidden">
                 <Image
-                  src={page.coverImage}
+                  src={coverImage}
                   alt={page.title}
                   fill
                   className="object-cover"

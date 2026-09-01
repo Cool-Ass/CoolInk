@@ -7,7 +7,7 @@ const { PrismaClient } = require("@prisma/client");
 const { randomUUID } = require("crypto");
 
 const prisma = new PrismaClient();
-const privateTables = ["Client", "TattooProject", "Appointment", "ClientNotification", "ProjectActivity", "ProjectMessage", "AvailableSlot", "WorkingHoursOverride", "CalendarEvent"];
+const privateTables = ["Client", "TattooProject", "Appointment", "ClientNotification", "ProjectActivity", "ProjectMessage", "AvailableSlot", "WorkingHoursOverride", "CalendarEvent", "GoogleCalendarConnection", "GoogleCalendarSelection", "GoogleCalendarEventSync"];
 
 function quote(value) { return `"${value.replaceAll('"', '""')}"`; }
 

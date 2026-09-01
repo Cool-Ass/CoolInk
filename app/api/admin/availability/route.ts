@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 type HoursPayload = { weekday: number; enabled: boolean; startsAt: string; endsAt: string };
 
@@ -11,6 +13,7 @@ const defaultHours = Array.from({ length: 7 }, (_, weekday) => ({
 }));
 
 export async function GET() {
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const [hours, blocks, promotions, buffer] = await Promise.all([
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }),
@@ -21,21 +24,29 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null);
-  const hours: HoursPayload[] = Array.isArray(body?.hours) ? body.hours : [];
   const bufferMinutes = Number(body?.bufferMinutes);
-  if (hours.length !== 7) return NextResponse.json({ error: "Uzupełnij godziny dla każdego dnia tygodnia." }, { status: 400 });
   if (!Number.isInteger(bufferMinutes) || bufferMinutes < 0 || bufferMinutes > 240 || bufferMinutes % 5 !== 0) return NextResponse.json({ error: "Bufor ustaw od 0 do 240 minut, co 5 minut." }, { status: 400 });
+  const visibleMonths = Number(body?.visibleMonths ?? 3);
+  const defaultFreeStart = String(body?.defaultFreeStart ?? "10:00");
+  const defaultFreeEnd = String(body?.defaultFreeEnd ?? "18:00");
+  if (!Number.isInteger(visibleMonths) || visibleMonths < 1 || visibleMonths > 12) return NextResponse.json({ error: "Widoczność ustaw od 1 do 12 miesięcy." }, { status: 400 });
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(defaultFreeStart) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(defaultFreeEnd) || defaultFreeStart >= defaultFreeEnd) return NextResponse.json({ error: "Podaj poprawne domyślne godziny wolnego terminu." }, { status: 400 });
 
-  await prisma.$transaction([...hours.map((item) => prisma.workingHours.upsert({
-    where: { weekday: Number(item.weekday) },
-    update: { enabled: Boolean(item.enabled), startsAt: String(item.startsAt), endsAt: String(item.endsAt) },
-    create: { weekday: Number(item.weekday), enabled: Boolean(item.enabled), startsAt: String(item.startsAt), endsAt: String(item.endsAt) },
-  })), prisma.siteSetting.upsert({ where: { key: "booking_buffer_minutes" }, update: { value: String(bufferMinutes) }, create: { key: "booking_buffer_minutes", value: String(bufferMinutes) } })]);
+  await prisma.$transaction([
+    prisma.siteSetting.upsert({ where: { key: "booking_buffer_minutes" }, update: { value: String(bufferMinutes) }, create: { key: "booking_buffer_minutes", value: String(bufferMinutes) } }),
+    prisma.siteSetting.upsert({ where: { key: "calendar_visible_months" }, update: { value: String(visibleMonths) }, create: { key: "calendar_visible_months", value: String(visibleMonths) } }),
+    prisma.siteSetting.upsert({ where: { key: "calendar_default_free_start" }, update: { value: defaultFreeStart }, create: { key: "calendar_default_free_start", value: defaultFreeStart } }),
+    prisma.siteSetting.upsert({ where: { key: "calendar_default_free_end" }, update: { value: defaultFreeEnd }, create: { key: "calendar_default_free_end", value: defaultFreeEnd } }),
+  ]);
   return NextResponse.json({ ok: true });
 }
 
 export async function POST(request: Request) {
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null);
   const kind = String(body?.kind ?? "");
   if (kind === "block") {

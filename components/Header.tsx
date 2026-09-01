@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import MagneticButton from "@/components/MagneticButton";
 import { CORE_NAV_LINKS, type NavLink } from "@/lib/nav";
+import { imageSource } from "@/lib/imageSource";
 
 export default function Header({
   navLinks = CORE_NAV_LINKS,
@@ -17,6 +18,7 @@ export default function Header({
   const [active, setActive] = useState("home");
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const logoSource = imageSource(logoUrl);
 
   // Solid background once the user scrolls past the hero.
   useEffect(() => {
@@ -73,14 +75,7 @@ export default function Header({
             scrolled ? "h-11 w-32 md:h-12 md:w-36" : "h-14 w-40 md:h-16 md:w-48"
           }`}
         >
-          <Image
-            src={logoUrl}
-            alt="CoolInk Tattoo Studio — logo"
-            fill
-            priority
-            className="object-contain mix-blend-screen"
-            sizes="192px"
-          />
+          {logoSource ? <Image src={logoSource} alt="CoolInk Tattoo Studio — logo" fill priority className="object-contain mix-blend-screen" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">COOLINK</span>}
         </a>
 
         {/* Nav */}

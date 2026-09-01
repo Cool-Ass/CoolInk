@@ -10,6 +10,7 @@ import SocialRail from "@/components/SocialRail";
 import StudioStamp from "@/components/StudioStamp";
 import MultilineText from "@/components/MultilineText";
 import { defaultModuleData, type HeroModuleData } from "@/lib/modules";
+import { imageSource } from "@/lib/imageSource";
 
 export default function Hero({
   content = defaultModuleData("hero") as unknown as HeroModuleData,
@@ -19,6 +20,8 @@ export default function Hero({
   socials?: { instagramUrl: string; facebookUrl: string };
 }) {
   const scopeRef = useRef<HTMLDivElement>(null);
+  const backgroundImage = imageSource(content.backgroundImage) ?? "/images/crops/about-main.jpg";
+  const portraitImage = imageSource(content.portraitImage) ?? "/images/portrait.jpg";
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
@@ -59,7 +62,7 @@ export default function Hero({
       <div className="absolute inset-0 overflow-hidden">
         <Parallax speed={0.08} className="absolute inset-x-0 -top-[8%] h-[116%]">
           <Image
-            src={content.backgroundImage}
+            src={backgroundImage}
             alt=""
             fill
             priority
@@ -76,7 +79,7 @@ export default function Hero({
         <div className="portrait-fade relative h-full w-full">
           <Parallax speed={0.12} className="absolute inset-x-0 -top-[10%] h-[120%]">
             <Image
-              src={content.portraitImage}
+              src={portraitImage}
               alt="Portret artysty tatuażu CoolInk"
               fill
               priority

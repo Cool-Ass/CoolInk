@@ -20,6 +20,7 @@ model AdminUser {
   name         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  googleCalendarConnections GoogleCalendarConnection[]
 }
 
 /// CMS-authored pages, built from an ordered list of modules (see
@@ -194,6 +195,7 @@ model Appointment {
   price       Int?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  googleCalendarSync GoogleCalendarEventSync?
 }
 
 /// Permanent, ordered history of meaningful actions taken on a tattoo project.
@@ -319,8 +321,72 @@ model CalendarEvent {
   isPublic    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  googleCalendarSync GoogleCalendarEventSync?
 
   @@index([startsAt, endsAt])
+}
+
+/// One explicit, administrator-owned Google Calendar consent. Tokens remain
+/// encrypted and are used only by server-side sync code.
+model GoogleCalendarConnection {
+  id                    String   @id @default(cuid())
+  adminUserId           String
+  adminUser             AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  accountEmail          String?
+  encryptedRefreshToken String
+  tokenExpiresAt        DateTime?
+  primaryCalendarId     String?
+  syncToken             String?
+  lastSyncedAt          DateTime?
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  selections            GoogleCalendarSelection[]
+  events                GoogleCalendarEventSync[]
+
+  @@unique([adminUserId])
+}
+
+/// A primary read/write calendar or a read-only busy source chosen by admin.
+model GoogleCalendarSelection {
+  id           String   @id @default(cuid())
+  connectionId String
+  connection   GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  calendarId   String
+  summary      String?
+  role         String   @default("busy") // primary | busy
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([connectionId, calendarId])
+  @@index([connectionId, role])
+}
+
+/// Stable idempotency record for one Google event. A row links either one
+/// CoolInk appointment or one imported admin-only CalendarEvent, never data
+/// exposed to clients/public Calendar APIs.
+model GoogleCalendarEventSync {
+  id                String   @id @default(cuid())
+  connectionId      String
+  connection        GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  googleCalendarId  String
+  googleEventId     String
+  appointmentId     String?  @unique
+  appointment       Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  calendarEventId   String?  @unique
+  calendarEvent     CalendarEvent? @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+  googleUpdatedAt   DateTime?
+  localFingerprint  String?
+  lastSyncedAt      DateTime?
+  syncStatus        String   @default("SYNCED") // SYNCED | PENDING_GOOGLE | PENDING_COOLINK | CONFLICT | ERROR | DELETED_REMOTE
+  syncError         String?
+  remoteDeletedAt   DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([googleCalendarId, googleEventId])
+  @@index([connectionId, syncStatus])
 }
 
 model ProjectImage {

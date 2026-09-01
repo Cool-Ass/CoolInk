@@ -3,9 +3,11 @@ import MagneticButton from "@/components/MagneticButton";
 import Parallax from "@/components/Parallax";
 import MultilineText from "@/components/MultilineText";
 import type { ImageTextModuleData } from "@/lib/modules";
+import { imageSource } from "@/lib/imageSource";
 
 export default function ImageText({ data }: { data: ImageTextModuleData }) {
   const reversed = data.imagePosition === "right";
+  const source = imageSource(data.image);
 
   return (
     <section className="relative overflow-hidden bg-ink-black py-20 md:py-28">
@@ -50,10 +52,10 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
               reversed ? "lg:order-1" : ""
             }`}
           >
-            {data.image ? (
+            {source ? (
               <Parallax speed={0.14} className="absolute inset-x-0 -top-[10%] h-[120%]">
                 <Image
-                  src={data.image}
+                  src={source}
                   alt={data.heading1 || ""}
                   fill
                   className="object-cover"

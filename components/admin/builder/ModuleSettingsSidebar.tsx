@@ -8,6 +8,7 @@ import GalleryEditor from "@/components/admin/builder/GalleryEditor";
 import { TextField, TextareaField, SelectField, FieldGroup } from "@/components/admin/builder/fields";
 import { defaultModuleData, withDefaults, MODULE_LABELS, type ColumnWidget, type ColumnWidgetType, type Module, type ModuleStyle } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
+import { imageSource } from "@/lib/imageSource";
 
 interface Props {
   module: Module;
@@ -128,6 +129,8 @@ function renderFields(
                 <div className="grid grid-cols-3 gap-2">
                   {portfolioItems.map((item) => {
                     const active = selectedIds.includes(item.id);
+                    const source = imageSource(item.src);
+                    if (!source) return null;
                     return (
                       <button
                         key={item.id}
@@ -143,7 +146,7 @@ function renderFields(
                         }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={item.src} alt={item.alt} className="h-full w-full object-cover" />
+                        <img src={source} alt={item.alt} className="h-full w-full object-cover" />
                       </button>
                     );
                   })}

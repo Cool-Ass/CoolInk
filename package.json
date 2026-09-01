@@ -21,6 +21,7 @@
     "db:security:http-verify": "node scripts/verifyTestHttpSecurity.cjs",
     "test:smoke:rls": "node scripts/verifyTestAppSmoke.cjs",
     "test:smoke:admin": "node scripts/verifyTestAdminSmoke.cjs",
+    "test:smoke:client-fixture": "node scripts/verifyExistingTestClientSmoke.cjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

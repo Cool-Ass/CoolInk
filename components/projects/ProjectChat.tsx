@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppButton from "@/components/ui/AppButton";
 import EmptyState from "@/components/ui/EmptyState";
+import { imageSource } from "@/lib/imageSource";
 
 type Message = {
   id: string;
@@ -18,10 +19,12 @@ export default function ProjectChat({
   projectId,
   initial,
   role,
+  autoFocus = false,
 }: {
   projectId: string;
   initial: Message[];
   role: "client" | "admin";
+  autoFocus?: boolean;
 }) {
   const [messages, setMessages] = useState(initial);
   const [text, setText] = useState("");
@@ -32,6 +35,8 @@ export default function ProjectChat({
     role === "admin"
       ? `/api/admin/projects/${projectId}/messages`
       : `/api/client/projects/${projectId}/messages`;
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { if (autoFocus) composerRef.current?.focus(); }, [autoFocus]);
 
   const add = (message: Message) => setMessages((items) => [...items, message]);
   async function send() {
@@ -118,8 +123,9 @@ export default function ProjectChat({
             icon="✦"
           />
         ) : (
-          messages.map((message) => (
-            <article
+          messages.map((message) => {
+            const attachmentSource = imageSource(message.attachment?.url);
+            return <article
               key={message.id}
               className={`max-w-[90%] border p-3 text-sm ${message.author === role ? "ml-auto border-ink-gold/50 bg-ink-gold/5" : "border-ink-white/15 bg-ink-black/30"}`}
             >
@@ -133,9 +139,9 @@ export default function ProjectChat({
               )}
               {message.attachment && (
                 <div className="mt-3 border border-ink-white/15 p-2">
-                  {message.attachment.url ? (
+                  {attachmentSource ? (
                     <img
-                      src={message.attachment.url}
+                      src={attachmentSource}
                       alt={message.attachment.caption || "Inspiracja"}
                       className="max-h-56 w-full object-cover"
                     />
@@ -155,8 +161,8 @@ export default function ProjectChat({
                   timeStyle: "short",
                 })}
               </p>
-            </article>
-          ))
+            </article>;
+          })
         )}
       </div>
       <div className="mt-4 border-t border-ink-white/10 pt-4">
@@ -176,6 +182,7 @@ export default function ProjectChat({
         <label className="mt-3 block text-[10px] tracking-widest text-ink-grey">
           WIADOMOŚĆ
           <textarea
+            ref={composerRef}
             value={text}
             onChange={(event) => setText(event.target.value.slice(0, 2_000))}
             rows={3}

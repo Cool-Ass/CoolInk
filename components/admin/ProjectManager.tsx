@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/ToastProvider";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { ADMIN_STATUS_LABEL, DEPOSIT_STATUS } from "@/lib/projectWorkflow";
+import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalendarPicker";
 
 const OPTIONS = Object.entries(ADMIN_STATUS_LABEL);
 
@@ -258,18 +259,10 @@ export default function ProjectManager({
             Klient zobaczy proponowany termin na swoim koncie.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2"><p className="text-[11px] tracking-[0.1em] text-ink-grey">WYBIERZ DZIEŃ</p><div className="mt-2 border border-ink-white/15 bg-ink-black/20 p-3"><AdminProposalCalendarPicker value={proposal.startsAt} onChange={(startsAt) => setProposal({ ...proposal, startsAt })} /></div></div>
             <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
-              DATA I GODZINA
-              <input
-                required
-                type="datetime-local"
-                step="1800"
-                value={proposal.startsAt}
-                onChange={(event) =>
-                  setProposal({ ...proposal, startsAt: event.target.value })
-                }
-                className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white"
-              />
+              GODZINA
+              <input required type="time" step="1800" value={proposal.startsAt ? proposal.startsAt.slice(11, 16) : ""} onChange={(event) => proposal.startsAt && setProposal({ ...proposal, startsAt: `${proposal.startsAt.slice(0, 10)}T${event.target.value}` })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white" />
             </label>
             <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
               CZAS TRWANIA

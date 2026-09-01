@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { getCurrentAdmin } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+export async function GET() { const admin = await getCurrentAdmin(); if (!admin) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 }); const connection = await prisma.googleCalendarConnection.findUnique({ where: { adminUserId: admin.id }, include: { selections: { orderBy: { role: "asc" } } } }); return NextResponse.json({ connection: connection ? { id: connection.id, accountEmail: connection.accountEmail, primaryCalendarId: connection.primaryCalendarId, lastSyncedAt: connection.lastSyncedAt, active: connection.active, selections: connection.selections.map((item) => ({ calendarId: item.calendarId, summary: item.summary, role: item.role, enabled: item.enabled })) } : null }); }

@@ -4,12 +4,17 @@ import Parallax from "@/components/Parallax";
 import MultilineText from "@/components/MultilineText";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { defaultModuleData, type AboutModuleData } from "@/lib/modules";
+import { imageSource } from "@/lib/imageSource";
 
 export default function About({
   content = defaultModuleData("about") as unknown as AboutModuleData,
 }: {
   content?: AboutModuleData;
 }) {
+  const mainImage = imageSource(content.mainImage) ?? "/images/crops/about-main.jpg";
+  const detailImage1 = imageSource(content.detailImage1) ?? "/images/crops/about-gun.jpg";
+  const detailImage2 = imageSource(content.detailImage2) ?? "/images/crops/about-back.jpg";
+  const detailImage3 = imageSource(content.detailImage3) ?? "/images/crops/about-process.jpg";
   return (
     <section
       id="artists"
@@ -65,7 +70,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.1} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src={content.mainImage}
+                  src={mainImage}
                   alt="Szczegółowa realistyczna praca tatuażu"
                   fill
                   className="object-cover"
@@ -79,7 +84,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.22} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src={content.detailImage1}
+                  src={detailImage1}
                   alt="Maszynka do tatuażu w dłoni artysty"
                   fill
                   className="object-cover"
@@ -93,7 +98,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.16} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src={content.detailImage2}
+                  src={detailImage2}
                   alt="Precyzyjny tatuaż dotwork na plecach"
                   fill
                   className="object-cover"
@@ -107,7 +112,7 @@ export default function About({
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.26} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
-                  src={content.detailImage3}
+                  src={detailImage3}
                   alt="Zbliżenie na proces tatuowania"
                   fill
                   className="object-cover"

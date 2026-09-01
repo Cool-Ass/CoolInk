@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { imageSource } from "@/lib/imageSource";
 
 interface MediaItem {
   id: string;
@@ -81,8 +82,10 @@ export default function MediaPickerModal({
           )}
           {filtered.length > 0 && (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {filtered.map((item) => (
-                <button
+              {filtered.map((item) => {
+                const source = imageSource(item.url);
+                if (!source) return null;
+                return <button
                   key={item.id}
                   type="button"
                   onClick={() => multiple ? setSelected((prev) => prev.includes(item.url) ? prev.filter((url) => url !== item.url) : [...prev, item.url]) : onSelect(item.url)}
@@ -90,7 +93,7 @@ export default function MediaPickerModal({
                   title={`Wybierz: ${item.filename}`}
                 >
                   <Image
-                    src={item.url}
+                    src={source}
                     alt={item.alt ?? ""}
                     fill
                     className="object-cover transition-transform group-hover:scale-105"
@@ -99,8 +102,8 @@ export default function MediaPickerModal({
                   <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-ink-black/80 px-2 py-1 text-left text-[10px] text-ink-white opacity-0 transition-opacity group-hover:opacity-100">
                     {item.filename}
                   </span>
-                </button>
-              ))}
+                </button>;
+              })}
             </div>
           )}
         </div>

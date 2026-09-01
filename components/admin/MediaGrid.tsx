@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef, useState, type ChangeEvent } from "react";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { useToast } from "@/components/admin/ToastProvider";
+import { imageSource } from "@/lib/imageSource";
 
 interface MediaItem {
   id: string;
@@ -113,10 +114,11 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {filtered.map((item) => (
-            <div key={item.id} className="border border-ink-white/10 bg-ink-charcoal/30">
+          {filtered.map((item) => {
+            const source = imageSource(item.url);
+            return <div key={item.id} className="border border-ink-white/10 bg-ink-charcoal/30">
               <div className="relative aspect-square w-full bg-ink-black">
-                <Image src={item.url} alt={item.alt ?? ""} fill className="object-cover" sizes="240px" />
+                {source ? <Image src={source} alt={item.alt ?? ""} fill className="object-cover" sizes="240px" /> : <span className="flex h-full items-center justify-center text-xs text-ink-grey">Brak podglądu</span>}
               </div>
               <div className="flex flex-col gap-2 p-3">
                 <p className="truncate text-[11px] text-ink-grey">{item.filename}</p>
@@ -150,8 +152,8 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
                   />
                 )}
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
         </div>
       )}
     </div>

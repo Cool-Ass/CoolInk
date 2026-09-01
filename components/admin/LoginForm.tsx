@@ -3,8 +3,9 @@
 import Image from "next/image";
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { imageSource } from "@/lib/imageSource";
 
-function LoginFormInner({ logoUrl }: { logoUrl: string }) {
+function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/admin";
@@ -13,6 +14,7 @@ function LoginFormInner({ logoUrl }: { logoUrl: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const logoSource = imageSource(logoUrl);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,14 +42,20 @@ function LoginFormInner({ logoUrl }: { logoUrl: string }) {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <div className="relative h-16 w-48">
-            <Image
-              src={logoUrl}
-              alt="CoolInk Tattoo Studio — logo"
-              fill
-              priority
-              className="object-contain mix-blend-screen"
-              sizes="192px"
-            />
+            {logoSource ? (
+              <Image
+                src={logoSource}
+                alt="CoolInk Tattoo Studio — logo"
+                fill
+                priority
+                className="object-contain mix-blend-screen"
+                sizes="192px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center font-display text-3xl tracking-[0.08em] text-ink-white" aria-label="CoolInk Tattoo Studio">
+                COOLINK
+              </div>
+            )}
           </div>
         </div>
 
@@ -108,7 +116,7 @@ function LoginFormInner({ logoUrl }: { logoUrl: string }) {
   );
 }
 
-export default function LoginForm({ logoUrl }: { logoUrl: string }) {
+export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
   return (
     <Suspense fallback={null}>
       <LoginFormInner logoUrl={logoUrl} />

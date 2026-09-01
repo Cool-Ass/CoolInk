@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import AddPortfolioItem from "@/components/admin/AddPortfolioItem";
 import PortfolioRowActions from "@/components/admin/PortfolioRowActions";
 import Link from "next/link";
+import { imageSource } from "@/lib/imageSource";
 
 export const dynamic = "force-dynamic";
 
@@ -27,16 +28,17 @@ export default async function PortfolioListPage() {
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item, i) => (
-            <div key={item.id} className="border border-ink-white/10 bg-ink-charcoal/30">
+          {items.map((item, i) => {
+            const source = imageSource(item.imageUrl);
+            return <div key={item.id} className="border border-ink-white/10 bg-ink-charcoal/30">
               <div className="relative aspect-[4/5] w-full overflow-hidden bg-ink-black">
-                <Image
-                  src={item.imageUrl}
+                {source ? <Image
+                  src={source}
                   alt={item.title}
                   fill
                   className="object-cover"
                   sizes="(min-width: 1024px) 25vw, 45vw"
-                />
+                /> : <span className="flex h-full items-center justify-center text-xs text-ink-grey">Brak podglądu</span>}
                 {!item.published && (
                   <span className="absolute left-2 top-2 border border-ink-grey/60 bg-ink-black/80 px-2 py-0.5 text-[10px] tracking-[0.1em] text-ink-grey">
                     ROBOCZY
@@ -67,8 +69,8 @@ export default async function PortfolioListPage() {
                   isLast={i === items.length - 1}
                 />
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
         </div>
       )}
     </div>

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FileText, Globe2, Image as ImageIcon, LayoutDashboard, Mail, PanelsTopLeft, Settings, Users } from "lucide-react";
+import { CalendarDays, FileText, Globe2, Image as ImageIcon, LayoutDashboard, LibraryBig, PanelsTopLeft, Settings, Users } from "lucide-react";
+import { imageSource } from "@/lib/imageSource";
 
 export const ADMIN_SECTIONS = [
   {
@@ -19,12 +20,12 @@ export const ADMIN_SECTIONS = [
     links: [
       { href: "/admin/pages", label: "Strony i builder", icon: PanelsTopLeft },
       { href: "/admin/portfolio", label: "Portfolio / Galeria", icon: ImageIcon },
-      { href: "/admin/media", label: "Obrazy / Media", icon: ImageIcon },
+      { href: "/admin/media", label: "Biblioteka mediów", icon: LibraryBig },
       { href: "/admin/content", label: "Treści globalne", icon: Globe2 },
       { href: "/admin/navigation", label: "Nawigacja", icon: Globe2 },
     ],
   },
-  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/messages", label: "Wiadomości", icon: Mail }] },
+  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }] },
   {
     label: "USTAWIENIA",
     links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings }],
@@ -37,18 +38,13 @@ export default function Sidebar({
   logoUrl?: string;
 }) {
   const pathname = usePathname();
+  const logoSource = imageSource(logoUrl);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-ink-white/10 bg-ink-charcoal/40 md:flex">
       <div className="flex items-center gap-2 border-b border-ink-white/10 px-6 py-6">
         <div className="relative h-9 w-28">
-          <Image
-            src={logoUrl}
-            alt="CoolInk"
-            fill
-            className="object-contain mix-blend-screen"
-            sizes="112px"
-          />
+          {logoSource ? <Image src={logoSource} alt="CoolInk" fill className="object-contain mix-blend-screen" sizes="112px" /> : <span className="flex h-full items-center font-display text-base tracking-[0.08em] text-ink-white">COOLINK</span>}
         </div>
       </div>
 

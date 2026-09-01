@@ -3,11 +3,13 @@
  * isolated COOLINK APP project and never logs credentials or response bodies.
  */
 const { randomUUID } = require("crypto");
+const { PrismaClient } = require("@prisma/client");
 const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.cjs");
 
 const tables = [
   "AdminUser", "Appointment", "AvailabilityBlock", "Client", "ClientNotification",
   "AvailableSlot", "CalendarEvent",
+  "GoogleCalendarConnection", "GoogleCalendarSelection", "GoogleCalendarEventSync",
   "ContactMessage", "DocumentAcceptance", "Media", "NavItem", "Page", "PortfolioItem",
   "ProjectActivity", "ProjectImage", "ProjectMessage", "Promotion", "SiteSetting", "StudioDocument",
   "TattooProject", "WorkingHours", "WorkingHoursOverride",
@@ -39,7 +41,7 @@ async function signUp(url, key, label) {
   if (!response.ok || !data?.access_token) {
     throw new Error("Could not create a test client session. In the test project, disable email confirmation temporarily or provide pre-created test accounts through a separate local-only test configuration.");
   }
-  return data.access_token;
+  return { email, token: data.access_token };
 }
 
 async function checkPrincipal(label, url, key, token) {
@@ -62,12 +64,24 @@ async function main() {
   const key = env.DRY_RUN_SUPABASE_PUBLISHABLE_KEY;
   if (!key) throw new Error("Missing DRY_RUN_SUPABASE_PUBLISHABLE_KEY in ignored .env.dryrun.local.");
 
-  const anon = await checkPrincipal("anon", url, key, null);
-  const clientA = await signUp(url, key, "a");
-  const clientB = await signUp(url, key, "b");
-  const authenticatedA = await checkPrincipal("authenticated client A", url, key, clientA);
-  const authenticatedB = await checkPrincipal("authenticated client B", url, key, clientB);
-  console.log(JSON.stringify({ tables: tables.length, anon, authenticatedA, authenticatedB }, null, 2));
+  const createdEmails = [];
+  try {
+    const anon = await checkPrincipal("anon", url, key, null);
+    const clientA = await signUp(url, key, "a"); createdEmails.push(clientA.email);
+    const clientB = await signUp(url, key, "b"); createdEmails.push(clientB.email);
+    const authenticatedA = await checkPrincipal("authenticated client A", url, key, clientA.token);
+    const authenticatedB = await checkPrincipal("authenticated client B", url, key, clientB.token);
+    console.log(JSON.stringify({ tables: tables.length, anon, authenticatedA, authenticatedB }, null, 2));
+  } finally {
+    if (createdEmails.length && env.DRY_RUN_DIRECT_URL) {
+      const previousUrl = process.env.DATABASE_URL;
+      process.env.DATABASE_URL = env.DRY_RUN_DIRECT_URL;
+      const prisma = new PrismaClient();
+      await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = ANY($1::text[])", createdEmails).catch(() => null);
+      await prisma.$disconnect();
+      if (previousUrl) process.env.DATABASE_URL = previousUrl; else delete process.env.DATABASE_URL;
+    }
+  }
 }
 
 main().catch((error) => { console.error(`FAIL: ${error.message}`); process.exitCode = 1; });

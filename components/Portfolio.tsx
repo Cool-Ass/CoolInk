@@ -10,6 +10,7 @@ import MultilineText from "@/components/MultilineText";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { defaultModuleData, type PortfolioModuleData } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
+import { imageSource } from "@/lib/imageSource";
 
 const FALLBACK_WORKS: PortfolioWork[] = [
   { id: "1", src: "/images/crops/portfolio-1.jpg", alt: "Rzeźbiarski, realistyczny rękaw tatuażu" },
@@ -26,13 +27,17 @@ export default function Portfolio({
   works?: PortfolioWork[];
 }) {
   const [active, setActive] = useState(0);
-  const hasWorks = works.length > 0;
+  const validWorks = works.flatMap((work) => {
+    const source = imageSource(work.src);
+    return source ? [{ ...work, src: source }] : [];
+  });
+  const hasWorks = validWorks.length > 0;
 
   function prev() {
-    setActive((i) => (i - 1 + works.length) % works.length);
+    setActive((i) => (i - 1 + validWorks.length) % validWorks.length);
   }
   function next() {
-    setActive((i) => (i + 1) % works.length);
+    setActive((i) => (i + 1) % validWorks.length);
   }
 
   return (
@@ -87,7 +92,7 @@ export default function Portfolio({
             {hasWorks ? (
               <>
                 <div className="flex h-[420px] gap-1.5 md:h-[485px]">
-                  {works.map((work, i) => (
+                  {validWorks.map((work, i) => (
                     <button
                       key={work.id}
                       onClick={() => setActive(i)}
@@ -132,7 +137,7 @@ export default function Portfolio({
                     →
                   </button>
                   <span className="ml-1 text-[13px] tracking-[0.15em] text-ink-white">
-                    <span className="text-ink-gold">0{active + 1}</span> / 0{works.length}
+                    <span className="text-ink-gold">0{active + 1}</span> / 0{validWorks.length}
                   </span>
                 </div>
               </>

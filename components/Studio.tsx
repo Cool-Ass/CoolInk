@@ -7,12 +7,14 @@ import Parallax from "@/components/Parallax";
 import MultilineText from "@/components/MultilineText";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { defaultModuleData, type StudioModuleData } from "@/lib/modules";
+import { imageSource } from "@/lib/imageSource";
 
 export default function Studio({
   content = defaultModuleData("studio") as unknown as StudioModuleData,
 }: {
   content?: StudioModuleData;
 }) {
+  const studioImage = imageSource(content.image) ?? "/images/crops/studio-room.jpg";
   return (
     <section id="studio" className="relative overflow-hidden bg-ink-black py-24 md:py-32">
       <CalligraphyBackground opacity={0.045} position="15% 70%" />
@@ -64,7 +66,7 @@ export default function Studio({
           <div className="reveal-up relative mx-auto h-[380px] w-full max-w-xl overflow-hidden shadow-2xl shadow-black/60 lg:h-[560px]">
             <Parallax speed={0.14} className="absolute inset-x-0 -top-[10%] h-[120%]">
               <Image
-                src={content.image || "/images/crops/studio-room.jpg"}
+                src={studioImage}
                 alt="Wnętrze studia CoolInk z fotelem do tatuażu"
                 fill
                 className="object-cover"

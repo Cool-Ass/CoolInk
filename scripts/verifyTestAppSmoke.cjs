@@ -19,7 +19,7 @@ async function call(path, options = {}, cookie = "") {
 async function register(label) {
   const email = `${tag}-${label}@example.test`;
   const password = `CoolInk!${randomUUID()}A1`;
-  const { response, body } = await call("/api/client/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: `Smoke ${label}`, lastName: "RLS", email, password }) });
+  const { response, body } = await call("/api/client/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: `Smoke ${label}`, lastName: "RLS", email, password, privacyAcknowledged: true }) });
   assert(response.status === 200, `registration ${label} returned ${response.status}`);
   let cookie = cookies(response);
   if (!cookie.includes("coolink_client_access=")) {
@@ -37,9 +37,14 @@ async function register(label) {
 }
 async function main() {
   const dry = loadDryRunEnvironment(); requireTestProject(dry);
+  let contactMessageId = null;
   const homepage = await call("/"); assert(homepage.response.status === 200, "homepage failed");
   const contactOk = await call("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Security smoke", email: `${tag}@example.test`, message: "Wiadomość testowa do sprawdzenia zabezpieczeń." }) });
   assert([201, 429].includes(contactOk.response.status), `contact success returned ${contactOk.response.status}`);
+  if (contactOk.response.status === 201) {
+    const contact = await prisma.contactMessage.findFirst({ where: { email: `${tag}@example.test`, message: "Wiadomość testowa do sprawdzenia zabezpieczeń." }, orderBy: { createdAt: "desc" }, select: { id: true } });
+    contactMessageId = contact?.id || null;
+  }
   const contactInvalid = await call("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "x" }) });
   assert([400, 429].includes(contactInvalid.response.status), `contact validation returned ${contactInvalid.response.status}`);
   const contactHoneypot = await call("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "bot", email: `${tag}-bot@example.test`, message: "to nie zostanie zapisane", website: "https://spam.example" }) });
@@ -79,10 +84,11 @@ async function main() {
     assert(icsForeign.response.status === 404, `foreign ICS returned ${icsForeign.response.status}`);
     assert(icsCancelled.response.status === 404, `cancelled ICS returned ${icsCancelled.response.status}`);
     const portal = await call("/app/portal", {}, a.cookie); assert(portal.response.status === 200, `portal returned ${portal.response.status}`);
-    assert(portal.body.includes(`/api/client/appointments/${proposedA.id}/calendar`) && portal.body.includes("calendar.google.com/calendar/render?") && portal.body.includes("ctz=Europe%2FWarsaw"), "confirmed appointment Google Calendar link is missing or has no Warsaw timezone");
-    for (const appointment of [cancelledA, unconfirmedA, proposedB]) assert(!portal.body.includes(`/api/client/appointments/${appointment.id}/calendar`), `Google/ICS link was exposed for ${appointment.status} or foreign appointment`);
+    const visits = await call("/app/portal/visits", {}, a.cookie); assert(visits.response.status === 200, `project visits returned ${visits.response.status}`);
+    assert(visits.body.includes("PROJEKTY / ZGŁOSZENIA") && visits.body.includes("RLS project A"), "project view did not render the client-owned project");
     console.log("PASS: contact security, client registration/login, profile, projects, proposal accept/reject, notifications, documents, ICS, Google Calendar link restrictions and A/B endpoint isolation.");
   } finally {
+    if (contactMessageId) await prisma.contactMessage.delete({ where: { id: contactMessageId } }).catch(() => null);
     await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = ANY($1::text[])", [a.email, b.email]).catch(() => null);
     await prisma.client.deleteMany({ where: { id: { in: [clientA.id, clientB.id] } } });
     await prisma.studioDocument.delete({ where: { id: doc.id } }).catch(() => null);

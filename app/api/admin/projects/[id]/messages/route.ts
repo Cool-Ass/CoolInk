@@ -113,7 +113,7 @@ export async function POST(
         type: "PROJECT_MESSAGE",
         title: "Nowa wiadomość od studia",
         body: text.slice(0, 160),
-        href: "#projekty",
+        href: "/app/portal/messages",
       },
     });
     return message;

@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-import { isHexColor, rangeCanFit, resolveAvailableRanges } from "@/lib/calendarHub";
+import { isHexColor } from "@/lib/calendarHub";
+import { bookingConflict } from "@/lib/bookingRules";
 import { sanitizeRichText } from "@/lib/richText";
 import { isValidIconName } from "@/lib/icons";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 type CalendarKind = "dayOff" | "freeTerm" | "promotion" | "event" | "workingHours" | "clearStatus";
 const text = (value: unknown) => String(value ?? "").trim();
@@ -36,17 +38,16 @@ function content(kind: CalendarKind, body: Record<string, unknown> | null, start
   return null;
 }
 async function availableForSlot(startsAt: Date, endsAt: Date) {
-  const [hours, overrides, blocks, appointments, setting] = await Promise.all([
-    prisma.workingHours.findMany(), prisma.workingHoursOverride.findMany(),
-    prisma.availabilityBlock.findMany({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }),
-    prisma.appointment.findMany({ where: { status: { notIn: ["cancelled", "no_show"] }, startsAt: { lt: endsAt }, endsAt: { gt: startsAt } }, select: { startsAt: true, endsAt: true, status: true } }),
-    prisma.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } }),
-  ]);
-  return rangeCanFit(resolveAvailableRanges({ date: startsAt, recurring: hours, overrides, slots: [{ startsAt, endsAt }], blocks, appointments, bufferMinutes: Number(setting?.value) || 0 }), startsAt, endsAt);
+  // An explicit WOLNY slot is the sole source of public availability. Repeating
+  // opening hours never grant or remove bookability; they only remain stored
+  // for historic/internal compatibility.
+  const conflict = await bookingConflict(startsAt, endsAt);
+  return !conflict.appointment && !conflict.block;
 }
 
 export async function POST(request: Request) {
   const denied = await adminOnly(); if (denied) return denied;
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { body, kind, startsAt, endsAt } = parse(await request.json().catch(() => null)); const dates = selectedDates(body);
   if (kind === "workingHours") {
     const hours = body?.hours as Record<string, unknown> | undefined; const from = text(hours?.startsAt) || "10:00"; const to = text(hours?.endsAt) || "19:00";
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const denied = await adminOnly(); if (denied) return denied;
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { body, kind, startsAt, endsAt } = parse(await request.json().catch(() => null)); const id = text(body?.id);
   if (!id) return NextResponse.json({ error: "Brakuje identyfikatora elementu." }, { status: 400 });
   if (kind === "workingHours") { const hours = body?.hours as Record<string, unknown> | undefined; const from = text(hours?.startsAt); const to = text(hours?.endsAt); if (!validTime(from) || !validTime(to) || from >= to) return NextResponse.json({ error: "Podaj poprawne godziny pracy." }, { status: 400 }); return NextResponse.json({ item: await prisma.workingHoursOverride.update({ where: { id }, data: { enabled: hours?.enabled !== false, startsAt: from, endsAt: to, breakStart: text(hours?.breakStart) || null, breakEnd: text(hours?.breakEnd) || null } }) }); }
@@ -94,6 +96,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const denied = await adminOnly(); if (denied) return denied;
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { searchParams } = new URL(request.url); const kind = searchParams.get("kind") as CalendarKind | null; const id = searchParams.get("id"); const ids = searchParams.getAll("id").filter(Boolean);
   if (kind === "clearStatus") {
     const dates = searchParams.getAll("date").map(toDate).filter((date) => !Number.isNaN(date.getTime()));

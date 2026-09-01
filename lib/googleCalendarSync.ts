@@ -1,0 +1,8 @@
+import { createHash } from "crypto";
+import type { GoogleEvent } from "@/lib/googleCalendar";
+
+export type SyncDecision = "APPLY_GOOGLE" | "KEEP_COOLINK" | "CONFLICT" | "REMOTE_DELETED";
+export function appointmentFingerprint(input: { startsAt: Date; endsAt: Date; status: string }) { return createHash("sha256").update(`${input.startsAt.toISOString()}|${input.endsAt.toISOString()}|${input.status}`).digest("hex"); }
+export function decideGoogleSync(input: { remoteDeleted?: boolean; googleUpdatedAt?: Date | null; localUpdatedAt: Date; lastSyncedAt?: Date | null; localFingerprint?: string | null; currentFingerprint: string }) : SyncDecision { if (input.remoteDeleted) return "REMOTE_DELETED"; const localChanged = !input.lastSyncedAt || input.localUpdatedAt > input.lastSyncedAt || input.localFingerprint !== input.currentFingerprint; const googleChanged = Boolean(input.googleUpdatedAt && (!input.lastSyncedAt || input.googleUpdatedAt > input.lastSyncedAt)); if (localChanged && googleChanged) return "CONFLICT"; return googleChanged ? "APPLY_GOOGLE" : "KEEP_COOLINK"; }
+export function googleEventPayload(input: { startsAt: Date; endsAt: Date; location?: string | null; title?: string }) { return { summary: input.title || "CoolInk — Wizyta", location: input.location || undefined, description: "Wizyta CoolInk. Szczegóły pozostają w bezpiecznym systemie CoolInk.", start: { dateTime: input.startsAt.toISOString(), timeZone: "Europe/Warsaw" }, end: { dateTime: input.endsAt.toISOString(), timeZone: "Europe/Warsaw" } }; }
+export function externalGoogleTitle(event: GoogleEvent) { return event.summary?.trim().slice(0, 200) || "Google event"; }

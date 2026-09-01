@@ -1,0 +1,17 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Range = { startsAt: string; endsAt: string };
+const months = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
+const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const dayStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+const overlaps = (range: Range, date: Date) => new Date(range.startsAt) < new Date(dayStart(date).getTime() + 86400000) && new Date(range.endsAt) > dayStart(date);
+
+export default function AdminProposalCalendarPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const today = dayStart(new Date()); const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1)); const [data, setData] = useState<{ appointments: Range[]; blocks: Range[]; slots: Range[]; googleBusy: Range[] }>({ appointments: [], blocks: [], slots: [], googleBusy: [] });
+  useEffect(() => { fetch("/api/admin/calendar-snapshot").then((response) => response.ok ? response.json() : null).then((result) => result && setData(result)).catch(() => undefined); }, []);
+  const days = useMemo(() => { const start = new Date(cursor); start.setDate(1 - ((start.getDay() + 6) % 7)); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return date; }); }, [cursor]);
+  const selectedKey = value ? key(new Date(value)) : "";
+  return <div><div className="mb-3 flex items-center justify-between"><button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="border border-ink-white/15 px-2 py-1 text-sm">←</button><p className="font-display text-xl">{months[cursor.getMonth()]} {cursor.getFullYear()}</p><button type="button" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="border border-ink-white/15 px-2 py-1 text-sm">→</button></div><div className="grid grid-cols-7 border-l border-t border-ink-white/10">{["PN","WT","ŚR","CZ","PT","SB","ND"].map((day) => <span key={day} className="border-b border-r border-ink-white/10 py-1 text-center text-[9px] text-ink-grey">{day}</span>)}{days.map((date) => { const available = data.slots.some((range) => overlaps(range, date)); const busy = data.appointments.some((range) => overlaps(range, date)) || data.blocks.some((range) => overlaps(range, date)) || data.googleBusy.some((range) => overlaps(range, date)); const muted = date.getMonth() !== cursor.getMonth(); const selected = selectedKey === key(date); return <button key={date.toISOString()} type="button" disabled={busy || date < today} onClick={() => onChange(`${key(date)}T10:00`)} className={`min-h-12 border-b border-r border-ink-white/10 p-1 text-left text-xs ${selected ? "ring-1 ring-inset ring-ink-gold" : ""} ${busy ? "bg-red-500/15 text-red-200" : available ? "bg-emerald-500/15 text-emerald-200" : "bg-ink-white/[0.035] text-ink-grey"} ${muted ? "opacity-35" : ""} disabled:cursor-not-allowed`}><b>{date.getDate()}</b>{busy ? <span className="mt-1 block text-[7px]">ZAJĘTY</span> : available ? <span className="mt-1 block text-[7px]">WOLNY</span> : null}</button>; })}</div><p className="mt-2 text-[10px] text-ink-grey">Zielony: wolny termin · czerwony: wizyta, blokada lub Google busy.</p></div>;
+}
