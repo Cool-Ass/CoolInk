@@ -11,8 +11,10 @@ const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.c
 
 const prisma = new PrismaClient();
 const base = (process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
-const password = process.env.SMOKE_CLIENT_PASSWORD;
 const tag = `fixture-smoke-${Date.now()}-${randomUUID().slice(0, 8)}`;
+// The fixture lives only in the dedicated test project. A fresh ephemeral
+// password avoids placing a reusable client credential in an env file or log.
+const password = process.env.SMOKE_CLIENT_PASSWORD || `CoolInk-${randomUUID()}-Aa1`;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -40,7 +42,7 @@ async function futureFreeRange() {
   const now = new Date();
   for (let day = 18; day <= 110; day += 1) {
     const startsAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + day, 10, 0, 0));
-    const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 8 * 60 * 60 * 1000);
     const bufferedStart = new Date(startsAt.getTime() - 30 * 60 * 1000);
     const bufferedEnd = new Date(endsAt.getTime() + 30 * 60 * 1000);
     const [appointment, block, googleBusy] = await Promise.all([
@@ -79,7 +81,7 @@ async function resetFixturePassword(client) {
 async function main() {
   const dry = loadDryRunEnvironment();
   requireTestProject(dry);
-  assert(typeof password === "string" && password.length >= 12, "SMOKE_CLIENT_PASSWORD is required and is not stored in this script.");
+  assert(typeof password === "string" && password.length >= 12, "The test fixture password could not be prepared.");
 
   const fixture = await prisma.client.findFirst({
     where: { email: { startsWith: "dryrun-client-" }, supabaseUserId: { not: null } },
@@ -180,6 +182,12 @@ async function main() {
       body: JSON.stringify({ projectId: project.id, startsAt: free.startsAt.toISOString(), endsAt: free.endsAt.toISOString(), description: "Kontrolowana prośba o wizytę z jawnie ustawionego wolnego terminu." }),
     }, cookie);
     assert(booking.response.status === 201, `explicit free-slot booking returned ${booking.response.status}`);
+    const requested = JSON.parse(booking.body).appointment;
+    assert(new Date(requested.endsAt).getTime() - new Date(requested.startsAt).getTime() === 8 * 60 * 60 * 1000, "Free 10:00–18:00 range was shortened before the studio reviewed it.");
+    const illegalAccept = await call(`/api/client/appointments/${requested.id}/response`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ response: "accept" }) }, cookie);
+    assert(illegalAccept.response.status === 409, `client self-confirm of original request returned ${illegalAccept.response.status}`);
+    const stillRequested = await prisma.appointment.findUnique({ where: { id: requested.id }, select: { status: true } });
+    assert(stillRequested?.status === "requested", "Illegal client self-confirm changed the original request status.");
 
     const unavailable = await futureNonFreeRange();
     const noSlotBooking = await call("/api/client/appointments", {
@@ -206,7 +214,7 @@ async function main() {
     const afterLogout = await call("/api/client/notifications");
     assert(afterLogout.response.status === 401, `logged-out notifications returned ${afterLogout.response.status}`);
 
-    console.log("PASS: existing client fixture auth/session/logout, portal navigation, projects and finance privacy, appointments/ICS, explicit availability, messages, notifications, documents, profile, client A/B isolation and Google privacy.");
+    console.log("PASS: existing client fixture auth/session/logout, portal navigation, projects and finance privacy, 10:00–18:00 availability, client self-confirm blocking, alternate-term response, messages, notifications, documents, profile, client A/B isolation and Google privacy.");
   } finally {
     await prisma.client.update({ where: { id: fixture.id }, data: { firstName: fixture.firstName, lastName: fixture.lastName, phone: fixture.phone } }).catch(() => null);
     if (ids.clientB) await prisma.client.delete({ where: { id: ids.clientB } }).catch(() => null);

@@ -89,7 +89,7 @@ export default function ClientProjectCards({
                   {project.appointments.length}{" "}
                   {project.appointments.length === 1 ? "sesja" : "sesje"}
                 </p>
-                {(project.estimatedPrice || project.finalPrice || project.depositAmount) && <p className="mt-2 text-xs text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : `Zadatek: ${project.depositAmount} zł`}</p>}
+                <p className="mt-2 text-xs text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : "Wycena w trakcie ustalania"}</p>
               </div>
             </button>;
           })}
@@ -112,7 +112,7 @@ export default function ClientProjectCards({
               </div>
               <p className="mt-3 text-sm text-ink-grey">{selected.next}</p>
             </section>
-            <section className="border-y border-ink-white/10 py-5"><p className="text-[10px] tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{selected.estimatedPrice ? `${selected.estimatedPrice} zł` : "W trakcie ustalania"}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" ? "Niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || selected.depositStatus}`}</p></div></div></section>
+            <section className="border-y border-ink-white/10 py-5"><p className="text-[10px] tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{selected.estimatedPrice ? `${selected.estimatedPrice} zł` : "W trakcie ustalania"}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" && !selected.depositAmount ? "Jeszcze nieustalony" : selected.depositStatus === "not_required" ? "Zadatek niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || "Jeszcze nieustalony"}`}</p></div></div></section>
             <section>
               <p className="text-[10px] tracking-widest text-ink-gold">SESJE</p>
               {selected.appointments.length ? (

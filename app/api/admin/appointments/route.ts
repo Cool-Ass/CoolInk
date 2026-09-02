@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
 import { activityMessage } from "@/lib/projectWorkflow";
+import { getCurrentAdmin } from "@/lib/auth";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const body = await request.json().catch(() => null);
   const requestedProjectId = String(body?.projectId ?? ""); const requestedClientId = String(body?.clientId ?? ""); const startsAt = new Date(String(body?.startsAt ?? "")); const endsAt = new Date(String(body?.endsAt ?? ""));
   if (!validAppointmentRange(startsAt, endsAt)) return NextResponse.json({ error: "Wybierz termin co 30 minut, o długości od 30 minut do 12 godzin." }, { status: 400 });

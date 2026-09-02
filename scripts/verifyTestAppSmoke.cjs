@@ -1,6 +1,7 @@
 /* HTTP smoke test for the local CoolInk server configured only with COOLINK APP. */
 const { PrismaClient } = require("@prisma/client");
 const { randomUUID } = require("crypto");
+const bcrypt = require("bcryptjs");
 const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.cjs");
 
 const prisma = new PrismaClient();
@@ -53,6 +54,10 @@ async function main() {
   assert(foreign.status === 403, `foreign origin returned ${foreign.status}`);
 
   const a = await register("a"); const b = await register("b");
+  // Admin and client may intentionally share an e-mail address. Their
+  // cookies and route guards must still remain completely isolated.
+  const sameEmailAdminPassword = `CoolInk!${randomUUID()}A1`;
+  const sameEmailAdmin = await prisma.adminUser.create({ data: { email: a.email, name: "Same e-mail smoke", passwordHash: await bcrypt.hash(sameEmailAdminPassword, 12) } });
   const createA = await call("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: "Smoke a", lastName: "RLS", email: a.email, title: "RLS project A", description: "Projekt testowy po migracji RLS." }) }, a.cookie);
   const createB = await call("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: "Smoke b", lastName: "RLS", email: b.email, title: "RLS project B", description: "Projekt testowy po migracji RLS." }) }, b.cookie);
   assert(createA.response.status === 201 && createB.response.status === 201, "project creation failed");
@@ -69,6 +74,12 @@ async function main() {
   try {
     const profile = await call("/api/client/profile", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: "Smoke", lastName: "Updated", phone: "123" }) }, a.cookie);
     assert(profile.response.status === 200, `profile returned ${profile.response.status}`);
+    const sameEmailAdminLogin = await call("/api/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: a.email, password: sameEmailAdminPassword }) });
+    assert(sameEmailAdminLogin.response.status === 200, "Admin login failed for a deliberately shared e-mail.");
+    const clientWithAdminCookie = await call("/api/client/notifications", {}, cookies(sameEmailAdminLogin.response));
+    assert(clientWithAdminCookie.response.status === 401, "An admin cookie accessed client data for a shared e-mail.");
+    const adminWithClientCookie = await call("/api/admin/clients", {}, a.cookie);
+    assert(adminWithClientCookie.response.status === 401, "A client cookie accessed administrator data for a shared e-mail.");
     const accept = await call(`/api/client/appointments/${proposedA.id}/response`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ response: "accept" }) }, a.cookie);
     assert(accept.response.status === 200, `appointment accept returned ${accept.response.status}`);
     const reject = await call(`/api/client/appointments/${proposedB.id}/response`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ response: "reject" }) }, b.cookie);
@@ -86,10 +97,11 @@ async function main() {
     const portal = await call("/app/portal", {}, a.cookie); assert(portal.response.status === 200, `portal returned ${portal.response.status}`);
     const visits = await call("/app/portal/visits", {}, a.cookie); assert(visits.response.status === 200, `project visits returned ${visits.response.status}`);
     assert(visits.body.includes("PROJEKTY / ZGŁOSZENIA") && visits.body.includes("RLS project A"), "project view did not render the client-owned project");
-    console.log("PASS: contact security, client registration/login, profile, projects, proposal accept/reject, notifications, documents, ICS, Google Calendar link restrictions and A/B endpoint isolation.");
+    console.log("PASS: contact security, client registration/login, same-e-mail admin/client isolation, profile, projects, proposal accept/reject, notifications, documents, ICS, Google Calendar link restrictions and A/B endpoint isolation.");
   } finally {
     if (contactMessageId) await prisma.contactMessage.delete({ where: { id: contactMessageId } }).catch(() => null);
     await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = ANY($1::text[])", [a.email, b.email]).catch(() => null);
+    await prisma.adminUser.delete({ where: { id: sameEmailAdmin.id } }).catch(() => null);
     await prisma.client.deleteMany({ where: { id: { in: [clientA.id, clientB.id] } } });
     await prisma.studioDocument.delete({ where: { id: doc.id } }).catch(() => null);
     await prisma.$disconnect();

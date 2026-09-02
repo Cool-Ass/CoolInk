@@ -3,10 +3,12 @@ import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { activityMessage } from "@/lib/projectWorkflow";
 import { recordWorkflowEvent } from "@/lib/workflowEvents";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 interface Params { params: Promise<{ id: string }> }
 
 export async function POST(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
   const { id } = await params;
@@ -15,7 +17,10 @@ export async function POST(request: Request, { params }: Params) {
   if (response !== "accept" && response !== "reject") return NextResponse.json({ error: "Nieprawidłowa odpowiedź." }, { status: 400 });
   const appointment = await prisma.appointment.findFirst({ where: { id, project: { clientId: client.id } }, include: { project: true } });
   if (!appointment) return NextResponse.json({ error: "Nie znaleziono wizyty." }, { status: 404 });
-  if (!["proposed", "requested"].includes(appointment.status)) return NextResponse.json({ error: "Na ten termin nie można już odpowiedzieć." }, { status: 409 });
+  // A request chosen by the client is deliberately not actionable by that
+  // same client. Only a different term explicitly proposed by the studio can
+  // be accepted or rejected here.
+  if (appointment.status !== "proposed") return NextResponse.json({ error: "Studio nie zaproponowało jeszcze nowego terminu." }, { status: 409 });
 
   const accepted = response === "accept";
   const nextProjectStatus = accepted ? (appointment.project.depositStatus === "awaiting" ? "awaiting_deposit" : "confirmed") : "awaiting_client";

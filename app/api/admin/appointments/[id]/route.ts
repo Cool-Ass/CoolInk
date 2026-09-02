@@ -2,29 +2,36 @@ import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 interface Params { params: Promise<{ id: string }>; }
 
 export async function PATCH(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params; const body = await request.json().catch(() => null);
-  const appointment = await prisma.appointment.findUnique({ where: { id }, include: { project: { select: { clientId: true } } } });
+  const appointment = await prisma.appointment.findUnique({ where: { id }, include: { project: { select: { clientId: true, depositStatus: true } } } });
   if (!appointment) return NextResponse.json({ error: "Wizyta nie istnieje." }, { status: 404 });
   const startsAt = body?.startsAt ? new Date(String(body.startsAt)) : appointment.startsAt;
   const endsAt = body?.endsAt ? new Date(String(body.endsAt)) : appointment.endsAt;
   if (!validAppointmentRange(startsAt, endsAt)) return NextResponse.json({ error: "Wybierz termin co 30 minut, o długości od 30 minut do 12 godzin." }, { status: 400 });
-  const status = typeof body?.status === "string" ? body.status : appointment.status;
+  const requestedStatus = typeof body?.status === "string" ? body.status : appointment.status;
+  const timeChanged = startsAt.getTime() !== appointment.startsAt.getTime() || endsAt.getTime() !== appointment.endsAt.getTime();
+  // A changed time is an offer from the studio, never an implicit client
+  // confirmation. The client can respond only to this `proposed` state.
+  const status = appointment.status === "requested" && timeChanged && requestedStatus !== "confirmed" ? "proposed" : requestedStatus;
   if (!["requested", "proposed", "confirmed", "completed", "no_show", "cancelled"].includes(status)) return NextResponse.json({ error: "Nieprawidłowy status wizyty." }, { status: 400 });
   const conflict = await bookingConflict(startsAt, endsAt, id, !Boolean(body?.ignoreBuffer));
   if (status !== "cancelled" && (conflict.appointment || conflict.block)) return NextResponse.json({ error: "Ten termin koliduje z inną wizytą, blokadą lub ustawionym buforem." }, { status: 409 });
   const rawPrice = body?.price; const price = rawPrice === undefined || rawPrice === "" ? appointment.price : Number(rawPrice);
   if (price !== null && (!Number.isInteger(price) || price < 0)) return NextResponse.json({ error: "Cena musi być liczbą całkowitą większą lub równą zero." }, { status: 400 });
-  const changed = startsAt.getTime() !== appointment.startsAt.getTime() || endsAt.getTime() !== appointment.endsAt.getTime() || status !== appointment.status;
-  const updated = await prisma.$transaction(async (tx) => { const item = await tx.appointment.update({ where: { id }, data: { startsAt, endsAt, status, price, notes: typeof body?.notes === "string" ? body.notes.trim() || null : appointment.notes } }); if (changed) { const cancelled = status === "cancelled" && appointment.status !== "cancelled"; const message = cancelled ? "Wizyta została anulowana przez studio." : status !== appointment.status ? `Zmieniono status wizyty na: ${status}.` : `Zmieniono termin wizyty na ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`; await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: cancelled ? "appointment_cancelled" : "appointment_updated", message, visibility: "admin" } }); if (cancelled) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal" } }); else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: "Aktualizacja wizyty", body: message, href: "/app/portal" } }); } return item; });
+  const changed = timeChanged || status !== appointment.status;
+  const updated = await prisma.$transaction(async (tx) => { const item = await tx.appointment.update({ where: { id }, data: { startsAt, endsAt, status, price, notes: typeof body?.notes === "string" ? body.notes.trim() || null : appointment.notes } }); if (changed) { const cancelled = status === "cancelled" && appointment.status !== "cancelled"; const proposed = status === "proposed"; const message = cancelled ? "Wizyta została anulowana przez studio." : proposed ? `Studio zaproponowało nowy termin: ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.` : status !== appointment.status ? `Zmieniono status wizyty na: ${status}.` : `Zmieniono termin wizyty na ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`; await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: proposed ? "appointment_proposed" : cancelled ? "appointment_cancelled" : "appointment_updated", message, visibility: "admin" } }); if (cancelled) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal/visits" } }); else if (proposed) { await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: "date_proposed" } }); await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_PROPOSED", title: "Studio zaproponowało nowy termin", body: `Sprawdź propozycję: ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`, href: "/app/portal/visits" } }); } else if (["confirmed", "completed", "no_show"].includes(status)) { if (status === "confirmed") await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: appointment.project.depositStatus === "awaiting" ? "awaiting_deposit" : "confirmed" } }); await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: status === "confirmed" ? "Wizyta potwierdzona" : "Aktualizacja wizyty", body: message, href: "/app/portal/visits" } }); } } return item; });
   return NextResponse.json({ appointment: updated });
 }
 
-export async function DELETE(_: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params; const appointment = await prisma.appointment.findUnique({ where: { id }, include: { project: { select: { clientId: true } } } });
   if (!appointment) return NextResponse.json({ error: "Wizyta nie istnieje." }, { status: 404 });
