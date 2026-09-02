@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import AppModal from "@/components/ui/AppModal";
 import AppButton from "@/components/ui/AppButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { imageSource } from "@/lib/imageSource";
@@ -30,6 +31,7 @@ export default function ProjectChat({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [preview, setPreview] = useState<Message["attachment"]>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const api =
     role === "admin"
@@ -37,6 +39,19 @@ export default function ProjectChat({
       : `/api/client/projects/${projectId}/messages`;
   const composerRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { if (autoFocus) composerRef.current?.focus(); }, [autoFocus]);
+  useEffect(() => {
+    let alive = true;
+    async function refreshConversation() {
+      try {
+        const response = await fetch(api, { cache: "no-store" });
+        const result = await response.json();
+        if (alive && response.ok && Array.isArray(result.messages)) setMessages(result.messages);
+      } catch { /* polling is progressive enhancement; the composer still works */ }
+    }
+    void refreshConversation();
+    const timer = window.setInterval(refreshConversation, 2500);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [api]);
 
   const add = (message: Message) => setMessages((items) => [...items, message]);
   async function send() {
@@ -140,11 +155,13 @@ export default function ProjectChat({
               {message.attachment && (
                 <div className="mt-3 border border-ink-white/15 p-2">
                   {attachmentSource ? (
+                    <button type="button" onClick={() => setPreview(message.attachment)} className="block w-full text-left" aria-label="Otwórz pełny podgląd inspiracji">
                     <img
                       src={attachmentSource}
                       alt={message.attachment.caption || "Inspiracja"}
                       className="max-h-56 w-full object-cover"
                     />
+                    </button>
                   ) : (
                     <p className="text-xs text-ink-grey">
                       Klient przesłał inspirację.
@@ -219,6 +236,7 @@ export default function ProjectChat({
           </AppButton>
         </div>
       </div>
+      {preview && <AppModal title={preview.caption || "Inspiracja"} onClose={() => setPreview(null)} size="lg"><div className="max-h-[75vh] overflow-auto">{imageSource(preview.url) ? <img src={imageSource(preview.url)!} alt={preview.caption || "Inspiracja"} className="mx-auto max-h-[70vh] w-auto max-w-full object-contain" /> : <p className="text-sm text-ink-grey">Podgląd pliku jest niedostępny.</p>}</div></AppModal>}
     </section>
   );
 }

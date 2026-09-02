@@ -51,15 +51,12 @@ export async function GET(
       { error: "Projekt nie istnieje." },
       { status: 404 },
     );
+  await prisma.projectMessage.updateMany({ where: { projectId: id, author: "client", readAt: null }, data: { readAt: new Date() } });
   const messages = await prisma.projectMessage.findMany({
     where: { projectId: id },
     include: { attachment: { select: { id: true, caption: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
-  });
-  await prisma.projectMessage.updateMany({
-    where: { projectId: id, author: "client", readAt: null },
-    data: { readAt: new Date() },
   });
   return NextResponse.json({ messages: messages.map(serialize) });
 }
@@ -101,22 +98,9 @@ export async function POST(
       { error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` },
       { status: 400 },
     );
-  const result = await prisma.$transaction(async (tx) => {
-    const message = await tx.projectMessage.create({
+  const result = await prisma.projectMessage.create({
       data: { projectId: id, author: "admin", body: text },
       include: { attachment: { select: { id: true, caption: true } } },
     });
-    await tx.clientNotification.create({
-      data: {
-        clientId: project.clientId,
-        projectId: id,
-        type: "PROJECT_MESSAGE",
-        title: "Nowa wiadomość od studia",
-        body: text.slice(0, 160),
-        href: "/app/portal/messages",
-      },
-    });
-    return message;
-  });
   return NextResponse.json({ message: serialize(result) }, { status: 201 });
 }

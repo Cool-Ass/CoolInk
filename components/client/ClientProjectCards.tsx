@@ -6,6 +6,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import StatusBadge from "@/components/ui/StatusBadge";
 import InspirationPreview from "@/components/client/InspirationPreview";
 import ClientAppointmentModal from "@/components/client/ClientAppointmentModal";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AppButton from "@/components/ui/AppButton";
 import { imageSource } from "@/lib/imageSource";
 
 type Appointment = {
@@ -47,13 +49,27 @@ export default function ClientProjectCards({
     item: Appointment;
     title: string;
   } | null>(null);
+  const [cancelProject, setCancelProject] = useState<Project | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [visibleProjects, setVisibleProjects] = useState(projects);
+  async function cancelSelectedProject() {
+    if (!cancelProject) return;
+    setCancelling(true);
+    try {
+      const response = await fetch(`/api/client/projects/${cancelProject.id}/cancel`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Nie udało się anulować projektu.");
+      setVisibleProjects((items) => items.map((item) => item.id === cancelProject.id ? { ...item, status: "cancelled", appointments: item.appointments.map((session) => ["requested", "proposed", "confirmed"].includes(session.status) ? { ...session, status: "cancelled" } : session) } : item));
+      setSelected(null); setCancelProject(null);
+    } catch { /* the existing project remains visible if the request fails */ } finally { setCancelling(false); }
+  }
   return (
     <section id="projekty" className="mt-2 scroll-mt-6">
       <p className="text-[11px] tracking-[.18em] text-ink-gold">
         PROJEKTY / ZGŁOSZENIA
       </p>
       <h2 className="mt-2 font-display text-3xl">Twoje projekty.</h2>
-      {projects.length === 0 ? (
+      {visibleProjects.length === 0 ? (
         <div className="mt-5">
           <EmptyState
             title="Nie masz jeszcze projektu"
@@ -62,7 +78,7 @@ export default function ClientProjectCards({
         </div>
       ) : (
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          {projects.map((project) => {
+          {visibleProjects.map((project) => {
             const previewSource = imageSource(project.images[0]?.url);
             return <button
               key={project.id}
@@ -147,9 +163,11 @@ export default function ClientProjectCards({
                 <InspirationPreview images={selected.images} />
               </div>
             </section>
+            {selected.status !== "cancelled" && <div className="border-t border-ink-white/10 pt-5"><AppButton type="button" variant="destructive" onClick={() => setCancelProject(selected)}>ANULUJ PROJEKT</AppButton></div>}
           </div>
         </AppModal>
       )}
+      {cancelProject && <ConfirmModal message="Anulować projekt? Aktywne terminy zostaną anulowane. Historia, dokumenty i inspiracje pozostaną zachowane." onConfirm={() => { void cancelSelectedProject(); }} onCancel={() => { if (!cancelling) setCancelProject(null); }} pending={cancelling} pendingLabel="ANULOWANIE…" />}
       {appointment && (
         <ClientAppointmentModal
           appointment={appointment.item}

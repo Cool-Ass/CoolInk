@@ -56,15 +56,15 @@ export async function GET(
       { error: "Nie znaleziono projektu." },
       { status: 404 },
     );
+  await prisma.projectMessage.updateMany({
+    where: { projectId: id, author: "admin", readAt: null },
+    data: { readAt: new Date() },
+  });
   const messages = await prisma.projectMessage.findMany({
     where: { projectId: id },
     include: { attachment: { select: { id: true, caption: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
-  });
-  await prisma.projectMessage.updateMany({
-    where: { projectId: id, author: "admin", readAt: null },
-    data: { readAt: new Date() },
   });
   return NextResponse.json({ messages: messages.map(serialize) });
 }

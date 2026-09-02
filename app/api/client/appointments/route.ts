@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
-import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
+import { validAppointmentRange } from "@/lib/bookingRules";
+import { verifyExplicitAppointmentAvailability } from "@/lib/appointmentAvailability";
 import { activityMessage } from "@/lib/projectWorkflow";
 
 export async function POST(request: Request) {
@@ -20,19 +21,8 @@ export async function POST(request: Request) {
   if (!projectId && description.length < 12) return NextResponse.json({ error: "Opisz swój pomysł w co najmniej 12 znakach." }, { status: 400 });
   // Working hours are a studio-side planning aid, not public availability.
   // A client may request only an exact range explicitly published as free.
-  const [conflict, publishedSlot] = await Promise.all([
-    bookingConflict(startsAt, endsAt),
-    prisma.availableSlot.findFirst({
-      where: {
-        isPublic: true,
-        startsAt: { lte: startsAt },
-        endsAt: { gte: endsAt },
-      },
-      select: { id: true },
-    }),
-  ]);
-  if (!publishedSlot) return NextResponse.json({ error: "Ten dzień nie został udostępniony jako wolny termin." }, { status: 409 });
-  if (conflict.appointment || conflict.block) return NextResponse.json({ error: `Ten termin nie jest już dostępny. Uwzględniam też ${conflict.bufferMinutes}-minutowy bufor między wizytami.` }, { status: 409 });
+  const availability = await verifyExplicitAppointmentAvailability(startsAt, endsAt);
+  if (!availability.ok) return NextResponse.json({ error: availability.error }, { status: availability.status });
   const ownedProject = projectId ? await prisma.tattooProject.findFirst({ where: { id: projectId, clientId: client.id }, select: { id: true } }) : null;
   if (projectId && !ownedProject) return NextResponse.json({ error: "Nie znaleziono Twojej wizyty." }, { status: 404 });
   const projectTitle = String(body?.title ?? "").trim().slice(0, 160) || "Nowa wizyta tatuażu";
