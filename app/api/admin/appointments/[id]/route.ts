@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { projectStatusAfterAppointmentChange } from "@/lib/projectLifecycle";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 interface Params { params: Promise<{ id: string }>; }
 
@@ -32,13 +33,13 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!changed) return item;
     const cancelled = status === "cancelled" && appointment.status !== "cancelled";
     const proposed = status === "proposed";
-    const message = cancelled ? "Wizyta została anulowana przez studio." : proposed ? `Studio zaproponowało nowy termin: ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.` : status !== appointment.status ? "Zmieniono status wizyty." : `Zmieniono termin wizyty na ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`;
+    const message = cancelled ? "Wizyta została anulowana przez studio." : proposed ? `Studio zaproponowało nowy termin: ${formatCoolinkDateTime(startsAt)}.` : status !== appointment.status ? "Zmieniono status wizyty." : `Zmieniono termin wizyty na ${formatCoolinkDateTime(startsAt)}.`;
     await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: proposed ? "appointment_proposed" : cancelled ? "appointment_cancelled" : "appointment_updated", message, visibility: "admin" } });
     const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true } });
     const project = await tx.tattooProject.findUniqueOrThrow({ where: { id: appointment.projectId }, select: { status: true } });
     await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: projectStatusAfterAppointmentChange(sessions, appointment.project.depositStatus, project.status) } });
     if (cancelled) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal/visits" } });
-    else if (proposed) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_PROPOSED", title: "Studio zaproponowało nowy termin", body: `Sprawdź propozycję: ${startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}.`, href: "/app/portal/visits" } });
+    else if (proposed) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_PROPOSED", title: "Studio zaproponowało nowy termin", body: `Sprawdź propozycję: ${formatCoolinkDateTime(startsAt)}.`, href: "/app/portal/visits" } });
     else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: status === "confirmed" ? "Wizyta potwierdzona" : "Aktualizacja wizyty", body: message, href: "/app/portal/visits" } });
     return item;
   });

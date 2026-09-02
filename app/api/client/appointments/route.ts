@@ -5,6 +5,7 @@ import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity"
 import { validAppointmentRange } from "@/lib/bookingRules";
 import { verifyExplicitAppointmentAvailability } from "@/lib/appointmentAvailability";
 import { activityMessage } from "@/lib/projectWorkflow";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -31,9 +32,9 @@ export async function POST(request: Request) {
   const size = String(body?.size ?? "").trim().slice(0, 120) || null;
   const notes = String(body?.notes ?? "").trim().slice(0, 1000);
   const result = await prisma.$transaction(async (tx) => {
-    const project = ownedProject ? await tx.tattooProject.update({ where: { id: ownedProject.id }, data: { status: "awaiting_confirmation" } }) : await tx.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description, styles, placement, size, preferredDateNote: startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" }), status: "awaiting_confirmation", activities: { create: { type: "project_created", message: activityMessage("project_created"), visibility: "admin" } } } });
+    const project = ownedProject ? await tx.tattooProject.update({ where: { id: ownedProject.id }, data: { status: "awaiting_confirmation" } }) : await tx.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description, styles, placement, size, preferredDateNote: formatCoolinkDateTime(startsAt), status: "awaiting_confirmation", activities: { create: { type: "project_created", message: activityMessage("project_created"), visibility: "admin" } } } });
     const appointment = await tx.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "requested", notes: notes || null } });
-    await tx.projectActivity.create({ data: { projectId: project.id, type: "appointment_requested", message: activityMessage("appointment_requested", startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })), visibility: "admin" } });
+    await tx.projectActivity.create({ data: { projectId: project.id, type: "appointment_requested", message: activityMessage("appointment_requested", formatCoolinkDateTime(startsAt)), visibility: "admin" } });
     await tx.clientNotification.create({ data: { clientId: client.id, type: "appointment_requested", title: "Prośba o wizytę wysłana", body: "Studio sprawdzi szczegóły oraz wybrany termin i wróci z odpowiedzią.", href: "/app/portal/projects", projectId: project.id, appointmentId: appointment.id } });
     return { appointment, projectId: project.id };
   });

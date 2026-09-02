@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
 import { activityMessage } from "@/lib/projectWorkflow";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { getCurrentAdmin } from "@/lib/auth";
 import { isSameOrigin } from "@/lib/requestSecurity";
 
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
   const appointment = await prisma.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "confirmed", notes: String(body?.notes ?? "").trim() || null, price: validPrice } });
   await prisma.$transaction([
     prisma.tattooProject.update({ where: { id: project.id }, data: { status: "confirmed" } }),
-    prisma.projectActivity.create({ data: { projectId: project.id, type: "appointment_confirmed", message: activityMessage("appointment_confirmed", startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })), visibility: "admin" } }),
+    prisma.projectActivity.create({ data: { projectId: project.id, type: "appointment_confirmed", message: activityMessage("appointment_confirmed", formatCoolinkDateTime(startsAt)), visibility: "admin" } }),
   ]);
   return NextResponse.json({ appointment }, { status: 201 });
 }

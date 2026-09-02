@@ -5,6 +5,7 @@ import { isSameOrigin } from "@/lib/requestSecurity";
 import { verifyExplicitAppointmentAvailability } from "@/lib/appointmentAvailability";
 import { activityMessage } from "@/lib/projectWorkflow";
 import { recordWorkflowEvent } from "@/lib/workflowEvents";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 interface Params { params: Promise<{ id: string }>; }
 
@@ -22,7 +23,7 @@ export async function POST(request: Request, { params }: Params) {
   const appointment = await prisma.appointment.create({ data: { projectId: id, startsAt, endsAt, status: "proposed", notes: `[PROPOZYCJA STUDIA]${extra ? ` ${extra}` : ""}` } });
   await prisma.$transaction([
     prisma.tattooProject.update({ where: { id }, data: { status: "date_proposed" } }),
-    prisma.projectActivity.create({ data: { projectId: id, type: "appointment_proposed", message: activityMessage("appointment_proposed", startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })), visibility: "client" } }),
+    prisma.projectActivity.create({ data: { projectId: id, type: "appointment_proposed", message: activityMessage("appointment_proposed", formatCoolinkDateTime(startsAt)), visibility: "client" } }),
   ]);
   await recordWorkflowEvent({ projectId: id, type: "APPOINTMENT_PROPOSED", notification: { title: "Nowa propozycja terminu", body: "Sprawdź proponowaną wizytę i potwierdź, czy termin Ci pasuje.", appointmentId: appointment.id } });
   return NextResponse.json({ appointment }, { status: 201 });
