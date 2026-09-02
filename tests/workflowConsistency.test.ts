@@ -5,7 +5,7 @@ import { appointmentStatusLabel, depositStatusLabel, projectStatusLabel } from "
 describe("workflow consistency", () => {
   it("uses Polish labels and never falls back to a raw stored status", () => {
     expect(appointmentStatusLabel("proposed")).toBe("OCZEKUJE NA TWOJĄ DECYZJĘ");
-    expect(projectStatusLabel("awaiting_confirmation")).toBe("OCZEKUJE NA STUDIO");
+    expect(projectStatusLabel("awaiting_confirmation")).toBe("OCZEKUJE NA DECYZJĘ STUDIA");
     expect(depositStatusLabel("not_required")).toBe("ZADATEK NIEWYMAGANY");
     expect(projectStatusLabel("unknown_value")).not.toBe("unknown_value");
   });

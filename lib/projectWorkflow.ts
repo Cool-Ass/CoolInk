@@ -1,3 +1,5 @@
+import { projectStatusLabel } from "@/lib/workflowStatus";
+
 export const PROJECT_STATUSES = [
   "inquiry",
   "reviewing",
@@ -23,7 +25,7 @@ export const ADMIN_STATUS_LABEL: Record<ProjectStatus, string> = {
   reviewing: "Do przejrzenia",
   awaiting_client: "Oczekiwanie na klienta",
   date_proposed: "Termin zaproponowany",
-  awaiting_confirmation: "Oczekuje na studio",
+  awaiting_confirmation: projectStatusLabel("awaiting_confirmation"),
   awaiting_deposit: "Oczekiwanie na zadatek",
   confirmed: "Wizyta potwierdzona",
   designing: "Projekt w przygotowaniu",
@@ -40,7 +42,7 @@ export const CLIENT_STATUS: Record<ProjectStatus, { label: string; next: string 
   reviewing: { label: "Analizuję Twój projekt", next: "Sprawdzam szczegóły projektu i dostępność terminów." },
   awaiting_client: { label: "Potrzebuję dodatkowych informacji", next: "Uzupełnij informacje, o które poproszę." },
   date_proposed: { label: "Termin zaproponowany", next: "Sprawdź proponowaną wizytę i zaakceptuj ją albo poproś o inny termin." },
-  awaiting_confirmation: { label: "Oczekuje na studio", next: "Studio sprawdzi szczegóły i potwierdzi termin." },
+  awaiting_confirmation: { label: projectStatusLabel("awaiting_confirmation"), next: "Studio sprawdzi szczegóły i potwierdzi termin." },
   awaiting_deposit: { label: "Termin zaakceptowany — czekam na zadatek", next: "Po oznaczeniu zadatku jako wpłaconego potwierdzę wizytę." },
   confirmed: { label: "Wizyta potwierdzona", next: "Przygotuj się do wizyty zgodnie z dokumentami na koncie." },
   designing: { label: "Projekt w przygotowaniu", next: "Pracuję nad szczegółami Twojego tatuażu." },
