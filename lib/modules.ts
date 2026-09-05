@@ -341,7 +341,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         title2: "KTÓRY ZROZUMIE TWÓJ POMYSŁ?",
         message: "Porozmawiajmy o Twoim tatuażu.",
         buttonLabel: "UMÓW WIZYTĘ",
-        href: "#contact",
+        href: "#kalendarz",
       } satisfies CtaBarModuleData;
     case "portfolio":
       return {
@@ -373,10 +373,10 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         heading1: "NAPISZ",
         heading2: "DO NAS.",
         body: "Masz pomysł na tatuaż, ale nie wiesz od czego zacząć?\nNapisz do nas, umówmy się na konsultację\ni porozmawiajmy o Twoim projekcie.",
-        address: "ul. Artystyczna 12, 00-001 Warszawa",
-        phone: "+48 500 100 200",
-        email: "kontakt@coolink-tattoo.pl",
-        hours: "Wt–Sob: 11:00 – 19:00",
+        address: "al. Konstytucji 3 Maja 10, 65-001 Zielona Góra",
+        phone: "+48 530 178 346",
+        email: "kontakt@coolinktattoo.pl",
+        hours: "Wt–Sob: 11:00 – 18:00",
       } satisfies ContactModuleData;
     case "textSection":
       return {
@@ -450,11 +450,19 @@ export function createModule(type: ModuleType): Module {
 export function defaultHomepageModules(): Module[] {
   return [
     { id: generateModuleId(), type: "hero", hidden: false, data: defaultModuleData("hero") },
-    { id: generateModuleId(), type: "stats", hidden: false, data: defaultModuleData("stats") },
+    { id: generateModuleId(), type: "iconList", hidden: false, data: { title: "Od pomysłu do zagojonego tatuażu", style: "arrow", items: ["Krótki brief i wybór bezpiecznego wolnego terminu", "Konsultacja, indywidualny projekt i jasne ustalenia", "Sesja w kameralnym studiu oraz instrukcja pielęgnacji"] } },
+    { id: generateModuleId(), type: "stats", hidden: false, data: { items: [{ value: "ZIELONA GÓRA", label: "STUDIO STACJONARNE" }, { value: "1 / 1", label: "INDYWIDUALNY PROJEKT" }, { value: "WT–SOB", label: "11:00–18:00" }, { value: "ONLINE", label: "REZERWACJE I KONTO" }] } },
     { id: generateModuleId(), type: "about", hidden: false, data: defaultModuleData("about") },
     { id: generateModuleId(), type: "ctaBar", hidden: false, data: defaultModuleData("ctaBar") },
     { id: generateModuleId(), type: "portfolio", hidden: false, data: defaultModuleData("portfolio") },
     { id: generateModuleId(), type: "studio", hidden: false, data: defaultModuleData("studio") },
+    { id: generateModuleId(), type: "faq", hidden: false, data: { title: "Zanim zarezerwujesz", items: [
+      { question: "Jak wygląda rezerwacja?", answer: "Wybierz dostępny termin i opisz pomysł. Po zalogowaniu wyślesz prośbę, a studio potwierdzi szczegóły w Twoim koncie." },
+      { question: "Czy projekt jest indywidualny?", answer: "Tak. Kierunek projektu, rozmiar i miejsce ustalamy przed sesją. Podgląd i wiadomości znajdziesz w koncie klienta." },
+      { question: "Jak przygotować się do wizyty?", answer: "Przed terminem otrzymasz aktualne zalecenia w koncie. Nie opalaj miejsca, odpocznij, zjedz posiłek i poinformuj studio o przeciwwskazaniach." },
+      { question: "Gdzie znajduje się studio?", answer: "al. Konstytucji 3 Maja 10, 65-001 Zielona Góra. Aktualne godziny i dane kontaktowe są w sekcji Kontakt." }
+    ] } },
+    { id: generateModuleId(), type: "callout", hidden: false, data: { eyebrow: "GOTOWY NA PIERWSZY KROK?", title: "Sprawdź realnie dostępne terminy", body: "Zamiast czekać na odpowiedź w wiadomościach, wybierz termin i śledź cały proces w jednym miejscu.", buttonLabel: "ZOBACZ WOLNE TERMINY", href: "#kalendarz", style: "outline" } },
     { id: generateModuleId(), type: "contact", hidden: false, data: defaultModuleData("contact") },
   ];
 }

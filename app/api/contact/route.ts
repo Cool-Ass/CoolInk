@@ -13,7 +13,7 @@ function clean(value: unknown, maxLength: number) {
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const limit = rateLimit(request, "contact", 5, 60 * 60 * 1000);
+  const limit = await rateLimit(request, "contact", 5, 60 * 60 * 1000);
   if (!limit.allowed) return tooManyRequests(limit);
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {

@@ -6,7 +6,7 @@ import { activityMessage } from "@/lib/projectWorkflow";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const limit = rateLimit(request, "project-request", 5, 60 * 60 * 1000);
+  const limit = await rateLimit(request, "project-request", 5, 60 * 60 * 1000);
   if (!limit.allowed) return tooManyRequests(limit);
   const body = await request.json().catch(() => null);
   if (String(body?.website ?? "").trim()) return NextResponse.json({ projectId: "received" }, { status: 201 });

@@ -17,7 +17,7 @@ export function sanitizeRichText(value: string) {
     if (match.startsWith("</")) return `</${tag}>`;
     if (tag !== "a") return `<${tag}>`;
     const href = /href\s*=\s*["']?([^"'\s>]+)/i.exec(attrs)?.[1] ?? "";
-    const safeHref = /^(https?:\/\/|mailto:|tel:|#|\/)/i.test(href) ? href.replace(/"/g, "") : "";
+    const safeHref = /^(https?:\/\/|mailto:|tel:|#|\/(?!\/))/i.test(href) ? href.replace(/"/g, "") : "";
     return safeHref ? `<a href="${safeHref}" rel="noreferrer">` : "<a>";
   });
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import MediaGrid from "@/components/admin/MediaGrid";
 import { getMediaUsageMap } from "@/lib/mediaUsage";
 import type { Media } from "@prisma/client";
+import { usesExternalStorage } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function MediaPage() {
           użyć go w innym miejscu.
         </p>
       </div>
+      {!usesExternalStorage() && <div role="status" className="border border-amber-400/45 bg-amber-400/5 p-4 text-sm text-amber-200">Trwałe przesyłanie nowych zdjęć jest wyłączone, dopóki w Vercel nie skonfigurujesz magazynu zgodnego z S3 (np. Cloudflare R2). Obrazy dołączone do repozytorium nadal działają.</div>}
       <MediaGrid initialMedia={mediaWithUsage} />
     </div>
   );

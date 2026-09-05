@@ -74,7 +74,7 @@ export async function POST(
     );
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const limit = rateLimit(
+  const limit = await rateLimit(
     request,
     "admin-project-message",
     40,

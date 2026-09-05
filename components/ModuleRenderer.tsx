@@ -21,6 +21,7 @@ import {
   type CtaBarModuleData,
   type PortfolioModuleData,
 } from "@/lib/modules";
+import { safeHref, safeMapEmbedUrl } from "@/lib/safeHref";
 
 function moduleVisualStyle(mod: Module): CSSProperties | undefined {
   const style = mod.style;
@@ -35,6 +36,7 @@ function radiusClass(radius?: ModuleStyle["radius"]) {
 export interface ModuleRendererGlobals {
   instagramUrl?: string;
   facebookUrl?: string;
+  contact?: { address: string; phone: string; email: string; hours: string };
 }
 
 export interface ModuleRendererProps {
@@ -68,7 +70,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
             titleLines={[data.title1, data.title2]}
             message={data.message}
             buttonLabel={data.buttonLabel}
-            href={data.href}
+            href={safeHref(data.href)}
           />
         </div>
       );
@@ -84,15 +86,21 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     case "studio":
       return <Studio content={withDefaults("studio", mod.data)} />;
     case "contact":
-      return <Contact content={withDefaults("contact", mod.data)} />;
+      return <Contact content={{ ...withDefaults("contact", mod.data), ...(globals?.contact ?? {}) }} />;
     case "textSection":
       return <TextSection data={withDefaults("textSection", mod.data)} />;
-    case "imageText":
-      return <ImageText data={withDefaults("imageText", mod.data)} />;
+    case "imageText": {
+      const data = withDefaults("imageText", mod.data);
+      return <ImageText data={{ ...data, buttonUrl: safeHref(data.buttonUrl, "") }} />;
+    }
     case "spacer":
       return <Spacer data={withDefaults("spacer", mod.data)} />;
-    case "heading": case "text": case "image": case "button": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout":
-      return <BuilderWidgets module={mod} showEmpty={editable} />;
+    case "heading": case "text": case "image": case "button": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout": {
+      const data = { ...mod.data };
+      if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
+      if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} />;
+    }
     default:
       return null;
   }

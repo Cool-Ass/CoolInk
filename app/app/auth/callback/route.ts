@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { clientCookieOptions, CLIENT_ACCESS_COOKIE, CLIENT_REFRESH_COOKIE, getSupabaseConfig, supabaseAuth } from "@/lib/clientAuth";
+import { clientCookieOptions, CLIENT_ACCESS_COOKIE, CLIENT_REFRESH_COOKIE, getSupabaseConfig, linkAuthenticatedClient, supabaseAuth } from "@/lib/clientAuth";
 import { isClientProfileComplete, safeClientReturnTo } from "@/lib/clientProfile";
 const COOKIE = "coolink_oauth_verifier";
 const RETURN_TO_COOKIE = "coolink_oauth_return_to";
@@ -35,10 +34,9 @@ export async function GET(request: NextRequest) {
     return returnToLogin(request, "oauth_profile");
   }
 
-  const email = user.email.toLowerCase(), meta = user.user_metadata || {};
   try {
-    const fullName = String(meta.full_name || meta.name || "").trim().split(/\s+/);
-    const client = await prisma.client.upsert({ where: { email }, update: { supabaseUserId: user.id }, create: { email, supabaseUserId: user.id, firstName: String(meta.first_name || fullName[0] || ""), lastName: String(meta.last_name || fullName.slice(1).join(" ") || ""), avatarUrl: typeof meta.avatar_url === "string" ? meta.avatar_url : null } });
+    const client = await linkAuthenticatedClient(user);
+    if (!client) return returnToLogin(request, "oauth_profile");
     const target = isClientProfileComplete(client) ? returnTo : `/app/complete-profile?returnTo=${encodeURIComponent(returnTo)}`;
     const response = NextResponse.redirect(new URL(target, request.url));
     response.cookies.set(CLIENT_ACCESS_COOKIE, session.access_token, clientCookieOptions);

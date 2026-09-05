@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import MagneticButton from "@/components/MagneticButton";
 import { CORE_NAV_LINKS, type NavLink } from "@/lib/nav";
@@ -60,7 +61,7 @@ export default function Header({
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
         scrolled
           ? "border-b border-ink-white/10 bg-ink-black/85 backdrop-blur-md"
-          : "border-b border-transparent bg-transparent"
+          : "border-b border-ink-white/10 bg-ink-black/55 backdrop-blur-sm"
       }`}
     >
       <div
@@ -69,14 +70,14 @@ export default function Header({
         }`}
       >
         {/* Logo */}
-        <a
+        <Link
           href="/#home"
           className={`relative shrink-0 transition-all duration-500 ${
             scrolled ? "h-11 w-32 md:h-12 md:w-36" : "h-14 w-40 md:h-16 md:w-48"
           }`}
         >
           {logoSource ? <Image src={logoSource} alt="CoolInk Tattoo Studio — logo" fill priority className="object-contain mix-blend-screen" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">COOLINK</span>}
-        </a>
+        </Link>
 
         {/* Nav */}
         <nav className="hidden items-center gap-9 text-[13px] font-medium text-ink-white lg:flex">
@@ -94,14 +95,14 @@ export default function Header({
 
         {/* Public actions */}
         <div className="hidden items-center gap-3 md:flex">
-          <a
+          <Link
             href="/app"
             className="border border-ink-white/30 px-4 py-3 text-[11px] font-medium tracking-[0.08em] text-ink-white transition-colors hover:border-ink-gold hover:text-ink-gold"
           >
             KONTO KLIENTA
-          </a>
+          </Link>
           <MagneticButton
-            href="/#contact"
+            href="/#kalendarz"
             animateOnScroll={false}
             className="items-center gap-3 border border-ink-gold px-5 py-3 text-[12px] font-medium tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black lg:px-6 lg:text-[13px]"
           >
@@ -142,20 +143,20 @@ export default function Header({
                 {item.label}
               </a>
             ))}
-            <a
+            <Link
               href="/app"
               onClick={() => setMobileMenuOpen(false)}
               className="border border-ink-white/30 px-5 py-3 text-[12px] tracking-[0.08em] text-ink-white"
             >
               KONTO KLIENTA
-            </a>
-            <a
-              href="/#contact"
+            </Link>
+            <Link
+              href="/#kalendarz"
               onClick={() => setMobileMenuOpen(false)}
               className="mt-2 border border-ink-gold px-5 py-3 text-[12px] tracking-[0.08em] text-ink-gold"
             >
               {bookLabel}
-            </a>
+            </Link>
           </div>
         </nav>
       )}

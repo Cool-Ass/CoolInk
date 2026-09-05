@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedImage, MediaUploadError } from "@/lib/media";
+import { requireAdminApi } from "@/lib/adminApi";
 
 export async function GET() {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const media = await prisma.media.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json({ media });
 }
 
 export async function POST(request: Request) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
 

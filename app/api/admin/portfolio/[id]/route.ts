@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/adminApi";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Nieprawidłowe dane." }, { status: 400 });
@@ -30,6 +32,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const { id } = await params;
   const existing = await prisma.portfolioItem.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Nie znaleziono." }, { status: 404 });

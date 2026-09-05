@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/adminApi";
 
 export async function GET() {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const items = await prisma.portfolioItem.findMany({ orderBy: { order: "asc" } });
   return NextResponse.json({ items });
 }
 
 export async function POST(request: Request) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   if (!body?.title || !body?.imageUrl) {
     return NextResponse.json(

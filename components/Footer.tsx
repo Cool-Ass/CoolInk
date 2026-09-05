@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { CORE_NAV_LINKS, type NavLink } from "@/lib/nav";
 import { imageSource } from "@/lib/imageSource";
@@ -18,9 +19,9 @@ export default function Footer({
       <CalligraphyBackground opacity={0.04} position="60% 20%" />
 
       <div className="relative mx-auto flex max-w-[1536px] flex-col gap-8 px-6 py-12 md:flex-row md:items-center md:justify-between md:px-10 lg:px-16">
-        <a href="/#home" className="relative h-12 w-36 shrink-0">
+        <Link href="/#home" className="relative h-12 w-36 shrink-0">
           {logoSource ? <Image src={logoSource} alt="CoolInk Tattoo Studio — logo" fill className="object-contain mix-blend-screen opacity-90" sizes="144px" /> : <span className="flex h-full items-center font-display text-lg tracking-[0.08em] text-ink-white">COOLINK</span>}
-        </a>
+        </Link>
 
         <nav className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[12px] tracking-[0.1em] text-ink-grey">
           {navLinks.map((item) => (
@@ -37,7 +38,7 @@ export default function Footer({
         <p className="text-[12px] tracking-[0.05em] text-ink-grey/70">
           © {new Date().getFullYear()} {text}
         </p>
-        <a href="/polityka-prywatnosci" className="text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">POLITYKA PRYWATNOŚCI</a>
+        <Link href="/polityka-prywatnosci" className="text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">POLITYKA PRYWATNOŚCI</Link>
       </div>
     </footer>
   );

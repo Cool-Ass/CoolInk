@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import type { Page, NavItem } from "@prisma/client";
+import { safeHref } from "./safeHref";
 
 export interface NavLink {
   id: string;
@@ -43,8 +44,8 @@ export async function getPublicNavLinks(): Promise<NavLink[]> {
   const customLinks: NavLink[] = custom.map((n: NavItem) => ({
     id: `nav-${n.id}`,
     label: n.label.toUpperCase(),
-    href: n.href,
-  }));
+    href: safeHref(n.href, ""),
+  })).filter((item) => Boolean(item.href));
 
   return [...CORE_NAV_LINKS, ...pageLinks, ...customLinks];
 }

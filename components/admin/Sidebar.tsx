@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FileText, Globe2, Image as ImageIcon, LayoutDashboard, LibraryBig, PanelsTopLeft, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarDays, FileText, Globe2, Image as ImageIcon, LayoutDashboard, LibraryBig, PackageOpen, PanelsTopLeft, Settings, Users } from "lucide-react";
 import { imageSource } from "@/lib/imageSource";
 
 export const ADMIN_SECTIONS = [
@@ -13,6 +13,8 @@ export const ADMIN_SECTIONS = [
       { href: "/admin", label: "Dziś", icon: LayoutDashboard, exact: true },
       { href: "/admin/calendar", label: "Kalendarz", icon: CalendarDays },
       { href: "/admin/clients", label: "Klienci", icon: Users },
+      { href: "/admin/statistics", label: "Statystyki", icon: BarChart3 },
+      { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen },
     ],
   },
   {

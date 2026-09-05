@@ -37,7 +37,11 @@ export async function DELETE(request: Request) {
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
 
-  await prisma.client.delete({ where: { id: client.id } });
+  await prisma.accountDeletionRequest.upsert({
+    where: { clientId: client.id },
+    update: { status: "pending", requestedAt: new Date(), resolvedAt: null },
+    create: { clientId: client.id },
+  });
   const response = NextResponse.json({ ok: true });
   response.cookies.set(CLIENT_ACCESS_COOKIE, "", { path: "/", maxAge: 0 });
   response.cookies.set(CLIENT_REFRESH_COOKIE, "", { path: "/", maxAge: 0 });

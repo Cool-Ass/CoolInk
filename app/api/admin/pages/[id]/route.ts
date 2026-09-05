@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify, RESERVED_SLUGS } from "@/lib/slugify";
 import { parseModules, serializeModules } from "@/lib/pageModules";
 import { MODULE_TYPE_ORDER, type Module } from "@/lib/modules";
+import { requireAdminApi } from "@/lib/adminApi";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -24,6 +25,7 @@ function isValidModules(value: unknown): value is Module[] {
 }
 
 export async function GET(_request: Request, { params }: Params) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const { id } = await params;
   const page = await prisma.page.findUnique({ where: { id } });
   if (!page) return NextResponse.json({ error: "Nie znaleziono strony." }, { status: 404 });
@@ -38,6 +40,7 @@ export async function GET(_request: Request, { params }: Params) {
  *  - any of title/slug/excerpt/coverImage/showInNav/navOrder -> page settings
  */
 export async function PATCH(request: Request, { params }: Params) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Nieprawidłowe dane." }, { status: 400 });
@@ -101,6 +104,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const { id } = await params;
   const existing = await prisma.page.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Nie znaleziono strony." }, { status: 404 });

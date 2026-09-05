@@ -8,7 +8,8 @@ import { imageSource } from "@/lib/imageSource";
 function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/admin";
+  const requestedNext = searchParams.get("next");
+  const next = requestedNext?.startsWith("/admin") && !requestedNext.startsWith("//") ? requestedNext : "/admin";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,7 +76,7 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
-                placeholder="admin@coolink-tattoo.pl"
+                placeholder="Twój e-mail administratora"
               />
             </label>
 
@@ -108,9 +109,7 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-[12px] text-ink-grey/70">
-          Dane logowania konfiguruje się przez zmienne środowiskowe — zobacz .env.example.
-        </p>
+        <p className="mt-6 text-center text-[12px] text-ink-grey/70">Dostęp wyłącznie dla zespołu CoolInk.</p>
       </div>
     </div>
   );

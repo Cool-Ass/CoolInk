@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
+import { bookingConflict, lockBookingCalendar, validAppointmentRange } from "@/lib/bookingRules";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { projectStatusAfterAppointmentChange } from "@/lib/projectLifecycle";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
@@ -29,6 +29,9 @@ export async function PATCH(request: Request, { params }: Params) {
   if (price !== null && (!Number.isInteger(price) || price < 0)) return NextResponse.json({ error: "Cena musi być liczbą całkowitą większą lub równą zero." }, { status: 400 });
   const changed = timeChanged || status !== appointment.status;
   const updated = await prisma.$transaction(async (tx) => {
+    await lockBookingCalendar(tx);
+    const lockedConflict = await bookingConflict(startsAt, endsAt, id, !Boolean(body?.ignoreBuffer), tx);
+    if (status !== "cancelled" && (lockedConflict.appointment || lockedConflict.block)) throw new Error("BOOKING_CONFLICT");
     const item = await tx.appointment.update({ where: { id }, data: { startsAt, endsAt, status, price, notes: typeof body?.notes === "string" ? body.notes.trim() || null : appointment.notes } });
     if (!changed) return item;
     const cancelled = status === "cancelled" && appointment.status !== "cancelled";
@@ -42,7 +45,11 @@ export async function PATCH(request: Request, { params }: Params) {
     else if (proposed) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_PROPOSED", title: "Studio zaproponowało nowy termin", body: `Sprawdź propozycję: ${formatCoolinkDateTime(startsAt)}.`, href: "/app/portal/visits" } });
     else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: status === "confirmed" ? "Wizyta potwierdzona" : "Aktualizacja wizyty", body: message, href: "/app/portal/visits" } });
     return item;
+  }).catch((error: unknown) => {
+    if (error instanceof Error && error.message === "BOOKING_CONFLICT") return null;
+    throw error;
   });
+  if (!updated) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny zakres." }, { status: 409 });
   return NextResponse.json({ appointment: updated });
 }
 

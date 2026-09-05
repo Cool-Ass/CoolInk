@@ -132,7 +132,7 @@ export default function Hero({
 
           <div className="hero-fade mt-10 flex flex-wrap items-center gap-8">
             <MagneticButton
-              href="#contact"
+              href="#kalendarz"
               className="inline-flex items-center gap-3 border border-ink-white/70 px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold"
             >
               {content.primaryBtnLabel}

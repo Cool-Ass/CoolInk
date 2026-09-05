@@ -1,9 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 const DEFAULT_BUFFER_MINUTES = 30;
 
-export async function getBookingBufferMinutes() {
-  const setting = await prisma.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } });
+type BookingDb = typeof prisma | Prisma.TransactionClient;
+
+export async function lockBookingCalendar(tx: Prisma.TransactionClient) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(20260905)`;
+}
+
+export async function getBookingBufferMinutes(db: BookingDb = prisma) {
+  const setting = await db.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } });
   const value = Number(setting?.value);
   return Number.isInteger(value) && value >= 0 && value <= 240 ? value : DEFAULT_BUFFER_MINUTES;
 }
@@ -19,14 +26,14 @@ export function validAppointmentRange(startsAt: Date, endsAt: Date) {
     && duration % (30 * 60 * 1000) === 0;
 }
 
-export async function bookingConflict(startsAt: Date, endsAt: Date, excludeAppointmentId?: string, includeBuffer = true) {
-  const bufferMinutes = includeBuffer ? await getBookingBufferMinutes() : 0;
+export async function bookingConflict(startsAt: Date, endsAt: Date, excludeAppointmentId?: string, includeBuffer = true, db: BookingDb = prisma) {
+  const bufferMinutes = includeBuffer ? await getBookingBufferMinutes(db) : 0;
   const bufferedStart = new Date(startsAt.getTime() - bufferMinutes * 60_000);
   const bufferedEnd = new Date(endsAt.getTime() + bufferMinutes * 60_000);
   const [appointment, block, externalBusy] = await Promise.all([
-    prisma.appointment.findFirst({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, startsAt: { lt: bufferedEnd }, endsAt: { gt: bufferedStart } } }),
-    prisma.availabilityBlock.findFirst({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }),
-    prisma.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", calendarEvent: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }, select: { id: true } }),
+    db.appointment.findFirst({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, startsAt: { lt: bufferedEnd }, endsAt: { gt: bufferedStart } } }),
+    db.availabilityBlock.findFirst({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }),
+    db.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", calendarEvent: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }, select: { id: true } }),
   ]);
   return { appointment, block: block || externalBusy, bufferMinutes };
 }

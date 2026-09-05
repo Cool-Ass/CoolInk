@@ -8,19 +8,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                        String                     @id @default(cuid())
+  email                     String                     @unique
+  passwordHash              String
+  name                      String?
+  role                      String                     @default("owner") // owner | manager | artist | receptionist
+  sessionVersion            Int                        @default(1)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
   googleCalendarConnections GoogleCalendarConnection[]
+  inventoryMovements        InventoryMovement[]
 }
 
 /// CMS-authored pages, built from an ordered list of modules (see
@@ -56,7 +59,7 @@ model PortfolioItem {
   description String?
   imageUrl    String
   category    String?
-  tags        String?  // comma-separated
+  tags        String? // comma-separated
   order       Int      @default(0)
   published   Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -111,21 +114,37 @@ model ContactMessage {
 /// CRM profile. Client login/authentication will be connected in the client-app phase;
 /// it is intentionally separate from AdminUser so client data never shares admin access.
 model Client {
-  id          String          @id @default(cuid())
-  supabaseUserId String?      @unique
-  firstName   String
-  lastName    String
-  email       String          @unique
-  phone       String?
-  avatarUrl   String?
-  birthDate   DateTime?
-  notes       String?
-  tags        String          @default("") // temporary CSV; normalized tags follow with staff roles
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  projects    TattooProject[]
-  acceptances DocumentAcceptance[]
-  notifications ClientNotification[]
+  id                String                  @id @default(cuid())
+  supabaseUserId    String?                 @unique
+  firstName         String
+  lastName          String
+  email             String                  @unique
+  phone             String?
+  avatarUrl         String?
+  birthDate         DateTime?
+  notes             String?
+  tags              String                  @default("") // temporary CSV; normalized tags follow with staff roles
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  projects          TattooProject[]
+  acceptances       DocumentAcceptance[]
+  notifications     ClientNotification[]
+  pushSubscriptions PushSubscription[]
+  deletionRequest   AccountDeletionRequest?
+}
+
+/// Client-initiated privacy request. CRM and statutory records are not
+/// silently cascaded before the studio verifies retention obligations.
+model AccountDeletionRequest {
+  id          String    @id @default(cuid())
+  clientId    String    @unique
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status      String    @default("pending")
+  requestedAt DateTime  @default(now())
+  resolvedAt  DateTime?
+  note        String?
+
+  @@index([status, requestedAt])
 }
 
 /// Versioned studio documents: consent, preparation, aftercare and policies.
@@ -150,64 +169,142 @@ model DocumentAcceptance {
   document   StudioDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
   version    Int
   acceptedAt DateTime       @default(now())
+
   @@unique([clientId, documentId, version])
 }
 
 /// A tattoo brief is the central operational record. Appointments, deposits,
 /// client messages and documents will attach to this entity in later phases.
 model TattooProject {
-  id                String         @id @default(cuid())
-  clientId          String
-  client            Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  title             String
-  description       String
-  styles            String         @default("")
-  placement         String?
-  size              String?
-  colorPreference   String?
-  estimatedPrice    Int?
-  finalPrice        Int?
-  status            String         @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
-  preferredDateNote String?
-  internalNotes     String?
-  depositStatus     String         @default("not_required") // not_required | awaiting | paid | refunded | forfeited
-  depositAmount     Int?
-  depositPaidAt     DateTime?
+  id                   String            @id @default(cuid())
+  clientId             String
+  client               Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title                String
+  description          String
+  styles               String            @default("")
+  placement            String?
+  size                 String?
+  colorPreference      String?
+  estimatedPrice       Int?
+  finalPrice           Int?
+  status               String            @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
+  preferredDateNote    String?
+  internalNotes        String?
+  depositStatus        String            @default("not_required") // not_required | awaiting | paid | refunded | forfeited
+  depositAmount        Int?
+  depositPaidAt        DateTime?
   depositPaymentMethod String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  images            ProjectImage[]
-  appointments      Appointment[]
-  activities        ProjectActivity[]
-  messages          ProjectMessage[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  images               ProjectImage[]
+  appointments         Appointment[]
+  activities           ProjectActivity[]
+  messages             ProjectMessage[]
 }
 
 /// Appointments are kept separately from a project because a larger tattoo
 /// can require several sessions. Availability blocks use the same time range model.
 model Appointment {
-  id          String        @id @default(cuid())
-  projectId   String
-  project     TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  startsAt    DateTime
-  endsAt      DateTime
-  status      String        @default("requested") // requested | confirmed | deposit_required | deposit_paid | completed | cancelled | no_show
-  notes       String?
-  price       Int?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                 String                   @id @default(cuid())
+  projectId          String
+  project            TattooProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startsAt           DateTime
+  endsAt             DateTime
+  status             String                   @default("requested") // requested | confirmed | deposit_required | deposit_paid | completed | cancelled | no_show
+  notes              String?
+  price              Int?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
   googleCalendarSync GoogleCalendarEventSync?
+  reminderDeliveries ReminderDelivery[]
+}
+
+/// One browser/device that the client explicitly allowed to receive push
+/// notifications. Endpoints and encryption keys never leave server APIs.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, updatedAt])
+}
+
+/// Idempotency ledger for scheduled reminders. A unique row prevents the
+/// same appointment reminder from being sent more than once per channel.
+model ReminderDelivery {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  channel       String
+  offsetHours   Int
+  sentAt        DateTime?
+  error         String?
+  createdAt     DateTime    @default(now())
+
+  @@unique([appointmentId, channel, offsetHours])
+  @@index([sentAt, createdAt])
+}
+
+/// Consumables and equipment tracked by the studio. Monetary values are
+/// stored as integer grosz to avoid floating point rounding.
+model InventoryItem {
+  id            String              @id @default(cuid())
+  name          String
+  sku           String?             @unique
+  category      String              @default("materiały")
+  unit          String              @default("szt.")
+  quantity      Int                 @default(0)
+  minimumStock  Int                 @default(0)
+  unitCostCents Int?
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  movements     InventoryMovement[]
+
+  @@index([active, category, name])
+}
+
+model InventoryMovement {
+  id          String        @id @default(cuid())
+  itemId      String
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  adminUserId String?
+  adminUser   AdminUser?    @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  delta       Int
+  reason      String
+  note        String?
+  createdAt   DateTime      @default(now())
+
+  @@index([itemId, createdAt])
+}
+
+/// Shared rate-limit state for serverless instances. Keys are SHA-256 hashes,
+/// so e-mail addresses and client IPs are not stored in clear text.
+model RateLimitBucket {
+  key       String   @id
+  hits      Int      @default(0)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
 }
 
 /// Permanent, ordered history of meaningful actions taken on a tattoo project.
 /// Internal events stay private; client-visible events may be surfaced in the portal.
 model ProjectActivity {
-  id        String        @id @default(cuid())
-  projectId String
-  project   TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type      String
-  message   String
-  visibility String       @default("admin") // admin | client
-  createdAt DateTime      @default(now())
+  id         String        @id @default(cuid())
+  projectId  String
+  project    TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  visibility String        @default("admin") // admin | client
+  createdAt  DateTime      @default(now())
 
   @@index([projectId, createdAt])
 }
@@ -215,9 +312,9 @@ model ProjectActivity {
 /// In-app delivery of business events. Future push and e-mail adapters can
 /// consume the same event type without duplicating workflow logic.
 model ClientNotification {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   clientId      String
-  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   type          String
   title         String
   body          String
@@ -225,7 +322,7 @@ model ClientNotification {
   projectId     String?
   appointmentId String?
   readAt        DateTime?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 
   @@index([clientId, readAt, createdAt])
   @@index([projectId, createdAt])
@@ -309,18 +406,18 @@ model Promotion {
 /// Labels stay on the event itself to avoid an extra lookup table until the
 /// studio actually needs reusable event taxonomies.
 model CalendarEvent {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  startsAt    DateTime
-  endsAt      DateTime
-  allDay      Boolean  @default(false)
-  color       String   @default("#6B7280")
-  icon        String?
-  label       String?
-  isPublic    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String                   @id @default(cuid())
+  title              String
+  description        String?
+  startsAt           DateTime
+  endsAt             DateTime
+  allDay             Boolean                  @default(false)
+  color              String                   @default("#6B7280")
+  icon               String?
+  label              String?
+  isPublic           Boolean                  @default(false)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
   googleCalendarSync GoogleCalendarEventSync?
 
   @@index([startsAt, endsAt])
@@ -329,18 +426,18 @@ model CalendarEvent {
 /// One explicit, administrator-owned Google Calendar consent. Tokens remain
 /// encrypted and are used only by server-side sync code.
 model GoogleCalendarConnection {
-  id                    String   @id @default(cuid())
+  id                    String                    @id @default(cuid())
   adminUserId           String
-  adminUser             AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUser             AdminUser                 @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
   accountEmail          String?
   encryptedRefreshToken String
   tokenExpiresAt        DateTime?
   primaryCalendarId     String?
   syncToken             String?
   lastSyncedAt          DateTime?
-  active                Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  active                Boolean                   @default(true)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
   selections            GoogleCalendarSelection[]
   events                GoogleCalendarEventSync[]
 
@@ -349,15 +446,15 @@ model GoogleCalendarConnection {
 
 /// A primary read/write calendar or a read-only busy source chosen by admin.
 model GoogleCalendarSelection {
-  id           String   @id @default(cuid())
+  id           String                   @id @default(cuid())
   connectionId String
   connection   GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   calendarId   String
   summary      String?
-  role         String   @default("busy") // primary | busy
-  enabled      Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         String                   @default("busy") // primary | busy
+  enabled      Boolean                  @default(true)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
 
   @@unique([connectionId, calendarId])
   @@index([connectionId, role])
@@ -367,51 +464,51 @@ model GoogleCalendarSelection {
 /// CoolInk appointment or one imported admin-only CalendarEvent, never data
 /// exposed to clients/public Calendar APIs.
 model GoogleCalendarEventSync {
-  id                String   @id @default(cuid())
-  connectionId      String
-  connection        GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  googleCalendarId  String
-  googleEventId     String
-  appointmentId     String?  @unique
-  appointment       Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  calendarEventId   String?  @unique
-  calendarEvent     CalendarEvent? @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
-  googleUpdatedAt   DateTime?
-  localFingerprint  String?
-  lastSyncedAt      DateTime?
-  syncStatus        String   @default("SYNCED") // SYNCED | PENDING_GOOGLE | PENDING_COOLINK | CONFLICT | ERROR | DELETED_REMOTE
-  syncError         String?
-  remoteDeletedAt   DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String                   @id @default(cuid())
+  connectionId     String
+  connection       GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  googleCalendarId String
+  googleEventId    String
+  appointmentId    String?                  @unique
+  appointment      Appointment?             @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  calendarEventId  String?                  @unique
+  calendarEvent    CalendarEvent?           @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+  googleUpdatedAt  DateTime?
+  localFingerprint String?
+  lastSyncedAt     DateTime?
+  syncStatus       String                   @default("SYNCED") // SYNCED | PENDING_GOOGLE | PENDING_COOLINK | CONFLICT | ERROR | DELETED_REMOTE
+  syncError        String?
+  remoteDeletedAt  DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   @@unique([googleCalendarId, googleEventId])
   @@index([connectionId, syncStatus])
 }
 
 model ProjectImage {
-  id        String        @id @default(cuid())
+  id        String          @id @default(cuid())
   projectId String
-  project   TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   TattooProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   url       String
   caption   String?
-  order     Int           @default(0)
-  createdAt DateTime      @default(now())
+  order     Int             @default(0)
+  createdAt DateTime        @default(now())
   message   ProjectMessage? @relation("ProjectMessageAttachment")
 }
 
 /// Private conversation connected to one tattoo project. Messages are served
 /// only by authenticated Next.js endpoints, never through the public Data API.
 model ProjectMessage {
-  id           String         @id @default(cuid())
+  id           String        @id @default(cuid())
   projectId    String
-  project      TattooProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  author       String         // client | admin
-  body         String         @default("")
-  attachmentId String?        @unique
-  attachment   ProjectImage?  @relation("ProjectMessageAttachment", fields: [attachmentId], references: [id], onDelete: SetNull)
+  project      TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author       String // client | admin
+  body         String        @default("")
+  attachmentId String?       @unique
+  attachment   ProjectImage? @relation("ProjectMessageAttachment", fields: [attachmentId], references: [id], onDelete: SetNull)
   readAt       DateTime?
-  createdAt    DateTime       @default(now())
+  createdAt    DateTime      @default(now())
 
   @@index([projectId, createdAt])
   @@index([projectId, author, readAt])

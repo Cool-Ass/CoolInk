@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/adminApi";
 
 export async function POST(request: Request) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   const firstName = String(body?.firstName ?? "").trim();
   const lastName = String(body?.lastName ?? "").trim();

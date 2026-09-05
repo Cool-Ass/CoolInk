@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/adminApi";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
 export async function POST(request: Request, { params }: Params) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const direction = body?.direction;

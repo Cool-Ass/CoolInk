@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { sanitizeRichText } from "@/lib/richText";
+import { requireAdminApi } from "@/lib/adminApi";
 
 export async function POST(request: Request) {
+  const access = await requireAdminApi(); if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   const title = String(body?.title ?? "").trim(); const content = sanitizeRichText(String(body?.content ?? "").trim()); const category = String(body?.category ?? "other");
   if (!title || !content) return NextResponse.json({ error: "Tytuł i treść dokumentu są wymagane." }, { status: 400 });

@@ -14,14 +14,14 @@ import { prisma } from "./prisma";
 export const DEFAULT_CONTENT = {
   brand: {
     logoUrl: "/images/logo-white.jpg",
-    instagramUrl: "https://instagram.com",
-    facebookUrl: "https://facebook.com",
+    instagramUrl: "https://instagram.com/coolink.tattoo.studio",
+    facebookUrl: "https://facebook.com/coolink.tattoo.studio",
   },
   contact: {
-    address: "ul. Artystyczna 12, 00-001 Warszawa",
-    phone: "+48 500 100 200",
-    email: "kontakt@coolink-tattoo.pl",
-    hours: "Wt–Sob: 11:00 – 19:00",
+    address: "al. Konstytucji 3 Maja 10, 65-001 Zielona Góra",
+    phone: "+48 530 178 346",
+    email: "kontakt@coolinktattoo.pl",
+    hours: "Wt–Sob: 11:00 – 18:00",
   },
   footer: {
     text: "CoolInk Tattoo Studio. Wszelkie prawa zastrzeżone.",

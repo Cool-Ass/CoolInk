@@ -1,10 +1,10 @@
 # CoolInk Tattoo Studio — Strona + CMS z edytorem modułowym
 
-Strona dla CoolInk Tattoo Studio (Next.js 15 / React 19 / TypeScript / Tailwind v4) z pełnym
+Strona dla CoolInk Tattoo Studio (Next.js 16 / React 19 / TypeScript / Tailwind v4) z pełnym
 panelem administracyjnym (`/admin`), zawierającym **wizualny edytor modułowy** (mini
 Elementor/WordPress zbudowany specjalnie pod ten motyw), bibliotekę mediów, zarządzanie
-portfolio i globalną marką — wszystko oparte o bazę danych (Prisma + SQLite lokalnie,
-z łatwym przejściem na Postgres w produkcji).
+portfolio, rezerwacje, statystyki, magazyn, powiadomienia i globalną markę — wszystko oparte
+o PostgreSQL w Supabase przez Prisma.
 
 Wygląd, animacje (parallax GSAP/Lenis, płynne przewijanie, magnetyczne przyciski), typografia i
 identyfikacja wizualna publicznej strony pozostają dokładnie takie same jak wcześniej — to jest
@@ -20,8 +20,10 @@ cp .env.example .env
 ```
 
 W pliku `.env` ustaw:
-- `SESSION_SECRET` — dowolny długi losowy ciąg (`openssl rand -base64 32`)
-- `ADMIN_EMAIL` / `ADMIN_PASSWORD` — dane logowania administratora (hasło min. 8 znaków)
+- `SESSION_SECRET` — losowy ciąg o długości co najmniej 32 znaków (`openssl rand -base64 32`)
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` — dane logowania administratora
+- `DATABASE_URL`, `DIRECT_URL` i publiczne zmienne Supabase
+- klucze Web Push (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`) i `CRON_SECRET`
 
 Następnie utwórz i zasil bazę danych:
 
@@ -119,7 +121,14 @@ ustaw to w module Portfolio/Galeria tej strony („Wybór zdjęć: Wybrane ręcz
 pliku widać, gdzie jest obecnie używany (strona, element portfolio, logo globalne) —
 usunięcie ostrzeże, jeśli plik jest w użyciu.
 
-**Zmień hasło**: Ustawienia → Zmień hasło.
+**Zmień hasło**: Ustawienia → Zmień hasło (nowe hasło musi mieć min. 12 znaków).
+
+**Statystyki i magazyn**: sekcje Statystyki oraz Magazyn pokazują klientów, wizyty,
+przychody, najczęstsze style, wartość materiałów i alerty niskiego stanu. Każda korekta
+magazynowa trafia do historii ruchów.
+
+**Aplikacja klienta**: konto pod `/app` jest instalowalną PWA. Klient może odzyskać hasło,
+śledzić proces, zainstalować aplikację na ekranie telefonu i włączyć przypomnienia push.
 
 **Odbieraj zapytania z formularza**: wiadomości z publicznego formularza kontaktowego są
 zapisywane w bazie i dostępne w panelu: **Wiadomości**. W tym etapie nie są automatycznie

@@ -3,6 +3,7 @@ import { Anton, Jost, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 import ScrollReveal from "@/components/ScrollReveal";
+import PwaRegister from "@/components/PwaRegister";
 
 const anton = Anton({
   subsets: ["latin"],
@@ -26,15 +27,22 @@ const dancingScript = Dancing_Script({
 });
 
 export const metadata: Metadata = {
-  title: "CoolInk Tattoo Studio — Your Story. Our Craft.",
+  metadataBase: new URL("https://www.coolinktattoo.pl"),
+  title: "CoolInk Tattoo Studio — tatuaże w Zielonej Górze",
   description:
-    "CoolInk Tattoo Studio — unikalne tatuaże w najwyższej jakości. Indywidualne projekty, realizm, detal. Sztuka, która zostaje na zawsze.",
-  keywords: ["tattoo", "tattoo studio", "CoolInk", "tatuaż", "realism tattoo"],
+    "CoolInk Tattoo Studio w Zielonej Górze. Indywidualne projekty, realizm, szkic i covery. Sprawdź wolne terminy i obsługuj wizytę online.",
+  keywords: ["tatuaż Zielona Góra", "studio tatuażu Zielona Góra", "CoolInk", "realizm", "cover tatuażu"],
+  alternates: { canonical: "/" },
   openGraph: {
     title: "CoolInk Tattoo Studio",
-    description: "Your Story. Our Craft.",
+    description: "Indywidualne tatuaże i rezerwacje online w Zielonej Górze.",
+    locale: "pl_PL",
+    url: "/",
+    siteName: "CoolInk Tattoo Studio",
+    images: [{ url: "/images/portrait.jpg", width: 1200, height: 1200, alt: "CoolInk Tattoo Studio" }],
     type: "website",
   },
+  twitter: { card: "summary_large_image", title: "CoolInk Tattoo Studio", description: "Tatuaże i rezerwacje online w Zielonej Górze.", images: ["/images/portrait.jpg"] },
 };
 
 export default function RootLayout({
@@ -42,12 +50,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
-      lang="en"
+      lang="pl"
       className={`${anton.variable} ${jost.variable} ${dancingScript.variable}`}
     >
       <body className="antialiased">
         <SmoothScrollProvider>{children}</SmoothScrollProvider>
         <ScrollReveal />
+        <PwaRegister />
       </body>
     </html>
   );

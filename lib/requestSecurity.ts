@@ -1,16 +1,8 @@
 import type { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { prisma } from "@/lib/prisma";
 
 type RateLimitResult = { allowed: true; remaining: number } | { allowed: false; retryAfter: number };
-type RateLimitEntry = { hits: number[] };
-
-// This is deliberately stored on globalThis so hot reloads do not clear it.
-// For production with multiple server instances, Vercel's WAF/rate limiting
-// should be enabled as an additional perimeter; this layer still protects
-// each instance and local deployments without another service.
-const store = globalThis as typeof globalThis & { coolinkRateLimits?: Map<string, RateLimitEntry> };
-const limits = store.coolinkRateLimits ?? new Map<string, RateLimitEntry>();
-store.coolinkRateLimits = limits;
-
 export function requestIp(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || request.headers.get("x-real-ip")
@@ -22,18 +14,21 @@ export function isSameOrigin(request: Request) {
   return !origin || origin === new URL(request.url).origin;
 }
 
-export function rateLimit(request: Request, scope: string, maxHits: number, windowMs: number, discriminator = "") : RateLimitResult {
-  const now = Date.now();
-  const key = `${scope}:${requestIp(request)}:${discriminator}`;
-  const entry = limits.get(key) ?? { hits: [] };
-  entry.hits = entry.hits.filter((timestamp) => now - timestamp < windowMs);
-  if (entry.hits.length >= maxHits) {
-    limits.set(key, entry);
-    return { allowed: false, retryAfter: Math.max(1, Math.ceil((entry.hits[0] + windowMs - now) / 1000)) };
-  }
-  entry.hits.push(now);
-  limits.set(key, entry);
-  return { allowed: true, remaining: maxHits - entry.hits.length };
+export async function rateLimit(request: Request, scope: string, maxHits: number, windowMs: number, discriminator = "") : Promise<RateLimitResult> {
+  const key = createHash("sha256").update(`${scope}:${requestIp(request)}:${discriminator}`).digest("hex");
+  const resetAt = new Date(Date.now() + windowMs);
+  const rows = await prisma.$queryRaw<Array<{ hits: number; resetAt: Date }>>`
+    INSERT INTO "RateLimitBucket" ("key", "hits", "resetAt", "updatedAt")
+    VALUES (${key}, 1, ${resetAt}, CURRENT_TIMESTAMP)
+    ON CONFLICT ("key") DO UPDATE SET
+      "hits" = CASE WHEN "RateLimitBucket"."resetAt" <= CURRENT_TIMESTAMP THEN 1 ELSE "RateLimitBucket"."hits" + 1 END,
+      "resetAt" = CASE WHEN "RateLimitBucket"."resetAt" <= CURRENT_TIMESTAMP THEN ${resetAt} ELSE "RateLimitBucket"."resetAt" END,
+      "updatedAt" = CURRENT_TIMESTAMP
+    RETURNING "hits", "resetAt"
+  `;
+  const row = rows[0];
+  if (!row || row.hits <= maxHits) return { allowed: true, remaining: Math.max(0, maxHits - (row?.hits ?? 1)) };
+  return { allowed: false, retryAfter: Math.max(1, Math.ceil((new Date(row.resetAt).getTime() - Date.now()) / 1000)) };
 }
 
 export function tooManyRequests(result: Extract<RateLimitResult, { allowed: false }>) {

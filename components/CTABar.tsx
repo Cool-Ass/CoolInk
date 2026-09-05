@@ -12,7 +12,7 @@ export default function CTABar({
   titleLines,
   message,
   buttonLabel = "UMÓW WIZYTĘ",
-  href = "#contact",
+  href = "#kalendarz",
 }: CTABarProps) {
   return (
     <div className="relative mx-auto max-w-[1536px] overflow-hidden px-6 md:px-10 lg:px-16">

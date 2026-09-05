@@ -29,7 +29,7 @@ export async function getCurrentAdmin() {
 
   const admin = await prisma.adminUser.findUnique({
     where: { id: payload.sub },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, role: true, sessionVersion: true },
   });
-  return admin;
+  return admin && admin.sessionVersion === payload.version ? admin : null;
 }

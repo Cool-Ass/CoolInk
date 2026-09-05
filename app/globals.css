@@ -24,6 +24,10 @@ body {
   overflow-x: hidden;
 }
 
+:where(input, textarea, select) {
+  border-color: color-mix(in srgb, var(--color-ink-white) 45%, transparent);
+}
+
 /* Builder galleries use CSS variables so one saved module adapts at each breakpoint. */
 .builder-gallery-grid {
   grid-template-columns: repeat(var(--builder-gallery-columns-mobile, 1), minmax(0, 1fr));

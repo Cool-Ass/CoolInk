@@ -40,6 +40,7 @@ export default async function Home() {
         globals={{
           instagramUrl: content.brand.instagramUrl,
           facebookUrl: content.brand.facebookUrl,
+          contact: content.contact,
         }}
       />
       <section id="kalendarz" className="bg-ink-black px-4 py-16 text-ink-white sm:px-6 lg:px-10">

@@ -2,9 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { useToast } from "@/components/admin/ToastProvider";
+import { useRouter } from "next/navigation";
 
 export default function ChangePasswordForm() {
   const { showToast } = useToast();
+  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,10 +29,12 @@ export default function ChangePasswordForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Nie udało się zmienić hasła.");
-      showToast("Hasło zaktualizowane.");
+      showToast("Hasło zaktualizowane. Zaloguj się ponownie.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      router.replace("/admin/login");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się zmienić hasła.");
     } finally {
@@ -55,7 +59,7 @@ export default function ChangePasswordForm() {
         <input
           type="password"
           required
-          minLength={8}
+          minLength={12}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
@@ -66,7 +70,7 @@ export default function ChangePasswordForm() {
         <input
           type="password"
           required
-          minLength={8}
+          minLength={12}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"

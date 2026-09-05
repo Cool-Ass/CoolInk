@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${page.title} — CoolInk Tattoo Studio`,
     description: page.excerpt || undefined,
+    alternates: { canonical: `/${page.slug}` },
   };
 }
 
@@ -48,7 +49,7 @@ export default async function CmsPage({ params }: Props) {
 
   const modules = parseModules(page.publishedModules);
   const coverImage = imageSource(page.coverImage);
-  const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl };
+  const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl, contact: content.contact };
 
   return (
     <main className="relative min-h-screen bg-ink-black">
