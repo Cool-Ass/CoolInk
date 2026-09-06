@@ -165,11 +165,12 @@ wysyłane e-mailem — integrację z pocztą lub CRM można dodać osobno.
    a na hostingu uruchom `npm run db:deploy`; następnie jednorazowo `npm run db:seed`, aby
    utworzyć konto administratora.
 2. **Przesyłane pliki**: `/public/uploads` działa lokalnie, ale większość hostingów (np.
-   Vercel) ma efemeryczny/tylko-do-odczytu system plików w produkcji. Aplikacja obsługuje już
-   storage zgodny z S3. Dla Cloudflare R2 utwórz prywatny bucket oraz klucz ograniczony do
-   odczytu/zapisu tego jednego bucketu, a następnie ustaw `S3_ENDPOINT` na adres API R2,
-   `S3_REGION=auto`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` i
-   `S3_PUBLIC_URL` na publiczną domenę plików. Kluczy nigdy nie zapisuj w repozytorium.
+   Vercel) ma efemeryczny/tylko-do-odczytu system plików w produkcji. Produkcja używa
+   publicznego Vercel Blob podłączonego do projektu przez `BLOB_READ_WRITE_TOKEN`.
+   Aplikacja nadal obsługuje również storage zgodny z S3. Gdy skonfigurujesz Cloudflare R2,
+   ustaw `S3_ENDPOINT`, `S3_REGION=auto`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
+   `S3_BUCKET` i `S3_PUBLIC_URL`; R2 ma pierwszeństwo nad Blob. Kluczy nigdy nie zapisuj w
+   repozytorium.
 3. **Zmienne środowiskowe**: ustaw `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`,
    `ADMIN_PASSWORD`, `MAX_UPLOAD_MB` oraz zmienne `S3_*` w panelu zmiennych/sekretów swojego hostingu (nigdy nie
    commituj `.env`).

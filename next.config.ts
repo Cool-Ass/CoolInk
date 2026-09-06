@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 const mediaPattern = process.env.S3_PUBLIC_URL
   ? new URL(`${process.env.S3_PUBLIC_URL.replace(/\/$/, "")}/**`)
   : null;
+const remoteMediaPatterns = [
+  {
+    protocol: "https" as const,
+    hostname: "*.public.blob.vercel-storage.com",
+    pathname: "/**",
+  },
+  ...(mediaPattern ? [mediaPattern] : []),
+];
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -33,7 +41,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: mediaPattern ? [mediaPattern] : [],
+    remotePatterns: remoteMediaPatterns,
   },
   reactStrictMode: true,
 };

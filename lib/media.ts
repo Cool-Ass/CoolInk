@@ -73,7 +73,7 @@ export async function saveUploadedImage(file: File) {
 export async function deleteUploadedFile(url: string) {
   if (!url.startsWith("/uploads/")) {
     if (!isExternalMediaUrl(url)) return;
-    const external = await deleteMedia(`uploads/${url.split("/").pop()}`);
+    const external = await deleteMedia(url);
     if (!external) return;
     return;
   }

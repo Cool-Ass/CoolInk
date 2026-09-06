@@ -94,15 +94,23 @@ Wdrożone i zweryfikowane mechanizmy:
 
 Aktualny `npm audit --omit=dev` nie wykrywa podatności w zależnościach produkcyjnych.
 
-## 7. Cloudflare R2 i przesyłanie zdjęć
+## 7. Magazyn zdjęć
 
-Kod aplikacji jest gotowy na trwały magazyn zgodny z S3 i nie próbuje już zapisywać do tylko-do-odczytu katalogu Vercel, gdy R2 jest aktywne. Do pełnego uruchomienia pozostała konfiguracja infrastruktury:
+Przesyłanie zdjęć jest uruchomione przez publiczny magazyn Vercel Blob `coolink-media` w
+regionie Frankfurt. Projekt otrzymał własny token środowiskowy dla produkcji i preview;
+sekret nie jest zapisany w repozytorium. Kod nie próbuje zapisywać do tylko-do-odczytu
+katalogu Vercel, gdy Blob albo R2 jest aktywne.
+
+Plan Hobby obejmuje 1 GB storage i 10 GB transferu miesięcznie. Po przekroczeniu limitu Blob
+na Hobby zostaje czasowo wstrzymany, zamiast generować opłatę. Cloudflare R2 pozostaje
+docelową opcją o większym bezpłatnym limicie. Do jego późniejszego uruchomienia potrzebne są:
 
 1. końcowa aktywacja R2 w Cloudflare;
 2. bucket `coolink-media`;
 3. publiczna domena plików, preferencyjnie `media.coolinktattoo.pl`;
 4. klucz ograniczony do odczytu i zapisu tego jednego bucketu;
-5. zaszyfrowane zmienne `S3_*` w Vercel i ponowny deploy.
+5. zaszyfrowane zmienne `S3_*` w Vercel i ponowny deploy. Po ich dodaniu aplikacja
+   automatycznie wybierze R2, zachowując dostęp do wcześniej przesłanych adresów Blob.
 
 Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji klasy A i 10 mln operacji klasy B w limicie. Po przekroczeniu limitów nalicza opłaty zgodnie z ekranem zamówienia. Końcowa aktywacja wymaga zaakceptowania regulaminu i zgody na obciążanie metody płatniczej za nadwyżki, dlatego nie została wykonana automatycznie bez osobnego potwierdzenia.
 
@@ -137,4 +145,4 @@ i `X-Frame-Options: DENY`. Tryb budowy nadal jest włączony i oznaczony `noinde
 
 ## 10. Ocena końcowa
 
-Architektura jest gotowa na pełną zmianę wyglądu bez ponownego budowania systemu rezerwacji i danych. Najważniejszą pozostałą blokadą funkcjonalną jest wyłącznie aktywacja i podpięcie R2. Do czasu publikacji redesignu tryb budowy powinien pozostać włączony.
+Architektura jest gotowa na pełną zmianę wyglądu bez ponownego budowania systemu rezerwacji i danych. Przesyłanie zdjęć działa przez Vercel Blob; aktywacja R2 jest opcjonalną późniejszą migracją zwiększającą bezpłatny limit. Do czasu publikacji redesignu tryb budowy powinien pozostać włączony.

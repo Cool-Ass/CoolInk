@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { del as deleteBlob, put as putBlob } from "@vercel/blob";
 
 type S3Config = {
   endpoint: string;
@@ -70,23 +71,71 @@ async function s3Request(method: "PUT" | "DELETE", key: string, body?: Buffer, c
 }
 
 export function usesExternalStorage() {
-  return getS3Config() !== null;
+  return getS3Config() !== null || Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
 export function isExternalMediaUrl(url: string) {
   const config = getS3Config();
-  return Boolean(config && url.startsWith(`${config.publicUrl}/uploads/`));
+  if (config && url.startsWith(`${config.publicUrl}/uploads/`)) return true;
+  try {
+    const parsed = new URL(url);
+    return (
+      Boolean(process.env.BLOB_READ_WRITE_TOKEN) &&
+      parsed.protocol === "https:" &&
+      parsed.hostname.endsWith(".public.blob.vercel-storage.com") &&
+      parsed.pathname.startsWith("/uploads/")
+    );
+  } catch {
+    return false;
+  }
 }
 
 export async function uploadMedia(key: string, data: Buffer, contentType: string) {
   const config = getS3Config();
-  if (!config) return null;
-  await s3Request("PUT", key, data, contentType);
-  return `${config.publicUrl}/${key}`;
+  if (config) {
+    await s3Request("PUT", key, data, contentType);
+    return `${config.publicUrl}/${key}`;
+  }
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await putBlob(key, data, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType,
+    });
+    return blob.url;
+  }
+  return null;
 }
 
-export async function deleteMedia(key: string) {
-  if (!getS3Config()) return false;
-  await s3Request("DELETE", key);
-  return true;
+export async function deleteMedia(urlOrKey: string) {
+  const blobUrl = (() => {
+    try {
+      const parsed = new URL(urlOrKey);
+      return parsed.hostname.endsWith(".public.blob.vercel-storage.com");
+    } catch {
+      return false;
+    }
+  })();
+  if (blobUrl && process.env.BLOB_READ_WRITE_TOKEN) {
+    await deleteBlob(urlOrKey);
+    return true;
+  }
+
+  const config = getS3Config();
+  if (config) {
+    let key = urlOrKey;
+    try {
+      const parsed = new URL(urlOrKey);
+      key = parsed.pathname.replace(/^\//, "");
+    } catch {
+      // A storage key was passed directly.
+    }
+    await s3Request("DELETE", key);
+    return true;
+  }
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    await deleteBlob(urlOrKey);
+    return true;
+  }
+  return false;
 }
