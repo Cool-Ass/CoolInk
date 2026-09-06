@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 
 export default async function ConstructionPage() {
   const content = await getSiteContent();
-  return <MaintenanceScreen content={content.maintenance} />;
+  return <MaintenanceScreen content={content.maintenance} theme={content.theme} />;
 }

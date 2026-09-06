@@ -72,6 +72,19 @@ export default async function ContentPage() {
         />
 
         <SettingsSection
+          title="Kolory całej witryny"
+          initialValues={flat("theme")}
+          fields={[
+            { key: "theme.background", label: "Główne tło", type: "color" },
+            { key: "theme.surface", label: "Tło kart i paneli", type: "color" },
+            { key: "theme.accent", label: "Kolor akcentu", type: "color" },
+            { key: "theme.accentBright", label: "Jaśniejszy akcent", type: "color" },
+            { key: "theme.text", label: "Główny tekst", type: "color" },
+            { key: "theme.muted", label: "Tekst pomocniczy", type: "color" },
+          ]}
+        />
+
+        <SettingsSection
           title="Menu główne"
           initialValues={flat("navigation")}
           fields={[

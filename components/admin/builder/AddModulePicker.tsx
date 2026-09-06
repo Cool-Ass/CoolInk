@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   MODULE_TYPE_ORDER,
   MODULE_LABELS,
@@ -15,6 +17,8 @@ export default function AddModulePicker({
   onAdd: (type: ModuleType) => void;
   insertAfterSelection?: boolean;
 }) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase("pl-PL");
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -27,11 +31,30 @@ export default function AddModulePicker({
       </div>
 
       <div className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-3 py-2 text-[11px] leading-relaxed text-ink-grey">
-        Wskazówka: kliknij dowolną sekcję w podglądzie, aby zmienić jej treść lub kolejność.
+        Każdy moduł ma warianty powierzchni, szerokość, odstępy, tło, ramkę, cień,
+        widoczność na urządzeniach i bezpieczne deklaracje CSS.
       </div>
 
+      <label className="flex flex-col gap-2 text-[11px] tracking-[.1em] text-ink-grey">
+        SZUKAJ MODUŁU
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="np. akordeon, korzyści, HTML…"
+          className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-[13px] text-ink-white outline-none focus:border-ink-gold"
+        />
+      </label>
+
       {(["widgets", "templates"] as const).map((category) => {
-        const types = MODULE_TYPE_ORDER.filter((type) => MODULE_CATEGORIES[type] === category);
+        const types = MODULE_TYPE_ORDER.filter((type) => {
+          if (MODULE_CATEGORIES[type] !== category) return false;
+          if (!normalizedQuery) return true;
+          return `${MODULE_LABELS[type]} ${MODULE_DESCRIPTIONS[type]}`
+            .toLocaleLowerCase("pl-PL")
+            .includes(normalizedQuery);
+        });
+        if (!types.length) return null;
         return (
         <div key={category} className="flex flex-col gap-2">
           <p className="text-[10px] tracking-[0.14em] text-ink-gold">

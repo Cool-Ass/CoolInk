@@ -49,6 +49,7 @@ export default async function PageBuilderRoute({ params }: Props) {
           facebookUrl: content.brand.facebookUrl,
           contact: content.contact,
           calendar,
+          theme: content.theme,
         }}
       />
     </ToastProvider>

@@ -13,6 +13,7 @@ import { getPublicCalendarData } from "@/lib/publicCalendar";
 import { getMaintenanceMode } from "@/lib/maintenance";
 import { getCurrentAdmin } from "@/lib/auth";
 import { ensureEditableHomepage } from "@/lib/homepage";
+import { siteThemeStyle } from "@/lib/siteTheme";
 
 // Content is admin-editable, so this page must always read the current
 // database state rather than being frozen at build time.
@@ -34,7 +35,7 @@ export default async function Home() {
   const admin = maintenanceEnabled ? await getCurrentAdmin() : null;
   if (maintenanceEnabled && !admin) {
     const content = await getSiteContent();
-    return <MaintenanceScreen content={content.maintenance} />;
+    return <MaintenanceScreen content={content.maintenance} theme={content.theme} />;
   }
 
   const [homepage, content, works, calendar] = await Promise.all([
@@ -51,7 +52,7 @@ export default async function Home() {
       : defaultHomepageModules();
 
   return (
-    <main className="relative">
+    <main style={siteThemeStyle(content.theme)} className="relative">
       {maintenanceEnabled && admin && (
         <aside className="fixed bottom-4 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 flex-col gap-3 border border-amber-400/50 bg-ink-black/95 px-4 py-3 text-ink-white shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between" aria-label="Tryb budowy">
           <p className="text-[13px] leading-relaxed text-amber-100">

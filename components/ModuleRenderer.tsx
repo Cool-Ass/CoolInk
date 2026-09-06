@@ -24,11 +24,24 @@ import {
   type PortfolioModuleData,
 } from "@/lib/modules";
 import { safeHref, safeMapEmbedUrl } from "@/lib/safeHref";
+import { parseSafeCssDeclarations } from "@/lib/moduleStyle";
+import type { SiteContent } from "@/lib/content";
 
 function moduleVisualStyle(mod: Module): CSSProperties | undefined {
   const style = mod.style;
-  if (!style || (!style.backgroundColor && !style.backgroundImage)) return undefined;
-  return { backgroundColor: style.backgroundColor || undefined, backgroundImage: style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : undefined, backgroundSize: style.backgroundSize || "cover", backgroundPosition: "center" };
+  if (!style) return undefined;
+  return {
+    backgroundColor: style.backgroundColor || undefined,
+    backgroundImage: style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : undefined,
+    backgroundSize: style.backgroundSize || "cover",
+    backgroundPosition: "center",
+    borderColor: style.borderColor || undefined,
+    borderWidth: style.borderWidth ? `${Math.min(12, Math.max(0, style.borderWidth))}px` : undefined,
+    borderStyle: style.borderWidth ? "solid" : undefined,
+    minHeight: style.minHeight ? `${Math.min(1600, Math.max(0, style.minHeight))}px` : undefined,
+    opacity: typeof style.opacity === "number" ? Math.min(1, Math.max(0.1, style.opacity / 100)) : undefined,
+    ...parseSafeCssDeclarations(style.customCss),
+  };
 }
 
 function radiusClass(radius?: ModuleStyle["radius"]) {
@@ -40,6 +53,46 @@ export interface ModuleRendererGlobals {
   facebookUrl?: string;
   contact?: { address: string; phone: string; email: string; hours: string };
   calendar?: PublicCalendarData;
+  theme?: SiteContent["theme"];
+}
+
+function moduleLayoutClasses(style?: ModuleStyle, editable = false) {
+  const padding = {
+    none: "p-0",
+    sm: "p-3 md:p-5",
+    md: "p-5 md:p-8",
+    lg: "p-8 md:p-12",
+    xl: "p-12 md:p-20",
+  }[style?.padding ?? "none"];
+  const margin = {
+    none: "my-0",
+    sm: "my-3",
+    md: "my-6",
+    lg: "my-10",
+    xl: "my-16",
+  }[style?.margin ?? "none"];
+  const width = {
+    full: "w-full",
+    wide: "mx-auto w-[calc(100%_-_2rem)] max-w-[90rem]",
+    normal: "mx-auto w-[calc(100%_-_2rem)] max-w-[72rem]",
+    narrow: "mx-auto w-[calc(100%_-_2rem)] max-w-[52rem]",
+  }[style?.contentWidth ?? "full"];
+  const surface = {
+    plain: "",
+    card: "border border-ink-white/10 bg-ink-charcoal/70",
+    outline: "border border-ink-gold/45 bg-transparent",
+    glass: "border border-ink-white/15 bg-ink-black/55 backdrop-blur-xl",
+  }[style?.surface ?? "plain"];
+  const shadow = {
+    none: "",
+    sm: "shadow-md shadow-black/25",
+    md: "shadow-xl shadow-black/35",
+    lg: "shadow-2xl shadow-black/50",
+  }[style?.shadow ?? "none"];
+  const responsive = editable
+    ? ""
+    : `${style?.hiddenOn?.mobile ? "max-sm:hidden" : ""} ${style?.hiddenOn?.tablet ? "sm:max-lg:hidden" : ""} ${style?.hiddenOn?.desktop ? "lg:hidden" : ""}`;
+  return `${padding} ${margin} ${width} ${surface} ${shadow} ${responsive}`;
 }
 
 export interface ModuleRendererProps {
@@ -107,7 +160,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     }
     case "spacer":
       return <Spacer data={withDefaults("spacer", mod.data)} />;
-    case "heading": case "text": case "image": case "button": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout": {
+    case "heading": case "text": case "image": case "button": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout": case "customCode": {
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
@@ -139,7 +192,7 @@ export default function ModuleRenderer({
         const content = renderModule(mod, portfolioWorks, globals, editable);
 
         const visualStyle = moduleVisualStyle(mod);
-        const styleClass = `${radiusClass(mod.style?.radius)} ${mod.style?.cssClass ?? ""}`;
+        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${mod.style?.cssClass ?? ""}`;
         const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
 
         if (!editable) {

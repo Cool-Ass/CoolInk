@@ -28,8 +28,6 @@ export async function saveUploadedImage(file: File) {
     );
   }
 
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-
   const inputBuffer = Buffer.from(await file.arrayBuffer());
 
   const image = sharp(inputBuffer).rotate(); // auto-orient from EXIF
@@ -56,7 +54,10 @@ export async function saveUploadedImage(file: File) {
   if (!externalUrl && process.env.VERCEL) {
     throw new MediaUploadError("Trwały magazyn zdjęć nie jest jeszcze skonfigurowany. Dodaj ustawienia S3/R2 przed przesłaniem pliku.");
   }
-  if (!externalUrl) await fs.writeFile(path.join(UPLOAD_DIR, filename), outputBuffer);
+  if (!externalUrl) {
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    await fs.writeFile(path.join(UPLOAD_DIR, filename), outputBuffer);
+  }
 
   return {
     filename,

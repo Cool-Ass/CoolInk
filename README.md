@@ -6,11 +6,10 @@ Elementor/WordPress zbudowany specjalnie pod ten motyw), bibliotekę mediów, za
 portfolio, rezerwacje, statystyki, magazyn, powiadomienia i globalną markę — wszystko oparte
 o PostgreSQL w Supabase przez Prisma.
 
-Wygląd, animacje (parallax GSAP/Lenis, płynne przewijanie, magnetyczne przyciski), typografia i
-identyfikacja wizualna publicznej strony pozostają dokładnie takie same jak wcześniej — to jest
-rozbudowa istniejącego projektu, a nie przebudowa od zera. Sekcje takie jak Hero, O mnie,
-Portfolio, Studio czy Kontakt to te same komponenty co wcześniej, tylko teraz sterowane danymi
-z edytora zamiast zaszytymi na stałe w kodzie.
+Sekcje takie jak Hero, O mnie, Portfolio, Studio czy Kontakt korzystają z istniejącego motywu,
+ale ich treść, kolejność i oprawa są teraz sterowane z panelu. Każdy moduł ma wspólne ustawienia
+tła, szerokości, odstępów, obramowania, zaokrąglenia, cienia, widoczności na urządzeniach oraz
+bezpiecznych deklaracji CSS. Globalną paletę witryny zmienia się bez edycji kodu.
 
 ## 1. Pierwsze uruchomienie
 
@@ -60,6 +59,13 @@ Każda strona (w tym strona główna) to uporządkowana lista **modułów** prze
 | **Sekcja tekstowa** | Prosty blok tekstowy, wyrównanie do lewej/wyśrodkowane |
 | **Obraz + tekst** | Zdjęcie obok tekstu (lewo/prawo), opcjonalny przycisk |
 | **Odstęp** | Pusty odstęp między sekcjami (mały/średni/duży) |
+| **Nagłówek, tekst, obraz, przycisk, separator** | Podstawowe elementy do budowania własnego układu |
+| **Galeria i kolumny** | Elastyczny układ zdjęć oraz dwóch lub trzech kolumn |
+| **FAQ / akordeon** | Pytania w wariancie liniowym, kartowym albo dzielonym |
+| **Lista korzyści** | Lista, siatka kart albo numerowane kroki; 1–3 kolumny |
+| **Cytat / opinia** | Wariant redakcyjny, karta lub duży układ wyśrodkowany |
+| **Wideo, mapa, komunikat** | Osadzenia i wyróżnione wezwania do działania |
+| **Własny HTML + CSS** | Zaawansowany blok w odizolowanej ramce bez skryptów i formularzy |
 
 `ModuleRenderer` renderuje tę listę, mapując każdy typ modułu na **ten sam komponent
 publicznej strony**, który był używany wcześniej (`Hero`, `About`, `Portfolio`, `Studio`,
@@ -95,10 +101,12 @@ utraty jej zawartości (można ją opublikować ponownie w każdej chwili). Stan
 Pełnoekranowy edytor: pasek górny (tytuł, status, przełącznik urządzenia, Zapisz/Opublikuj),
 po lewej podgląd strony (kliknij moduł, aby go zaznaczyć — pojawia się pływający pasek
 narzędzi: przesuń w górę/dół, duplikuj, ukryj, usuń, a także przeciąganie za uchwyt ⠿), po
-prawej panel ustawień zaznaczonego modułu (albo lista „dodaj moduł", gdy nic nie jest
-zaznaczone). Zmiany w panelu ustawień aktualizują podgląd natychmiast — to lokalny stan
-Reacta, nie ma przeładowania strony. Zapis do bazy następuje dopiero po kliknięciu „Zapisz
-wersję roboczą" lub „Opublikuj".
+prawej panel ustawień zaznaczonego modułu (albo przeszukiwalna lista „dodaj moduł", gdy nic
+nie jest zaznaczone). Zakładka „Wygląd” daje wspólne sterowanie tłem, obrazem tła i nakładką,
+szerokością, odstępami, powierzchnią, cieniem, obramowaniem, minimalną wysokością,
+przezroczystością i widocznością na telefonie/tablecie/komputerze. Zakładka „Zaawansowane”
+obsługuje kotwicę, klasy oraz bezpieczne deklaracje CSS. Zmiany aktualizują podgląd natychmiast;
+zapis do bazy następuje dopiero po kliknięciu „Zapisz wersję roboczą" lub „Opublikuj".
 
 ## 3. Korzystanie z panelu
 
@@ -111,9 +119,10 @@ edytor modułowy co dla każdej innej strony. W modułach można zmienić wszyst
 przyciski, linki, zdjęcia i ich opisy, komunikaty formularza kontaktowego oraz teksty
 kalendarza rezerwacji. Moduły można ukrywać, usuwać, duplikować i zmieniać ich kolejność.
 
-**Edytuj nagłówek, menu, stopkę i ekran budowy**: Treści globalne → odpowiednia karta →
-zmień tekst lub adres linku → „Zapisz treści". Pusta etykieta opcjonalnego elementu ukrywa
-go na stronie publicznej.
+**Edytuj nagłówek, menu, stopkę, kolory i ekran budowy**: Treści globalne → odpowiednia karta →
+zmień tekst, adres linku albo sześć kolorów motywu → „Zapisz treści". Pusta etykieta
+opcjonalnego elementu ukrywa go na stronie publicznej. Paleta działa na stronie głównej,
+podstronach CMS, polityce prywatności i ekranie trybu budowy.
 
 **Tryb budowy / maintenance**: Strony → „Widoczność strony" → „Włącz tryb budowy".
 Odwiedzający zobaczą ekran „Zapraszam wkrótce", ale zalogowany administrator nadal może
@@ -140,7 +149,9 @@ przychody, najczęstsze style, wartość materiałów i alerty niskiego stanu. K
 magazynowa trafia do historii ruchów.
 
 **Aplikacja klienta**: konto pod `/app` jest instalowalną PWA. Klient może odzyskać hasło,
-śledzić proces, zainstalować aplikację na ekranie telefonu i włączyć przypomnienia push.
+śledzić proces, zainstalować aplikację na ekranie telefonu, włączyć przypomnienia push oraz
+samodzielnie anulować własny przyszły termin. Anulowanie natychmiast zwalnia kalendarz,
+aktualizuje status projektu i zapisuje informację widoczną dla studia.
 
 **Odbieraj zapytania z formularza**: wiadomości z publicznego formularza kontaktowego są
 zapisywane w bazie i dostępne w panelu: **Wiadomości**. W tym etapie nie są automatycznie
@@ -155,8 +166,10 @@ wysyłane e-mailem — integrację z pocztą lub CRM można dodać osobno.
    utworzyć konto administratora.
 2. **Przesyłane pliki**: `/public/uploads` działa lokalnie, ale większość hostingów (np.
    Vercel) ma efemeryczny/tylko-do-odczytu system plików w produkcji. Aplikacja obsługuje już
-   storage zgodny z S3 (np. Cloudflare R2): ustaw `S3_ENDPOINT`, `S3_REGION`,
-   `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` i `S3_PUBLIC_URL`.
+   storage zgodny z S3. Dla Cloudflare R2 utwórz prywatny bucket oraz klucz ograniczony do
+   odczytu/zapisu tego jednego bucketu, a następnie ustaw `S3_ENDPOINT` na adres API R2,
+   `S3_REGION=auto`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` i
+   `S3_PUBLIC_URL` na publiczną domenę plików. Kluczy nigdy nie zapisuj w repozytorium.
 3. **Zmienne środowiskowe**: ustaw `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`,
    `ADMIN_PASSWORD`, `MAX_UPLOAD_MB` oraz zmienne `S3_*` w panelu zmiennych/sekretów swojego hostingu (nigdy nie
    commituj `.env`).

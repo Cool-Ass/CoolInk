@@ -24,7 +24,8 @@ export type ModuleType =
   | "map"
   | "quote"
   | "iconList"
-  | "callout";
+  | "callout"
+  | "customCode";
 
 export interface ModuleBase {
   id: string;
@@ -41,7 +42,16 @@ export interface ModuleStyle {
   overlayColor?: string;
   overlayOpacity?: number;
   radius?: "none" | "sm" | "md" | "lg";
-  padding?: "sm" | "md" | "lg";
+  padding?: "none" | "sm" | "md" | "lg" | "xl";
+  margin?: "none" | "sm" | "md" | "lg" | "xl";
+  contentWidth?: "full" | "wide" | "normal" | "narrow";
+  surface?: "plain" | "card" | "outline" | "glass";
+  shadow?: "none" | "sm" | "md" | "lg";
+  borderColor?: string;
+  borderWidth?: number;
+  minHeight?: number;
+  opacity?: number;
+  customCss?: string;
   cssClass?: string;
   anchorId?: string;
   hiddenOn?: { desktop?: boolean; tablet?: boolean; mobile?: boolean };
@@ -212,12 +222,13 @@ export interface GalleryModuleData { image1: string; image2: string; image3: str
 export type ColumnWidgetType = "heading" | "text" | "image" | "button" | "divider" | "spacer";
 export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; }
 export interface ColumnsModuleData { layout: "two" | "three"; columns: ColumnWidget[][]; background: "transparent" | "charcoal" | "gold"; padding: "sm" | "md" | "lg"; }
-export interface FaqModuleData { title: string; items: { question: string; answer: string }[]; }
+export interface FaqModuleData { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first"; }
 export interface VideoModuleData { url: string; title: string; caption: string; }
 export interface MapModuleData { embedUrl: string; title: string; address: string; height: "sm" | "md" | "lg"; }
-export interface QuoteModuleData { quote: string; author: string; role: string; }
-export interface IconListModuleData { title: string; items: string[]; style: "check" | "dot" | "arrow"; }
+export interface QuoteModuleData { quote: string; author: string; role: string; variant: "editorial" | "card" | "centered"; }
+export interface IconListModuleData { title: string; items: string[]; style: "check" | "dot" | "arrow"; layout: "list" | "cards" | "steps"; columns: "one" | "two" | "three"; }
 export interface CalloutModuleData { eyebrow: string; title: string; body: string; buttonLabel: string; href: string; style: "charcoal" | "gold" | "outline"; }
+export interface CustomCodeModuleData { title: string; html: string; css: string; height: number; backgroundColor: string; }
 
 export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? HeroModuleData
@@ -267,6 +278,8 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? IconListModuleData
   : T extends "callout"
   ? CalloutModuleData
+  : T extends "customCode"
+  ? CustomCodeModuleData
   : never;
 
 /** A module as it lives inside Page.modules (JSON) — loosely typed data, validated on render. */
@@ -304,6 +317,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   quote: "Cytat / opinia",
   iconList: "Lista korzyści",
   callout: "Wyróżniony komunikat",
+  customCode: "Własny HTML + CSS",
 };
 
 /** Short helper description shown in the "add module" picker. */
@@ -332,10 +346,11 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   quote: "Opinia klienta, cytat lub wyróżniona rekomendacja.",
   iconList: "Lista zalet, informacji lub kolejnych kroków.",
   callout: "Wyróżniona treść z opcjonalnym przyciskiem.",
+  customCode: "Zaawansowany, izolowany blok z własnym kodem HTML i CSS.",
 };
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
-  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets",
+  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
   hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
@@ -347,6 +362,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "gallery",
   "columns",
   "callout",
+  "customCode",
   "iconList",
   "faq",
   "quote",
@@ -543,17 +559,25 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         ],
       } satisfies ColumnsModuleData;
     case "faq":
-      return { title: "Najczęściej zadawane pytania", items: [{ question: "Pytanie", answer: "Wpisz odpowiedź na to pytanie." }] } satisfies FaqModuleData;
+      return { title: "Najczęściej zadawane pytania", items: [{ question: "Pytanie", answer: "Wpisz odpowiedź na to pytanie." }], variant: "lines", initiallyOpen: "none" } satisfies FaqModuleData;
     case "video":
       return { url: "", title: "Wideo", caption: "" } satisfies VideoModuleData;
     case "map":
       return { embedUrl: "", title: "Jak do nas trafić", address: "", height: "md" } satisfies MapModuleData;
     case "quote":
-      return { quote: "Tutaj wpisz opinię klienta lub ważny cytat.", author: "Imię i nazwisko", role: "Klient" } satisfies QuoteModuleData;
+      return { quote: "Tutaj wpisz opinię klienta lub ważny cytat.", author: "Imię i nazwisko", role: "Klient", variant: "editorial" } satisfies QuoteModuleData;
     case "iconList":
-      return { title: "Dlaczego warto", items: ["Pierwsza korzyść", "Druga korzyść", "Trzecia korzyść"], style: "check" } satisfies IconListModuleData;
+      return { title: "Dlaczego warto", items: ["Pierwsza korzyść", "Druga korzyść", "Trzecia korzyść"], style: "check", layout: "list", columns: "one" } satisfies IconListModuleData;
     case "callout":
       return { eyebrow: "WYRÓŻNIONA INFORMACJA", title: "Przyciągnij uwagę odbiorcy", body: "Dodaj krótki opis tego, co jest dla klienta najważniejsze.", buttonLabel: "Dowiedz się więcej", href: "#", style: "charcoal" } satisfies CalloutModuleData;
+    case "customCode":
+      return {
+        title: "Własna sekcja",
+        html: '<section class="custom-section"><p class="eyebrow">WŁASNY MODUŁ</p><h2>Pełna swoboda HTML i CSS</h2><p>Zbuduj dowolny układ w bezpiecznie odizolowanym podglądzie.</p></section>',
+        css: "body { margin: 0; background: #111; color: #f5f5f5; font-family: Arial, sans-serif; }\n.custom-section { padding: 48px; }\n.eyebrow { color: #c8a86b; letter-spacing: .18em; font-size: 12px; }\nh2 { margin: 12px 0; font-size: clamp(32px, 6vw, 72px); }\np { line-height: 1.7; }",
+        height: 420,
+        backgroundColor: "#111111",
+      } satisfies CustomCodeModuleData;
     default:
       return {};
   }

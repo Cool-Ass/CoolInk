@@ -32,6 +32,14 @@ export const DEFAULT_CONTENT = {
     bookingLabel: "UMÓW WIZYTĘ",
     bookingHref: "/#kalendarz",
   },
+  theme: {
+    background: "#0a0908",
+    surface: "#131211",
+    accent: "#c99a4a",
+    accentBright: "#e0b869",
+    text: "#f3f1ec",
+    muted: "#9a9691",
+  },
   contact: {
     address: "al. Konstytucji 3 Maja 10, 65-001 Zielona Góra",
     phone: "+48 530 178 346",

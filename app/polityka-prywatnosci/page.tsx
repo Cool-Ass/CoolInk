@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { getSiteContent } from "@/lib/content";
 import { getPublicNavLinks } from "@/lib/nav";
 import { PRIVACY_POLICY_HTML, PRIVACY_POLICY_UPDATED_AT } from "@/lib/privacyPolicy";
+import { siteThemeStyle } from "@/lib/siteTheme";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 export default async function PrivacyPolicyPage() {
   const content = await getSiteContent();
   const navLinks = await getPublicNavLinks(content.navigation);
-  return <main className="min-h-screen bg-ink-black text-ink-white">
+  return <main style={siteThemeStyle(content.theme)} className="min-h-screen bg-ink-black text-ink-white">
     <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
     <article className="mx-auto max-w-3xl px-6 pb-24 pt-36 sm:pt-44">
       <p className="text-xs tracking-[.2em] text-ink-gold">PRYWATNOŚĆ I RODO</p>

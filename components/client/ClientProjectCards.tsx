@@ -52,6 +52,20 @@ export default function ClientProjectCards({
   const [cancelProject, setCancelProject] = useState<Project | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [visibleProjects, setVisibleProjects] = useState(projects);
+  function markAppointmentCancelled(appointmentId: string, projectStatus: string) {
+    const update = (project: Project) => ({
+      ...project,
+      status: project.appointments.some((item) => item.id === appointmentId)
+        ? projectStatus
+        : project.status,
+      appointments: project.appointments.map((item) =>
+        item.id === appointmentId ? { ...item, status: "cancelled" } : item
+      ),
+    });
+    setVisibleProjects((items) => items.map(update));
+    setSelected((project) => project ? update(project) : null);
+    setAppointment(null);
+  }
   async function cancelSelectedProject() {
     if (!cancelProject) return;
     setCancelling(true);
@@ -173,6 +187,7 @@ export default function ClientProjectCards({
           appointment={appointment.item}
           projectTitle={appointment.title}
           onClose={() => setAppointment(null)}
+          onCancelled={markAppointmentCancelled}
         />
       )}
     </section>

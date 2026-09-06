@@ -7,6 +7,7 @@ interface Field {
   key: string;
   label: string;
   multiline?: boolean;
+  type?: "text" | "color";
 }
 
 export default function SettingsSection({
@@ -57,6 +58,21 @@ export default function SettingsSection({
                 onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                 className="resize-y border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
               />
+            ) : field.type === "color" ? (
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={/^#[0-9a-f]{6}$/i.test(values[field.key] ?? "") ? values[field.key] : "#000000"}
+                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                  className="h-11 w-14 cursor-pointer border border-ink-white/20 bg-transparent p-1"
+                />
+                <input
+                  type="text"
+                  value={values[field.key] ?? ""}
+                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                  className="min-w-0 flex-1 border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
+                />
+              </div>
             ) : (
               <input
                 type="text"

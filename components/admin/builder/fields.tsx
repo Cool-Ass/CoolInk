@@ -83,6 +83,37 @@ export function SelectField<T extends string>({
   );
 }
 
+export function NumberField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  return (
+    <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
+      {label}
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(event) => onChange(Number(event.target.value) || 0)}
+        className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-[13px] text-ink-white outline-none transition-colors focus:border-ink-gold"
+      />
+    </label>
+  );
+}
+
 export function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-4">

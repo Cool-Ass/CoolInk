@@ -12,6 +12,7 @@ import PageSettingsModal, {
 import { useToast } from "@/components/admin/ToastProvider";
 import { createModule, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
+import { siteThemeStyle } from "@/lib/siteTheme";
 
 export interface BuilderPage {
   id: string;
@@ -234,7 +235,7 @@ export default function PageBuilder({
         >
           <div
             className="builder-canvas relative mx-auto border border-ink-white/10 bg-ink-black transition-[width] duration-300"
-            style={{ width: DEVICE_WIDTHS[device], maxWidth: "100%" }}
+            style={{ width: DEVICE_WIDTHS[device], maxWidth: "100%", ...(globals.theme ? siteThemeStyle(globals.theme) : {}) }}
           >
             <div className="border-b border-ink-white/10 bg-ink-charcoal/60 px-4 py-2 text-center text-[11px] leading-relaxed text-ink-grey">
               Kliknij sekcję, aby ją edytować. Najedź na nią, aby zobaczyć opcje kolejności, duplikowania i ukrywania.
@@ -257,7 +258,7 @@ export default function PageBuilder({
 
         <aside
           data-lenis-prevent
-          className="w-[380px] shrink-0 overflow-y-auto border-l border-ink-white/10 bg-ink-charcoal/40 p-6"
+          className="w-[440px] max-w-[46vw] shrink-0 overflow-y-auto border-l border-ink-white/10 bg-ink-charcoal/40 p-6"
         >
           {selectedModule ? (
             <div className="flex flex-col gap-8">
