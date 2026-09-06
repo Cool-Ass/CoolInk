@@ -15,7 +15,7 @@ export default async function ClientAppointmentsPage() {
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: new Date() } }, select: { startsAt: true, endsAt: true } }),
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" }, select: { weekday: true, enabled: true, startsAt: true, endsAt: true } }),
     prisma.workingHoursOverride.findMany({ where: { date: { gte: new Date() } }, select: { date: true, enabled: true, startsAt: true, endsAt: true } }),
-    prisma.availableSlot.findMany({ where: { isPublic: true, endsAt: { gte: new Date() } }, select: { startsAt: true, endsAt: true, isPublic: true } }),
+    prisma.availableSlot.findMany({ where: { isPublic: true, endsAt: { gte: new Date() } }, select: { startsAt: true, endsAt: true, title: true, description: true, color: true, isPublic: true } }),
     prisma.promotion.findMany({ where: { active: true, endsAt: { gte: new Date() } }, select: { id: true, title: true, description: true, badge: true, color: true, startsAt: true, endsAt: true } }),
     prisma.calendarEvent.findMany({ where: { isPublic: true, endsAt: { gte: new Date() } }, select: { id: true, title: true, label: true, description: true, startsAt: true, endsAt: true, color: true } }),
     prisma.siteSetting.findMany({ where: { key: { in: ["booking_buffer_minutes", "calendar_visible_months"] } }, select: { key: true, value: true } }),

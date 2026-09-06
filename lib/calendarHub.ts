@@ -1,4 +1,10 @@
-export type CalendarItemKind = "appointment" | "freeTerm" | "workingHours" | "dayOff" | "promotion" | "event";
+export type CalendarItemKind = "appointment" | "freeTerm" | "consultation" | "workingHours" | "dayOff" | "promotion" | "event";
+
+export const CONSULTATION_SLOT_TITLE = "KONSULTACJA";
+
+export function isConsultationSlot(item: { title?: string | null }) {
+  return item.title?.trim().toLocaleUpperCase("pl-PL") === CONSULTATION_SLOT_TITLE;
+}
 
 /** Cancelled records are audit history, not operational calendar entries. */
 export function isOperationalCalendarAppointment(status: string) {

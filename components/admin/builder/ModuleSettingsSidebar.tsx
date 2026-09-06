@@ -242,7 +242,9 @@ function renderFields(
             <TextField label="Nazwa kalendarza" value={d.booking.calendarLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, calendarLabel: v } })} />
             <TextareaField label="Objaśnienie kolorów" value={d.booking.legend} onChange={(v) => onChange({ ...d, booking: { ...d.booking, legend: v } })} rows={2} />
             <TextField label="Tekst przy wolnym terminie" value={d.booking.freeLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, freeLabel: v } })} />
+            <TextField label="Tekst przy konsultacji" value={d.booking.consultationLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, consultationLabel: v } })} />
             <TextField label="Przycisk rezerwacji" value={d.booking.bookingButtonLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, bookingButtonLabel: v } })} />
+            <TextField label="Przycisk konsultacji" value={d.booking.consultationButtonLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, consultationButtonLabel: v } })} />
           </FieldGroup>
         </>
       );
@@ -257,6 +259,7 @@ function renderFields(
           <TextField label="Nazwa kalendarza" value={d.calendarLabel} onChange={(v) => onChange({ ...d, calendarLabel: v })} />
           <TextareaField label="Objaśnienie kolorów" value={d.legend} onChange={(v) => onChange({ ...d, legend: v })} rows={3} />
           <TextField label="Etykieta wolnego terminu" value={d.freeLabel} onChange={(v) => onChange({ ...d, freeLabel: v })} />
+          <TextField label="Etykieta konsultacji" value={d.consultationLabel} onChange={(v) => onChange({ ...d, consultationLabel: v })} />
           <TextField label="Etykieta niedostępnego dnia" value={d.unavailableLabel} onChange={(v) => onChange({ ...d, unavailableLabel: v })} />
           <TextField label="Etykieta dnia bez oznaczenia" value={d.unmarkedLabel} onChange={(v) => onChange({ ...d, unmarkedLabel: v })} />
           <TextareaField label="Komunikat o braku terminu" value={d.unavailableMessage} onChange={(v) => onChange({ ...d, unavailableMessage: v })} rows={2} />
@@ -265,6 +268,7 @@ function renderFields(
           <TextField label="Opcja nowej wizyty" value={d.newVisitLabel} onChange={(v) => onChange({ ...d, newVisitLabel: v })} />
           <TextField label="Przycisk propozycji terminu" value={d.proposeButtonLabel} onChange={(v) => onChange({ ...d, proposeButtonLabel: v })} />
           <TextField label="Przycisk rezerwacji" value={d.bookingButtonLabel} onChange={(v) => onChange({ ...d, bookingButtonLabel: v })} />
+          <TextField label="Przycisk konsultacji" value={d.consultationButtonLabel} onChange={(v) => onChange({ ...d, consultationButtonLabel: v })} />
           <TextField label="Domyślna etykieta wydarzenia" value={d.eventFallbackLabel} onChange={(v) => onChange({ ...d, eventFallbackLabel: v })} />
           <TextField label="Domyślna etykieta promocji" value={d.promotionFallbackLabel} onChange={(v) => onChange({ ...d, promotionFallbackLabel: v })} />
         </FieldGroup>

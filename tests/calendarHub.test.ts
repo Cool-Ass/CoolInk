@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { calendarDayStatus, effectiveWorkingHours, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
+import { calendarDayStatus, effectiveWorkingHours, isConsultationSlot, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
 import { isValidIconName } from "../lib/icons";
 
 describe("Calendar Hub selection", () => {
+  it("recognizes consultation slots regardless of casing and surrounding spaces", () => {
+    expect(isConsultationSlot({ title: " konsultacja " })).toBe(true);
+    expect(isConsultationSlot({ title: "Wolny termin" })).toBe(false);
+    expect(isConsultationSlot({ title: null })).toBe(false);
+  });
+
   it("keeps cancelled appointments in history but excludes them from the operational calendar", () => {
     expect(isOperationalCalendarAppointment("confirmed")).toBe(true);
     expect(isOperationalCalendarAppointment("proposed")).toBe(true);

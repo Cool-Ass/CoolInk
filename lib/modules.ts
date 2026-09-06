@@ -196,6 +196,7 @@ export interface BookingModuleData {
   calendarLabel: string;
   legend: string;
   freeLabel: string;
+  consultationLabel: string;
   unavailableLabel: string;
   unmarkedLabel: string;
   unavailableMessage: string;
@@ -204,6 +205,7 @@ export interface BookingModuleData {
   newVisitLabel: string;
   proposeButtonLabel: string;
   bookingButtonLabel: string;
+  consultationButtonLabel: string;
   eventFallbackLabel: string;
   promotionFallbackLabel: string;
 }
@@ -553,8 +555,9 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         heading: "Sprawdź wolne terminy.",
         body: "Wybierz zielony termin. Po zalogowaniu wrócimy dokładnie do wybranej daty, aby dokończyć prośbę o wizytę.",
         calendarLabel: "KALENDARZ DOSTĘPNOŚCI",
-        legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Czerwony — niedostępny.",
+        legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Niebieski — konsultację. Czerwony — niedostępny.",
         freeLabel: "WOLNY",
+        consultationLabel: "KONSULTACJA",
         unavailableLabel: "NIEDOSTĘPNY",
         unmarkedLabel: "BRAK OZNACZENIA",
         unavailableMessage: "Ten dzień nie został udostępniony jako wolny termin.",
@@ -563,6 +566,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         newVisitLabel: "Nowa wizyta",
         proposeButtonLabel: "ZAPROPONUJ WIZYTĘ",
         bookingButtonLabel: "UMÓW WIZYTĘ",
+        consultationButtonLabel: "UMÓW KONSULTACJĘ",
         eventFallbackLabel: "EVENT",
         promotionFallbackLabel: "PROMO",
       } satisfies BookingModuleData;
@@ -670,7 +674,14 @@ export function withDefaults<T extends ModuleType>(
   type: T,
   data: Record<string, unknown> | undefined | null
 ): ModuleDataFor<T> {
-  return { ...(defaultModuleData(type) as object), ...(data || {}) } as unknown as ModuleDataFor<T>;
+  const defaults = defaultModuleData(type) as Record<string, unknown>;
+  const merged = { ...defaults, ...(data || {}) };
+  if (type === "contact") {
+    const defaultBooking = defaults.booking as Record<string, unknown>;
+    const savedBooking = data?.booking && typeof data.booking === "object" && !Array.isArray(data.booking) ? data.booking as Record<string, unknown> : {};
+    merged.booking = { ...defaultBooking, ...savedBooking };
+  }
+  return merged as unknown as ModuleDataFor<T>;
 }
 
 export type { SiteContent };

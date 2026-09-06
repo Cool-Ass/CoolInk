@@ -19,5 +19,11 @@ describe("homepage builder content", () => {
     expect(contact.formTitle).toBe("Napisz do mnie");
     expect(contact.formSubmitLabel).toBeTruthy();
     expect(contact.booking.bookingButtonLabel).toBeTruthy();
+    expect(contact.booking.consultationLabel).toBe("KONSULTACJA");
+    expect(contact.booking.consultationButtonLabel).toBe("UMÓW KONSULTACJĘ");
+
+    const partiallySavedContact = withDefaults("contact", { booking: { freeLabel: "DOSTĘPNY" } });
+    expect(partiallySavedContact.booking.freeLabel).toBe("DOSTĘPNY");
+    expect(partiallySavedContact.booking.consultationLabel).toBe("KONSULTACJA");
   });
 });

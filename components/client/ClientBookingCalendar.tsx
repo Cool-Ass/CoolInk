@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { resolveAvailableRanges } from "@/lib/calendarHub";
+import { isConsultationSlot, resolveAvailableRanges } from "@/lib/calendarHub";
 import BookingRequestForm from "@/components/client/BookingRequestForm";
 
 type Project = { id: string; title: string };
@@ -10,7 +10,7 @@ type Busy = { startsAt: string; endsAt: string };
 type Block = { startsAt: string; endsAt: string };
 type Hours = { weekday: number; enabled: boolean; startsAt: string; endsAt: string };
 type Override = { date: string; enabled: boolean; startsAt: string; endsAt: string };
-type AvailableSlot = { startsAt: string; endsAt: string; isPublic: boolean };
+type AvailableSlot = { startsAt: string; endsAt: string; title?: string | null; description?: string | null; color?: string; isPublic: boolean };
 type Promotion = { id: string; title: string; description: string | null; badge: string | null; startsAt: string; endsAt: string; color: string };
 type CalendarEvent = { id: string; title: string; label: string | null; description: string | null; startsAt: string; endsAt: string; color: string };
 
@@ -18,6 +18,7 @@ export interface BookingCalendarCopy {
   calendarLabel: string;
   legend: string;
   freeLabel: string;
+  consultationLabel: string;
   unavailableLabel: string;
   unmarkedLabel: string;
   unavailableMessage: string;
@@ -26,14 +27,16 @@ export interface BookingCalendarCopy {
   newVisitLabel: string;
   proposeButtonLabel: string;
   bookingButtonLabel: string;
+  consultationButtonLabel: string;
   eventFallbackLabel: string;
   promotionFallbackLabel: string;
 }
 
 const DEFAULT_COPY: BookingCalendarCopy = {
   calendarLabel: "KALENDARZ DOSTĘPNOŚCI",
-  legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Czerwony — niedostępny.",
+  legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Niebieski — konsultację. Czerwony — niedostępny.",
   freeLabel: "WOLNY",
+  consultationLabel: "KONSULTACJA",
   unavailableLabel: "NIEDOSTĘPNY",
   unmarkedLabel: "BRAK OZNACZENIA",
   unavailableMessage: "Ten dzień nie został udostępniony jako wolny termin.",
@@ -42,6 +45,7 @@ const DEFAULT_COPY: BookingCalendarCopy = {
   newVisitLabel: "Nowa wizyta",
   proposeButtonLabel: "ZAPROPONUJ WIZYTĘ",
   bookingButtonLabel: "UMÓW WIZYTĘ",
+  consultationButtonLabel: "UMÓW KONSULTACJĘ",
   eventFallbackLabel: "EVENT",
   promotionFallbackLabel: "PROMO",
 };
@@ -111,6 +115,7 @@ export default function ClientBookingCalendar({
     });
   }, [cursor]);
   const slotsFor = (date: Date) => availableSlots.filter((slot) => slot.isPublic && overlapsDay(slot, date));
+  const slotForRange = (range: { startsAt: Date; endsAt: Date }) => availableSlots.find((slot) => slot.isPublic && new Date(slot.startsAt) <= range.startsAt && new Date(slot.endsAt) >= range.endsAt);
   const blocked = (date: Date) => blocks.some((block) => overlapsDay(block, date));
   const isAvailable = (date: Date) => !blocked(date) && slotsFor(date).length > 0;
   const ranges = resolveAvailableRanges({
@@ -165,16 +170,17 @@ export default function ClientBookingCalendar({
             {dates.map((date) => {
               const available = isAvailable(date);
               const unavailable = blocked(date) || (!available && date.getDay() === 0);
+              const consultation = slotsFor(date).find(isConsultationSlot);
               const dayEvent = events.find((item) => overlapsDay(item, date));
               const dayPromotion = promotions.find((item) => overlapsDay(item, date));
-              const contextualColor = !available && !blocked(date) ? (dayEvent?.color ?? dayPromotion?.color) : undefined;
+              const contextualColor = consultation?.color ?? (!available && !blocked(date) ? (dayEvent?.color ?? dayPromotion?.color) : undefined);
               const selectedDay = sameDay(date, selected);
               const muted = date.getMonth() !== cursor.getMonth();
               return (
                 <button key={date.toISOString()} type="button" onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`${compact ? "min-h-14 p-1.5" : "min-h-20 p-2"} border-b border-r text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
                   <strong className="block text-lg">{date.getDate()}</strong>
-                  <span className={`mt-2 block text-[8px] ${available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
-                    {available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : copy.unmarkedLabel)}
+                  <span className={`mt-2 block text-[8px] ${consultation ? "text-blue-200" : available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
+                    {consultation ? copy.consultationLabel : available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : copy.unmarkedLabel)}
                   </span>
                 </button>
               );
@@ -200,13 +206,17 @@ export default function ClientBookingCalendar({
               <p className="text-sm text-ink-grey">{copy.unavailableMessage}</p>
             ) : ranges.length === 0 ? (
               <p className="text-sm text-ink-grey">{copy.partiallyBookedMessage}</p>
-            ) : ranges.map((range) => (
-              <div key={range.startsAt.toISOString()} className="border border-emerald-500/30 bg-emerald-500/5 p-3">
-                <p className="text-xs text-emerald-300">{copy.freeLabel}</p>
+            ) : ranges.map((range) => {
+              const sourceSlot = slotForRange(range);
+              const consultation = isConsultationSlot(sourceSlot ?? {});
+              const color = sourceSlot?.color ?? (consultation ? "#60A5FA" : "#10B981");
+              return <div key={range.startsAt.toISOString()} className="border p-3" style={{ borderColor: `${color}55`, backgroundColor: `${color}0d` }}>
+                <p className="text-xs" style={{ color }}>{consultation ? copy.consultationLabel : copy.freeLabel}</p>
                 <p className="mt-1 font-display text-2xl">{formatTime(range.startsAt)}–{formatTime(range.endsAt)}</p>
-                <button type="button" onClick={() => propose(range)} className="mt-3 border border-emerald-400/60 px-3 py-2 text-xs text-emerald-200 hover:bg-emerald-500/10">{projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
-              </div>
-            ))}
+                {sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
+                <button type="button" onClick={() => propose(range)} className="mt-3 border px-3 py-2 text-xs hover:bg-ink-white/5" style={{ borderColor: `${color}99`, color }}>{consultation ? copy.consultationButtonLabel : projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
+              </div>;
+            })}
           </div>
         </aside>
       </div>
