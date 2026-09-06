@@ -1,12 +1,12 @@
 # CoolInk — raport audytu i wdrożenia
 
-**Data aktualizacji:** 06.09.2026  
+**Data aktualizacji:** 07.09.2026  
 **Zakres:** strona publiczna, panel administratora, konto klienta, rezerwacje, bezpieczeństwo, możliwości redesignu, mobile/PWA, media oraz publiczne otoczenie marki.  
 **Stan publikacji:** strona pozostaje w trybie budowy; administrator nadal ma dostęp do pełnego podglądu i edycji.
 
 ## 1. Podsumowanie
 
-CoolInk nie jest już wyłącznie stroną-wizytówką. Obecna wersja łączy modułowy CMS, obsługę klientów i projektów, kalendarz, dokumenty, powiadomienia, statystyki, magazyn oraz instalowalną aplikację klienta. Najważniejsze bariery wykryte w audycie — niejasna ścieżka rezerwacji, zbyt wiele tekstów zaszytych w kodzie, brak samodzielnego anulowania pojedynczej wizyty, ograniczona swoboda wizualna oraz nietrwałe pliki na Vercel — zostały usunięte w kodzie albo przygotowane do końcowej konfiguracji infrastruktury.
+CoolInk nie jest już wyłącznie stroną-wizytówką. Obecna wersja łączy modułowy CMS, obsługę klientów i projektów, kalendarz, dokumenty, powiadomienia, statystyki, magazyn oraz instalowalne aplikacje klienta i administratora. Najważniejsze bariery wykryte w audycie — niejasna ścieżka rezerwacji, zbyt wiele tekstów zaszytych w kodzie, brak samodzielnego anulowania pojedynczej wizyty, ograniczona swoboda wizualna oraz nietrwałe pliki na Vercel — zostały usunięte. Produkcyjna wersja działa, a publiczny widok nadal pozostaje celowo w trybie budowy.
 
 Najmocniejszy kierunek produktu to **osobista marka artysty + uporządkowana obsługa bez wiadomości rozsianych po DM-ach**. Publiczna strona powinna budować pragnienie i zaufanie, a aplikacja przejmować cały proces od pomysłu do zakończonej sesji.
 
@@ -14,7 +14,7 @@ Najmocniejszy kierunek produktu to **osobista marka artysty + uporządkowana obs
 
 ### Strona publiczna
 
-Największym problemem wcześniejszej wersji była przewaga dekoracyjnych komunikatów i efektów nad konkretną ścieżką użytkownika. Usunięto zbędne wezwania w rodzaju „przewiń, żeby odkryć”, a główne działania prowadzą teraz do portfolio, wolnych terminów lub konta klienta. Wszystkie ważne teksty strony głównej, przyciski, etykiety, zdjęcia, formularz, kalendarz, nagłówek i stopka są edytowalne z panelu.
+Największym problemem wcześniejszej wersji była przewaga dekoracyjnych komunikatów i efektów nad konkretną ścieżką użytkownika. Usunięto zbędne wezwania w rodzaju „przewiń, żeby odkryć”, a główne działania prowadzą teraz do portfolio, wolnych terminów lub konta klienta. Formularz kontaktowy został zastąpiony publicznym kalendarzem rezerwacji. Wszystkie ważne teksty strony głównej, przyciski, etykiety, zdjęcia, kalendarz, nagłówek i stopka są edytowalne z panelu.
 
 Zalecana hierarchia docelowego redesignu:
 
@@ -30,11 +30,13 @@ Zalecana hierarchia docelowego redesignu:
 
 Klient ma jeden spójny proces: konto → projekt → termin → decyzja studia → potwierdzenie → dokumenty i przypomnienia. Kalendarz nie ujawnia danych innych osób i nie traktuje samego kliknięcia jako gwarantowanej rezerwacji. Studio nadal zatwierdza zgłoszenie albo proponuje inny termin.
 
+Administrator może oznaczyć dzień jako wolny termin, niedostępny, promocję, wydarzenie albo konsultację. Konsultacja domyślnie zajmuje 09:00–09:30, ma własną niebieską etykietę i pozostaje edytowalna. Klient widzi ją jako osobny rodzaj dostępnego terminu wraz z osobnym tekstem przycisku rezerwacji.
+
 Dodano samodzielne anulowanie pojedynczej przyszłej wizyty. Klient może anulować wyłącznie własny termin w stanie „zgłoszony”, „zaproponowany” lub „potwierdzony”. Operacja jest powtórnie sprawdzana w transakcji, blokuje wyścig z inną zmianą kalendarza, zwalnia termin, aktualizuje status projektu, zapisuje zdarzenie dla administratora i tworzy potwierdzenie dla klienta. Wizyt zakończonych, już anulowanych, oznaczonych jako nieobecność ani terminów z przeszłości nie można anulować.
 
 ### Panel administratora
 
-Panel porządkuje pracę studia wokół kalendarza, klientów, projektów, wiadomości i elementów wymagających uwagi. Dostępne są także statystyki klientów, wizyt i finansów, magazyn z historią ruchów i alertami, dokumenty, powiadomienia push, przypomnienia oraz integracja z Kalendarzem Google.
+Panel porządkuje pracę studia wokół kalendarza, klientów, projektów, wiadomości i elementów wymagających uwagi. Dostępne są także statystyki klientów, wizyt i finansów, magazyn z historią ruchów i alertami, dokumenty, przypomnienia oraz integracja z Kalendarzem Google. Panel administratora można zainstalować jak aplikację; powiadomienia push obejmują m.in. nowe zgłoszenie terminu, anulowanie wizyty lub projektu, odpowiedź klienta, wiadomość i dodanie inspiracji.
 
 Najważniejsza dalsza optymalizacja operacyjna nie wymaga nowej architektury: warto z czasem dodać jeden ekran „Dzisiaj”, łączący wizyty, nieprzeczytane wiadomości, projekty oczekujące na decyzję, należne zadatki i niski stan materiałów.
 
@@ -54,7 +56,7 @@ Najważniejsza zmiana komunikacyjna: bio i regularne publikacje powinny prowadzi
 
 ## 4. Możliwości redesignu
 
-Każda strona CMS, łącznie ze stroną główną, korzysta z tego samego edytora typu mini WordPress/Elementor. Dostępnych jest 25 rodzajów modułów: gotowe sekcje marki oraz neutralne widgety — nagłówek, tekst, obraz, przycisk, galeria, kolumny, separator, FAQ, cytat, lista korzyści, komunikat, wideo, mapa i własny HTML + CSS.
+Każda strona CMS, łącznie ze stroną główną, korzysta z tego samego edytora typu mini WordPress/Elementor. Lewy, kompaktowy panel zawiera wyszukiwarkę i kafelki widgetów przeciąganych metodą drag-and-drop. Strona składa się z sekcji dzielonych na 1–4 kolumny, a widgety można przenosić pomiędzy kolumnami i ustawiać w wybranej kolejności. Dostępne są gotowe sekcje marki oraz neutralne widgety — nagłówek, tekst, obraz, przycisk, galeria, separator, FAQ, cytat, lista korzyści, komunikat, wideo, mapa i własny HTML + CSS.
 
 Każdy moduł ma wspólne sterowanie:
 
@@ -66,13 +68,15 @@ Każdy moduł ma wspólne sterowanie:
 - widocznością osobno na telefonie, tablecie i komputerze;
 - kotwicą, klasą oraz ograniczonymi deklaracjami CSS.
 
+Ustawienia widgetu są podzielone na kompaktowe zakładki „Treść/Układ”, „Styl” i „Zaawansowane”. Obejmują między innymi krój i rozmiar pisma, wagę, interlinię, odstępy liter, wyrównanie, transformację tekstu, kolory, tło, obrys, cień, marginesy, dopełnienie, responsywność i własny CSS.
+
 FAQ ma wariant liniowy, kartowy i dzielony. Lista korzyści działa jako lista, karty albo numerowane kroki w 1–3 kolumnach. Cytaty mają wariant redakcyjny, kartowy i centralny. Własny moduł HTML + CSS jest wyświetlany w odizolowanej ramce bez JavaScriptu, formularzy, dostępu do strony nadrzędnej i połączeń API. Pozwala to tworzyć niestandardowe sekcje bez narażania sesji administratora lub klienta.
 
 Globalna paleta sześciu kolorów jest edytowalna w „Treściach globalnych” i obejmuje stronę główną, wszystkie podstrony, politykę prywatności oraz ekran trybu budowy. Builder zachowuje wersję roboczą oddzielnie od opublikowanej, więc pełny redesign można przygotowywać bez wpływu na klientów.
 
 ## 5. Mobile i płynność
 
-Konto klienta jest instalowalną aplikacją PWA z własnym manifestem, ikonami, service workerem i ustawieniami powiadomień. Jeden responsywny produkt jest obecnie właściwszy niż osobna aplikacja natywna: wykorzystuje ten sam backend, działa z linku z Instagrama i nie wymaga instalacji ze sklepu. Builder pozwala kontrolować wygląd osobno dla trzech szerokości i ukrywać moduły zależnie od urządzenia.
+Konto klienta i panel administratora są instalowalnymi aplikacjami PWA z własnymi manifestami, ikonami, service workerem i ustawieniami powiadomień. Jeden responsywny produkt jest obecnie właściwszy niż osobna aplikacja natywna: wykorzystuje ten sam backend, działa z linku z Instagrama i nie wymaga instalacji ze sklepu. Osobna aplikacja Android pozostaje świadomie odłożona na później. Builder pozwala kontrolować wygląd osobno dla trzech szerokości i ukrywać moduły zależnie od urządzenia.
 
 Zdjęcia przesyłane przez CMS są automatycznie obracane według EXIF, skalowane maksymalnie do 2400 px i konwertowane do WebP. Next.js generuje AVIF/WebP tam, gdzie korzysta z komponentu optymalizacji obrazu. Animacje respektują `prefers-reduced-motion`. W pełnym redesignie warto utrzymać zasadę: ruch tylko tam, gdzie pomaga hierarchii; bez obowiązkowego „odkrywania” treści przewijaniem.
 
@@ -119,7 +123,7 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Kontrola | Wynik |
 |---|---:|
 | TypeScript | PASS |
-| Testy automatyczne | 48/48 PASS |
+| Testy automatyczne | 49/49 PASS |
 | ESLint | 0 błędów, 13 ostrzeżeń nieblokujących |
 | Build produkcyjny Next.js | PASS |
 | `npm audit --omit=dev` | 0 podatności |
@@ -130,8 +134,8 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 
 Testy obejmują m.in. workflow, kalendarz, tryb budowy, linki CMS, ustawienia strony głównej, style tatuażu, integrację kalendarza oraz nowe reguły anulowania i bezpiecznego CSS.
 
-Kod został zapisany w GitHubie w commicie `35548d4` i poprawnie wdrożony do produkcyjnego
-projektu Vercel `cool-ink` (deployment `dpl_BMP9EYdt4L7Ednozv3eAZ2UnTYui`). Domena
+Kod został zapisany w głównej gałęzi repozytorium GitHub i poprawnie wdrożony do produkcyjnego
+projektu Vercel `cool-ink`. Domena
 `www.coolinktattoo.pl` odpowiada z nagłówkami ochronnymi `X-Content-Type-Options: nosniff`
 i `X-Frame-Options: DENY`. Tryb budowy nadal jest włączony i oznaczony `noindex`.
 
