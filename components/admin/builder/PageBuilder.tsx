@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import ModuleRenderer from "@/components/ModuleRenderer";
+import ModuleRenderer, { type ModuleRendererGlobals } from "@/components/ModuleRenderer";
 import BuilderTopBar, { type DeviceMode } from "@/components/admin/builder/BuilderTopBar";
 import AddModulePicker from "@/components/admin/builder/AddModulePicker";
 import ModuleSettingsSidebar from "@/components/admin/builder/ModuleSettingsSidebar";
@@ -39,7 +39,7 @@ export default function PageBuilder({
 }: {
   page: BuilderPage;
   portfolioItems: PortfolioWork[];
-  globals: { instagramUrl: string; facebookUrl: string };
+  globals: ModuleRendererGlobals;
 }) {
   const router = useRouter();
   const { showToast } = useToast();

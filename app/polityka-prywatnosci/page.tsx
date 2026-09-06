@@ -14,15 +14,16 @@ export const metadata: Metadata = {
 };
 
 export default async function PrivacyPolicyPage() {
-  const [content, navLinks] = await Promise.all([getSiteContent(), getPublicNavLinks()]);
+  const content = await getSiteContent();
+  const navLinks = await getPublicNavLinks(content.navigation);
   return <main className="min-h-screen bg-ink-black text-ink-white">
-    <Header navLinks={navLinks} logoUrl={content.brand.logoUrl} />
+    <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
     <article className="mx-auto max-w-3xl px-6 pb-24 pt-36 sm:pt-44">
       <p className="text-xs tracking-[.2em] text-ink-gold">PRYWATNOŚĆ I RODO</p>
       <h1 className="mt-4 font-display text-5xl leading-none sm:text-7xl">Twoje dane. Jasne zasady.</h1>
       <p className="mt-6 border-l-2 border-ink-gold pl-4 text-sm leading-relaxed text-ink-grey">Wersja 1 · aktualizacja: {PRIVACY_POLICY_UPDATED_AT}</p>
       <div className="document-rich-text mt-10 text-[15px] leading-relaxed text-ink-grey" dangerouslySetInnerHTML={{ __html: PRIVACY_POLICY_HTML }} />
     </article>
-    <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} />
+    <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} privacyLabel={content.footer.privacyLabel} privacyHref={content.footer.privacyHref} />
   </main>;
 }

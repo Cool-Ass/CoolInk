@@ -27,14 +27,7 @@ export default function StatsBar({ content = defaultModuleData("stats") as unkno
   const stats = STATS.map((stat, index) => ({ ...stat, ...(content.items?.[index] || {}) }));
   return (
     <section className="relative border-y border-ink-white/10 bg-ink-black">
-      <div className="mx-auto flex max-w-[1536px] items-stretch gap-6 px-6 py-8 md:px-10 lg:gap-14 lg:px-16">
-        <div className="hidden shrink-0 flex-col items-center gap-3 border-r border-ink-white/10 pr-8 text-ink-grey lg:flex">
-          <span className="text-ink-gold" aria-hidden>
-            ↓
-          </span>
-          <span className="text-[11px] tracking-[0.25em]">PRZEWIŃ, ABY ODKRYĆ</span>
-        </div>
-
+      <div className="mx-auto flex max-w-[1536px] items-stretch px-6 py-8 md:px-10 lg:px-16">
         <div className="grid flex-1 grid-cols-2 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
           {stats.map((stat, index) => (
             <div key={`${stat.label}-${index}`} className="flex items-center gap-4">

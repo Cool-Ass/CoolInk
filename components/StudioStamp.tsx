@@ -1,4 +1,5 @@
-export default function StudioStamp() {
+export default function StudioStamp({ ringText, leftText, centerText, rightText }: { ringText: string; leftText: string; centerText: string; rightText: string }) {
+  if (![ringText, leftText, centerText, rightText].some(Boolean)) return null;
   return (
     <div className="absolute bottom-8 right-6 z-10 hidden h-36 w-36 md:right-10 lg:right-16 lg:flex">
       <div className="relative h-full w-full animate-[spin_22s_linear_infinite] text-ink-white">
@@ -20,16 +21,16 @@ export default function StudioStamp() {
           />
           <text fontSize="11.5" letterSpacing="3" fill="currentColor">
             <textPath href="#stampCircle" startOffset="2%">
-              COOLINK · TATTOO STUDIO ·
+              {ringText}
             </textPath>
           </text>
         </svg>
       </div>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="flex items-center gap-2 font-display text-sm text-ink-white">
-          <span className="text-ink-gold">20</span>
-          <span className="text-2xl">GT</span>
-          <span className="text-ink-gold">21</span>
+          <span className="text-ink-gold">{leftText}</span>
+          <span className="text-2xl">{centerText}</span>
+          <span className="text-ink-gold">{rightText}</span>
         </div>
       </div>
     </div>

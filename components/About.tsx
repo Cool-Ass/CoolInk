@@ -1,5 +1,4 @@
 import Image from "next/image";
-import SectionRail from "@/components/SectionRail";
 import Parallax from "@/components/Parallax";
 import MultilineText from "@/components/MultilineText";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
@@ -11,10 +10,11 @@ export default function About({
 }: {
   content?: AboutModuleData;
 }) {
-  const mainImage = imageSource(content.mainImage) ?? "/images/crops/about-main.jpg";
-  const detailImage1 = imageSource(content.detailImage1) ?? "/images/crops/about-gun.jpg";
-  const detailImage2 = imageSource(content.detailImage2) ?? "/images/crops/about-back.jpg";
-  const detailImage3 = imageSource(content.detailImage3) ?? "/images/crops/about-process.jpg";
+  const mainImage = imageSource(content.mainImage);
+  const detailImage1 = imageSource(content.detailImage1);
+  const detailImage2 = imageSource(content.detailImage2);
+  const detailImage3 = imageSource(content.detailImage3);
+  const hasImages = [mainImage, detailImage1, detailImage2, detailImage3].some(Boolean);
   return (
     <section
       id="artists"
@@ -33,9 +33,7 @@ export default function About({
       />
 
       <div className="relative mx-auto flex max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <SectionRail number="02" />
-
-        <div className="grid w-full items-center gap-14 lg:grid-cols-2 lg:gap-10">
+        <div className={`grid w-full items-center gap-14 lg:gap-10 ${hasImages ? "lg:grid-cols-2" : ""}`}>
           {/* Text column */}
           <div className="reveal-up max-w-xl">
             <p className="mb-4 text-[13px] font-medium tracking-[0.35em] text-ink-gold">
@@ -64,64 +62,64 @@ export default function About({
           </div>
 
           {/* Image collage */}
-          <div className="reveal-up relative mx-auto h-[520px] w-full max-w-md lg:h-[620px] lg:max-w-none">
+          {hasImages && <div className="reveal-up relative mx-auto h-[520px] w-full max-w-md lg:h-[620px] lg:max-w-none">
 
-            <div className="absolute left-0 top-0 h-[85%] w-[62%] -rotate-2 border-[6px] border-ink-white/95 bg-ink-white shadow-2xl shadow-black/60">
+            {mainImage && <div className="absolute left-0 top-0 h-[85%] w-[62%] -rotate-2 border-[6px] border-ink-white/95 bg-ink-white shadow-2xl shadow-black/60">
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.1} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
                   src={mainImage}
-                  alt="Szczegółowa realistyczna praca tatuażu"
+                  alt={content.mainImageAlt}
                   fill
                   className="object-cover"
                   sizes="(min-width: 1024px) 30vw, 60vw"
                 />
                 </Parallax>
               </div>
-            </div>
+            </div>}
 
-            <div className="absolute right-0 top-0 h-[34%] w-[42%] rotate-2 border-[5px] border-ink-white/95 bg-ink-white shadow-xl shadow-black/50">
+            {detailImage1 && <div className="absolute right-0 top-0 h-[34%] w-[42%] rotate-2 border-[5px] border-ink-white/95 bg-ink-white shadow-xl shadow-black/50">
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.22} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
                   src={detailImage1}
-                  alt="Maszynka do tatuażu w dłoni artysty"
+                  alt={content.detailImage1Alt}
                   fill
                   className="object-cover"
                   sizes="220px"
                 />
                 </Parallax>
               </div>
-            </div>
+            </div>}
 
-            <div className="absolute right-0 top-[38%] h-[34%] w-[42%] -rotate-1 border-[5px] border-ink-white/95 bg-ink-white shadow-xl shadow-black/50">
+            {detailImage2 && <div className="absolute right-0 top-[38%] h-[34%] w-[42%] -rotate-1 border-[5px] border-ink-white/95 bg-ink-white shadow-xl shadow-black/50">
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.16} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
                   src={detailImage2}
-                  alt="Precyzyjny tatuaż dotwork na plecach"
+                  alt={content.detailImage2Alt}
                   fill
                   className="object-cover"
                   sizes="220px"
                 />
                 </Parallax>
               </div>
-            </div>
+            </div>}
 
-            <div className="absolute bottom-0 right-[6%] h-[30%] w-[46%] rotate-2 border-[5px] border-ink-white/95 bg-ink-white shadow-xl shadow-black/50">
+            {detailImage3 && <div className="absolute bottom-0 right-[6%] h-[30%] w-[46%] rotate-2 border-[5px] border-ink-white/95 bg-ink-white shadow-xl shadow-black/50">
               <div className="relative h-full w-full overflow-hidden">
                 <Parallax speed={0.26} className="absolute inset-x-0 -top-[12%] h-[124%]">
                 <Image
                   src={detailImage3}
-                  alt="Zbliżenie na proces tatuowania"
+                  alt={content.detailImage3Alt}
                   fill
                   className="object-cover"
                   sizes="220px"
                 />
                 </Parallax>
               </div>
-            </div>
-          </div>
+            </div>}
+          </div>}
         </div>
       </div>
     </section>

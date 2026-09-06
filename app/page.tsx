@@ -7,13 +7,12 @@ import MaintenanceScreen from "@/components/MaintenanceScreen";
 import { getSiteContent } from "@/lib/content";
 import { getPublicNavLinks } from "@/lib/nav";
 import { getPublishedPortfolioWorks } from "@/lib/portfolio";
-import { prisma } from "@/lib/prisma";
 import { defaultHomepageModules, type Module } from "@/lib/modules";
 import { parseModules } from "@/lib/pageModules";
-import PublicBookingCalendar from "@/components/client/PublicBookingCalendar";
 import { getPublicCalendarData } from "@/lib/publicCalendar";
 import { getMaintenanceMode } from "@/lib/maintenance";
 import { getCurrentAdmin } from "@/lib/auth";
+import { ensureEditableHomepage } from "@/lib/homepage";
 
 // Content is admin-editable, so this page must always read the current
 // database state rather than being frozen at build time.
@@ -33,23 +32,23 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   const maintenanceEnabled = await getMaintenanceMode();
   const admin = maintenanceEnabled ? await getCurrentAdmin() : null;
-  if (maintenanceEnabled && !admin) return <MaintenanceScreen />;
+  if (maintenanceEnabled && !admin) {
+    const content = await getSiteContent();
+    return <MaintenanceScreen content={content.maintenance} />;
+  }
 
-  const [homepage, content, navLinks, works, calendar] = await Promise.all([
-    prisma.page.findFirst({ where: { isHomepage: true } }),
+  const [homepage, content, works, calendar] = await Promise.all([
+    ensureEditableHomepage(),
     getSiteContent(),
-    getPublicNavLinks(),
     getPublishedPortfolioWorks(),
     getPublicCalendarData(),
   ]);
+  const navLinks = await getPublicNavLinks(content.navigation);
 
   const modules: Module[] =
     homepage && homepage.status === "published" && homepage.publishedModules
       ? parseModules(homepage.publishedModules)
       : defaultHomepageModules();
-
-  const heroModule = modules.find((m) => m.type === "hero");
-  const bookLabel = (heroModule?.data?.primaryBtnLabel as string) || "UMÓW WIZYTĘ";
 
   return (
     <main className="relative">
@@ -64,7 +63,7 @@ export default async function Home() {
           </Link>
         </aside>
       )}
-      <Header navLinks={navLinks} bookLabel={bookLabel} logoUrl={content.brand.logoUrl} />
+      <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
       <ModuleRenderer
         modules={modules}
         portfolioWorks={works}
@@ -72,12 +71,10 @@ export default async function Home() {
           instagramUrl: content.brand.instagramUrl,
           facebookUrl: content.brand.facebookUrl,
           contact: content.contact,
+          calendar,
         }}
       />
-      <section id="kalendarz" className="bg-ink-black px-4 py-16 text-ink-white sm:px-6 lg:px-10">
-        <div className="mx-auto max-w-7xl"><p className="text-[11px] tracking-[.2em] text-ink-gold">UMÓW WIZYTĘ</p><h2 className="mt-3 font-display text-4xl sm:text-6xl">Sprawdź wolne terminy.</h2><p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-grey">Wybierz zielony termin. Po zalogowaniu wrócimy dokładnie do wybranej daty, aby dokończyć prośbę o wizytę.</p><PublicBookingCalendar {...calendar} /></div>
-      </section>
-      <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} />
+      <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} privacyLabel={content.footer.privacyLabel} privacyHref={content.footer.privacyHref} />
     </main>
   );
 }

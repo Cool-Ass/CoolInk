@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSiteContent } from "@/lib/content";
+import { flattenDefaults, getSiteContent } from "@/lib/content";
 import { getCurrentAdmin } from "@/lib/auth";
 import { isSameOrigin } from "@/lib/requestSecurity";
 
@@ -19,8 +20,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Nieprawidłowe dane." }, { status: 400 });
   }
 
+  const allowedKeys = new Set(Object.keys(flattenDefaults()));
   const entries = Object.entries(body).filter(
-    ([, value]) => typeof value === "string"
+    ([key, value]) => allowedKeys.has(key) && typeof value === "string" && value.length <= 5_000
   ) as [string, string][];
 
   if (!entries.length) {
@@ -36,6 +38,9 @@ export async function PATCH(request: Request) {
       })
     )
   );
+
+  revalidatePath("/");
+  revalidatePath("/budujemy");
 
   const content = await getSiteContent();
   return NextResponse.json({ content });

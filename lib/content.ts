@@ -13,9 +13,24 @@ import { prisma } from "./prisma";
  */
 export const DEFAULT_CONTENT = {
   brand: {
+    name: "CoolInk Tattoo Studio",
     logoUrl: "/images/logo-white.jpg",
+    logoAlt: "CoolInk Tattoo Studio — logo",
     instagramUrl: "https://instagram.com/coolink.tattoo.studio",
     facebookUrl: "https://facebook.com/coolink.tattoo.studio",
+  },
+  navigation: {
+    homeLabel: "STRONA GŁÓWNA",
+    aboutLabel: "O MNIE",
+    portfolioLabel: "PORTFOLIO",
+    studioLabel: "STUDIO",
+    contactLabel: "KONTAKT",
+  },
+  header: {
+    clientAreaLabel: "KONTO KLIENTA",
+    clientAreaHref: "/app",
+    bookingLabel: "UMÓW WIZYTĘ",
+    bookingHref: "/#kalendarz",
   },
   contact: {
     address: "al. Konstytucji 3 Maja 10, 65-001 Zielona Góra",
@@ -25,6 +40,16 @@ export const DEFAULT_CONTENT = {
   },
   footer: {
     text: "CoolInk Tattoo Studio. Wszelkie prawa zastrzeżone.",
+    privacyLabel: "POLITYKA PRYWATNOŚCI",
+    privacyHref: "/polityka-prywatnosci",
+  },
+  maintenance: {
+    brandLabel: "COOLINK TATTOO STUDIO",
+    statusLabel: "TRYB BUDOWY",
+    headingLine1: "ZAPRASZAM",
+    headingLine2: "WKRÓTCE",
+    message: "Dopracowuję przestrzeń. Wróć za chwilę — będzie warto.",
+    mark: "P",
   },
 } as const;
 

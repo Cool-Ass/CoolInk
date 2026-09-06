@@ -26,3 +26,5 @@ export async function getPublicCalendarData(includeLoggedInPromotions = false) {
     visibleMonths: Math.min(12, Math.max(1, Number(setting.get("calendar_visible_months")) || 3)),
   };
 }
+
+export type PublicCalendarData = Awaited<ReturnType<typeof getPublicCalendarData>>;

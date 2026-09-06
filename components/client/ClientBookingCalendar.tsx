@@ -13,6 +13,39 @@ type Override = { date: string; enabled: boolean; startsAt: string; endsAt: stri
 type AvailableSlot = { startsAt: string; endsAt: string; isPublic: boolean };
 type Promotion = { id: string; title: string; description: string | null; badge: string | null; startsAt: string; endsAt: string; color: string };
 type CalendarEvent = { id: string; title: string; label: string | null; description: string | null; startsAt: string; endsAt: string; color: string };
+
+export interface BookingCalendarCopy {
+  calendarLabel: string;
+  legend: string;
+  freeLabel: string;
+  unavailableLabel: string;
+  unmarkedLabel: string;
+  unavailableMessage: string;
+  partiallyBookedMessage: string;
+  addToProjectLabel: string;
+  newVisitLabel: string;
+  proposeButtonLabel: string;
+  bookingButtonLabel: string;
+  eventFallbackLabel: string;
+  promotionFallbackLabel: string;
+}
+
+const DEFAULT_COPY: BookingCalendarCopy = {
+  calendarLabel: "KALENDARZ DOSTĘPNOŚCI",
+  legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Czerwony — niedostępny.",
+  freeLabel: "WOLNY",
+  unavailableLabel: "NIEDOSTĘPNY",
+  unmarkedLabel: "BRAK OZNACZENIA",
+  unavailableMessage: "Ten dzień nie został udostępniony jako wolny termin.",
+  partiallyBookedMessage: "Ten wolny termin został już częściowo wykorzystany. Wybierz inny dzień albo napisz do studia.",
+  addToProjectLabel: "DODAJ DO ISTNIEJĄCEGO PROJEKTU (OPCJONALNIE)",
+  newVisitLabel: "Nowa wizyta",
+  proposeButtonLabel: "ZAPROPONUJ WIZYTĘ",
+  bookingButtonLabel: "UMÓW WIZYTĘ",
+  eventFallbackLabel: "EVENT",
+  promotionFallbackLabel: "PROMO",
+};
+
 const DAYS = ["PN", "WT", "ŚR", "CZ", "PT", "SB", "ND"];
 const MONTHS = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -21,25 +54,162 @@ const dayEnd = (date: Date) => { const end = dayStart(date); end.setDate(end.get
 const overlapsDay = (item: { startsAt: string; endsAt: string }, date: Date) => new Date(item.startsAt) < dayEnd(date) && new Date(item.endsAt) > dayStart(date);
 const formatTime = (date: Date) => date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
-export default function ClientBookingCalendar({ projects = [], busy, blocks, hours, overrides = [], availableSlots = [], bufferMinutes = 30, visibleMonths = 3, promotions, events = [], initialStartsAt, mode = "client", tattooStyles }: { projects?: Project[]; busy: Busy[]; blocks: Block[]; hours: Hours[]; overrides?: Override[]; availableSlots?: AvailableSlot[]; bufferMinutes?: number; visibleMonths?: number; promotions: Promotion[]; events?: CalendarEvent[]; initialStartsAt?: string; mode?: "client" | "public"; tattooStyles?: string[] }) {
-  const router = useRouter(); const today = dayStart(new Date());
+interface Props {
+  projects?: Project[];
+  busy: Busy[];
+  blocks: Block[];
+  hours: Hours[];
+  overrides?: Override[];
+  availableSlots?: AvailableSlot[];
+  bufferMinutes?: number;
+  visibleMonths?: number;
+  promotions: Promotion[];
+  events?: CalendarEvent[];
+  initialStartsAt?: string;
+  mode?: "client" | "public";
+  tattooStyles?: string[];
+  copy?: BookingCalendarCopy;
+}
+
+export default function ClientBookingCalendar({
+  projects = [],
+  busy,
+  blocks,
+  hours,
+  overrides = [],
+  availableSlots = [],
+  bufferMinutes = 30,
+  visibleMonths = 3,
+  promotions,
+  events = [],
+  initialStartsAt,
+  mode = "client",
+  tattooStyles,
+  copy = DEFAULT_COPY,
+}: Props) {
+  const router = useRouter();
+  const today = dayStart(new Date());
   const restored = initialStartsAt ? new Date(initialStartsAt) : null;
   const initialDate = restored && !Number.isNaN(restored.getTime()) ? dayStart(restored) : today;
-  const [selected, setSelected] = useState(initialDate); const [cursor, setCursor] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1)); const [projectId, setProjectId] = useState(""); const [notice, setNotice] = useState(""); const [bookingRange, setBookingRange] = useState<{ startsAt: string; endsAt: string; projectId?: string } | null>(null); const [restoredOpened, setRestoredOpened] = useState(false);
-  const firstVisibleMonth = new Date(today.getFullYear(), today.getMonth(), 1); const lastVisibleMonth = new Date(today.getFullYear(), today.getMonth() + Math.min(12, Math.max(1, visibleMonths)) - 1, 1);
-  const dates = useMemo(() => { const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1); const start = new Date(first); start.setDate(first.getDate() - ((first.getDay() + 6) % 7)); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return date; }); }, [cursor]);
+  const [selected, setSelected] = useState(initialDate);
+  const [cursor, setCursor] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
+  const [projectId, setProjectId] = useState("");
+  const [bookingRange, setBookingRange] = useState<{ startsAt: string; endsAt: string; projectId?: string } | null>(null);
+  const [restoredOpened, setRestoredOpened] = useState(false);
+  const firstVisibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastVisibleMonth = new Date(today.getFullYear(), today.getMonth() + Math.min(12, Math.max(1, visibleMonths)) - 1, 1);
+  const dates = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const start = new Date(first);
+    start.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return date;
+    });
+  }, [cursor]);
   const slotsFor = (date: Date) => availableSlots.filter((slot) => slot.isPublic && overlapsDay(slot, date));
   const blocked = (date: Date) => blocks.some((block) => overlapsDay(block, date));
   const isAvailable = (date: Date) => !blocked(date) && slotsFor(date).length > 0;
-  const ranges = resolveAvailableRanges({ date: selected, recurring: hours, overrides: overrides.map((item) => ({ ...item, date: new Date(item.date) })), slots: availableSlots.map((item) => ({ ...item, startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) })), blocks: blocks.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) })), appointments: busy.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt), status: "confirmed" })), bufferMinutes, publicOnly: true });
-  useEffect(() => { if (!initialStartsAt || restoredOpened || mode !== "client") return; const timer = window.setTimeout(() => { const match = ranges.find((range) => range.startsAt.toISOString() === initialStartsAt); setRestoredOpened(true); if (match) setBookingRange({ startsAt: match.startsAt.toISOString(), endsAt: match.endsAt.toISOString() }); }, 0); return () => window.clearTimeout(timer); }, [initialStartsAt, mode, ranges, restoredOpened]);
+  const ranges = resolveAvailableRanges({
+    date: selected,
+    recurring: hours,
+    overrides: overrides.map((item) => ({ ...item, date: new Date(item.date) })),
+    slots: availableSlots.map((item) => ({ ...item, startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) })),
+    blocks: blocks.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) })),
+    appointments: busy.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt), status: "confirmed" })),
+    bufferMinutes,
+    publicOnly: true,
+  });
+
+  useEffect(() => {
+    if (!initialStartsAt || restoredOpened || mode !== "client") return;
+    const timer = window.setTimeout(() => {
+      const match = ranges.find((range) => range.startsAt.toISOString() === initialStartsAt);
+      setRestoredOpened(true);
+      if (match) setBookingRange({ startsAt: match.startsAt.toISOString(), endsAt: match.endsAt.toISOString() });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialStartsAt, mode, ranges, restoredOpened]);
+
   const promotion = promotions.find((item) => selected >= dayStart(new Date(item.startsAt)) && selected <= dayStart(new Date(item.endsAt)));
   const calendarEvent = events.find((item) => selected >= dayStart(new Date(item.startsAt)) && selected <= dayStart(new Date(item.endsAt)));
+  const previousDisabled = cursor <= firstVisibleMonth;
+  const nextDisabled = cursor >= lastVisibleMonth;
+
   function propose(range: { startsAt: Date; endsAt: Date }) {
-    const startsAt = range.startsAt; const endsAt = range.endsAt;
-    if (mode === "public") { router.push(`/app?returnTo=${encodeURIComponent(`/app/portal?booking=${encodeURIComponent(startsAt.toISOString())}`)}`); return; }
-    setNotice(""); setBookingRange({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), projectId: projectId || undefined });
+    const startsAt = range.startsAt;
+    const endsAt = range.endsAt;
+    if (mode === "public") {
+      router.push(`/app?returnTo=${encodeURIComponent(`/app/portal?booking=${encodeURIComponent(startsAt.toISOString())}`)}`);
+      return;
+    }
+    setBookingRange({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), projectId: projectId || undefined });
   }
-  const previousDisabled = cursor <= firstVisibleMonth; const nextDisabled = cursor >= lastVisibleMonth;
-  return <><div className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_.75fr]"><section className="border border-ink-white/15 bg-ink-charcoal/30 p-4 sm:p-5"><p className="text-[11px] tracking-[0.16em] text-ink-gold">KALENDARZ DOSTĘPNOŚCI</p><div className="mt-2 flex items-center justify-between gap-3"><button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="border border-ink-white/20 px-3 py-2 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button><h2 className="font-display text-xl sm:text-3xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2><button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="border border-ink-white/20 px-3 py-2 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button></div><p className="mt-3 text-xs text-ink-grey">Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Czerwony — niedostępny.</p><div className="mt-5 grid grid-cols-7 border-l border-t border-ink-white/10">{DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-[9px] text-ink-grey">{day}</div>)}{dates.map((date) => { const available = isAvailable(date); const unavailable = blocked(date) || (!available && date.getDay() === 0); const dayEvent = events.find((item) => overlapsDay(item, date)); const dayPromotion = promotions.find((item) => overlapsDay(item, date)); const contextualColor = !available && !blocked(date) ? (dayEvent?.color ?? dayPromotion?.color) : undefined; const selectedDay = sameDay(date, selected); const muted = date.getMonth() !== cursor.getMonth(); return <button key={date.toISOString()} type="button" onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`min-h-20 border-b border-r p-2 text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}><strong className="block text-lg">{date.getDate()}</strong><span className={`mt-2 block text-[8px] ${available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>{available ? "WOLNY" : dayEvent?.label || dayPromotion?.badge || (unavailable ? "NIEDOSTĘPNY" : "BRAK OZNACZENIA")}</span></button>; })}</div></section><aside className="border border-ink-white/15 bg-ink-charcoal/30 p-5"><p className="text-[11px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>{calendarEvent && <div className="mt-4 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || "EVENT"}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>}{promotion && <div className="mt-4 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || "PROMO"}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>}{projects.length > 0 && isAvailable(selected) && ranges.length > 0 && <label className="mt-5 block text-[11px] tracking-[0.1em] text-ink-grey">DODAJ DO ISTNIEJĄCEGO PROJEKTU (OPCJONALNIE)<select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full border border-ink-white/15 bg-ink-black px-3 py-2.5 text-sm text-ink-white"><option value="">Nowa wizyta</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>}<div className="mt-5 space-y-3">{!isAvailable(selected) ? <p className="text-sm text-ink-grey">Ten dzień nie został udostępniony jako wolny termin.</p> : ranges.length === 0 ? <p className="text-sm text-ink-grey">Ten wolny termin został już częściowo wykorzystany. Wybierz inny dzień albo napisz do studia.</p> : ranges.map((range) => <div key={range.startsAt.toISOString()} className="border border-emerald-500/30 bg-emerald-500/5 p-3"><p className="text-xs text-emerald-300">WOLNY TERMIN</p><p className="mt-1 font-display text-2xl">{formatTime(range.startsAt)}–{formatTime(range.endsAt)}</p><button type="button" onClick={() => propose(range)} className="mt-3 border border-emerald-400/60 px-3 py-2 text-xs text-emerald-200 hover:bg-emerald-500/10">{projectId ? "ZAPROPONUJ WIZYTĘ" : "UMÓW WIZYTĘ"}</button></div>)}</div>{notice && <p role="status" className="mt-4 text-sm text-ink-gold">{notice}</p>}</aside></div>{bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projectId={bookingRange.projectId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}</>;
+
+  return (
+    <>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
+        <section className="border border-ink-white/15 bg-ink-charcoal/30 p-4 sm:p-5">
+          <p className="text-[11px] tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="border border-ink-white/20 px-3 py-2 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button>
+            <h2 className="font-display text-xl sm:text-3xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
+            <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="border border-ink-white/20 px-3 py-2 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button>
+          </div>
+          <p className="mt-3 text-xs text-ink-grey">{copy.legend}</p>
+          <div className="mt-5 grid grid-cols-7 border-l border-t border-ink-white/10">
+            {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-[9px] text-ink-grey">{day}</div>)}
+            {dates.map((date) => {
+              const available = isAvailable(date);
+              const unavailable = blocked(date) || (!available && date.getDay() === 0);
+              const dayEvent = events.find((item) => overlapsDay(item, date));
+              const dayPromotion = promotions.find((item) => overlapsDay(item, date));
+              const contextualColor = !available && !blocked(date) ? (dayEvent?.color ?? dayPromotion?.color) : undefined;
+              const selectedDay = sameDay(date, selected);
+              const muted = date.getMonth() !== cursor.getMonth();
+              return (
+                <button key={date.toISOString()} type="button" onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`min-h-20 border-b border-r p-2 text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
+                  <strong className="block text-lg">{date.getDate()}</strong>
+                  <span className={`mt-2 block text-[8px] ${available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
+                    {available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : copy.unmarkedLabel)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <aside className="border border-ink-white/15 bg-ink-charcoal/30 p-5">
+          <p className="text-[11px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>
+          {calendarEvent && <div className="mt-4 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || copy.eventFallbackLabel}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>}
+          {promotion && <div className="mt-4 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || copy.promotionFallbackLabel}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>}
+          {projects.length > 0 && isAvailable(selected) && ranges.length > 0 && (
+            <label className="mt-5 block text-[11px] tracking-[0.1em] text-ink-grey">
+              {copy.addToProjectLabel}
+              <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full border border-ink-white/15 bg-ink-black px-3 py-2.5 text-sm text-ink-white">
+                <option value="">{copy.newVisitLabel}</option>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+              </select>
+            </label>
+          )}
+          <div className="mt-5 space-y-3">
+            {!isAvailable(selected) ? (
+              <p className="text-sm text-ink-grey">{copy.unavailableMessage}</p>
+            ) : ranges.length === 0 ? (
+              <p className="text-sm text-ink-grey">{copy.partiallyBookedMessage}</p>
+            ) : ranges.map((range) => (
+              <div key={range.startsAt.toISOString()} className="border border-emerald-500/30 bg-emerald-500/5 p-3">
+                <p className="text-xs text-emerald-300">{copy.freeLabel}</p>
+                <p className="mt-1 font-display text-2xl">{formatTime(range.startsAt)}–{formatTime(range.endsAt)}</p>
+                <button type="button" onClick={() => propose(range)} className="mt-3 border border-emerald-400/60 px-3 py-2 text-xs text-emerald-200 hover:bg-emerald-500/10">{projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+
+      {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projectId={bookingRange.projectId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+    </>
+  );
 }

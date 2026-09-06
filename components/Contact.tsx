@@ -1,6 +1,5 @@
 "use client";
 
-import SectionRail from "@/components/SectionRail";
 import MultilineText from "@/components/MultilineText";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { defaultModuleData, type ContactModuleData } from "@/lib/modules";
@@ -25,10 +24,10 @@ export default function Contact({
   const [sending, setSending] = useState(false);
   const [formStatus, setFormStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const details = [
-    { label: "ADRES", value: content.address, path: ICON_PATHS.address },
-    { label: "TELEFON", value: content.phone, path: ICON_PATHS.phone },
-    { label: "EMAIL", value: content.email, path: ICON_PATHS.email },
-    { label: "GODZINY", value: content.hours, path: ICON_PATHS.hours },
+    { label: content.addressLabel, value: content.address, path: ICON_PATHS.address },
+    { label: content.phoneLabel, value: content.phone, path: ICON_PATHS.phone },
+    { label: content.emailLabel, value: content.email, path: ICON_PATHS.email },
+    { label: content.hoursLabel, value: content.hours, path: ICON_PATHS.hours },
   ];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -47,7 +46,7 @@ export default function Contact({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Nie udało się wysłać wiadomości.");
       form.reset();
-      setFormStatus({ type: "success", text: "Dziękujemy — wiadomość została wysłana. Odpowiemy możliwie szybko." });
+      setFormStatus({ type: "success", text: content.formSuccessMessage });
     } catch (error) {
       setFormStatus({
         type: "error",
@@ -72,8 +71,6 @@ export default function Contact({
       />
 
       <div className="relative mx-auto flex max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <SectionRail number="05" />
-
         <div className="grid w-full gap-14 lg:grid-cols-2 lg:gap-10">
           {/* Text column */}
           <div className="reveal-up max-w-xl">
@@ -114,10 +111,10 @@ export default function Contact({
           {/* Form column */}
           <div className="reveal-up border border-ink-white/15 bg-ink-charcoal/60 p-7 backdrop-blur-sm md:p-10">
             <p className="mb-1 text-[13px] font-medium tracking-[0.3em] text-ink-gold">
-              NAPISZ WIADOMOŚĆ
+              {content.formTitle}
             </p>
             <p className="mb-8 text-[14px] text-ink-grey">
-              Odpowiadamy zwykle w ciągu 24 godzin.
+              {content.formDescription}
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -127,7 +124,7 @@ export default function Contact({
               </label>
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
-                  IMIĘ I NAZWISKO
+                  {content.formNameLabel}
                   <input
                     type="text"
                     name="name"
@@ -135,11 +132,11 @@ export default function Contact({
                     required
                     maxLength={120}
                     className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
-                    placeholder="Jan Kowalski"
+                    placeholder={content.formNamePlaceholder}
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
-                  EMAIL
+                  {content.formEmailLabel}
                   <input
                     type="email"
                     name="email"
@@ -147,31 +144,31 @@ export default function Contact({
                     required
                     maxLength={254}
                     className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
-                    placeholder="jan@email.pl"
+                    placeholder={content.formEmailPlaceholder}
                   />
                 </label>
               </div>
 
               <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
-                TEMAT
+                {content.formSubjectLabel}
                 <input
                   type="text"
                     name="subject"
                     maxLength={180}
                   className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
-                  placeholder="Realizm, rękaw, cover-up..."
+                  placeholder={content.formSubjectPlaceholder}
                 />
               </label>
 
               <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
-                WIADOMOŚĆ
+                {content.formMessageLabel}
                 <textarea
                     name="message"
                     rows={4}
                     required
                     maxLength={5000}
                   className="resize-none border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
-                  placeholder="Opisz swój pomysł na tatuaż..."
+                  placeholder={content.formMessagePlaceholder}
                 />
               </label>
 
@@ -191,7 +188,7 @@ export default function Contact({
                 disabled={sending}
                 className="mt-2 inline-flex items-center justify-center gap-3 self-start border border-ink-gold px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-gold transition-colors hover:bg-ink-gold hover:text-ink-black disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {sending ? "WYSYŁANIE…" : "WYŚLIJ WIADOMOŚĆ"}
+                {sending ? content.formSendingLabel : content.formSubmitLabel}
                 <span aria-hidden>→</span>
               </button>
             </form>

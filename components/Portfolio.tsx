@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import SectionRail from "@/components/SectionRail";
 import MagneticButton from "@/components/MagneticButton";
 import PlayButton from "@/components/PlayButton";
 import Parallax from "@/components/Parallax";
@@ -54,8 +53,6 @@ export default function Portfolio({
       />
 
       <div className="relative mx-auto flex max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <SectionRail number="03" />
-
         <div className="grid w-full items-center gap-14 lg:grid-cols-2 lg:gap-10">
           {/* Text column */}
           <div className="reveal-up max-w-xl">
@@ -75,15 +72,15 @@ export default function Portfolio({
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-8">
-              <MagneticButton
-                href="#portfolio"
+              {content.primaryBtnLabel && <MagneticButton
+                href={content.primaryBtnHref}
                 className="inline-flex items-center gap-3 border border-ink-white/70 px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold"
               >
                 {content.primaryBtnLabel}
                 <span aria-hidden>→</span>
-              </MagneticButton>
+              </MagneticButton>}
 
-              <PlayButton>{content.secondaryBtnLabel}</PlayButton>
+              {content.secondaryBtnLabel && <PlayButton href={content.secondaryBtnHref}>{content.secondaryBtnLabel}</PlayButton>}
             </div>
           </div>
 
@@ -143,7 +140,7 @@ export default function Portfolio({
               </>
             ) : (
               <div className="flex h-[420px] items-center justify-center border border-dashed border-ink-white/15 text-center text-[14px] text-ink-grey md:h-[485px]">
-                Portfolio pojawi się wkrótce — dodaj zdjęcia w panelu /admin/portfolio.
+                {content.emptyMessage}
               </div>
             )}
           </div>

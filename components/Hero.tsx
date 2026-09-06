@@ -20,8 +20,8 @@ export default function Hero({
   socials?: { instagramUrl: string; facebookUrl: string };
 }) {
   const scopeRef = useRef<HTMLDivElement>(null);
-  const backgroundImage = imageSource(content.backgroundImage) ?? "/images/crops/about-main.jpg";
-  const portraitImage = imageSource(content.portraitImage) ?? "/images/portrait.jpg";
+  const backgroundImage = imageSource(content.backgroundImage);
+  const portraitImage = imageSource(content.portraitImage);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
@@ -61,26 +61,26 @@ export default function Hero({
       {/* Background texture */}
       <div className="absolute inset-0 overflow-hidden">
         <Parallax speed={0.08} className="absolute inset-x-0 -top-[8%] h-[116%]">
-          <Image
+          {backgroundImage && <Image
             src={backgroundImage}
             alt=""
             fill
             priority
             className="object-cover opacity-40"
             sizes="100vw"
-          />
+          />}
         </Parallax>
         <div className="absolute inset-0 bg-gradient-to-r from-ink-black via-ink-black/70 to-ink-black/30" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink-black via-transparent to-ink-black/40" />
       </div>
 
       {/* Portrait */}
-      <div className="hero-portrait absolute right-0 top-0 h-full w-full overflow-hidden lg:w-[58%]">
+      {portraitImage && <div className="hero-portrait absolute right-0 top-0 h-full w-full overflow-hidden lg:w-[58%]">
         <div className="portrait-fade relative h-full w-full">
           <Parallax speed={0.12} className="absolute inset-x-0 -top-[10%] h-[120%]">
             <Image
               src={portraitImage}
-              alt="Portret artysty tatuażu CoolInk"
+              alt={content.portraitAlt}
               fill
               priority
               className="object-cover object-[65%_20%]"
@@ -88,25 +88,13 @@ export default function Hero({
             />
           </Parallax>
         </div>
-      </div>
+      </div>}
 
       <SocialRail instagramUrl={socials?.instagramUrl} facebookUrl={socials?.facebookUrl} />
-      <StudioStamp />
+      <StudioStamp ringText={content.stampRingText} leftText={content.stampLeftText} centerText={content.stampCenterText} rightText={content.stampRightText} />
 
       {/* Content */}
       <div className="relative z-10 mx-auto flex h-full max-w-[1536px] px-6 pt-[168px] md:px-10 lg:px-16">
-        {/* Section index rail */}
-        <div className="hero-fade mr-8 hidden flex-col items-center pt-2 lg:flex">
-          <span className="font-display text-lg text-ink-gold">01</span>
-          <span className="mt-3 h-24 w-px bg-ink-grey/40" />
-          <span
-            className="mt-3 text-[11px] tracking-[0.3em] text-ink-grey"
-            style={{ writingMode: "vertical-rl" }}
-          >
-            PRZEWIŃ
-          </span>
-        </div>
-
         <div className="flex max-w-2xl flex-col justify-center pb-16 pt-6">
           <p className="hero-fade mb-4 text-[13px] font-medium tracking-[0.35em] text-ink-gold">
             {content.eyebrow}
@@ -131,25 +119,17 @@ export default function Hero({
           </p>
 
           <div className="hero-fade mt-10 flex flex-wrap items-center gap-8">
-            <MagneticButton
-              href="#kalendarz"
+            {content.primaryBtnLabel && <MagneticButton
+              href={content.primaryBtnHref}
               className="inline-flex items-center gap-3 border border-ink-white/70 px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold"
             >
               {content.primaryBtnLabel}
               <span aria-hidden>→</span>
-            </MagneticButton>
+            </MagneticButton>}
 
-            <PlayButton>{content.secondaryBtnLabel}</PlayButton>
+            {content.secondaryBtnLabel && <PlayButton href={content.secondaryBtnHref}>{content.secondaryBtnLabel}</PlayButton>}
           </div>
         </div>
-      </div>
-
-      {/* Scroll to discover */}
-      <div className="hero-fade absolute bottom-8 left-6 z-10 flex items-center gap-3 text-[11px] tracking-[0.25em] text-ink-grey md:left-10 lg:left-16">
-        <span>PRZEWIŃ, ABY ODKRYĆ</span>
-        <span className="animate-bounce text-ink-gold" aria-hidden>
-          ↓
-        </span>
       </div>
     </section>
   );

@@ -12,6 +12,7 @@ import { getPublishedPortfolioWorks } from "@/lib/portfolio";
 import type { Module } from "@/lib/modules";
 import { parseModules } from "@/lib/pageModules";
 import { imageSource } from "@/lib/imageSource";
+import { getPublicCalendarData } from "@/lib/publicCalendar";
 
 export const dynamic = "force-dynamic";
 
@@ -41,19 +42,20 @@ export default async function CmsPage({ params }: Props) {
   const page = await getPage(slug);
   if (!page) notFound();
 
-  const [navLinks, content, works] = await Promise.all([
-    getPublicNavLinks(),
+  const [content, works, calendar] = await Promise.all([
     getSiteContent(),
     getPublishedPortfolioWorks(),
+    getPublicCalendarData(),
   ]);
+  const navLinks = await getPublicNavLinks(content.navigation);
 
   const modules = parseModules(page.publishedModules);
   const coverImage = imageSource(page.coverImage);
-  const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl, contact: content.contact };
+  const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl, contact: content.contact, calendar };
 
   return (
     <main className="relative min-h-screen bg-ink-black">
-      <Header navLinks={navLinks} logoUrl={content.brand.logoUrl} />
+      <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
 
       {modules.length > 0 ? (
         <div className="pt-24">
@@ -99,7 +101,7 @@ export default async function CmsPage({ params }: Props) {
         </article>
       )}
 
-      <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} />
+      <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} privacyLabel={content.footer.privacyLabel} privacyHref={content.footer.privacyHref} />
     </main>
   );
 }

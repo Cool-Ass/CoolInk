@@ -1,5 +1,4 @@
 import Image from "next/image";
-import SectionRail from "@/components/SectionRail";
 import MagneticButton from "@/components/MagneticButton";
 import PlayButton from "@/components/PlayButton";
 import CTABar from "@/components/CTABar";
@@ -14,7 +13,7 @@ export default function Studio({
 }: {
   content?: StudioModuleData;
 }) {
-  const studioImage = imageSource(content.image) ?? "/images/crops/studio-room.jpg";
+  const studioImage = imageSource(content.image);
   return (
     <section id="studio" className="relative overflow-hidden bg-ink-black py-24 md:py-32">
       <CalligraphyBackground opacity={0.045} position="15% 70%" />
@@ -29,9 +28,7 @@ export default function Studio({
       />
 
       <div className="relative mx-auto mb-16 flex max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <SectionRail number="04" />
-
-        <div className="grid w-full items-center gap-14 lg:grid-cols-2 lg:gap-10">
+        <div className={`grid w-full items-center gap-14 lg:gap-10 ${studioImage ? "lg:grid-cols-2" : ""}`}>
           {/* Text column */}
           <div className="reveal-up max-w-xl">
             <p className="mb-4 text-[13px] font-medium tracking-[0.35em] text-ink-gold">
@@ -50,37 +47,39 @@ export default function Studio({
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-8">
-              <MagneticButton
-                href="#studio"
+              {content.primaryBtnLabel && <MagneticButton
+                href={content.primaryBtnHref}
                 className="inline-flex items-center gap-3 border border-ink-white/70 px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold"
               >
                 {content.primaryBtnLabel}
                 <span aria-hidden>→</span>
-              </MagneticButton>
+              </MagneticButton>}
 
-              <PlayButton>{content.secondaryBtnLabel}</PlayButton>
+              {content.secondaryBtnLabel && <PlayButton href={content.secondaryBtnHref}>{content.secondaryBtnLabel}</PlayButton>}
             </div>
           </div>
 
           {/* Studio photo */}
-          <div className="reveal-up relative mx-auto h-[380px] w-full max-w-xl overflow-hidden shadow-2xl shadow-black/60 lg:h-[560px]">
+          {studioImage && <div className="reveal-up relative mx-auto h-[380px] w-full max-w-xl overflow-hidden shadow-2xl shadow-black/60 lg:h-[560px]">
             <Parallax speed={0.14} className="absolute inset-x-0 -top-[10%] h-[120%]">
               <Image
                 src={studioImage}
-                alt="Wnętrze studia CoolInk z fotelem do tatuażu"
+                alt={content.imageAlt}
                 fill
                 className="object-cover"
                 sizes="(min-width: 1024px) 45vw, 90vw"
               />
             </Parallax>
             <div className="absolute inset-0 bg-gradient-to-t from-ink-black/30 via-transparent to-transparent" />
-          </div>
+          </div>}
         </div>
       </div>
 
       <CTABar
         titleLines={[content.ctaTitle1, content.ctaTitle2]}
         message={content.ctaMessage}
+        buttonLabel={content.ctaButtonLabel}
+        href={content.ctaButtonHref}
       />
     </section>
   );

@@ -4,8 +4,8 @@ import { useLayoutEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-export default function PlayButton({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLButtonElement>(null);
+export default function PlayButton({ children, href }: { children: ReactNode; href: string }) {
+  const ref = useRef<HTMLAnchorElement>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -41,11 +41,11 @@ export default function PlayButton({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <button ref={ref} className="group inline-flex items-center gap-3 text-[13px] font-medium tracking-[0.08em] text-ink-white">
+    <a ref={ref} href={href} className="group inline-flex items-center gap-3 text-[13px] font-medium tracking-[0.08em] text-ink-white">
       <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-gold text-ink-gold transition-colors group-hover:bg-ink-gold group-hover:text-ink-black">
         ▶
       </span>
       {children}
-    </button>
+    </a>
   );
 }

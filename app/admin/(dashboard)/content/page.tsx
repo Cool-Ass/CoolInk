@@ -22,11 +22,11 @@ export default async function ContentPage() {
         <p className="mb-2 text-[13px] font-medium tracking-[0.3em] text-ink-gold">
           TREŚCI GLOBALNE
         </p>
-        <h1 className="font-display text-3xl text-ink-white">Marka i dane kontaktowe</h1>
+        <h1 className="font-display text-3xl text-ink-white">Wspólne elementy strony</h1>
         <p className="mt-2 max-w-xl text-[13px] text-ink-grey">
           To są elementy używane w wielu miejscach naraz (logo, social media, dane kontaktowe,
-          stopka) — zmiana tutaj aktualizuje je wszędzie. Treść poszczególnych stron (Hero, O
-          mnie, Portfolio…) edytujesz w wizualnym edytorze pod Strony.
+          menu, przyciski nagłówka, ekran budowy i stopka) — zmiana tutaj aktualizuje je wszędzie.
+          Treść sekcji strony głównej edytujesz w wizualnym edytorze pod Strony.
         </p>
       </div>
 
@@ -37,6 +37,18 @@ export default async function ContentPage() {
         </div>
 
         <SettingsSection
+          title="Nazwa marki i opis logo"
+          initialValues={{
+            "brand.name": content.brand.name,
+            "brand.logoAlt": content.brand.logoAlt,
+          }}
+          fields={[
+            { key: "brand.name", label: "Nazwa marki (również zamiast logo, gdy obraz jest pusty)" },
+            { key: "brand.logoAlt", label: "Opis logo dla dostępności" },
+          ]}
+        />
+
+        <SettingsSection
           title="Social media"
           initialValues={{
             "brand.instagramUrl": content.brand.instagramUrl,
@@ -45,6 +57,29 @@ export default async function ContentPage() {
           fields={[
             { key: "brand.instagramUrl", label: "Link do Instagrama" },
             { key: "brand.facebookUrl", label: "Link do Facebooka" },
+          ]}
+        />
+
+        <SettingsSection
+          title="Górny pasek strony"
+          initialValues={flat("header")}
+          fields={[
+            { key: "header.clientAreaLabel", label: "Tekst przycisku konta klienta (puste pole ukrywa przycisk)" },
+            { key: "header.clientAreaHref", label: "Link przycisku konta klienta" },
+            { key: "header.bookingLabel", label: "Tekst przycisku rezerwacji (puste pole ukrywa przycisk)" },
+            { key: "header.bookingHref", label: "Link przycisku rezerwacji" },
+          ]}
+        />
+
+        <SettingsSection
+          title="Menu główne"
+          initialValues={flat("navigation")}
+          fields={[
+            { key: "navigation.homeLabel", label: "Strona główna (puste pole ukrywa link)" },
+            { key: "navigation.aboutLabel", label: "Sekcja O mnie (puste pole ukrywa link)" },
+            { key: "navigation.portfolioLabel", label: "Sekcja Portfolio (puste pole ukrywa link)" },
+            { key: "navigation.studioLabel", label: "Sekcja Studio (puste pole ukrywa link)" },
+            { key: "navigation.contactLabel", label: "Sekcja Kontakt (puste pole ukrywa link)" },
           ]}
         />
 
@@ -60,9 +95,26 @@ export default async function ContentPage() {
         />
 
         <SettingsSection
+          title="Ekran trybu budowy"
+          initialValues={flat("maintenance")}
+          fields={[
+            { key: "maintenance.brandLabel", label: "Nazwa studia u góry" },
+            { key: "maintenance.statusLabel", label: "Mały nadpis" },
+            { key: "maintenance.headingLine1", label: "Nagłówek — linia 1" },
+            { key: "maintenance.headingLine2", label: "Nagłówek — linia 2" },
+            { key: "maintenance.message", label: "Wiadomość", multiline: true },
+            { key: "maintenance.mark", label: "Znak / inicjał na dole (puste pole ukrywa element)" },
+          ]}
+        />
+
+        <SettingsSection
           title="Stopka"
           initialValues={flat("footer")}
-          fields={[{ key: "footer.text", label: "Tekst stopki (po roku praw autorskich)" }]}
+          fields={[
+            { key: "footer.text", label: "Tekst stopki (po roku praw autorskich)" },
+            { key: "footer.privacyLabel", label: "Tekst linku do polityki prywatności (puste pole ukrywa link)" },
+            { key: "footer.privacyHref", label: "Link do polityki prywatności" },
+          ]}
         />
       </div>
     </div>

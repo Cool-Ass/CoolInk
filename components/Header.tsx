@@ -6,15 +6,26 @@ import { useEffect, useState } from "react";
 import MagneticButton from "@/components/MagneticButton";
 import { CORE_NAV_LINKS, type NavLink } from "@/lib/nav";
 import { imageSource } from "@/lib/imageSource";
+import { safeHref } from "@/lib/safeHref";
 
 export default function Header({
   navLinks = CORE_NAV_LINKS,
   bookLabel = "UMÓW WIZYTĘ",
+  bookHref = "/#kalendarz",
+  clientAreaLabel = "KONTO KLIENTA",
+  clientAreaHref = "/app",
   logoUrl = "/images/logo-white.jpg",
+  logoAlt = "CoolInk Tattoo Studio — logo",
+  brandName = "COOLINK",
 }: {
   navLinks?: NavLink[];
   bookLabel?: string;
+  bookHref?: string;
+  clientAreaLabel?: string;
+  clientAreaHref?: string;
   logoUrl?: string;
+  logoAlt?: string;
+  brandName?: string;
 }) {
   const [active, setActive] = useState("home");
   const [scrolled, setScrolled] = useState(false);
@@ -76,7 +87,7 @@ export default function Header({
             scrolled ? "h-11 w-32 md:h-12 md:w-36" : "h-14 w-40 md:h-16 md:w-48"
           }`}
         >
-          {logoSource ? <Image src={logoSource} alt="CoolInk Tattoo Studio — logo" fill priority className="object-contain mix-blend-screen" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">COOLINK</span>}
+          {logoSource ? <Image src={logoSource} alt={logoAlt} fill priority className="object-contain mix-blend-screen" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">{brandName}</span>}
         </Link>
 
         {/* Nav */}
@@ -95,20 +106,20 @@ export default function Header({
 
         {/* Public actions */}
         <div className="hidden items-center gap-3 md:flex">
-          <Link
-            href="/app"
+          {clientAreaLabel && <Link
+            href={safeHref(clientAreaHref, "/app")}
             className="border border-ink-white/30 px-4 py-3 text-[11px] font-medium tracking-[0.08em] text-ink-white transition-colors hover:border-ink-gold hover:text-ink-gold"
           >
-            KONTO KLIENTA
-          </Link>
-          <MagneticButton
-            href="/#kalendarz"
+            {clientAreaLabel}
+          </Link>}
+          {bookLabel && <MagneticButton
+            href={safeHref(bookHref, "/#kalendarz")}
             animateOnScroll={false}
             className="items-center gap-3 border border-ink-gold px-5 py-3 text-[12px] font-medium tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black lg:px-6 lg:text-[13px]"
           >
             {bookLabel}
             <span aria-hidden>→</span>
-          </MagneticButton>
+          </MagneticButton>}
         </div>
 
         {/* Mobile navigation toggle */}
@@ -143,20 +154,20 @@ export default function Header({
                 {item.label}
               </a>
             ))}
-            <Link
-              href="/app"
+            {clientAreaLabel && <Link
+              href={safeHref(clientAreaHref, "/app")}
               onClick={() => setMobileMenuOpen(false)}
               className="border border-ink-white/30 px-5 py-3 text-[12px] tracking-[0.08em] text-ink-white"
             >
-              KONTO KLIENTA
-            </Link>
-            <Link
-              href="/#kalendarz"
+              {clientAreaLabel}
+            </Link>}
+            {bookLabel && <Link
+              href={safeHref(bookHref, "/#kalendarz")}
               onClick={() => setMobileMenuOpen(false)}
               className="mt-2 border border-ink-gold px-5 py-3 text-[12px] tracking-[0.08em] text-ink-gold"
             >
               {bookLabel}
-            </Link>
+            </Link>}
           </div>
         </nav>
       )}

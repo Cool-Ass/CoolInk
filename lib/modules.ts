@@ -8,6 +8,7 @@ export type ModuleType =
   | "portfolio"
   | "studio"
   | "contact"
+  | "booking"
   | "textSection"
   | "imageText"
   | "spacer"
@@ -56,9 +57,16 @@ export interface HeroModuleData {
   heading2: string;
   body: string;
   primaryBtnLabel: string;
+  primaryBtnHref: string;
   secondaryBtnLabel: string;
+  secondaryBtnHref: string;
   backgroundImage: string;
   portraitImage: string;
+  portraitAlt: string;
+  stampRingText: string;
+  stampLeftText: string;
+  stampCenterText: string;
+  stampRightText: string;
 }
 
 export interface AboutModuleData {
@@ -72,6 +80,10 @@ export interface AboutModuleData {
   detailImage1: string;
   detailImage2: string;
   detailImage3: string;
+  mainImageAlt: string;
+  detailImage1Alt: string;
+  detailImage2Alt: string;
+  detailImage3Alt: string;
 }
 
 export interface StatsModuleData {
@@ -92,7 +104,10 @@ export interface PortfolioModuleData {
   heading2: string;
   body: string;
   primaryBtnLabel: string;
+  primaryBtnHref: string;
   secondaryBtnLabel: string;
+  secondaryBtnHref: string;
+  emptyMessage: string;
   selectionMode: "all" | "selected";
   selectedIds: string[];
 }
@@ -103,11 +118,16 @@ export interface StudioModuleData {
   heading2: string;
   body: string;
   primaryBtnLabel: string;
+  primaryBtnHref: string;
   secondaryBtnLabel: string;
+  secondaryBtnHref: string;
   image: string;
+  imageAlt: string;
   ctaTitle1: string;
   ctaTitle2: string;
   ctaMessage: string;
+  ctaButtonLabel: string;
+  ctaButtonHref: string;
 }
 
 export interface ContactModuleData {
@@ -119,6 +139,43 @@ export interface ContactModuleData {
   phone: string;
   email: string;
   hours: string;
+  contactSource: "global" | "module";
+  addressLabel: string;
+  phoneLabel: string;
+  emailLabel: string;
+  hoursLabel: string;
+  formTitle: string;
+  formDescription: string;
+  formNameLabel: string;
+  formNamePlaceholder: string;
+  formEmailLabel: string;
+  formEmailPlaceholder: string;
+  formSubjectLabel: string;
+  formSubjectPlaceholder: string;
+  formMessageLabel: string;
+  formMessagePlaceholder: string;
+  formSubmitLabel: string;
+  formSendingLabel: string;
+  formSuccessMessage: string;
+}
+
+export interface BookingModuleData {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  calendarLabel: string;
+  legend: string;
+  freeLabel: string;
+  unavailableLabel: string;
+  unmarkedLabel: string;
+  unavailableMessage: string;
+  partiallyBookedMessage: string;
+  addToProjectLabel: string;
+  newVisitLabel: string;
+  proposeButtonLabel: string;
+  bookingButtonLabel: string;
+  eventFallbackLabel: string;
+  promotionFallbackLabel: string;
 }
 
 export interface TextSectionModuleData {
@@ -131,6 +188,8 @@ export interface TextSectionModuleData {
 
 export interface ImageTextModuleData {
   image: string;
+  imageAlt: string;
+  emptyMessage: string;
   heading1: string;
   heading2: string;
   body: string;
@@ -174,6 +233,8 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? StudioModuleData
   : T extends "contact"
   ? ContactModuleData
+  : T extends "booking"
+  ? BookingModuleData
   : T extends "textSection"
   ? TextSectionModuleData
   : T extends "imageText"
@@ -226,6 +287,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   portfolio: "Portfolio / Galeria",
   studio: "Studio",
   contact: "Kontakt",
+  booking: "Kalendarz rezerwacji",
   textSection: "Sekcja tekstowa",
   imageText: "Obraz + tekst",
   spacer: "Odstęp",
@@ -253,6 +315,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   portfolio: "Galeria prac — wszystkie lub wybrane ręcznie.",
   studio: "Zdjęcie i opis studia + baner CTA.",
   contact: "Dane kontaktowe i formularz wiadomości.",
+  booking: "Publiczny kalendarz wolnych terminów z własnymi nagłówkami i komunikatami.",
   textSection: "Prosty blok tekstowy z nagłówkiem.",
   imageText: "Zdjęcie obok tekstu, z opcjonalnym przyciskiem.",
   spacer: "Pusty odstęp między sekcjami.",
@@ -273,7 +336,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
   heading: "widgets", text: "widgets", image: "widgets", button: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets",
-  hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", textSection: "templates", imageText: "templates",
+  hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
 export const MODULE_TYPE_ORDER: ModuleType[] = [
@@ -298,6 +361,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "portfolio",
   "studio",
   "contact",
+  "booking",
   "textSection",
   "imageText",
 ];
@@ -316,9 +380,16 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         heading2: "NASZE RZEMIOSŁO.",
         body: "Tworzymy unikalne tatuaże w najwyższej jakości.\nIndywidualne projekty. Realizm. Detal.\nSztuka, która zostaje na zawsze.",
         primaryBtnLabel: "UMÓW WIZYTĘ",
+        primaryBtnHref: "#kalendarz",
         secondaryBtnLabel: "OBEJRZYJ SHOWREEL",
+        secondaryBtnHref: "#portfolio",
         backgroundImage: "/images/texture-bg.jpg",
         portraitImage: "/images/portrait.jpg",
+        portraitAlt: "Portret artysty tatuażu CoolInk",
+        stampRingText: "COOLINK · TATTOO STUDIO ·",
+        stampLeftText: "20",
+        stampCenterText: "GT",
+        stampRightText: "21",
       } satisfies HeroModuleData;
     case "about":
       return {
@@ -332,6 +403,10 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         detailImage1: "/images/crops/about-gun.jpg",
         detailImage2: "/images/crops/about-back.jpg",
         detailImage3: "/images/crops/about-process.jpg",
+        mainImageAlt: "Szczegółowa realistyczna praca tatuażu",
+        detailImage1Alt: "Maszynka do tatuażu w dłoni artysty",
+        detailImage2Alt: "Precyzyjny tatuaż dotwork na plecach",
+        detailImage3Alt: "Zbliżenie na proces tatuowania",
       } satisfies AboutModuleData;
     case "stats":
       return { items: [{ value: "5+", label: "LAT DOŚWIADCZENIA" }, { value: "1000+", label: "ZADOWOLONYCH KLIENTÓW" }, { value: "100%", label: "ZAANGAŻOWANIA" }, { value: "1/1", label: "INDYWIDUALNE PROJEKTY" }] } satisfies StatsModuleData;
@@ -350,7 +425,10 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         heading2: "PRACE.",
         body: "Każdy projekt to historia.\nRealizm. Detal. Charakter.\nTatuaże, które mówią więcej niż słowa.",
         primaryBtnLabel: "ZOBACZ PORTFOLIO",
+        primaryBtnHref: "#portfolio",
         secondaryBtnLabel: "OBEJRZYJ REEL",
+        secondaryBtnHref: "#portfolio",
+        emptyMessage: "Portfolio pojawi się wkrótce.",
         selectionMode: "all",
         selectedIds: [],
       } satisfies PortfolioModuleData;
@@ -361,11 +439,16 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         heading2: "TATTOO STUDIO.",
         body: "Miejsce stworzone z pasji do tatuażu.\nProfesjonalizm, higiena i indywidualne podejście\nto dla nas standard.\nDbamy o każdy detal, abyś czuł się komfortowo\nod pierwszej konsultacji, aż po finalny efekt.",
         primaryBtnLabel: "ODWIEDŹ STUDIO",
+        primaryBtnHref: "#contact",
         secondaryBtnLabel: "ZOBACZ WNĘTRZE",
+        secondaryBtnHref: "#studio",
         image: "/images/crops/studio-room.jpg",
+        imageAlt: "Wnętrze studia CoolInk z fotelem do tatuażu",
         ctaTitle1: "MASZ POMYSŁ?",
         ctaTitle2: "ZRÓBMY TO NAPRAWDĘ.",
         ctaMessage: "Podziel się swoją wizją, a zaprojektujemy coś stworzonego specjalnie dla Ciebie.",
+        ctaButtonLabel: "UMÓW WIZYTĘ",
+        ctaButtonHref: "#kalendarz",
       } satisfies StudioModuleData;
     case "contact":
       return {
@@ -377,7 +460,44 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         phone: "+48 530 178 346",
         email: "kontakt@coolinktattoo.pl",
         hours: "Wt–Sob: 11:00 – 18:00",
+        contactSource: "global",
+        addressLabel: "ADRES",
+        phoneLabel: "TELEFON",
+        emailLabel: "EMAIL",
+        hoursLabel: "GODZINY",
+        formTitle: "NAPISZ WIADOMOŚĆ",
+        formDescription: "Odpowiadamy zwykle w ciągu 24 godzin.",
+        formNameLabel: "IMIĘ I NAZWISKO",
+        formNamePlaceholder: "Jan Kowalski",
+        formEmailLabel: "EMAIL",
+        formEmailPlaceholder: "jan@email.pl",
+        formSubjectLabel: "TEMAT",
+        formSubjectPlaceholder: "Realizm, rękaw, cover-up...",
+        formMessageLabel: "WIADOMOŚĆ",
+        formMessagePlaceholder: "Opisz swój pomysł na tatuaż...",
+        formSubmitLabel: "WYŚLIJ WIADOMOŚĆ",
+        formSendingLabel: "WYSYŁANIE…",
+        formSuccessMessage: "Dziękujemy — wiadomość została wysłana. Odpowiemy możliwie szybko.",
       } satisfies ContactModuleData;
+    case "booking":
+      return {
+        eyebrow: "UMÓW WIZYTĘ",
+        heading: "Sprawdź wolne terminy.",
+        body: "Wybierz zielony termin. Po zalogowaniu wrócimy dokładnie do wybranej daty, aby dokończyć prośbę o wizytę.",
+        calendarLabel: "KALENDARZ DOSTĘPNOŚCI",
+        legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Czerwony — niedostępny.",
+        freeLabel: "WOLNY",
+        unavailableLabel: "NIEDOSTĘPNY",
+        unmarkedLabel: "BRAK OZNACZENIA",
+        unavailableMessage: "Ten dzień nie został udostępniony jako wolny termin.",
+        partiallyBookedMessage: "Ten wolny termin został już częściowo wykorzystany. Wybierz inny dzień albo napisz do studia.",
+        addToProjectLabel: "DODAJ DO ISTNIEJĄCEGO PROJEKTU (OPCJONALNIE)",
+        newVisitLabel: "Nowa wizyta",
+        proposeButtonLabel: "ZAPROPONUJ WIZYTĘ",
+        bookingButtonLabel: "UMÓW WIZYTĘ",
+        eventFallbackLabel: "EVENT",
+        promotionFallbackLabel: "PROMO",
+      } satisfies BookingModuleData;
     case "textSection":
       return {
         eyebrow: "",
@@ -389,6 +509,8 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "imageText":
       return {
         image: "",
+        imageAlt: "",
+        emptyMessage: "Brak wybranego obrazu",
         heading1: "NOWA SEKCJA",
         heading2: "",
         body: "Wpisz tutaj treść tej sekcji.",
@@ -464,6 +586,7 @@ export function defaultHomepageModules(): Module[] {
     ] } },
     { id: generateModuleId(), type: "callout", hidden: false, data: { eyebrow: "GOTOWY NA PIERWSZY KROK?", title: "Sprawdź realnie dostępne terminy", body: "Zamiast czekać na odpowiedź w wiadomościach, wybierz termin i śledź cały proces w jednym miejscu.", buttonLabel: "ZOBACZ WOLNE TERMINY", href: "#kalendarz", style: "outline" } },
     { id: generateModuleId(), type: "contact", hidden: false, data: defaultModuleData("contact") },
+    { id: generateModuleId(), type: "booking", hidden: false, data: defaultModuleData("booking") },
   ];
 }
 

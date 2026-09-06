@@ -3,15 +3,24 @@ import Link from "next/link";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
 import { CORE_NAV_LINKS, type NavLink } from "@/lib/nav";
 import { imageSource } from "@/lib/imageSource";
+import { safeHref } from "@/lib/safeHref";
 
 export default function Footer({
   navLinks = CORE_NAV_LINKS,
   text = "CoolInk Tattoo Studio. Wszelkie prawa zastrzeżone.",
   logoUrl = "/images/logo-white.jpg",
+  logoAlt = "CoolInk Tattoo Studio — logo",
+  brandName = "COOLINK",
+  privacyLabel = "POLITYKA PRYWATNOŚCI",
+  privacyHref = "/polityka-prywatnosci",
 }: {
   navLinks?: NavLink[];
   text?: string;
   logoUrl?: string;
+  logoAlt?: string;
+  brandName?: string;
+  privacyLabel?: string;
+  privacyHref?: string;
 }) {
   const logoSource = imageSource(logoUrl);
   return (
@@ -20,7 +29,7 @@ export default function Footer({
 
       <div className="relative mx-auto flex max-w-[1536px] flex-col gap-8 px-6 py-12 md:flex-row md:items-center md:justify-between md:px-10 lg:px-16">
         <Link href="/#home" className="relative h-12 w-36 shrink-0">
-          {logoSource ? <Image src={logoSource} alt="CoolInk Tattoo Studio — logo" fill className="object-contain mix-blend-screen opacity-90" sizes="144px" /> : <span className="flex h-full items-center font-display text-lg tracking-[0.08em] text-ink-white">COOLINK</span>}
+          {logoSource ? <Image src={logoSource} alt={logoAlt} fill className="object-contain mix-blend-screen opacity-90" sizes="144px" /> : <span className="flex h-full items-center font-display text-lg tracking-[0.08em] text-ink-white">{brandName}</span>}
         </Link>
 
         <nav className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[12px] tracking-[0.1em] text-ink-grey">
@@ -38,7 +47,7 @@ export default function Footer({
         <p className="text-[12px] tracking-[0.05em] text-ink-grey/70">
           © {new Date().getFullYear()} {text}
         </p>
-        <Link href="/polityka-prywatnosci" className="text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">POLITYKA PRYWATNOŚCI</Link>
+        {privacyLabel && <Link href={safeHref(privacyHref, "/polityka-prywatnosci")} className="text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">{privacyLabel}</Link>}
       </div>
     </footer>
   );

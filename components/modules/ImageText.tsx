@@ -8,6 +8,7 @@ import { imageSource } from "@/lib/imageSource";
 export default function ImageText({ data }: { data: ImageTextModuleData }) {
   const reversed = data.imagePosition === "right";
   const source = imageSource(data.image);
+  const showImage = Boolean(source || data.emptyMessage);
 
   return (
     <section className="relative overflow-hidden bg-ink-black py-20 md:py-28">
@@ -22,7 +23,7 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
         }}
       />
       <div className="relative mx-auto max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-10">
+        <div className={`grid items-center gap-14 lg:gap-10 ${showImage ? "lg:grid-cols-2" : ""}`}>
           <div className={`reveal-up max-w-xl ${reversed ? "lg:order-2" : ""}`}>
             <h2 className="headline-texture text-[11vw] leading-[0.9] tracking-tight sm:text-[7vw] md:text-[4.5vw] lg:text-[3.2vw]">
               <span className="block">{data.heading1}</span>
@@ -47,7 +48,7 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
             )}
           </div>
 
-          <div
+          {showImage && <div
             className={`reveal-up relative h-[300px] w-full overflow-hidden bg-ink-charcoal md:h-[440px] ${
               reversed ? "lg:order-1" : ""
             }`}
@@ -56,7 +57,7 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
               <Parallax speed={0.14} className="absolute inset-x-0 -top-[10%] h-[120%]">
                 <Image
                   src={source}
-                  alt={data.heading1 || ""}
+                  alt={data.imageAlt}
                   fill
                   className="object-cover"
                   sizes="(min-width: 1024px) 45vw, 90vw"
@@ -64,10 +65,10 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
               </Parallax>
             ) : (
               <div className="flex h-full items-center justify-center text-[13px] text-ink-grey">
-                Brak wybranego obrazu
+                {data.emptyMessage}
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </section>

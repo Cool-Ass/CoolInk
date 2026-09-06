@@ -82,10 +82,10 @@ utraty jej zawartości (można ją opublikować ponownie w każdej chwili). Stan
 
 ### Treści globalne vs treści strony (`lib/content.ts` vs `Page.modules`)
 
-- **Globalne** (`SiteSetting`, edytowane w `/admin/content`): logo, linki do social media,
-  dane kontaktowe używane jako domyślne, tekst stopki. Zmiana logo tutaj aktualizuje je
-  wszędzie — nagłówek, stopkę, panel logowania i sidebar administracyjny — bo wszystkie
-  czytają tę samą wartość.
+- **Globalne** (`SiteSetting`, edytowane w `/admin/content`): marka i opis logo, etykiety
+  menu, przyciski nagłówka, linki do social media, dane kontaktowe, tekst stopki oraz ekran
+  trybu budowy. Zmiana logo tutaj aktualizuje je wszędzie — nagłówek, stopkę, panel logowania
+  i sidebar administracyjny — bo wszystkie czytają tę samą wartość.
 - **Treść konkretnej strony** (`Page.modules`): nagłówek Hero na stronie głównej, tekst modułu
   „O mnie" itd. — należy tylko do tej jednej strony i edytuje się ją bezpośrednio w edytorze
   wizualnym danej strony.
@@ -107,7 +107,13 @@ do edytora modułowego → dodaj moduły (Hero, Obraz + tekst, Galeria, CTA…) 
 jest dostępna pod `/twoj-adres-url` bez pisania jakiegokolwiek kodu.
 
 **Edytuj stronę główną**: Strony → „Strona główna" (przypięta na górze listy) → ten sam
-edytor modułowy co dla każdej innej strony.
+edytor modułowy co dla każdej innej strony. W modułach można zmienić wszystkie teksty,
+przyciski, linki, zdjęcia i ich opisy, komunikaty formularza kontaktowego oraz teksty
+kalendarza rezerwacji. Moduły można ukrywać, usuwać, duplikować i zmieniać ich kolejność.
+
+**Edytuj nagłówek, menu, stopkę i ekran budowy**: Treści globalne → odpowiednia karta →
+zmień tekst lub adres linku → „Zapisz treści". Pusta etykieta opcjonalnego elementu ukrywa
+go na stronie publicznej.
 
 **Tryb budowy / maintenance**: Strony → „Widoczność strony" → „Włącz tryb budowy".
 Odwiedzający zobaczą ekran „Zapraszam wkrótce", ale zalogowany administrator nadal może

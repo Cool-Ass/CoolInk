@@ -37,13 +37,13 @@ export default function CTABar({
           </p>
         </div>
 
-        <MagneticButton
+        {buttonLabel && <MagneticButton
           href={href}
           className="inline-flex shrink-0 items-center justify-center gap-3 border border-ink-gold px-6 py-3.5 text-[13px] font-medium tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black"
         >
           {buttonLabel}
           <span aria-hidden>→</span>
-        </MagneticButton>
+        </MagneticButton>}
       </div>
     </div>
   );

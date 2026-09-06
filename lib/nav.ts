@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import type { Page, NavItem } from "@prisma/client";
 import { safeHref } from "./safeHref";
+import { DEFAULT_CONTENT, getSiteContent, type SiteContent } from "./content";
 
 export interface NavLink {
   id: string;
@@ -12,20 +13,25 @@ export interface NavLink {
 
 // The site's built-in homepage sections. Prefixed with "/" so the links
 // still work correctly when the visitor is on a CMS subpage like /o-nas.
-export const CORE_NAV_LINKS: NavLink[] = [
-  { id: "home", label: "STRONA GŁÓWNA", href: "/#home", isAnchor: true },
-  { id: "artists", label: "O MNIE", href: "/#artists", isAnchor: true },
-  { id: "portfolio", label: "PORTFOLIO", href: "/#portfolio", isAnchor: true },
-  { id: "studio", label: "STUDIO", href: "/#studio", isAnchor: true },
-  { id: "contact", label: "KONTAKT", href: "/#contact", isAnchor: true },
-];
+function coreNavLinks(content: SiteContent["navigation"]): NavLink[] {
+  return [
+    { id: "home", label: content.homeLabel, href: "/#home", isAnchor: true },
+    { id: "artists", label: content.aboutLabel, href: "/#artists", isAnchor: true },
+    { id: "portfolio", label: content.portfolioLabel, href: "/#portfolio", isAnchor: true },
+    { id: "studio", label: content.studioLabel, href: "/#studio", isAnchor: true },
+    { id: "contact", label: content.contactLabel, href: "/#contact", isAnchor: true },
+  ].filter((item) => item.label.trim());
+}
+
+export const CORE_NAV_LINKS: NavLink[] = coreNavLinks(DEFAULT_CONTENT.navigation);
 
 /**
  * Builds the public nav: the five built-in homepage sections, plus any
  * published CMS page with "show in navigation" on, plus any custom links
  * added under /admin/navigation — all sorted for display.
  */
-export async function getPublicNavLinks(): Promise<NavLink[]> {
+export async function getPublicNavLinks(navigation?: SiteContent["navigation"]): Promise<NavLink[]> {
+  const core = coreNavLinks(navigation ?? (await getSiteContent()).navigation);
   const [pages, custom] = await Promise.all([
     prisma.page.findMany({
       where: { status: "published", showInNav: true, isHomepage: false },
@@ -47,5 +53,5 @@ export async function getPublicNavLinks(): Promise<NavLink[]> {
     href: safeHref(n.href, ""),
   })).filter((item) => Boolean(item.href));
 
-  return [...CORE_NAV_LINKS, ...pageLinks, ...customLinks];
+  return [...core, ...pageLinks, ...customLinks];
 }

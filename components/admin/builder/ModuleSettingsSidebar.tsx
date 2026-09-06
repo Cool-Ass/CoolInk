@@ -55,10 +55,21 @@ function renderFields(
           <TextField label="Nagłówek — linia 2" value={d.heading2} onChange={(v) => onChange({ ...d, heading2: v })} />
           <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={4} />
           <TextField label="Etykieta głównego przycisku" value={d.primaryBtnLabel} onChange={(v) => onChange({ ...d, primaryBtnLabel: v })} />
+          <TextField label="Link głównego przycisku" value={d.primaryBtnHref} onChange={(v) => onChange({ ...d, primaryBtnHref: v })} placeholder="#kalendarz lub /kontakt" />
           <TextField label="Etykieta przycisku wideo" value={d.secondaryBtnLabel} onChange={(v) => onChange({ ...d, secondaryBtnLabel: v })} />
+          <TextField label="Link przycisku wideo" value={d.secondaryBtnHref} onChange={(v) => onChange({ ...d, secondaryBtnHref: v })} placeholder="Link do filmu lub sekcji" />
           <FieldGroup title="ZDJĘCIA HERO">
             <ImageUploadField label="Tekstura / zdjęcie tła" value={d.backgroundImage} onChange={(v) => onChange({ ...d, backgroundImage: v })} />
             <ImageUploadField label="Portret po prawej" value={d.portraitImage} onChange={(v) => onChange({ ...d, portraitImage: v })} />
+            <TextField label="Opis portretu dla dostępności" value={d.portraitAlt} onChange={(v) => onChange({ ...d, portraitAlt: v })} />
+          </FieldGroup>
+          <FieldGroup title="OKRĄGŁA PIECZĘĆ (PUSTE POLA UKRYWAJĄ CAŁOŚĆ)">
+            <TextField label="Tekst na okręgu" value={d.stampRingText} onChange={(v) => onChange({ ...d, stampRingText: v })} />
+            <div className="grid grid-cols-3 gap-2">
+              <TextField label="Lewy tekst" value={d.stampLeftText} onChange={(v) => onChange({ ...d, stampLeftText: v })} />
+              <TextField label="Środek" value={d.stampCenterText} onChange={(v) => onChange({ ...d, stampCenterText: v })} />
+              <TextField label="Prawy tekst" value={d.stampRightText} onChange={(v) => onChange({ ...d, stampRightText: v })} />
+            </div>
           </FieldGroup>
         </>
       );
@@ -75,9 +86,13 @@ function renderFields(
           <TextField label="Podpis — rola" value={d.signatureRole} onChange={(v) => onChange({ ...d, signatureRole: v })} />
           <FieldGroup title="KOLAŻ ZDJĘĆ">
             <ImageUploadField label="Duże zdjęcie" value={d.mainImage} onChange={(v) => onChange({ ...d, mainImage: v })} />
+            <TextField label="Opis dużego zdjęcia" value={d.mainImageAlt} onChange={(v) => onChange({ ...d, mainImageAlt: v })} />
             <ImageUploadField label="Małe zdjęcie 1" value={d.detailImage1} onChange={(v) => onChange({ ...d, detailImage1: v })} />
+            <TextField label="Opis małego zdjęcia 1" value={d.detailImage1Alt} onChange={(v) => onChange({ ...d, detailImage1Alt: v })} />
             <ImageUploadField label="Małe zdjęcie 2" value={d.detailImage2} onChange={(v) => onChange({ ...d, detailImage2: v })} />
+            <TextField label="Opis małego zdjęcia 2" value={d.detailImage2Alt} onChange={(v) => onChange({ ...d, detailImage2Alt: v })} />
             <ImageUploadField label="Małe zdjęcie 3" value={d.detailImage3} onChange={(v) => onChange({ ...d, detailImage3: v })} />
+            <TextField label="Opis małego zdjęcia 3" value={d.detailImage3Alt} onChange={(v) => onChange({ ...d, detailImage3Alt: v })} />
           </FieldGroup>
         </>
       );
@@ -109,7 +124,10 @@ function renderFields(
           <TextField label="Nagłówek — linia 2" value={d.heading2} onChange={(v) => onChange({ ...d, heading2: v })} />
           <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={3} />
           <TextField label="Etykieta głównego przycisku" value={d.primaryBtnLabel} onChange={(v) => onChange({ ...d, primaryBtnLabel: v })} />
+          <TextField label="Link głównego przycisku" value={d.primaryBtnHref} onChange={(v) => onChange({ ...d, primaryBtnHref: v })} />
           <TextField label="Etykieta przycisku wideo" value={d.secondaryBtnLabel} onChange={(v) => onChange({ ...d, secondaryBtnLabel: v })} />
+          <TextField label="Link przycisku wideo" value={d.secondaryBtnHref} onChange={(v) => onChange({ ...d, secondaryBtnHref: v })} />
+          <TextField label="Komunikat, gdy portfolio jest puste" value={d.emptyMessage} onChange={(v) => onChange({ ...d, emptyMessage: v })} />
           <SelectField
             label="Wybór zdjęć"
             value={d.selectionMode}
@@ -162,16 +180,21 @@ function renderFields(
       return (
         <>
           <ImageUploadField label="Zdjęcie studia" value={d.image} onChange={(v) => onChange({ ...d, image: v })} />
+          <TextField label="Opis zdjęcia dla dostępności" value={d.imageAlt} onChange={(v) => onChange({ ...d, imageAlt: v })} />
           <TextField label="Nadpis (eyebrow)" value={d.eyebrow} onChange={(v) => onChange({ ...d, eyebrow: v })} />
           <TextField label="Nagłówek — linia 1" value={d.heading1} onChange={(v) => onChange({ ...d, heading1: v })} />
           <TextField label="Nagłówek — linia 2" value={d.heading2} onChange={(v) => onChange({ ...d, heading2: v })} />
           <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={4} />
           <TextField label="Etykieta głównego przycisku" value={d.primaryBtnLabel} onChange={(v) => onChange({ ...d, primaryBtnLabel: v })} />
+          <TextField label="Link głównego przycisku" value={d.primaryBtnHref} onChange={(v) => onChange({ ...d, primaryBtnHref: v })} />
           <TextField label="Etykieta przycisku wideo" value={d.secondaryBtnLabel} onChange={(v) => onChange({ ...d, secondaryBtnLabel: v })} />
+          <TextField label="Link przycisku wideo" value={d.secondaryBtnHref} onChange={(v) => onChange({ ...d, secondaryBtnHref: v })} />
           <FieldGroup title="BANER CTA (na dole sekcji)">
             <TextField label="Tytuł — linia 1" value={d.ctaTitle1} onChange={(v) => onChange({ ...d, ctaTitle1: v })} />
             <TextField label="Tytuł — linia 2" value={d.ctaTitle2} onChange={(v) => onChange({ ...d, ctaTitle2: v })} />
             <TextareaField label="Wiadomość" value={d.ctaMessage} onChange={(v) => onChange({ ...d, ctaMessage: v })} rows={2} />
+            <TextField label="Etykieta przycisku" value={d.ctaButtonLabel} onChange={(v) => onChange({ ...d, ctaButtonLabel: v })} />
+            <TextField label="Link przycisku" value={d.ctaButtonHref} onChange={(v) => onChange({ ...d, ctaButtonHref: v })} />
           </FieldGroup>
         </>
       );
@@ -184,12 +207,59 @@ function renderFields(
           <TextField label="Nagłówek — linia 1" value={d.heading1} onChange={(v) => onChange({ ...d, heading1: v })} />
           <TextField label="Nagłówek — linia 2" value={d.heading2} onChange={(v) => onChange({ ...d, heading2: v })} />
           <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={3} />
-          <TextField label="Adres" value={d.address} onChange={(v) => onChange({ ...d, address: v })} />
-          <TextField label="Telefon" value={d.phone} onChange={(v) => onChange({ ...d, phone: v })} />
-          <TextField label="Email" value={d.email} onChange={(v) => onChange({ ...d, email: v })} />
-          <TextField label="Godziny otwarcia" value={d.hours} onChange={(v) => onChange({ ...d, hours: v })} />
+          <FieldGroup title="DANE KONTAKTOWE">
+            <SelectField label="Źródło danych" value={d.contactSource} onChange={(v) => onChange({ ...d, contactSource: v })} options={[{ value: "global", label: "Treści globalne" }, { value: "module", label: "Tylko ta sekcja" }]} />
+            {d.contactSource === "global" ? <p className="text-[11px] leading-relaxed text-ink-grey">Adres, telefon, e-mail i godziny zmienisz w Treści globalne. Etykiety poniżej nadal należą do tej sekcji.</p> : <>
+              <TextField label="Adres" value={d.address} onChange={(v) => onChange({ ...d, address: v })} />
+              <TextField label="Telefon" value={d.phone} onChange={(v) => onChange({ ...d, phone: v })} />
+              <TextField label="Email" value={d.email} onChange={(v) => onChange({ ...d, email: v })} />
+              <TextField label="Godziny otwarcia" value={d.hours} onChange={(v) => onChange({ ...d, hours: v })} />
+            </>}
+            <TextField label="Etykieta adresu" value={d.addressLabel} onChange={(v) => onChange({ ...d, addressLabel: v })} />
+            <TextField label="Etykieta telefonu" value={d.phoneLabel} onChange={(v) => onChange({ ...d, phoneLabel: v })} />
+            <TextField label="Etykieta e-maila" value={d.emailLabel} onChange={(v) => onChange({ ...d, emailLabel: v })} />
+            <TextField label="Etykieta godzin" value={d.hoursLabel} onChange={(v) => onChange({ ...d, hoursLabel: v })} />
+          </FieldGroup>
+          <FieldGroup title="FORMULARZ WIADOMOŚCI">
+            <TextField label="Tytuł formularza" value={d.formTitle} onChange={(v) => onChange({ ...d, formTitle: v })} />
+            <TextareaField label="Opis formularza" value={d.formDescription} onChange={(v) => onChange({ ...d, formDescription: v })} rows={2} />
+            <TextField label="Etykieta pola imienia" value={d.formNameLabel} onChange={(v) => onChange({ ...d, formNameLabel: v })} />
+            <TextField label="Przykład w polu imienia" value={d.formNamePlaceholder} onChange={(v) => onChange({ ...d, formNamePlaceholder: v })} />
+            <TextField label="Etykieta pola e-mail" value={d.formEmailLabel} onChange={(v) => onChange({ ...d, formEmailLabel: v })} />
+            <TextField label="Przykład w polu e-mail" value={d.formEmailPlaceholder} onChange={(v) => onChange({ ...d, formEmailPlaceholder: v })} />
+            <TextField label="Etykieta tematu" value={d.formSubjectLabel} onChange={(v) => onChange({ ...d, formSubjectLabel: v })} />
+            <TextField label="Przykład tematu" value={d.formSubjectPlaceholder} onChange={(v) => onChange({ ...d, formSubjectPlaceholder: v })} />
+            <TextField label="Etykieta wiadomości" value={d.formMessageLabel} onChange={(v) => onChange({ ...d, formMessageLabel: v })} />
+            <TextField label="Przykład wiadomości" value={d.formMessagePlaceholder} onChange={(v) => onChange({ ...d, formMessagePlaceholder: v })} />
+            <TextField label="Tekst przycisku wysyłania" value={d.formSubmitLabel} onChange={(v) => onChange({ ...d, formSubmitLabel: v })} />
+            <TextField label="Tekst podczas wysyłania" value={d.formSendingLabel} onChange={(v) => onChange({ ...d, formSendingLabel: v })} />
+            <TextareaField label="Komunikat po wysłaniu" value={d.formSuccessMessage} onChange={(v) => onChange({ ...d, formSuccessMessage: v })} rows={2} />
+          </FieldGroup>
         </>
       );
+    }
+    case "booking": {
+      const d = withDefaults("booking", module.data);
+      return <>
+        <TextField label="Nadpis" value={d.eyebrow} onChange={(v) => onChange({ ...d, eyebrow: v })} />
+        <TextField label="Nagłówek" value={d.heading} onChange={(v) => onChange({ ...d, heading: v })} />
+        <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={3} />
+        <FieldGroup title="TEKSTY KALENDARZA">
+          <TextField label="Nazwa kalendarza" value={d.calendarLabel} onChange={(v) => onChange({ ...d, calendarLabel: v })} />
+          <TextareaField label="Objaśnienie kolorów" value={d.legend} onChange={(v) => onChange({ ...d, legend: v })} rows={3} />
+          <TextField label="Etykieta wolnego terminu" value={d.freeLabel} onChange={(v) => onChange({ ...d, freeLabel: v })} />
+          <TextField label="Etykieta niedostępnego dnia" value={d.unavailableLabel} onChange={(v) => onChange({ ...d, unavailableLabel: v })} />
+          <TextField label="Etykieta dnia bez oznaczenia" value={d.unmarkedLabel} onChange={(v) => onChange({ ...d, unmarkedLabel: v })} />
+          <TextareaField label="Komunikat o braku terminu" value={d.unavailableMessage} onChange={(v) => onChange({ ...d, unavailableMessage: v })} rows={2} />
+          <TextareaField label="Komunikat o częściowo zajętym terminie" value={d.partiallyBookedMessage} onChange={(v) => onChange({ ...d, partiallyBookedMessage: v })} rows={3} />
+          <TextField label="Etykieta wyboru projektu" value={d.addToProjectLabel} onChange={(v) => onChange({ ...d, addToProjectLabel: v })} />
+          <TextField label="Opcja nowej wizyty" value={d.newVisitLabel} onChange={(v) => onChange({ ...d, newVisitLabel: v })} />
+          <TextField label="Przycisk propozycji terminu" value={d.proposeButtonLabel} onChange={(v) => onChange({ ...d, proposeButtonLabel: v })} />
+          <TextField label="Przycisk rezerwacji" value={d.bookingButtonLabel} onChange={(v) => onChange({ ...d, bookingButtonLabel: v })} />
+          <TextField label="Domyślna etykieta wydarzenia" value={d.eventFallbackLabel} onChange={(v) => onChange({ ...d, eventFallbackLabel: v })} />
+          <TextField label="Domyślna etykieta promocji" value={d.promotionFallbackLabel} onChange={(v) => onChange({ ...d, promotionFallbackLabel: v })} />
+        </FieldGroup>
+      </>;
     }
     case "textSection": {
       const d = withDefaults("textSection", module.data);
@@ -216,6 +286,8 @@ function renderFields(
       return (
         <>
           <ImageUploadField label="Obraz" value={d.image} onChange={(v) => onChange({ ...d, image: v })} />
+          <TextField label="Opis obrazu dla dostępności" value={d.imageAlt} onChange={(v) => onChange({ ...d, imageAlt: v })} />
+          <TextField label="Komunikat przy braku obrazu" value={d.emptyMessage} onChange={(v) => onChange({ ...d, emptyMessage: v })} />
           <TextField label="Nagłówek — linia 1" value={d.heading1} onChange={(v) => onChange({ ...d, heading1: v })} />
           <TextField label="Nagłówek — linia 2" value={d.heading2} onChange={(v) => onChange({ ...d, heading2: v })} />
           <TextareaField label="Treść" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={5} />

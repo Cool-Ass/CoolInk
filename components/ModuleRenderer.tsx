@@ -7,8 +7,10 @@ import StatsBar from "@/components/StatsBar";
 import CTABar from "@/components/CTABar";
 import Portfolio from "@/components/Portfolio";
 import type { PortfolioWork } from "@/lib/portfolio";
+import type { PublicCalendarData } from "@/lib/publicCalendar";
 import Studio from "@/components/Studio";
 import Contact from "@/components/Contact";
+import BookingSection from "@/components/BookingSection";
 import TextSection from "@/components/modules/TextSection";
 import ImageText from "@/components/modules/ImageText";
 import Spacer from "@/components/modules/Spacer";
@@ -37,6 +39,7 @@ export interface ModuleRendererGlobals {
   instagramUrl?: string;
   facebookUrl?: string;
   contact?: { address: string; phone: string; email: string; hours: string };
+  calendar?: PublicCalendarData;
 }
 
 export interface ModuleRendererProps {
@@ -56,8 +59,10 @@ export interface ModuleRendererProps {
 
 function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false) {
   switch (mod.type) {
-    case "hero":
-      return <Hero content={withDefaults("hero", mod.data)} socials={globals as { instagramUrl: string; facebookUrl: string }} />;
+    case "hero": {
+      const data = withDefaults("hero", mod.data);
+      return <Hero content={{ ...data, primaryBtnHref: safeHref(data.primaryBtnHref), secondaryBtnHref: safeHref(data.secondaryBtnHref) }} socials={globals as { instagramUrl: string; facebookUrl: string }} />;
+    }
     case "about":
       return <About content={withDefaults("about", mod.data)} />;
     case "stats":
@@ -81,12 +86,19 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
         data.selectionMode === "selected"
           ? portfolioWorks.filter((w) => data.selectedIds?.includes(w.id))
           : portfolioWorks;
-      return <Portfolio content={data} works={works} />;
+      return <Portfolio content={{ ...data, primaryBtnHref: safeHref(data.primaryBtnHref), secondaryBtnHref: safeHref(data.secondaryBtnHref) }} works={works} />;
     }
-    case "studio":
-      return <Studio content={withDefaults("studio", mod.data)} />;
-    case "contact":
-      return <Contact content={{ ...withDefaults("contact", mod.data), ...(globals?.contact ?? {}) }} />;
+    case "studio": {
+      const data = withDefaults("studio", mod.data);
+      return <Studio content={{ ...data, primaryBtnHref: safeHref(data.primaryBtnHref), secondaryBtnHref: safeHref(data.secondaryBtnHref), ctaButtonHref: safeHref(data.ctaButtonHref) }} />;
+    }
+    case "contact": {
+      const data = withDefaults("contact", mod.data);
+      const contact = data.contactSource === "global" ? { ...data, ...(globals?.contact ?? {}) } : data;
+      return <Contact content={contact} />;
+    }
+    case "booking":
+      return <BookingSection content={withDefaults("booking", mod.data)} calendar={globals?.calendar} />;
     case "textSection":
       return <TextSection data={withDefaults("textSection", mod.data)} />;
     case "imageText": {
