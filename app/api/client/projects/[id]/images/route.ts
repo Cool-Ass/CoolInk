@@ -6,6 +6,7 @@ import {
   getSupabaseConfig,
 } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToAdmins } from "@/lib/webPush";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -79,6 +80,7 @@ export async function POST(
   const image = await prisma.projectImage.create({
     data: { projectId: project.id, url: objectPath, caption },
   });
+  await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")
     return NextResponse.json({ imageId: image.id }, { status: 201 });
   const message = await prisma.projectMessage.create({

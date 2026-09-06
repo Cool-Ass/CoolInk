@@ -1,13 +1,64 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useState, type CSSProperties } from "react";
+import { useId, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import { IconPreview } from "@/components/admin/builder/IconPicker";
-import { defaultModuleData, withDefaults, type ColumnWidget, type Module } from "@/lib/modules";
+import { defaultModuleData, isColumnWidgetType, MODULE_LABELS, withDefaults, type ColumnWidget, type Module, type ModuleStyle } from "@/lib/modules";
 import { imageSource } from "@/lib/imageSource";
 import { safeHref, safeMapEmbedUrl } from "@/lib/safeHref";
+import { COLUMN_WIDGET_MIME, PALETTE_WIDGET_MIME, readColumnDragPayload } from "@/lib/builderDnd";
+import { parseSafeCssDeclarations } from "@/lib/moduleStyle";
 
-export default function BuilderWidgets({ module, showEmpty = false }: { module: Module; showEmpty?: boolean }) {
+interface BuilderWidgetProps {
+  module: Module;
+  showEmpty?: boolean;
+  editable?: boolean;
+  selectedWidgetId?: string | null;
+  onSelectWidget?: (widgetId: string, columnIndex: number) => void;
+  onDeleteWidget?: (widgetId: string, columnIndex: number) => void;
+  onColumnsChange?: (columns: ColumnWidget[][]) => void;
+}
+
+function widgetStyle(style?: ModuleStyle): CSSProperties | undefined {
+  if (!style) return undefined;
+  const box = (name: "margin" | "padding", value?: ModuleStyle["marginBox"]) => value ? {
+    [`${name}Top`]: value.top,
+    [`${name}Right`]: value.right,
+    [`${name}Bottom`]: value.bottom,
+    [`${name}Left`]: value.left,
+  } : {};
+  return {
+    backgroundColor: style.backgroundColor || undefined,
+    backgroundImage: style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : undefined,
+    backgroundSize: style.backgroundSize || undefined,
+    color: style.color || undefined,
+    borderColor: style.borderColor || undefined,
+    borderWidth: style.borderWidth ? `${style.borderWidth}px` : undefined,
+    borderStyle: style.borderWidth ? "solid" : undefined,
+    minHeight: style.minHeight || undefined,
+    opacity: typeof style.opacity === "number" ? Math.min(1, Math.max(.1, style.opacity / 100)) : undefined,
+    zIndex: style.zIndex,
+    ...(style.fontSize ? { "--builder-font-size": `${style.fontSize}px` } : {}),
+    ...(style.lineHeight ? { "--builder-line-height": String(style.lineHeight) } : {}),
+    ...(typeof style.letterSpacing === "number" && style.letterSpacing !== 0 ? { "--builder-letter-spacing": `${style.letterSpacing}px` } : {}),
+    ...(style.fontWeight ? { "--builder-font-weight": style.fontWeight } : {}),
+    ...(style.fontFamily && style.fontFamily !== "inherit" ? { "--builder-font-family": style.fontFamily === "display" ? "var(--font-anton)" : "var(--font-jost)" } : {}),
+    ...(style.textAlign ? { "--builder-text-align": style.textAlign } : {}),
+    ...(style.textTransform ? { "--builder-text-transform": style.textTransform } : {}),
+    ...(style.color ? { "--builder-text-color": style.color } : {}),
+    ...box("margin", style.marginBox),
+    ...box("padding", style.paddingBox),
+    ...parseSafeCssDeclarations(style.customCss),
+  } as CSSProperties;
+}
+
+function hasTypography(style?: ModuleStyle) {
+  return Boolean(style?.fontSize || style?.lineHeight || style?.letterSpacing || style?.fontWeight || (style?.fontFamily && style.fontFamily !== "inherit") || style?.textAlign || style?.textTransform || style?.color);
+}
+
+export default function BuilderWidgets({ module, showEmpty = false, editable = false, selectedWidgetId, onSelectWidget, onDeleteWidget, onColumnsChange }: BuilderWidgetProps) {
+  const widgetIdBase = useId().replace(/:/g, "");
+  const widgetIdCounter = useRef(0);
   switch (module.type) {
     case "heading": {
       const d = withDefaults("heading", module.data);
@@ -50,11 +101,48 @@ export default function BuilderWidgets({ module, showEmpty = false }: { module: 
     }
     case "columns": {
       const d = withDefaults("columns", module.data);
-      const columnCount = d.layout === "three" ? 3 : 2;
+      const columnCount = d.layout === "four" ? 4 : d.layout === "three" ? 3 : d.layout === "two" ? 2 : 1;
       const columns = Array.from({ length: columnCount }, (_, index) => d.columns[index] ?? []);
       const background = d.background === "charcoal" ? "bg-ink-charcoal" : d.background === "gold" ? "bg-ink-gold text-ink-black" : "bg-transparent";
       const padding = d.padding === "sm" ? "py-8" : d.padding === "lg" ? "py-20" : "py-12";
-      return <section className={`${background} px-6 md:px-12 ${padding}`}><div className={`grid grid-cols-1 gap-6 ${d.layout === "three" ? "md:grid-cols-3" : "md:grid-cols-2"}`}>{columns.map((widgets, columnIndex) => <div key={columnIndex} className="min-w-0 border-l border-ink-white/10 pl-4 first:border-l-0 first:pl-0">{widgets.length ? widgets.map((widget) => <BuilderWidgets key={widget.id} module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} />) : showEmpty ? <div className="border border-dashed border-ink-white/25 p-6 text-center text-xs text-ink-grey">Dodaj widget do tej kolumny</div> : null}</div>)}</div></section>;
+      const gridTemplate = (d.columnWidths?.length === columnCount ? d.columnWidths : Array(columnCount).fill(100 / columnCount)).map((width) => `${Math.max(5, Number(width) || 0)}fr`).join(" ");
+      const alignment = d.verticalAlign === "center" ? "items-center" : d.verticalAlign === "end" ? "items-end" : d.verticalAlign === "stretch" ? "items-stretch" : "items-start";
+
+      function update(next: ColumnWidget[][]) { onColumnsChange?.(next); }
+      function insertPalette(type: string, columnIndex: number, beforeIndex = columns[columnIndex].length) {
+        if (!isColumnWidgetType(type)) return;
+        const next = columns.map((items) => [...items]);
+        widgetIdCounter.current += 1;
+        const widgetId = `w_${widgetIdBase}_${widgetIdCounter.current}`;
+        next[columnIndex].splice(beforeIndex, 0, { id: widgetId, type, data: defaultModuleData(type) });
+        update(next);
+        onSelectWidget?.(widgetId, columnIndex);
+      }
+      function moveWidget(payload: ReturnType<typeof readColumnDragPayload>, columnIndex: number, beforeIndex: number) {
+        if (!payload || payload.moduleId !== module.id) return;
+        const next = columns.map((items) => [...items]);
+        const sourceIndex = next[payload.columnIndex]?.findIndex((item) => item.id === payload.widgetId) ?? -1;
+        if (sourceIndex < 0) return;
+        const [moved] = next[payload.columnIndex].splice(sourceIndex, 1);
+        const adjustedIndex = payload.columnIndex === columnIndex && sourceIndex < beforeIndex ? beforeIndex - 1 : beforeIndex;
+        next[columnIndex].splice(Math.max(0, adjustedIndex), 0, moved);
+        update(next);
+      }
+      function handleDrop(event: DragEvent, columnIndex: number, beforeIndex: number) {
+        event.preventDefault(); event.stopPropagation();
+        const paletteType = event.dataTransfer.getData(PALETTE_WIDGET_MIME);
+        if (paletteType) return insertPalette(paletteType, columnIndex, beforeIndex);
+        moveWidget(readColumnDragPayload(event.dataTransfer.getData(COLUMN_WIDGET_MIME)), columnIndex, beforeIndex);
+      }
+
+      return <section className={`${background} px-4 md:px-8 ${padding}`}><div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>{columns.map((widgets, columnIndex) => <div key={columnIndex} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }} onDrop={(event) => handleDrop(event, columnIndex, widgets.length)} className={`min-w-0 ${editable ? "min-h-28 border border-dashed border-ink-gold/30 bg-ink-black/15 p-2" : ""}`}><div className="mb-2 flex items-center justify-between text-[9px] tracking-[.1em] text-ink-gold/70" hidden={!editable}><span>KOLUMNA {columnIndex + 1}</span><span>UPUŚĆ WIDGET</span></div>{widgets.length ? widgets.map((widget, widgetIndex) => {
+        const selected = selectedWidgetId === widget.id;
+        const typography = hasTypography(widget.style);
+        return <div key={widget.id} draggable={editable} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData(COLUMN_WIDGET_MIME, JSON.stringify({ moduleId: module.id, widgetId: widget.id, columnIndex })); event.dataTransfer.effectAllowed = "move"; }} onDragOver={(event) => { if (editable) event.preventDefault(); }} onDrop={(event) => handleDrop(event, columnIndex, widgetIndex)} onClick={(event) => { if (!editable) return; event.stopPropagation(); onSelectWidget?.(widget.id, columnIndex); }} style={widgetStyle(widget.style)} className={`group/widget relative ${typography ? "builder-custom-typography" : ""} ${editable ? `cursor-pointer outline outline-2 outline-offset-[-2px] ${selected ? "outline-ink-gold" : "outline-transparent hover:outline-ink-gold/55"}` : ""} ${widget.style?.cssClass ?? ""}`}>
+          {editable && <div className={`absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-[9px] text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span><button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="border-l border-ink-black/20 px-2 py-1 hover:bg-black/10">×</button></div>}
+          <BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} />
+        </div>;
+      }) : editable ? <div className="flex min-h-24 items-center justify-center p-4 text-center text-[10px] leading-relaxed text-ink-grey">Przeciągnij widget z lewego panelu tutaj</div> : null}</div>)}</div></section>;
     }
     case "faq": {
       const d = withDefaults("faq", module.data);

@@ -24,6 +24,23 @@ model AdminUser {
   updatedAt                 DateTime                   @updatedAt
   googleCalendarConnections GoogleCalendarConnection[]
   inventoryMovements        InventoryMovement[]
+  pushSubscriptions         AdminPushSubscription[]
+}
+
+/// One admin browser/device that opted in to operational notifications.
+/// Subscriptions are stored server-side and can only be managed by that admin.
+model AdminPushSubscription {
+  id          String    @id @default(cuid())
+  adminUserId String
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  endpoint    String    @unique
+  p256dh      String
+  auth        String
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([adminUserId, updatedAt])
 }
 
 /// CMS-authored pages, built from an ordered list of modules (see

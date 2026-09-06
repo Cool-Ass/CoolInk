@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowLeft, FileText, Palette, Settings2 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import BackgroundControls from "@/components/admin/builder/BackgroundControls";
 import IconPicker from "@/components/admin/builder/IconPicker";
 import GalleryEditor from "@/components/admin/builder/GalleryEditor";
 import ColorPicker from "@/components/admin/builder/ColorPicker";
-import { TextField, TextareaField, SelectField, NumberField, FieldGroup } from "@/components/admin/builder/fields";
-import { defaultModuleData, withDefaults, MODULE_LABELS, type ColumnWidget, type ColumnWidgetType, type Module, type ModuleStyle } from "@/lib/modules";
+import { TextField, TextareaField, SelectField, NumberField, FieldGroup, BoxSpacingField, PanelSection } from "@/components/admin/builder/fields";
+import { withDefaults, MODULE_LABELS, type Module, type ModuleStyle } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { imageSource } from "@/lib/imageSource";
 
@@ -21,24 +22,37 @@ interface Props {
 
 export default function ModuleSettingsSidebar({ module, onChange, onStyleChange, onClose, portfolioItems }: Props) {
   const [tab, setTab] = useState<"content" | "style" | "advanced">("content");
+  const tabs = [
+    { id: "content" as const, label: module.type === "columns" ? "UKŁAD" : "TREŚĆ", icon: FileText },
+    { id: "style" as const, label: "STYL", icon: Palette },
+    { id: "advanced" as const, label: "ZAAWANS.", icon: Settings2 },
+  ];
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3 border-b border-ink-white/10 pb-4">
-        <p className="text-[14px] text-ink-white">{MODULE_LABELS[module.type]}</p>
-        <button
-          onClick={onClose}
-          className="text-[12px] text-ink-grey transition-colors hover:text-ink-white"
-        >
-          Zamknij ✕
-        </button>
+    <div className="flex min-h-full flex-col bg-[#1d1f22]">
+      <div className="flex h-12 items-center border-b border-white/10 px-3">
+        <button onClick={onClose} aria-label="Wróć do elementów" title="Wróć do elementów" className="flex h-8 w-8 items-center justify-center text-white/55 transition hover:text-ink-gold"><ArrowLeft className="h-4 w-4" /></button>
+        <p className="min-w-0 flex-1 truncate pr-8 text-center text-[13px] font-semibold text-white">Edytuj: {MODULE_LABELS[module.type]}</p>
       </div>
 
-      <div className="grid grid-cols-3 border border-ink-white/15 p-1 text-[10px] tracking-[0.08em]">{(["content", "style", "advanced"] as const).map((item) => <button key={item} type="button" onClick={() => setTab(item)} className={`px-2 py-2 transition-colors ${tab === item ? "bg-ink-gold/15 text-ink-gold" : "text-ink-grey hover:text-ink-white"}`}>{item === "content" ? "TREŚĆ" : item === "style" ? "STYL" : "ZAAWANS."}</button>)}</div>
-      {tab === "content" && renderFields(module, onChange, portfolioItems)}
-      {tab === "style" && <BackgroundControls value={module.style} onChange={onStyleChange} />}
-      {tab === "advanced" && <div className="flex flex-col gap-4"><TextField label="Anchor ID (opcjonalnie)" value={module.style?.anchorId ?? ""} onChange={(anchorId) => onStyleChange({ ...module.style, anchorId })} placeholder="np. kontakt" /><TextField label="Klasa CSS (opcjonalnie)" value={module.style?.cssClass ?? ""} onChange={(cssClass) => onStyleChange({ ...module.style, cssClass })} placeholder="np. moja-sekcja" /><TextareaField label="WŁASNE DEKLARACJE CSS" value={module.style?.customCss ?? ""} onChange={(customCss) => onStyleChange({ ...module.style, customCss })} rows={9} placeholder="np. transform: rotate(-1deg); letter-spacing: .02em;" /><p className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-3 py-2 text-[12px] leading-relaxed text-ink-grey">Wpisuj deklaracje jak wewnątrz atrybutu style. Importy, zdalne adresy i kod mogący przejąć stronę są automatycznie blokowane.</p></div>}
+      <div className="grid grid-cols-3 border-b border-white/10">{tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 border-b-2 px-1 text-[8px] transition ${tab === id ? "border-white text-white" : "border-transparent text-white/45 hover:text-white/75"}`}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</div>
+      <div className="flex flex-col gap-3 p-3">
+        {tab === "content" && renderFields(module, onChange, portfolioItems)}
+        {tab === "style" && <BackgroundControls value={module.style} onChange={onStyleChange} />}
+        {tab === "advanced" && <AdvancedControls value={module.style} onChange={onStyleChange} />}
+      </div>
     </div>
   );
+}
+function AdvancedControls({ value, onChange }: { value?: ModuleStyle; onChange: (style: ModuleStyle) => void }) {
+  const style = value ?? {};
+  const set = (patch: Partial<ModuleStyle>) => onChange({ ...style, ...patch });
+  return <div className="flex flex-col">
+    <PanelSection title="Odstępy" defaultOpen><BoxSpacingField label="MARGINES" value={style.marginBox} onChange={(marginBox) => set({ marginBox })} /><BoxSpacingField label="DOPEŁNIENIE" value={style.paddingBox} onChange={(paddingBox) => set({ paddingBox })} /></PanelSection>
+    <PanelSection title="Układ"><SelectField label="SZEROKOŚĆ MODUŁU" value={style.contentWidth ?? "full"} onChange={(contentWidth) => set({ contentWidth })} options={[{ value: "full", label: "Pełna szerokość" }, { value: "wide", label: "Szeroka" }, { value: "normal", label: "Standardowa" }, { value: "narrow", label: "Wąska" }]} /><div className="grid grid-cols-2 gap-2"><NumberField label="MIN. WYSOKOŚĆ" value={style.minHeight ?? 0} min={0} max={1600} onChange={(minHeight) => set({ minHeight })} /><NumberField label="Z-INDEX" value={style.zIndex ?? 0} min={-10} max={999} onChange={(zIndex) => set({ zIndex })} /></div></PanelSection>
+    <PanelSection title="Identyfikacja CSS"><TextField label="IDENTYFIKATOR CSS" value={style.anchorId ?? ""} onChange={(anchorId) => set({ anchorId })} placeholder="np. kontakt" /><TextField label="KLASY CSS" value={style.cssClass ?? ""} onChange={(cssClass) => set({ cssClass })} placeholder="np. moja-sekcja" /></PanelSection>
+    <PanelSection title="Responsywne"><div className="grid gap-2 text-[11px] text-ink-grey">{([['mobile','Ukryj na telefonie'],['tablet','Ukryj na tablecie'],['desktop','Ukryj na komputerze']] as const).map(([key,label]) => <label key={key} className="flex items-center gap-2"><input type="checkbox" checked={Boolean(style.hiddenOn?.[key])} onChange={(event) => set({ hiddenOn: { ...style.hiddenOn, [key]: event.target.checked } })} />{label}</label>)}</div></PanelSection>
+    <PanelSection title="Własny CSS"><TextareaField label="DEKLARACJE CSS" value={style.customCss ?? ""} onChange={(customCss) => set({ customCss })} rows={8} placeholder="np. transform: rotate(-1deg);" /><p className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-2.5 py-2 text-[10px] leading-relaxed text-ink-grey">Skrypty, importy i niebezpieczne deklaracje są blokowane.</p></PanelSection>
+  </div>;
 }
 
 function renderFields(
@@ -221,20 +235,14 @@ function renderFields(
             <TextField label="Etykieta e-maila" value={d.emailLabel} onChange={(v) => onChange({ ...d, emailLabel: v })} />
             <TextField label="Etykieta godzin" value={d.hoursLabel} onChange={(v) => onChange({ ...d, hoursLabel: v })} />
           </FieldGroup>
-          <FieldGroup title="FORMULARZ WIADOMOŚCI">
-            <TextField label="Tytuł formularza" value={d.formTitle} onChange={(v) => onChange({ ...d, formTitle: v })} />
-            <TextareaField label="Opis formularza" value={d.formDescription} onChange={(v) => onChange({ ...d, formDescription: v })} rows={2} />
-            <TextField label="Etykieta pola imienia" value={d.formNameLabel} onChange={(v) => onChange({ ...d, formNameLabel: v })} />
-            <TextField label="Przykład w polu imienia" value={d.formNamePlaceholder} onChange={(v) => onChange({ ...d, formNamePlaceholder: v })} />
-            <TextField label="Etykieta pola e-mail" value={d.formEmailLabel} onChange={(v) => onChange({ ...d, formEmailLabel: v })} />
-            <TextField label="Przykład w polu e-mail" value={d.formEmailPlaceholder} onChange={(v) => onChange({ ...d, formEmailPlaceholder: v })} />
-            <TextField label="Etykieta tematu" value={d.formSubjectLabel} onChange={(v) => onChange({ ...d, formSubjectLabel: v })} />
-            <TextField label="Przykład tematu" value={d.formSubjectPlaceholder} onChange={(v) => onChange({ ...d, formSubjectPlaceholder: v })} />
-            <TextField label="Etykieta wiadomości" value={d.formMessageLabel} onChange={(v) => onChange({ ...d, formMessageLabel: v })} />
-            <TextField label="Przykład wiadomości" value={d.formMessagePlaceholder} onChange={(v) => onChange({ ...d, formMessagePlaceholder: v })} />
-            <TextField label="Tekst przycisku wysyłania" value={d.formSubmitLabel} onChange={(v) => onChange({ ...d, formSubmitLabel: v })} />
-            <TextField label="Tekst podczas wysyłania" value={d.formSendingLabel} onChange={(v) => onChange({ ...d, formSendingLabel: v })} />
-            <TextareaField label="Komunikat po wysłaniu" value={d.formSuccessMessage} onChange={(v) => onChange({ ...d, formSuccessMessage: v })} rows={2} />
+          <FieldGroup title="KALENDARZ REZERWACJI">
+            <TextField label="Nadpis kalendarza" value={d.booking.eyebrow} onChange={(v) => onChange({ ...d, booking: { ...d.booking, eyebrow: v } })} />
+            <TextField label="Nagłówek kalendarza" value={d.booking.heading} onChange={(v) => onChange({ ...d, booking: { ...d.booking, heading: v } })} />
+            <TextareaField label="Opis kalendarza" value={d.booking.body} onChange={(v) => onChange({ ...d, booking: { ...d.booking, body: v } })} rows={2} />
+            <TextField label="Nazwa kalendarza" value={d.booking.calendarLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, calendarLabel: v } })} />
+            <TextareaField label="Objaśnienie kolorów" value={d.booking.legend} onChange={(v) => onChange({ ...d, booking: { ...d.booking, legend: v } })} rows={2} />
+            <TextField label="Tekst przy wolnym terminie" value={d.booking.freeLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, freeLabel: v } })} />
+            <TextField label="Przycisk rezerwacji" value={d.booking.bookingButtonLabel} onChange={(v) => onChange({ ...d, booking: { ...d.booking, bookingButtonLabel: v } })} />
           </FieldGroup>
         </>
       );
@@ -367,23 +375,19 @@ function renderFields(
     }
     case "columns": {
       const d = withDefaults("columns", module.data);
-      const expectedColumns = d.layout === "three" ? 3 : 2;
-      const columns = Array.from({ length: expectedColumns }, (_, i) => d.columns[i] ?? []);
-      const updateColumns = (next: ColumnWidget[][]) => onChange({ ...d, columns: next });
+      const counts = { one: 1, two: 2, three: 3, four: 4 } as const;
       return <>
-        <p className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-3 py-2 text-[12px] leading-relaxed text-ink-grey">Na komputerze zobaczysz kolumny obok siebie; na telefonie automatycznie układają się pionowo.</p>
+        <p className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-3 py-2 text-[10px] leading-relaxed text-ink-grey">Przeciągaj widgety z biblioteki bezpośrednio do kolumn na podglądzie. Kliknij widget w kolumnie, aby edytować jego treść i styl.</p>
         <SelectField label="Liczba kolumn" value={d.layout} onChange={(v) => {
-          const nextCount = v === "three" ? 3 : 2;
+          const nextCount = counts[v];
           const next = Array.from({ length: nextCount }, (_, i) => d.columns[i] ?? []);
-          onChange({ ...d, layout: v, columns: next });
-        }} options={[{ value: "two", label: "2 kolumny" }, { value: "three", label: "3 kolumny" }]} />
+          const evenWidth = Math.round((100 / nextCount) * 100) / 100;
+          onChange({ ...d, layout: v, columns: next, columnWidths: Array(nextCount).fill(evenWidth) });
+        }} options={[{ value: "one", label: "1 kolumna" }, { value: "two", label: "2 kolumny" }, { value: "three", label: "3 kolumny" }, { value: "four", label: "4 kolumny" }]} />
+        <NumberField label="ODSTĘP MIĘDZY KOLUMNAMI (PX)" value={d.gap ?? 24} min={0} max={160} onChange={(gap) => onChange({ ...d, gap })} />
+        <SelectField label="WYRÓWNANIE PIONOWE" value={d.verticalAlign ?? "start"} onChange={(verticalAlign) => onChange({ ...d, verticalAlign })} options={[{ value: "start", label: "Do góry" }, { value: "center", label: "Do środka" }, { value: "end", label: "Do dołu" }, { value: "stretch", label: "Rozciągnij" }]} />
         <SelectField label="Tło całego układu" value={d.background} onChange={(v) => onChange({ ...d, background: v })} options={[{ value: "transparent", label: "Bez tła" }, { value: "charcoal", label: "Ciemne" }, { value: "gold", label: "Złote" }]} />
         <SelectField label="Odstęp góra / dół" value={d.padding} onChange={(v) => onChange({ ...d, padding: v })} options={[{ value: "sm", label: "Mały" }, { value: "md", label: "Średni" }, { value: "lg", label: "Duży" }]} />
-        <FieldGroup title="ZAWARTOŚĆ KOLUMN">
-          <div className="flex flex-col gap-6">
-            {columns.map((widgets, columnIndex) => <ColumnEditor key={columnIndex} label={`Kolumna ${columnIndex + 1}`} widgets={widgets} onChange={(nextWidgets) => { const next = columns.map((col, i) => i === columnIndex ? nextWidgets : col); updateColumns(next); }} />)}
-          </div>
-        </FieldGroup>
       </>;
     }
     case "faq": {
@@ -400,35 +404,4 @@ function renderFields(
     default:
       return null;
   }
-}
-
-const COLUMN_WIDGETS: ColumnWidgetType[] = ["heading", "text", "image", "button", "divider", "spacer"];
-
-function ColumnEditor({ label, widgets, onChange }: { label: string; widgets: ColumnWidget[]; onChange: (widgets: ColumnWidget[]) => void }) {
-  function add(type: ColumnWidgetType) {
-    const nextId = widgets.reduce((highest, widget) => {
-      const match = widget.id.match(/^col_(\d+)$/);
-      return match ? Math.max(highest, Number(match[1])) : highest;
-    }, 0) + 1;
-    onChange([...widgets, { id: `col_${nextId}`, type, data: defaultModuleData(type) }]);
-  }
-  return <div className="border border-ink-white/15 p-3">
-    <p className="mb-3 text-[12px] text-ink-white">{label}</p>
-    <div className="flex flex-col gap-3">
-      {widgets.map((widget, index) => <div key={widget.id} className="border border-ink-white/10 bg-ink-black/20 p-3">
-        <div className="mb-3 flex items-center justify-between gap-2"><span className="text-[11px] text-ink-gold">{MODULE_LABELS[widget.type]}</span><div className="flex gap-2 text-[11px]"><button type="button" disabled={index === 0} onClick={() => { const next = [...widgets]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; onChange(next); }} className="text-ink-grey hover:text-ink-white disabled:opacity-30">↑</button><button type="button" disabled={index === widgets.length - 1} onClick={() => { const next = [...widgets]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; onChange(next); }} className="text-ink-grey hover:text-ink-white disabled:opacity-30">↓</button><button type="button" onClick={() => onChange(widgets.filter((item) => item.id !== widget.id))} className="text-red-400">Usuń</button></div></div>
-        <ColumnWidgetFields widget={widget} onChange={(data) => onChange(widgets.map((item) => item.id === widget.id ? { ...item, data } : item))} />
-      </div>)}
-    </div>
-    <div className="mt-3 flex flex-wrap gap-2">{COLUMN_WIDGETS.map((type) => <button key={type} type="button" onClick={() => add(type)} className="border border-ink-white/20 px-2 py-1 text-[10px] text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold">+ {MODULE_LABELS[type]}</button>)}</div>
-  </div>;
-}
-
-function ColumnWidgetFields({ widget, onChange }: { widget: ColumnWidget; onChange: (data: Record<string, unknown>) => void }) {
-  if (widget.type === "heading") { const d = withDefaults("heading", widget.data); return <TextField label="Treść" value={d.text} onChange={(v) => onChange({ ...d, text: v })} />; }
-  if (widget.type === "text") { const d = withDefaults("text", widget.data); return <TextareaField label="Treść" value={d.text} rows={4} onChange={(v) => onChange({ ...d, text: v })} />; }
-  if (widget.type === "image") { const d = withDefaults("image", widget.data); return <ImageUploadField label="Zdjęcie" value={d.image} onChange={(v) => onChange({ ...d, image: v })} />; }
-  if (widget.type === "button") { const d = withDefaults("button", widget.data); return <><TextField label="Tekst" value={d.label} onChange={(v) => onChange({ ...d, label: v })} /><TextField label="Link" value={d.href} onChange={(v) => onChange({ ...d, href: v })} /></>; }
-  if (widget.type === "spacer") { const d = withDefaults("spacer", widget.data); return <SelectField label="Rozmiar" value={d.size} onChange={(v) => onChange({ ...d, size: v })} options={[{ value: "sm", label: "Mały" }, { value: "md", label: "Średni" }, { value: "lg", label: "Duży" }]} />; }
-  return <p className="text-[11px] text-ink-grey">Ten separator nie wymaga dodatkowych ustawień.</p>;
 }

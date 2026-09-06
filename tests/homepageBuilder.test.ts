@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { defaultHomepageModules, withDefaults } from "../lib/modules";
 
 describe("homepage builder content", () => {
-  it("includes the editable booking calendar in a new homepage", () => {
+  it("includes the editable booking calendar inside contact without a duplicate", () => {
     const modules = defaultHomepageModules();
-    expect(modules.filter((module) => module.type === "booking")).toHaveLength(1);
+    expect(modules.filter((module) => module.type === "booking")).toHaveLength(0);
+    const contact = modules.find((module) => module.type === "contact");
+    expect(withDefaults("contact", contact?.data).booking.calendarLabel).toBeTruthy();
   });
 
   it("backfills newly editable fields without overwriting saved copy", () => {
@@ -16,5 +18,6 @@ describe("homepage builder content", () => {
     const contact = withDefaults("contact", { formTitle: "Napisz do mnie" });
     expect(contact.formTitle).toBe("Napisz do mnie");
     expect(contact.formSubmitLabel).toBeTruthy();
+    expect(contact.booking.bookingButtonLabel).toBeTruthy();
   });
 });

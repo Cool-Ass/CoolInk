@@ -1,0 +1,21 @@
+{
+  "id": "/admin",
+  "name": "CoolInk Studio Admin",
+  "short_name": "CoolInk Admin",
+  "description": "Zarządzanie studiem, klientami, wizytami i kalendarzem CoolInk.",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0908",
+  "theme_color": "#0a0908",
+  "orientation": "any",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Kalendarz", "url": "/admin/calendar", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Klienci", "url": "/admin/clients", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

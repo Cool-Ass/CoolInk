@@ -24,6 +24,28 @@ body {
   overflow-x: hidden;
 }
 
+/* Page builder output: mobile columns stack; custom typography is opt-in per widget. */
+.builder-columns-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .builder-columns-grid {
+    grid-template-columns: var(--builder-column-template, 1fr);
+  }
+}
+
+.builder-custom-typography :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote) {
+  color: var(--builder-text-color, inherit) !important;
+  font-family: var(--builder-font-family, inherit) !important;
+  font-size: var(--builder-font-size, inherit) !important;
+  font-weight: var(--builder-font-weight, inherit) !important;
+  line-height: var(--builder-line-height, inherit) !important;
+  letter-spacing: var(--builder-letter-spacing, inherit) !important;
+  text-align: var(--builder-text-align, inherit) !important;
+  text-transform: var(--builder-text-transform, none) !important;
+}
+
 :where(input, textarea, select) {
   border-color: color-mix(in srgb, var(--color-ink-white) 45%, transparent);
 }

@@ -55,6 +55,24 @@ export interface ModuleStyle {
   cssClass?: string;
   anchorId?: string;
   hiddenOn?: { desktop?: boolean; tablet?: boolean; mobile?: boolean };
+  color?: string;
+  fontFamily?: "inherit" | "display" | "body";
+  fontSize?: number;
+  fontWeight?: "300" | "400" | "500" | "600" | "700";
+  lineHeight?: number;
+  letterSpacing?: number;
+  textAlign?: "left" | "center" | "right" | "justify";
+  textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
+  marginBox?: SpacingBox;
+  paddingBox?: SpacingBox;
+  zIndex?: number;
+}
+
+export interface SpacingBox {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
 }
 
 export interface ModuleOf<T> extends ModuleBase {
@@ -167,6 +185,8 @@ export interface ContactModuleData {
   formSubmitLabel: string;
   formSendingLabel: string;
   formSuccessMessage: string;
+  /** Calendar shown in place of the retired public contact form. */
+  booking: BookingModuleData;
 }
 
 export interface BookingModuleData {
@@ -219,9 +239,31 @@ export interface ImageModuleData { image: string; alt: string; caption: string; 
 export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center" | "right"; style: "primary" | "outline"; icon?: string; iconPosition?: "left" | "right"; width?: "auto" | "full"; }
 export interface DividerModuleData { style: "line" | "gold" | "space"; icon?: string; }
 export interface GalleryModuleData { image1: string; image2: string; image3: string; images?: string[]; layout?: "grid" | "masonry"; columns?: { desktop: number; tablet: number; mobile: number }; gap?: "sm" | "md" | "lg"; radius?: "none" | "sm" | "md" | "lg"; lightbox?: boolean; }
-export type ColumnWidgetType = "heading" | "text" | "image" | "button" | "divider" | "spacer";
-export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; }
-export interface ColumnsModuleData { layout: "two" | "three"; columns: ColumnWidget[][]; background: "transparent" | "charcoal" | "gold"; padding: "sm" | "md" | "lg"; }
+export type ColumnWidgetType =
+  | "heading"
+  | "text"
+  | "image"
+  | "button"
+  | "divider"
+  | "spacer"
+  | "gallery"
+  | "faq"
+  | "video"
+  | "map"
+  | "quote"
+  | "iconList"
+  | "callout"
+  | "customCode";
+export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; style?: ModuleStyle; }
+export interface ColumnsModuleData {
+  layout: "one" | "two" | "three" | "four";
+  columns: ColumnWidget[][];
+  background: "transparent" | "charcoal" | "gold";
+  padding: "sm" | "md" | "lg";
+  gap?: number;
+  verticalAlign?: "start" | "center" | "end" | "stretch";
+  columnWidths?: number[];
+}
 export interface FaqModuleData { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first"; }
 export interface VideoModuleData { url: string; title: string; caption: string; }
 export interface MapModuleData { embedUrl: string; title: string; address: string; height: "sm" | "md" | "lg"; }
@@ -310,7 +352,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   button: "Przycisk",
   divider: "Separator",
   gallery: "Galeria zdjęć",
-  columns: "Kolumny",
+  columns: "Sekcja / kolumny",
   faq: "FAQ / akordeon",
   video: "Wideo",
   map: "Mapa",
@@ -328,7 +370,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   ctaBar: "Wąski baner z wezwaniem do działania i przyciskiem.",
   portfolio: "Galeria prac — wszystkie lub wybrane ręcznie.",
   studio: "Zdjęcie i opis studia + baner CTA.",
-  contact: "Dane kontaktowe i formularz wiadomości.",
+  contact: "Dane kontaktowe i kalendarz rezerwacji.",
   booking: "Publiczny kalendarz wolnych terminów z własnymi nagłówkami i komunikatami.",
   textSection: "Prosty blok tekstowy z nagłówkiem.",
   imageText: "Zdjęcie obok tekstu, z opcjonalnym przyciskiem.",
@@ -339,7 +381,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   button: "Link lub wezwanie do działania.",
   divider: "Delikatna linia albo oddech między elementami.",
   gallery: "Prosta galeria trzech własnych zdjęć.",
-  columns: "Układ dwóch lub trzech kolumn; na telefonie ustawią się jedna pod drugą.",
+  columns: "Sekcja dzielona na 1–4 kolumny z widgetami przeciąganymi do środka.",
   faq: "Rozwijane pytania i odpowiedzi.",
   video: "Film z YouTube lub Vimeo osadzony na stronie.",
   map: "Osadzona mapa Google Maps.",
@@ -381,6 +423,15 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "textSection",
   "imageText",
 ];
+
+export const COLUMN_WIDGET_TYPES: ColumnWidgetType[] = [
+  "heading", "text", "image", "button", "gallery", "callout", "iconList",
+  "faq", "quote", "video", "map", "divider", "spacer", "customCode",
+];
+
+export function isColumnWidgetType(type: string): type is ColumnWidgetType {
+  return (COLUMN_WIDGET_TYPES as string[]).includes(type);
+}
 
 function generateModuleId() {
   return `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -494,6 +545,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         formSubmitLabel: "WYŚLIJ WIADOMOŚĆ",
         formSendingLabel: "WYSYŁANIE…",
         formSuccessMessage: "Dziękujemy — wiadomość została wysłana. Odpowiemy możliwie szybko.",
+        booking: defaultModuleData("booking") as unknown as BookingModuleData,
       } satisfies ContactModuleData;
     case "booking":
       return {
@@ -550,13 +602,13 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
       return { image1: "", image2: "", image3: "", images: [], layout: "grid", columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: "md", radius: "none", lightbox: true } satisfies GalleryModuleData;
     case "columns":
       return {
-        layout: "two",
+        layout: "one",
         background: "transparent",
         padding: "md",
-        columns: [
-          [{ id: generateModuleId(), type: "heading", data: defaultModuleData("heading") }, { id: generateModuleId(), type: "text", data: defaultModuleData("text") }],
-          [{ id: generateModuleId(), type: "heading", data: { text: "Druga kolumna", level: "h2", alignment: "left" } }, { id: generateModuleId(), type: "text", data: defaultModuleData("text") }],
-        ],
+        gap: 24,
+        verticalAlign: "start",
+        columnWidths: [100],
+        columns: [[]],
       } satisfies ColumnsModuleData;
     case "faq":
       return { title: "Najczęściej zadawane pytania", items: [{ question: "Pytanie", answer: "Wpisz odpowiedź na to pytanie." }], variant: "lines", initiallyOpen: "none" } satisfies FaqModuleData;
@@ -610,7 +662,6 @@ export function defaultHomepageModules(): Module[] {
     ] } },
     { id: generateModuleId(), type: "callout", hidden: false, data: { eyebrow: "GOTOWY NA PIERWSZY KROK?", title: "Sprawdź realnie dostępne terminy", body: "Zamiast czekać na odpowiedź w wiadomościach, wybierz termin i śledź cały proces w jednym miejscu.", buttonLabel: "ZOBACZ WOLNE TERMINY", href: "#kalendarz", style: "outline" } },
     { id: generateModuleId(), type: "contact", hidden: false, data: defaultModuleData("contact") },
-    { id: generateModuleId(), type: "booking", hidden: false, data: defaultModuleData("booking") },
   ];
 }
 

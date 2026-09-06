@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { sendPushToAdmins } from "@/lib/webPush";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -16,5 +17,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await tx.tattooProject.update({ where: { id }, data: { status: "cancelled" } });
     await tx.projectActivity.create({ data: { projectId: id, type: "project_cancelled_by_client", message: "Klient anulował projekt. Historia i dokumenty pozostają zachowane.", visibility: "admin" } });
   });
+  await sendPushToAdmins({ title: "Klient anulował projekt", body: `${client.firstName} ${client.lastName} anulował swój projekt.`, url: `/admin/clients/${client.id}`, tag: `client-project-cancel-${id}` }).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }

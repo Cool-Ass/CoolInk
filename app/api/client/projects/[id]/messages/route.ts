@@ -6,6 +6,7 @@ import {
   rateLimit,
   tooManyRequests,
 } from "@/lib/requestSecurity";
+import { sendPushToAdmins } from "@/lib/webPush";
 
 const MAX_MESSAGE_LENGTH = 2_000;
 
@@ -106,5 +107,6 @@ export async function POST(
     data: { projectId: id, author: "client", body: text },
     include: { attachment: { select: { id: true, caption: true } } },
   });
+  await sendPushToAdmins({ title: "Nowa wiadomość od klienta", body: `${client.firstName} ${client.lastName}: ${text.slice(0, 120)}`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-message-${message.id}` }).catch(() => undefined);
   return NextResponse.json({ message: serialize(message) }, { status: 201 });
 }

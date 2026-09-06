@@ -5,6 +5,7 @@ import { activityMessage } from "@/lib/projectWorkflow";
 import { recordWorkflowEvent } from "@/lib/workflowEvents";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { bookingConflict, lockBookingCalendar } from "@/lib/bookingRules";
+import { sendPushToAdmins } from "@/lib/webPush";
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -43,5 +44,6 @@ export async function POST(request: Request, { params }: Params) {
   });
   if (!nextAppointment) return NextResponse.json({ error: "Ta propozycja nie jest już aktualna. Odśwież stronę i skontaktuj się ze studiem." }, { status: 409 });
   await recordWorkflowEvent({ projectId: appointment.projectId, type: accepted ? "APPOINTMENT_ACCEPTED" : "APPOINTMENT_REJECTED", notification: accepted ? { title: "Termin potwierdzony", body: "Twoja odpowiedź została zapisana. Szczegóły wizyty są widoczne na koncie.", appointmentId: id } : undefined });
+  await sendPushToAdmins({ title: accepted ? "Klient zaakceptował termin" : "Klient odrzucił termin", body: `${client.firstName} ${client.lastName} odpowiedział na propozycję wizyty.`, url: `/admin/clients/${client.id}`, tag: `client-response-${id}` }).catch(() => undefined);
   return NextResponse.json({ appointment: nextAppointment });
 }

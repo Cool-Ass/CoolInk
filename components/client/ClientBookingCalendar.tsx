@@ -69,6 +69,7 @@ interface Props {
   mode?: "client" | "public";
   tattooStyles?: string[];
   copy?: BookingCalendarCopy;
+  compact?: boolean;
 }
 
 export default function ClientBookingCalendar({
@@ -86,6 +87,7 @@ export default function ClientBookingCalendar({
   mode = "client",
   tattooStyles,
   copy = DEFAULT_COPY,
+  compact = false,
 }: Props) {
   const router = useRouter();
   const today = dayStart(new Date());
@@ -149,7 +151,7 @@ export default function ClientBookingCalendar({
 
   return (
     <>
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
+      <div className={`mt-6 grid gap-5 ${compact ? "grid-cols-1" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
         <section className="border border-ink-white/15 bg-ink-charcoal/30 p-4 sm:p-5">
           <p className="text-[11px] tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
@@ -169,7 +171,7 @@ export default function ClientBookingCalendar({
               const selectedDay = sameDay(date, selected);
               const muted = date.getMonth() !== cursor.getMonth();
               return (
-                <button key={date.toISOString()} type="button" onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`min-h-20 border-b border-r p-2 text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
+                <button key={date.toISOString()} type="button" onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`${compact ? "min-h-14 p-1.5" : "min-h-20 p-2"} border-b border-r text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
                   <strong className="block text-lg">{date.getDate()}</strong>
                   <span className={`mt-2 block text-[8px] ${available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
                     {available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : copy.unmarkedLabel)}

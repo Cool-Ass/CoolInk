@@ -20,6 +20,7 @@ import {
   withDefaults,
   type Module,
   type ModuleStyle,
+  type ColumnWidget,
   type CtaBarModuleData,
   type PortfolioModuleData,
 } from "@/lib/modules";
@@ -30,6 +31,12 @@ import type { SiteContent } from "@/lib/content";
 function moduleVisualStyle(mod: Module): CSSProperties | undefined {
   const style = mod.style;
   if (!style) return undefined;
+  const box = (name: "margin" | "padding", value?: ModuleStyle["marginBox"]) => value ? {
+    [`${name}Top`]: value.top,
+    [`${name}Right`]: value.right,
+    [`${name}Bottom`]: value.bottom,
+    [`${name}Left`]: value.left,
+  } : {};
   return {
     backgroundColor: style.backgroundColor || undefined,
     backgroundImage: style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : undefined,
@@ -40,8 +47,23 @@ function moduleVisualStyle(mod: Module): CSSProperties | undefined {
     borderStyle: style.borderWidth ? "solid" : undefined,
     minHeight: style.minHeight ? `${Math.min(1600, Math.max(0, style.minHeight))}px` : undefined,
     opacity: typeof style.opacity === "number" ? Math.min(1, Math.max(0.1, style.opacity / 100)) : undefined,
+    zIndex: style.zIndex,
+    ...(style.fontSize ? { "--builder-font-size": `${style.fontSize}px` } : {}),
+    ...(style.lineHeight ? { "--builder-line-height": String(style.lineHeight) } : {}),
+    ...(typeof style.letterSpacing === "number" && style.letterSpacing !== 0 ? { "--builder-letter-spacing": `${style.letterSpacing}px` } : {}),
+    ...(style.fontWeight ? { "--builder-font-weight": style.fontWeight } : {}),
+    ...(style.fontFamily && style.fontFamily !== "inherit" ? { "--builder-font-family": style.fontFamily === "display" ? "var(--font-anton)" : "var(--font-jost)" } : {}),
+    ...(style.textAlign ? { "--builder-text-align": style.textAlign } : {}),
+    ...(style.textTransform ? { "--builder-text-transform": style.textTransform } : {}),
+    ...(style.color ? { "--builder-text-color": style.color } : {}),
+    ...box("margin", style.marginBox),
+    ...box("padding", style.paddingBox),
     ...parseSafeCssDeclarations(style.customCss),
-  };
+  } as CSSProperties;
+}
+
+function hasTypography(style?: ModuleStyle) {
+  return Boolean(style?.fontSize || style?.lineHeight || style?.letterSpacing || style?.fontWeight || (style?.fontFamily && style.fontFamily !== "inherit") || style?.textAlign || style?.textTransform || style?.color);
 }
 
 function radiusClass(radius?: ModuleStyle["radius"]) {
@@ -108,9 +130,13 @@ export interface ModuleRendererProps {
   onDelete?: (id: string) => void;
   onToggleHidden?: (id: string) => void;
   onReorder?: (fromId: string, toId: string) => void;
+  selectedWidgetId?: string | null;
+  onSelectWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
+  onDeleteWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
+  onColumnsChange?: (moduleId: string, columns: ColumnWidget[][]) => void;
 }
 
-function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false) {
+function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "onSelectWidget" | "onDeleteWidget" | "onColumnsChange">) {
   switch (mod.type) {
     case "hero": {
       const data = withDefaults("hero", mod.data);
@@ -148,7 +174,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     case "contact": {
       const data = withDefaults("contact", mod.data);
       const contact = data.contactSource === "global" ? { ...data, ...(globals?.contact ?? {}) } : data;
-      return <Contact content={contact} />;
+      return <Contact content={contact} calendar={globals?.calendar} />;
     }
     case "booking":
       return <BookingSection content={withDefaults("booking", mod.data)} calendar={globals?.calendar} />;
@@ -164,7 +190,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
-      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} />;
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} />;
     }
     default:
       return null;
@@ -183,16 +209,20 @@ export default function ModuleRenderer({
   onDelete,
   onToggleHidden,
   onReorder,
+  selectedWidgetId,
+  onSelectWidget,
+  onDeleteWidget,
+  onColumnsChange,
 }: ModuleRendererProps) {
   const visible = modules.filter((m) => editable || !m.hidden);
 
   return (
     <>
       {visible.map((mod, i) => {
-        const content = renderModule(mod, portfolioWorks, globals, editable);
+        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, onSelectWidget, onDeleteWidget, onColumnsChange });
 
         const visualStyle = moduleVisualStyle(mod);
-        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${mod.style?.cssClass ?? ""}`;
+        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${hasTypography(mod.style) ? "builder-custom-typography" : ""} ${mod.style?.cssClass ?? ""}`;
         const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
 
         if (!editable) {
@@ -206,6 +236,7 @@ export default function ModuleRenderer({
             key={mod.id}
             draggable={Boolean(onReorder)}
             onDragStart={(e) => {
+              if (e.target !== e.currentTarget) return;
               e.dataTransfer.setData("text/module-id", mod.id);
               e.dataTransfer.effectAllowed = "move";
             }}

@@ -6,6 +6,7 @@ import { lockBookingCalendar, validAppointmentRange } from "@/lib/bookingRules";
 import { verifyExplicitAppointmentAvailability } from "@/lib/appointmentAvailability";
 import { activityMessage } from "@/lib/projectWorkflow";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
+import { sendPushToAdmins } from "@/lib/webPush";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -45,5 +46,6 @@ export async function POST(request: Request) {
     throw error;
   });
   if (!result) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
+  await sendPushToAdmins({ title: "Nowa prośba o wizytę", body: `${client.firstName} ${client.lastName}: ${formatCoolinkDateTime(startsAt)}`, url: `/admin/clients/${client.id}`, tag: `client-appointment-${result.appointment.id}` }).catch(() => undefined);
   return NextResponse.json(result, { status: 201 });
 }

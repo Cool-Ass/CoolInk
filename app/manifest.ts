@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/app",
     name: "CoolInk Tattoo Studio",
     short_name: "CoolInk",
     description: "Rezerwacje, projekty i kontakt z CoolInk Tattoo Studio w Zielonej Górze.",
