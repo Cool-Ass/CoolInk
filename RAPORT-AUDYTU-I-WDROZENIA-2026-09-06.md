@@ -116,8 +116,16 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Build produkcyjny Next.js | PASS |
 | `npm audit --omit=dev` | 0 podatności |
 | Sekrety w plikach śledzonych przez Git | nie wykryto |
+| Produkcyjne `/`, `/admin/login` i `/app` | HTTP 200 |
+| Anulowanie wizyty bez sesji klienta | HTTP 401 |
+| Mutujące żądanie z obcej domeny | HTTP 403 |
 
 Testy obejmują m.in. workflow, kalendarz, tryb budowy, linki CMS, ustawienia strony głównej, style tatuażu, integrację kalendarza oraz nowe reguły anulowania i bezpiecznego CSS.
+
+Kod został zapisany w GitHubie w commicie `35548d4` i poprawnie wdrożony do produkcyjnego
+projektu Vercel `cool-ink` (deployment `dpl_BMP9EYdt4L7Ednozv3eAZ2UnTYui`). Domena
+`www.coolinktattoo.pl` odpowiada z nagłówkami ochronnymi `X-Content-Type-Options: nosniff`
+i `X-Frame-Options: DENY`. Tryb budowy nadal jest włączony i oznaczony `noindex`.
 
 ## 9. Priorytety po uruchomieniu R2
 
