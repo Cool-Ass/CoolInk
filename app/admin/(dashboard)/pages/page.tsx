@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import PageRowActions from "@/components/admin/PageRowActions";
+import MaintenanceModeCard from "@/components/admin/MaintenanceModeCard";
+import { getMaintenanceMode } from "@/lib/maintenance";
+import { ensureEditableHomepage } from "@/lib/homepage";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function PagesListPage() {
+  const [homepage, maintenanceEnabled] = await Promise.all([
+    ensureEditableHomepage(),
+    getMaintenanceMode(),
+  ]);
   const pages = await prisma.page.findMany({
     orderBy: [{ isHomepage: "desc" }, { updatedAt: "desc" }],
   });
@@ -29,6 +36,8 @@ export default async function PagesListPage() {
           + NOWA STRONA
         </Link>
       </div>
+
+      <MaintenanceModeCard initialEnabled={maintenanceEnabled} homepageId={homepage.id} />
 
       {pages.length === 0 ? (
         <p className="border border-dashed border-ink-white/15 px-6 py-10 text-center text-[14px] text-ink-grey">

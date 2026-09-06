@@ -65,14 +65,6 @@ export async function proxy(request: NextRequest) {
     if (Number.isFinite(length) && length > 1_500_000) return NextResponse.json({ error: "Żądanie jest zbyt duże." }, { status: 413 });
   }
 
-  // A switchable, public-facing construction screen. The admin and API
-  // remain available so content and the studio workflow can keep moving
-  // while visitors see a focused, intentional holding page.
-  const isBuildMode = process.env.SITE_BUILD_MODE === "true";
-  if (isBuildMode && pathname === "/") {
-    return NextResponse.rewrite(new URL("/budujemy", request.url));
-  }
-
   const refreshedClientResponse = await refreshClientSession(request);
   if (refreshedClientResponse) return refreshedClientResponse;
 

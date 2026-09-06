@@ -109,6 +109,12 @@ jest dostępna pod `/twoj-adres-url` bez pisania jakiegokolwiek kodu.
 **Edytuj stronę główną**: Strony → „Strona główna" (przypięta na górze listy) → ten sam
 edytor modułowy co dla każdej innej strony.
 
+**Tryb budowy / maintenance**: Strony → „Widoczność strony" → „Włącz tryb budowy".
+Odwiedzający zobaczą ekran „Zapraszam wkrótce", ale zalogowany administrator nadal może
+otworzyć pełną stronę, edytować ją i publikować kolejne wersje. Na tej samej karcie jest
+bezpośredni link do edytora strony głównej oraz podgląd ekranu budowy. Zapis w bazie ma
+pierwszeństwo przed awaryjną zmienną `SITE_BUILD_MODE`.
+
 **Zmień logo**: Treści globalne → Marka → prześlij nowy plik lub wybierz z biblioteki →
 „Zapisz logo". Aktualizuje się automatycznie w nagłówku, stopce i panelu logowania.
 
