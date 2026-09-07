@@ -9,7 +9,7 @@ interface Params {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const existing = await prisma.media.findUnique({ where: { id } });
@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const existing = await prisma.media.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Nie znaleziono." }, { status: 404 });

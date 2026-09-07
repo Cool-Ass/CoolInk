@@ -1,6 +1,8 @@
 import NewPageForm from "@/components/admin/NewPageForm";
+import { requireAdminPage } from "@/lib/adminPage";
 
-export default function NewPagePage() {
+export default async function NewPagePage() {
+  await requireAdminPage("content.manage");
   return (
     <div className="flex flex-col gap-8">
       <div>

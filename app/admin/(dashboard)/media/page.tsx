@@ -3,10 +3,12 @@ import MediaGrid from "@/components/admin/MediaGrid";
 import { getMediaUsageMap } from "@/lib/mediaUsage";
 import type { Media } from "@prisma/client";
 import { usesExternalStorage } from "@/lib/storage";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
 export default async function MediaPage() {
+  await requireAdminPage("content.manage");
   const [media, usageMap] = await Promise.all([
     prisma.media.findMany({ orderBy: { createdAt: "desc" } }),
     getMediaUsageMap(),

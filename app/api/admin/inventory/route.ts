@@ -4,12 +4,12 @@ import { requireAdminApi } from "@/lib/adminApi";
 import { isSameOrigin } from "@/lib/requestSecurity";
 
 export async function GET() {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("inventory.manage"); if (!access.ok) return access.response;
   return NextResponse.json({ items: await prisma.inventoryItem.findMany({ orderBy: [{ active: "desc" }, { category: "asc" }, { name: "asc" }] }) });
 }
 
 export async function POST(request: Request) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("inventory.manage"); if (!access.ok) return access.response;
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null);
   const name = String(body?.name ?? "").trim(); const sku = String(body?.sku ?? "").trim(); const category = String(body?.category ?? "materiały").trim(); const unit = String(body?.unit ?? "szt.").trim();

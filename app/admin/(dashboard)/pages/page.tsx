@@ -4,6 +4,7 @@ import PageRowActions from "@/components/admin/PageRowActions";
 import MaintenanceModeCard from "@/components/admin/MaintenanceModeCard";
 import { getMaintenanceMode } from "@/lib/maintenance";
 import { ensureEditableHomepage } from "@/lib/homepage";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function PagesListPage() {
+  await requireAdminPage("content.manage");
   const [homepage, maintenanceEnabled] = await Promise.all([
     ensureEditableHomepage(),
     getMaintenanceMode(),

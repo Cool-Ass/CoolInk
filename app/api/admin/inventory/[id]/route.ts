@@ -4,7 +4,7 @@ import { requireAdminApi } from "@/lib/adminApi";
 import { isSameOrigin } from "@/lib/requestSecurity";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("inventory.manage"); if (!access.ok) return access.response;
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params; const body = await request.json().catch(() => null); const delta = Number(body?.delta ?? 0);
   if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 100000) return NextResponse.json({ error: "Podaj niezerową, pełną zmianę ilości." }, { status: 400 });

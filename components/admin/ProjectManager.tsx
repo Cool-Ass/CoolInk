@@ -11,6 +11,8 @@ const OPTIONS = Object.entries(ADMIN_STATUS_LABEL);
 export default function ProjectManager({
   id,
   clientId,
+  initialKind,
+  consultationMode,
   initialStatus,
   initialNotes,
   estimatedPrice,
@@ -18,9 +20,15 @@ export default function ProjectManager({
   initialDepositStatus,
   depositAmount,
   depositPaymentMethod,
+  initialNextAction,
+  initialNextActionDueAt,
+  canManageFinance,
+  canDeleteProject,
 }: {
   id: string;
   clientId: string;
+  initialKind: string;
+  consultationMode: string | null;
   initialStatus: string;
   initialNotes: string | null;
   estimatedPrice: number | null;
@@ -28,10 +36,15 @@ export default function ProjectManager({
   initialDepositStatus: string;
   depositAmount: number | null;
   depositPaymentMethod: string | null;
+  initialNextAction: string | null;
+  initialNextActionDueAt: string | null;
+  canManageFinance: boolean;
+  canDeleteProject: boolean;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [status, setStatus] = useState(initialStatus);
+  const [kind, setKind] = useState(initialKind);
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [estimate, setEstimate] = useState(estimatedPrice?.toString() ?? "");
   const [final, setFinal] = useState(finalPrice?.toString() ?? "");
@@ -40,6 +53,8 @@ export default function ProjectManager({
   const [depositMethod, setDepositMethod] = useState(
     depositPaymentMethod ?? "",
   );
+  const [nextAction, setNextAction] = useState(initialNextAction ?? "");
+  const [nextActionDueAt, setNextActionDueAt] = useState(initialNextActionDueAt?.slice(0, 16) ?? "");
   const [saving, setSaving] = useState(false);
   const [proposalOpen, setProposalOpen] = useState(false);
   const [proposal, setProposal] = useState({
@@ -59,11 +74,9 @@ export default function ProjectManager({
         body: JSON.stringify({
           status,
           internalNotes: notes,
-          estimatedPrice: estimate,
-          finalPrice: final,
-          depositStatus,
-          depositAmount: deposit,
-          depositPaymentMethod: depositMethod,
+          nextAction,
+          nextActionDueAt,
+          ...(canManageFinance ? { estimatedPrice: estimate, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
         }),
       });
       const data = await res.json();
@@ -78,6 +91,20 @@ export default function ProjectManager({
     } finally {
       setSaving(false);
     }
+  }
+  async function convertConsultation() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/projects/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ convertConsultation: true, status: "reviewing", nextAction: "Uzupełnij zakres projektu i zaproponuj kolejny krok", nextActionDueAt }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setKind("tattoo");
+      setStatus("reviewing");
+      setNextAction("Uzupełnij zakres projektu i zaproponuj kolejny krok");
+      showToast("Konsultacja została przekształcona w projekt. Historia i zdjęcia zostały zachowane.");
+      router.refresh();
+    } catch (error) { showToast(error instanceof Error ? error.message : "Nie udało się przekształcić konsultacji.", "error"); }
+    finally { setSaving(false); }
   }
   async function propose(event: FormEvent) {
     event.preventDefault();
@@ -136,9 +163,10 @@ export default function ProjectManager({
   }
   return (
     <section className="border border-ink-white/15 bg-ink-charcoal/40 p-5">
-      <p className="text-[11px] tracking-[0.14em] text-ink-gold">
-        ZARZĄDZANIE PROJEKTEM
+      <p className="text-xs tracking-[0.14em] text-ink-gold">
+        {kind === "consultation" ? "ZARZĄDZANIE KONSULTACJĄ" : "ZARZĄDZANIE PROJEKTEM"}
       </p>
+      {kind === "consultation" && <div className="mt-4 border border-blue-400/35 bg-blue-400/5 p-4"><p className="text-sm text-blue-100">Konsultacja · {({ studio: "w studiu", phone: "telefonicznie", video: "rozmowa wideo" } as Record<string, string>)[consultationMode ?? ""] || "forma do ustalenia"}</p><p className="mt-2 text-sm leading-relaxed text-ink-grey">Po rozmowie możesz zamienić ją w projekt bez kopiowania wiadomości, zdjęć ani notatek.</p><button type="button" onClick={convertConsultation} disabled={saving} className="mt-3 border border-blue-300 px-4 py-2.5 text-xs text-blue-100 hover:bg-blue-400/10 disabled:opacity-50">PRZEKSZTAŁĆ W PROJEKT TATUAŻU</button></div>}
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           STATUS
@@ -157,6 +185,7 @@ export default function ProjectManager({
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           WYCENA (PLN)
           <input
+            disabled={!canManageFinance}
             inputMode="numeric"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
@@ -166,6 +195,7 @@ export default function ProjectManager({
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           CENA KOŃCOWA (PLN)
           <input
+            disabled={!canManageFinance}
             inputMode="numeric"
             value={final}
             onChange={(e) => setFinal(e.target.value)}
@@ -173,10 +203,15 @@ export default function ProjectManager({
           />
         </label>
       </div>
+      <div className="mt-4 grid gap-4 border-t border-ink-white/10 pt-4 sm:grid-cols-[1fr_220px]">
+        <label className="flex flex-col gap-2 text-xs tracking-[0.08em] text-ink-grey">NASTĘPNE DZIAŁANIE<input value={nextAction} onChange={(event) => setNextAction(event.target.value)} maxLength={500} placeholder="Np. oddzwonić i potwierdzić termin" className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
+        <label className="flex flex-col gap-2 text-xs tracking-[0.08em] text-ink-grey">TERMIN DZIAŁANIA<input type="datetime-local" value={nextActionDueAt} onChange={(event) => setNextActionDueAt(event.target.value)} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
+      </div>
       <div className="mt-4 grid gap-4 border-t border-ink-white/10 pt-4 sm:grid-cols-3">
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           ZADATEK
           <select
+            disabled={!canManageFinance}
             value={depositStatus}
             onChange={(e) => setDepositStatus(e.target.value)}
             className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-ink-white"
@@ -201,6 +236,7 @@ export default function ProjectManager({
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           KWOTA ZADATKU (PLN)
           <input
+            disabled={!canManageFinance}
             inputMode="numeric"
             value={deposit}
             onChange={(e) => setDeposit(e.target.value)}
@@ -210,6 +246,7 @@ export default function ProjectManager({
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           METODA PŁATNOŚCI
           <input
+            disabled={!canManageFinance}
             value={depositMethod}
             onChange={(e) => setDepositMethod(e.target.value)}
             placeholder="np. przelew, gotówka"
@@ -227,14 +264,14 @@ export default function ProjectManager({
         />
       </label>
       <div className="mt-5 flex flex-wrap gap-3">
-        <button
+        {canDeleteProject && <button
           type="button"
           onClick={save}
           disabled={saving}
           className="border border-ink-gold px-4 py-2.5 text-xs tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black disabled:opacity-50"
         >
           {saving ? "ZAPISYWANIE…" : "ZAPISZ ZMIANY"}
-        </button>
+        </button>}
         <button
           type="button"
           onClick={() => setProposalOpen((value) => !value)}

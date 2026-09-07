@@ -18,6 +18,7 @@ export default async function ProjectsPage() {
 
   return <ClientProjectCards projects={projects.map((project) => ({
     id: project.id,
+    kind: project.kind,
     title: project.title,
     description: project.description,
     status: project.status,

@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       colorPreference: String(body.colorPreference ?? "").trim() || null,
       preferredDateNote: String(body.preferredDateNote ?? "").trim().slice(0, 500) || null,
       status: "inquiry",
+      nextAction: "Przejrzyj nowe zgłoszenie i odpowiedz klientowi",
       activities: { create: { type: "project_created", message: activityMessage("project_created"), visibility: "admin" } },
     },
   });

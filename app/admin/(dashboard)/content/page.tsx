@@ -2,10 +2,12 @@ import { getSiteContent } from "@/lib/content";
 import SettingsSection from "@/components/admin/SettingsSection";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import GlobalLogoField from "@/components/admin/GlobalLogoField";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContentPage() {
+  await requireAdminPage("content.manage");
   const content = await getSiteContent();
 
   const flat = (section: keyof typeof content) =>

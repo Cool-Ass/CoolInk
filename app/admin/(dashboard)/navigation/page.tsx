@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import NavItemManager from "@/components/admin/NavItemManager";
 import type { Page } from "@prisma/client";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function NavigationPage() {
+  await requireAdminPage("content.manage");
   const [pages, navItems] = await Promise.all([
     prisma.page.findMany({
       where: { isHomepage: false },

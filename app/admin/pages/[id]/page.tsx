@@ -8,6 +8,7 @@ import type { Module } from "@/lib/modules";
 import { parseModules } from "@/lib/pageModules";
 import { getPublicCalendarData } from "@/lib/publicCalendar";
 import { ensureEditableHomepage } from "@/lib/homepage";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default async function PageBuilderRoute({ params }: Props) {
+  await requireAdminPage("content.manage");
   const { id } = await params;
 
   const [page, works, content, calendar] = await Promise.all([

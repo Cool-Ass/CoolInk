@@ -25,6 +25,23 @@ model AdminUser {
   googleCalendarConnections GoogleCalendarConnection[]
   inventoryMovements        InventoryMovement[]
   pushSubscriptions         AdminPushSubscription[]
+  auditLogs                 AdminAuditLog[]
+}
+
+/// Immutable operational history for security-sensitive administrator actions.
+model AdminAuditLog {
+  id          String     @id @default(cuid())
+  adminUserId String?
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  action      String
+  targetType  String
+  targetId    String?
+  summary     String
+  metadata    String?
+  createdAt   DateTime   @default(now())
+
+  @@index([adminUserId, createdAt])
+  @@index([targetType, targetId, createdAt])
 }
 
 /// One admin browser/device that opted in to operational notifications.
@@ -198,6 +215,8 @@ model TattooProject {
   client               Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
   title                String
   description          String
+  kind                 String            @default("tattoo") // tattoo | consultation
+  consultationMode     String?           // studio | phone | video
   styles               String            @default("")
   placement            String?
   size                 String?
@@ -207,6 +226,8 @@ model TattooProject {
   status               String            @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
   preferredDateNote    String?
   internalNotes        String?
+  nextAction           String?
+  nextActionDueAt      DateTime?
   depositStatus        String            @default("not_required") // not_required | awaiting | paid | refunded | forfeited
   depositAmount        Int?
   depositPaidAt        DateTime?
@@ -217,6 +238,9 @@ model TattooProject {
   appointments         Appointment[]
   activities           ProjectActivity[]
   messages             ProjectMessage[]
+
+  @@index([kind, status, updatedAt])
+  @@index([nextActionDueAt])
 }
 
 /// Appointments are kept separately from a project because a larger tattoo

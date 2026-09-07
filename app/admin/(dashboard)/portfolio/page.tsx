@@ -4,10 +4,12 @@ import AddPortfolioItem from "@/components/admin/AddPortfolioItem";
 import PortfolioRowActions from "@/components/admin/PortfolioRowActions";
 import Link from "next/link";
 import { imageSource } from "@/lib/imageSource";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortfolioListPage() {
+  await requireAdminPage("content.manage");
   const items = await prisma.portfolioItem.findMany({ orderBy: { order: "asc" } });
 
   return (

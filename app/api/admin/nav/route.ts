@@ -4,13 +4,13 @@ import { requireAdminApi } from "@/lib/adminApi";
 import { safeHref } from "@/lib/safeHref";
 
 export async function GET() {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const items = await prisma.navItem.findMany({ orderBy: { order: "asc" } });
   return NextResponse.json({ items });
 }
 
 export async function POST(request: Request) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   const href = safeHref(body?.href, "");
   if (!String(body?.label ?? "").trim() || !href) {

@@ -7,7 +7,7 @@ interface Params {
 }
 
 export async function POST(request: Request, { params }: Params) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const direction = body?.direction;

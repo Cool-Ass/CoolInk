@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { flattenDefaults, getSiteContent } from "@/lib/content";
-import { getCurrentAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/adminApi";
+import { writeAdminAudit } from "@/lib/adminAudit";
 import { isSameOrigin } from "@/lib/requestSecurity";
 
 export async function GET() {
-  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  const access = await requireAdminApi("content.manage");
+  if (!access.ok) return access.response;
   const content = await getSiteContent();
   return NextResponse.json({ content });
 }
@@ -14,7 +16,8 @@ export async function GET() {
 /** Body: { "hero.heading1": "New heading", "about.body": "..." , ... } */
 export async function PATCH(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  const access = await requireAdminApi("content.manage");
+  if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Nieprawidłowe dane." }, { status: 400 });
@@ -38,6 +41,7 @@ export async function PATCH(request: Request) {
       })
     )
   );
+  await writeAdminAudit({ adminUserId: access.admin.id, action: "settings.update", targetType: "SiteSetting", summary: `Zmieniono ${entries.length} ustawień globalnych.`, metadata: { keys: entries.map(([key]) => key) } });
 
   revalidatePath("/");
   revalidatePath("/budujemy");

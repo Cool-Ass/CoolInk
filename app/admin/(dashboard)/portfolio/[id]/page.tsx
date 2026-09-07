@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PortfolioForm from "@/components/admin/PortfolioForm";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default async function EditPortfolioItemPage({ params }: Props) {
+  await requireAdminPage("content.manage");
   const { id } = await params;
   const item = await prisma.portfolioItem.findUnique({ where: { id } });
   if (!item) notFound();

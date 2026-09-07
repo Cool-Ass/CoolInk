@@ -1,27 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/adminApi";
 import {
   activityMessage,
   isProjectStatus,
   DEPOSIT_STATUS,
 } from "@/lib/projectWorkflow";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { hasAdminPermission } from "@/lib/adminPermissions";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
 export async function PATCH(request: Request, { params }: Params) {
-  if (!(await getCurrentAdmin()))
-    return NextResponse.json(
-      { error: "Brak dostępu administratora." },
-      { status: 401 },
-    );
+  const access = await requireAdminApi("operations.manage");
+  if (!access.ok) return access.response;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   const body = await request.json().catch(() => null);
+  const financialFields = ["estimatedPrice", "finalPrice", "depositStatus", "depositAmount", "depositPaymentMethod"];
+  if (financialFields.some((field) => Object.prototype.hasOwnProperty.call(body ?? {}, field)) && !hasAdminPermission(access.admin.role, "finance.manage")) return NextResponse.json({ error: "Twoja rola nie ma uprawnień do danych finansowych." }, { status: 403 });
   const project = await prisma.tattooProject.findUnique({ where: { id } });
   if (!project)
     return NextResponse.json(
@@ -34,11 +34,20 @@ export async function PATCH(request: Request, { params }: Params) {
     (DEPOSIT_STATUS as readonly string[]).includes(body.depositStatus)
       ? body.depositStatus
       : project.depositStatus;
+  const converting = body?.convertConsultation === true && project.kind === "consultation";
+  const kind = converting ? "tattoo" : project.kind;
+  const nextAction = typeof body?.nextAction === "string" ? body.nextAction.trim().slice(0, 500) || null : project.nextAction;
+  const dueValue = typeof body?.nextActionDueAt === "string" ? new Date(body.nextActionDueAt) : null;
+  const nextActionDueAt = body?.nextActionDueAt === "" ? null : dueValue && !Number.isNaN(dueValue.getTime()) ? dueValue : project.nextActionDueAt;
   const updated = await prisma.$transaction(async (tx) => {
     const next = await tx.tattooProject.update({
       where: { id },
       data: {
         status,
+        kind,
+        consultationMode: converting ? null : project.consultationMode,
+        nextAction,
+        nextActionDueAt,
         internalNotes:
           typeof body?.internalNotes === "string"
             ? body.internalNotes.slice(0, 5000)
@@ -84,17 +93,16 @@ export async function PATCH(request: Request, { params }: Params) {
           visibility: "admin",
         },
       });
+    if (converting) await tx.projectActivity.create({ data: { projectId: id, type: "consultation_converted", message: "Konsultacja została przekształcona w projekt tatuażu. Zdjęcia, rozmowa i historia zostały zachowane.", visibility: "admin" } });
+    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: converting ? "consultation.convert" : "project.update", targetType: "TattooProject", targetId: id, summary: converting ? `Przekształcono konsultację „${project.title}” w projekt.` : `Zaktualizowano projekt „${project.title}”.`, metadata: JSON.stringify({ previousStatus: project.status, status, nextAction }) } });
     return next;
   });
   return NextResponse.json({ project: updated });
 }
 
 export async function DELETE(request: Request, { params }: Params) {
-  if (!(await getCurrentAdmin()))
-    return NextResponse.json(
-      { error: "Brak dostępu administratora." },
-      { status: 401 },
-    );
+  const access = await requireAdminApi("projects.delete");
+  if (!access.ok) return access.response;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
@@ -110,6 +118,9 @@ export async function DELETE(request: Request, { params }: Params) {
   // Database relations (appointments, activities, messages and inspirations)
   // use ON DELETE CASCADE. Storage objects remain private and unreachable;
   // their lifecycle is handled by the bucket retention policy.
-  await prisma.tattooProject.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "project.delete", targetType: "TattooProject", targetId: id, summary: "Usunięto projekt wraz z powiązaną historią." } });
+    await tx.tattooProject.delete({ where: { id } });
+  });
   return NextResponse.json({ ok: true });
 }

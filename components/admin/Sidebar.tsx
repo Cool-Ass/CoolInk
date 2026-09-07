@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { BarChart3, CalendarDays, FileText, Globe2, Image as ImageIcon, LayoutDashboard, LibraryBig, PackageOpen, PanelsTopLeft, Settings, Users } from "lucide-react";
 import { imageSource } from "@/lib/imageSource";
+import { normalizeAdminRole, type AdminRole } from "@/lib/adminPermissions";
 
 export const ADMIN_SECTIONS = [
   {
@@ -13,34 +14,45 @@ export const ADMIN_SECTIONS = [
       { href: "/admin", label: "Dziś", icon: LayoutDashboard, exact: true },
       { href: "/admin/calendar", label: "Kalendarz", icon: CalendarDays },
       { href: "/admin/clients", label: "Klienci", icon: Users },
-      { href: "/admin/statistics", label: "Statystyki", icon: BarChart3 },
-      { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen },
+      { href: "/admin/statistics", label: "Statystyki", icon: BarChart3, roles: ["owner", "manager"] },
+      { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen, roles: ["owner", "manager"] },
     ],
   },
   {
     label: "STRONA / CMS",
     links: [
-      { href: "/admin/pages", label: "Strony i builder", icon: PanelsTopLeft },
-      { href: "/admin/portfolio", label: "Portfolio / Galeria", icon: ImageIcon },
-      { href: "/admin/media", label: "Biblioteka mediów", icon: LibraryBig },
-      { href: "/admin/content", label: "Treści globalne", icon: Globe2 },
-      { href: "/admin/navigation", label: "Nawigacja", icon: Globe2 },
+      { href: "/admin/pages", label: "Strony i builder", icon: PanelsTopLeft, roles: ["owner", "manager"] },
+      { href: "/admin/portfolio", label: "Portfolio / Galeria", icon: ImageIcon, roles: ["owner", "manager"] },
+      { href: "/admin/media", label: "Biblioteka mediów", icon: LibraryBig, roles: ["owner", "manager"] },
+      { href: "/admin/content", label: "Treści globalne", icon: Globe2, roles: ["owner", "manager"] },
+      { href: "/admin/navigation", label: "Nawigacja", icon: Globe2, roles: ["owner", "manager"] },
     ],
   },
   { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }] },
   {
     label: "USTAWIENIA",
-    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings }],
+    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }],
   },
 ] as const;
 
+export function getAdminSections(role: string) {
+  const normalized = normalizeAdminRole(role);
+  return ADMIN_SECTIONS.map((section) => ({
+    ...section,
+    links: section.links.filter((link) => !("roles" in link) || (link.roles as readonly AdminRole[]).includes(normalized)),
+  })).filter((section) => section.links.length > 0);
+}
+
 export default function Sidebar({
   logoUrl = "/images/logo-white.jpg",
+  role = "owner",
 }: {
   logoUrl?: string;
+  role?: string;
 }) {
   const pathname = usePathname();
   const logoSource = imageSource(logoUrl);
+  const sections = getAdminSections(role);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-ink-white/10 bg-ink-charcoal/40 md:flex">
@@ -51,9 +63,9 @@ export default function Sidebar({
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 px-3 py-6">
-        {ADMIN_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.label}>
-            <p className="px-3 pb-2 text-[10px] font-semibold tracking-[0.16em] text-ink-grey/70">
+            <p className="px-3 pb-2 text-xs font-semibold tracking-[0.16em] text-ink-grey/70">
               {section.label}
             </p>
             <div className="flex flex-col gap-1">

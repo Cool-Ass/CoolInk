@@ -74,6 +74,8 @@ interface Props {
   tattooStyles?: string[];
   copy?: BookingCalendarCopy;
   compact?: boolean;
+  rescheduleAppointmentId?: string;
+  rescheduleServiceType?: "tattoo" | "consultation";
 }
 
 export default function ClientBookingCalendar({
@@ -92,6 +94,8 @@ export default function ClientBookingCalendar({
   tattooStyles,
   copy = DEFAULT_COPY,
   compact = false,
+  rescheduleAppointmentId,
+  rescheduleServiceType,
 }: Props) {
   const router = useRouter();
   const today = dayStart(new Date());
@@ -100,7 +104,7 @@ export default function ClientBookingCalendar({
   const [selected, setSelected] = useState(initialDate);
   const [cursor, setCursor] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
   const [projectId, setProjectId] = useState("");
-  const [bookingRange, setBookingRange] = useState<{ startsAt: string; endsAt: string; projectId?: string } | null>(null);
+  const [bookingRange, setBookingRange] = useState<{ startsAt: string; endsAt: string; projectId?: string; serviceType: "tattoo" | "consultation"; rescheduleAppointmentId?: string } | null>(null);
   const [restoredOpened, setRestoredOpened] = useState(false);
   const firstVisibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastVisibleMonth = new Date(today.getFullYear(), today.getMonth() + Math.min(12, Math.max(1, visibleMonths)) - 1, 1);
@@ -134,10 +138,13 @@ export default function ClientBookingCalendar({
     const timer = window.setTimeout(() => {
       const match = ranges.find((range) => range.startsAt.toISOString() === initialStartsAt);
       setRestoredOpened(true);
-      if (match) setBookingRange({ startsAt: match.startsAt.toISOString(), endsAt: match.endsAt.toISOString() });
+      if (match) {
+        const sourceSlot = availableSlots.find((slot) => slot.isPublic && new Date(slot.startsAt) <= match.startsAt && new Date(slot.endsAt) >= match.endsAt);
+        setBookingRange({ startsAt: match.startsAt.toISOString(), endsAt: match.endsAt.toISOString(), serviceType: isConsultationSlot(sourceSlot ?? {}) ? "consultation" : "tattoo" });
+      }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [initialStartsAt, mode, ranges, restoredOpened]);
+  }, [availableSlots, initialStartsAt, mode, ranges, restoredOpened]);
 
   const promotion = promotions.find((item) => selected >= dayStart(new Date(item.startsAt)) && selected <= dayStart(new Date(item.endsAt)));
   const calendarEvent = events.find((item) => selected >= dayStart(new Date(item.startsAt)) && selected <= dayStart(new Date(item.endsAt)));
@@ -147,18 +154,19 @@ export default function ClientBookingCalendar({
   function propose(range: { startsAt: Date; endsAt: Date }) {
     const startsAt = range.startsAt;
     const endsAt = range.endsAt;
+    const serviceType = isConsultationSlot(slotForRange(range) ?? {}) ? "consultation" : "tattoo";
     if (mode === "public") {
-      router.push(`/app?returnTo=${encodeURIComponent(`/app/portal?booking=${encodeURIComponent(startsAt.toISOString())}`)}`);
+      router.push(`/app?returnTo=${encodeURIComponent(`/app/portal?booking=${encodeURIComponent(startsAt.toISOString())}&service=${serviceType}`)}`);
       return;
     }
-    setBookingRange({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), projectId: projectId || undefined });
+    setBookingRange({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), projectId: serviceType === "tattoo" ? projectId || undefined : undefined, serviceType, rescheduleAppointmentId });
   }
 
   return (
     <>
       <div className={`mt-6 grid gap-5 ${compact ? "grid-cols-1" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
         <section className="border border-ink-white/15 bg-ink-charcoal/30 p-4 sm:p-5">
-          <p className="text-[11px] tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
+          <p className="text-xs tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
             <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="border border-ink-white/20 px-3 py-2 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button>
             <h2 className="font-display text-xl sm:text-3xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
@@ -166,7 +174,7 @@ export default function ClientBookingCalendar({
           </div>
           <p className="mt-3 text-xs text-ink-grey">{copy.legend}</p>
           <div className="mt-5 grid grid-cols-7 border-l border-t border-ink-white/10">
-            {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-[9px] text-ink-grey">{day}</div>)}
+            {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-xs text-ink-grey">{day}</div>)}
             {dates.map((date) => {
               const available = isAvailable(date);
               const unavailable = blocked(date) || (!available && date.getDay() === 0);
@@ -179,7 +187,7 @@ export default function ClientBookingCalendar({
               return (
                 <button key={date.toISOString()} type="button" onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`${compact ? "min-h-14 p-1.5" : "min-h-20 p-2"} border-b border-r text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
                   <strong className="block text-lg">{date.getDate()}</strong>
-                  <span className={`mt-2 block text-[8px] ${consultation ? "text-blue-200" : available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
+                  <span className={`mt-2 block text-[11px] ${consultation ? "text-blue-200" : available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
                     {consultation ? copy.consultationLabel : available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : copy.unmarkedLabel)}
                   </span>
                 </button>
@@ -189,11 +197,11 @@ export default function ClientBookingCalendar({
         </section>
 
         <aside className="border border-ink-white/15 bg-ink-charcoal/30 p-5">
-          <p className="text-[11px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <p className="text-xs tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>
           {calendarEvent && <div className="mt-4 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || copy.eventFallbackLabel}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>}
           {promotion && <div className="mt-4 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || copy.promotionFallbackLabel}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>}
-          {projects.length > 0 && isAvailable(selected) && ranges.length > 0 && (
-            <label className="mt-5 block text-[11px] tracking-[0.1em] text-ink-grey">
+          {projects.length > 0 && !rescheduleAppointmentId && isAvailable(selected) && ranges.length > 0 && !slotsFor(selected).some(isConsultationSlot) && (
+            <label className="mt-5 block text-xs tracking-[0.1em] text-ink-grey">
               {copy.addToProjectLabel}
               <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full border border-ink-white/15 bg-ink-black px-3 py-2.5 text-sm text-ink-white">
                 <option value="">{copy.newVisitLabel}</option>
@@ -214,14 +222,14 @@ export default function ClientBookingCalendar({
                 <p className="text-xs" style={{ color }}>{consultation ? copy.consultationLabel : copy.freeLabel}</p>
                 <p className="mt-1 font-display text-2xl">{formatTime(range.startsAt)}–{formatTime(range.endsAt)}</p>
                 {sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
-                <button type="button" onClick={() => propose(range)} className="mt-3 border px-3 py-2 text-xs hover:bg-ink-white/5" style={{ borderColor: `${color}99`, color }}>{consultation ? copy.consultationButtonLabel : projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
+                <button type="button" disabled={Boolean(rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo"))} onClick={() => propose(range)} className="mt-3 border px-3 py-2.5 text-xs hover:bg-ink-white/5 disabled:cursor-not-allowed disabled:opacity-35" style={{ borderColor: `${color}99`, color }}>{rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo") ? "INNY RODZAJ TERMINU" : rescheduleAppointmentId ? "WYBIERZ NOWY TERMIN" : consultation ? copy.consultationButtonLabel : projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
               </div>;
             })}
           </div>
         </aside>
       </div>
 
-      {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projectId={bookingRange.projectId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+      {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projectId={bookingRange.projectId} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
     </>
   );
 }

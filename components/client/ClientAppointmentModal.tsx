@@ -7,6 +7,7 @@ import AddToCalendar from "@/components/client/AddToCalendar";
 import AppointmentResponse from "@/components/client/AppointmentResponse";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import AppButton from "@/components/ui/AppButton";
+import { useRouter } from "next/navigation";
 
 type Appointment = {
   id: string;
@@ -27,14 +28,17 @@ export default function ClientAppointmentModal({
   onClose: () => void;
   onCancelled: (appointmentId: string, projectStatus: string) => void;
 }) {
+  const router = useRouter();
   const [confirmCancellation, setConfirmCancellation] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
   const start = new Date(appointment.startsAt);
   const end = new Date(appointment.endsAt);
+  const now = new Date();
   const waitingForStudio = appointment.status === "requested";
   const canCancel =
     ["requested", "proposed", "confirmed"].includes(appointment.status) && start > new Date();
+  const canReschedule = ["requested", "proposed", "confirmed"].includes(appointment.status) && start.getTime() - now.getTime() >= 48 * 60 * 60 * 1000;
 
   async function cancelAppointment() {
     setCancelling(true);
@@ -98,15 +102,15 @@ export default function ClientAppointmentModal({
         )}
         {canCancel && (
           <div className="mt-6 border-t border-ink-white/10 pt-5">
-            <AppButton
+            <div className="flex flex-wrap gap-3">{canReschedule && <AppButton type="button" variant="secondary" onClick={() => { onClose(); router.push(`/app/portal/calendar?reschedule=${encodeURIComponent(appointment.id)}`); }}>PRZEŁÓŻ WIZYTĘ</AppButton>}<AppButton
               type="button"
               variant="destructive"
               onClick={() => setConfirmCancellation(true)}
             >
               ANULUJ TĘ WIZYTĘ
-            </AppButton>
+            </AppButton></div>
             <p className="mt-2 text-xs leading-relaxed text-ink-grey">
-              Termin zostanie od razu zwolniony, a studio otrzyma informację.
+              {canReschedule ? "Możesz wybrać nowy wolny termin albo anulować wizytę." : "Na mniej niż 48 godzin przed wizytą możesz ją anulować, ale przełożenie wymaga kontaktu ze studiem."}
             </p>
           </div>
         )}

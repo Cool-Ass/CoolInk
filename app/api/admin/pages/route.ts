@@ -4,7 +4,7 @@ import { slugify, RESERVED_SLUGS } from "@/lib/slugify";
 import { requireAdminApi } from "@/lib/adminApi";
 
 export async function GET() {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const pages = await prisma.page.findMany({
     orderBy: [{ isHomepage: "desc" }, { updatedAt: "desc" }],
   });
@@ -13,7 +13,7 @@ export async function GET() {
 
 /** Quick-create: title + slug only. Modules are then edited in the builder. */
 export async function POST(request: Request) {
-  const access = await requireAdminApi(); if (!access.ok) return access.response;
+  const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   if (!body?.title) {
     return NextResponse.json({ error: "Tytuł jest wymagany." }, { status: 400 });

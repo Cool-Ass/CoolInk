@@ -19,6 +19,7 @@ type Appointment = {
 };
 type Project = {
   id: string;
+  kind: string;
   title: string;
   description: string;
   status: string;
@@ -109,7 +110,7 @@ export default function ClientProjectCards({
               )}
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-display text-2xl">{project.title}</h3>
+                  <div>{project.kind === "consultation" && <span className="mb-2 inline-block border border-blue-400/40 px-2 py-1 text-xs text-blue-200">KONSULTACJA</span>}<h3 className="font-display text-2xl">{project.title}</h3></div>
                   <StatusBadge status={project.status} />
                 </div>
                 <p className="mt-3 line-clamp-2 text-sm text-ink-grey">
@@ -117,9 +118,9 @@ export default function ClientProjectCards({
                 </p>
                 <p className="mt-4 text-xs text-ink-gold">
                   {project.appointments.length}{" "}
-                  {project.appointments.length === 1 ? "sesja" : "sesje"}
+                  {project.kind === "consultation" ? "termin konsultacji" : project.appointments.length === 1 ? "sesja" : "sesje"}
                 </p>
-                <p className="mt-2 text-xs text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : "Wycena w trakcie ustalania"}</p>
+                {project.kind !== "consultation" && <p className="mt-2 text-xs text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : "Wycena w trakcie ustalania"}</p>}
               </div>
             </button>;
           })}
@@ -142,9 +143,9 @@ export default function ClientProjectCards({
               </div>
               <p className="mt-3 text-sm text-ink-grey">{selected.next}</p>
             </section>
-            <section className="border-y border-ink-white/10 py-5"><p className="text-[10px] tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{selected.estimatedPrice ? `${selected.estimatedPrice} zł` : "W trakcie ustalania"}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" && !selected.depositAmount ? "Jeszcze nieustalony" : selected.depositStatus === "not_required" ? "Zadatek niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || "Jeszcze nieustalony"}`}</p></div></div></section>
+            {selected.kind !== "consultation" && <section className="border-y border-ink-white/10 py-5"><p className="text-xs tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{selected.estimatedPrice ? `${selected.estimatedPrice} zł` : "W trakcie ustalania"}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADATEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" && !selected.depositAmount ? "Jeszcze nieustalony" : selected.depositStatus === "not_required" ? "Zadatek niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || "Jeszcze nieustalony"}`}</p></div></div></section>}
             <section>
-              <p className="text-[10px] tracking-widest text-ink-gold">SESJE</p>
+              <p className="text-xs tracking-widest text-ink-gold">{selected.kind === "consultation" ? "TERMIN KONSULTACJI" : "SESJE"}</p>
               {selected.appointments.length ? (
                 <div className="mt-3 space-y-2">
                   {selected.appointments.map((item) => (

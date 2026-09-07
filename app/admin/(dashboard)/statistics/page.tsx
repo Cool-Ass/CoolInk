@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
 const money = (value: number) => new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(value);
 
 export default async function StatisticsPage() {
+  await requireAdminPage("finance.manage");
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const yearStart = new Date(now.getFullYear(), 0, 1);
