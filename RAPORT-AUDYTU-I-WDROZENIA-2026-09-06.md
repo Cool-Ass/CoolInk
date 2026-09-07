@@ -8,6 +8,8 @@
 
 CoolInk nie jest już wyłącznie stroną-wizytówką. Obecna wersja łączy modułowy CMS, obsługę klientów i projektów, kalendarz, dokumenty, powiadomienia, statystyki, magazyn oraz instalowalne aplikacje klienta i administratora. Najważniejsze bariery wykryte w audycie — niejasna ścieżka rezerwacji, zbyt wiele tekstów zaszytych w kodzie, brak samodzielnego anulowania pojedynczej wizyty, ograniczona swoboda wizualna oraz nietrwałe pliki na Vercel — zostały usunięte. Produkcyjna wersja działa, a publiczny widok nadal pozostaje celowo w trybie budowy.
 
+W kolejnej iteracji wdrożono centrum pracy „Dzisiaj”, globalne wyszukiwanie, konsultacje, samodzielne przełożenie wizyty z zachowaniem 48-godzinnego limitu, listę rezerwową z czasową ofertą terminu, wspólną skrzynkę wiadomości, edytowalne szybkie odpowiedzi oraz przypomnienia push 72 i 24 godziny przed wizytą. Statystyki operacyjne pokazują teraz konwersję zgłoszeń, czas pierwszej odpowiedzi, obłożenie opublikowanych terminów, anulowania, nieobecności, powracających klientów i skuteczność listy rezerwowej.
+
 Najmocniejszy kierunek produktu to **osobista marka artysty + uporządkowana obsługa bez wiadomości rozsianych po DM-ach**. Publiczna strona powinna budować pragnienie i zaufanie, a aplikacja przejmować cały proces od pomysłu do zakończonej sesji.
 
 ## 2. Audyt UX
@@ -32,13 +34,15 @@ Klient ma jeden spójny proces: konto → projekt → termin → decyzja studia 
 
 Administrator może oznaczyć dzień jako wolny termin, niedostępny, promocję, wydarzenie albo konsultację. Konsultacja domyślnie zajmuje 09:00–09:30, ma własną niebieską etykietę i pozostaje edytowalna. Klient widzi ją jako osobny rodzaj dostępnego terminu wraz z osobnym tekstem przycisku rezerwacji.
 
+Widok administratora wylicza teraz rzeczywistą pozostałą dostępność zamiast pokazywać surową, pierwotną etykietę „wolny termin”. Po potwierdzeniu wizyty jej czas wraz z buforem jest odejmowany od zakresu. Jeśli nic nie zostało, zielona etykieta znika; przy częściowo zajętym dłuższym bloku widoczna pozostaje tylko faktycznie wolna część.
+
 Dodano samodzielne anulowanie pojedynczej przyszłej wizyty. Klient może anulować wyłącznie własny termin w stanie „zgłoszony”, „zaproponowany” lub „potwierdzony”. Operacja jest powtórnie sprawdzana w transakcji, blokuje wyścig z inną zmianą kalendarza, zwalnia termin, aktualizuje status projektu, zapisuje zdarzenie dla administratora i tworzy potwierdzenie dla klienta. Wizyt zakończonych, już anulowanych, oznaczonych jako nieobecność ani terminów z przeszłości nie można anulować.
 
 ### Panel administratora
 
-Panel porządkuje pracę studia wokół kalendarza, klientów, projektów, wiadomości i elementów wymagających uwagi. Dostępne są także statystyki klientów, wizyt i finansów, magazyn z historią ruchów i alertami, dokumenty, przypomnienia oraz integracja z Kalendarzem Google. Panel administratora można zainstalować jak aplikację; powiadomienia push obejmują m.in. nowe zgłoszenie terminu, anulowanie wizyty lub projektu, odpowiedź klienta, wiadomość i dodanie inspiracji.
+Panel porządkuje pracę studia wokół kalendarza, klientów, projektów, wiadomości i elementów wymagających uwagi. Ekran „Dzisiaj” łączy nadchodzące wizyty, nowe zgłoszenia, zaległe działania, nieprzeczytane wiadomości i alerty magazynu. Wspólna skrzynka grupuje rozmowy niezależnie od projektu, a odpowiedź tworzy jednocześnie wiadomość w koncie klienta i powiadomienie push. Dostępne są także statystyki operacyjne z filtrem 30/90/365 dni lub całego okresu, magazyn z historią ruchów i alertami, dokumenty, przypomnienia oraz integracja z Kalendarzem Google. Panel administratora można zainstalować jak aplikację; powiadomienia push obejmują m.in. nowe zgłoszenie terminu, anulowanie wizyty lub projektu, odpowiedź klienta, wiadomość i dodanie inspiracji.
 
-Najważniejsza dalsza optymalizacja operacyjna nie wymaga nowej architektury: warto z czasem dodać jeden ekran „Dzisiaj”, łączący wizyty, nieprzeczytane wiadomości, projekty oczekujące na decyzję, należne zadatki i niski stan materiałów.
+Źródło pozyskania jest zapisywane na poziomie każdego zgłoszenia (Instagram, Facebook, Google/Mapy, polecenie, stały klient, wydarzenie lub inne) i może zostać skorygowane przez administratora. Dzięki temu panel pokazuje nie tylko liczbę wejść z kanału, ale również jego konwersję na potwierdzony etap obsługi.
 
 ## 3. Wiarygodność i nisza odbiorców
 
@@ -123,7 +127,7 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Kontrola | Wynik |
 |---|---:|
 | TypeScript | PASS |
-| Testy automatyczne | 49/49 PASS |
+| Testy automatyczne | 57/57 PASS |
 | ESLint | 0 błędów, 13 ostrzeżeń nieblokujących |
 | Build produkcyjny Next.js | PASS |
 | `npm audit --omit=dev` | 0 podatności |
@@ -132,7 +136,7 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Anulowanie wizyty bez sesji klienta | HTTP 401 |
 | Mutujące żądanie z obcej domeny | HTTP 403 |
 
-Testy obejmują m.in. workflow, kalendarz, tryb budowy, linki CMS, ustawienia strony głównej, style tatuażu, integrację kalendarza oraz nowe reguły anulowania i bezpiecznego CSS.
+Testy obejmują m.in. workflow, rzeczywistą dostępność po zajęciu terminu, konsultacje, listę rezerwową, przypomnienia, tryb budowy, linki CMS, ustawienia strony głównej, źródła zgłoszeń, integrację kalendarza, reguły anulowania i bezpiecznego CSS.
 
 Kod został zapisany w głównej gałęzi repozytorium GitHub i poprawnie wdrożony do produkcyjnego
 projektu Vercel `cool-ink`. Domena
