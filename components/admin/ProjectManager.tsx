@@ -5,6 +5,7 @@ import { useToast } from "@/components/admin/ToastProvider";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { ADMIN_STATUS_LABEL, DEPOSIT_STATUS } from "@/lib/projectWorkflow";
 import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalendarPicker";
+import { LEAD_SOURCES } from "@/lib/leadSource";
 
 const OPTIONS = Object.entries(ADMIN_STATUS_LABEL);
 
@@ -14,6 +15,7 @@ export default function ProjectManager({
   initialKind,
   consultationMode,
   initialStatus,
+  initialLeadSource,
   initialNotes,
   estimatedPrice,
   finalPrice,
@@ -30,6 +32,7 @@ export default function ProjectManager({
   initialKind: string;
   consultationMode: string | null;
   initialStatus: string;
+  initialLeadSource: string | null;
   initialNotes: string | null;
   estimatedPrice: number | null;
   finalPrice: number | null;
@@ -44,6 +47,7 @@ export default function ProjectManager({
   const router = useRouter();
   const { showToast } = useToast();
   const [status, setStatus] = useState(initialStatus);
+  const [leadSource, setLeadSource] = useState(initialLeadSource ?? "");
   const [kind, setKind] = useState(initialKind);
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [estimate, setEstimate] = useState(estimatedPrice?.toString() ?? "");
@@ -73,6 +77,7 @@ export default function ProjectManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status,
+          leadSource,
           internalNotes: notes,
           nextAction,
           nextActionDueAt,
@@ -167,7 +172,7 @@ export default function ProjectManager({
         {kind === "consultation" ? "ZARZĄDZANIE KONSULTACJĄ" : "ZARZĄDZANIE PROJEKTEM"}
       </p>
       {kind === "consultation" && <div className="mt-4 border border-blue-400/35 bg-blue-400/5 p-4"><p className="text-sm text-blue-100">Konsultacja · {({ studio: "w studiu", phone: "telefonicznie", video: "rozmowa wideo" } as Record<string, string>)[consultationMode ?? ""] || "forma do ustalenia"}</p><p className="mt-2 text-sm leading-relaxed text-ink-grey">Po rozmowie możesz zamienić ją w projekt bez kopiowania wiadomości, zdjęć ani notatek.</p><button type="button" onClick={convertConsultation} disabled={saving} className="mt-3 border border-blue-300 px-4 py-2.5 text-xs text-blue-100 hover:bg-blue-400/10 disabled:opacity-50">PRZEKSZTAŁĆ W PROJEKT TATUAŻU</button></div>}
-      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           STATUS
           <select
@@ -180,6 +185,17 @@ export default function ProjectManager({
                 {label}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
+          ŹRÓDŁO ZGŁOSZENIA
+          <select
+            value={leadSource}
+            onChange={(event) => setLeadSource(event.target.value)}
+            className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"
+          >
+            <option value="">Nie podano</option>
+            {LEAD_SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
@@ -272,20 +288,20 @@ export default function ProjectManager({
         >
           {saving ? "ZAPISYWANIE…" : "ZAPISZ ZMIANY"}
         </button>
-        {canDeleteProject && <button
+        <button
           type="button"
           onClick={() => setProposalOpen((value) => !value)}
           className="border border-emerald-500/50 px-4 py-2.5 text-xs tracking-[0.08em] text-emerald-300 hover:bg-emerald-500/10"
         >
           ZAPROPONUJ TERMIN
-        </button>}
-        <button
+        </button>
+        {canDeleteProject && <button
           type="button"
           onClick={() => setDeleteOpen(true)}
           className="border border-red-500/60 px-4 py-2.5 text-xs tracking-[0.08em] text-red-300 hover:bg-red-500/10"
         >
           USUŃ PROJEKT
-        </button>
+        </button>}
       </div>
       {proposalOpen && (
         <form

@@ -222,6 +222,7 @@ model TattooProject {
   placement            String?
   size                 String?
   colorPreference      String?
+  leadSource           String?
   estimatedPrice       Int?
   finalPrice           Int?
   status               String            @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
@@ -242,6 +243,7 @@ model TattooProject {
   waitlistEntry        WaitlistEntry?
 
   @@index([kind, status, updatedAt])
+  @@index([leadSource, createdAt])
   @@index([nextActionDueAt])
 }
 

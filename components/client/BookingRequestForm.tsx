@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AppButton from "@/components/ui/AppButton";
 import AppModal from "@/components/ui/AppModal";
 import InspirationUpload from "@/components/client/InspirationUpload";
+import { LEAD_SOURCES } from "@/lib/leadSource";
 
 const styles = ["Realizm", "Black & Grey", "Fine Line", "Lettering", "Neo Traditional", "Inny"];
 const placements = ["Ramię", "Przedramię", "Bark", "Klatka piersiowa", "Plecy", "Żebra", "Udo", "Łydka", "Dłoń", "Szyja", "Inne"];
@@ -34,7 +35,7 @@ export default function BookingRequestForm({
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [inspirations, setInspirations] = useState<File[]>([]);
   const inspirationInput = useRef<HTMLInputElement>(null);
-  const [data, setData] = useState({ title: "", description: "", placement: "", size: "", styles: [] as string[], notes: "", consultationMode: "studio" });
+  const [data, setData] = useState({ title: "", description: "", placement: "", size: "", styles: [] as string[], notes: "", consultationMode: "studio", leadSource: "" });
   const format = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long", timeStyle: "short" });
   const range = `${format.format(new Date(startsAt))}–${new Date(endsAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
   const toggle = (style: string) => setData((value) => ({ ...value, styles: value.styles.includes(style) ? value.styles.filter((item) => item !== style) : [...value.styles, style] }));
@@ -112,6 +113,8 @@ export default function BookingRequestForm({
         <div className="space-y-4"><label className="block text-sm text-ink-grey">NAZWA / KRÓTKI TEMAT (OPCJONALNIE)<input value={data.title} onChange={(event) => setData({ ...data, title: event.target.value })} maxLength={160} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white" placeholder="Np. ornament na przedramię" /></label><label className="block text-sm text-ink-grey">OPIS / POMYSŁ<textarea required value={data.description} onChange={(event) => setData({ ...data, description: event.target.value })} minLength={12} maxLength={5000} rows={7} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white" placeholder="Co chcesz zrobić i co jest dla Ciebie ważne?" /></label><label className="block text-sm text-ink-grey">DODATKOWE INFORMACJE (OPCJONALNIE)<textarea value={data.notes} onChange={(event) => setData({ ...data, notes: event.target.value })} maxLength={1000} rows={3} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white" /></label></div>
         <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="text-sm text-ink-grey">MIEJSCE<select value={data.placement} onChange={(event) => setData({ ...data, placement: event.target.value })} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white"><option value="">Wybierz</option>{placements.map((item) => <option key={item}>{item}</option>)}</select></label><label className="text-sm text-ink-grey">ORIENTACYJNY ROZMIAR<input value={data.size} onChange={(event) => setData({ ...data, size: event.target.value })} maxLength={120} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white" placeholder="Np. 15 cm" /></label></div><div><p className="text-sm text-ink-grey">STYL (OPCJONALNIE)</p><div className="mt-2 flex flex-wrap gap-2">{tattooStyles.map((style) => <button key={style} type="button" onClick={() => toggle(style)} className={`border px-3 py-2 text-xs ${data.styles.includes(style) ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/20 text-ink-grey"}`}>{style}</button>)}</div></div>{uploadBox}</div>
       </section>}
+
+      {!projectId && <label className="block text-sm text-ink-grey">SKĄD O MNIE WIESZ? (OPCJONALNIE)<select value={data.leadSource} onChange={(event) => setData({ ...data, leadSource: event.target.value })} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white"><option value="">Nie podano</option>{LEAD_SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
 
       {error && <p role="alert" className="border border-red-400/40 bg-red-400/10 p-3 text-sm text-red-300">{error}</p>}
       <div className="flex justify-end gap-3"><AppButton type="button" variant="ghost" onClick={onClose} disabled={saving}>ANULUJ</AppButton><AppButton type="submit" variant="primary" disabled={saving}>{saving ? "WYSYŁANIE…" : consultation ? "WYŚLIJ PROŚBĘ O KONSULTACJĘ" : "WYŚLIJ PROŚBĘ O WIZYTĘ"}</AppButton></div>

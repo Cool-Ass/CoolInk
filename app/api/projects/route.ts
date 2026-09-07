@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { activityMessage } from "@/lib/projectWorkflow";
+import { normalizeLeadSource } from "@/lib/leadSource";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
       placement: String(body.placement ?? "").trim() || null,
       size: String(body.size ?? "").trim() || null,
       colorPreference: String(body.colorPreference ?? "").trim() || null,
+      leadSource: normalizeLeadSource(body.leadSource),
       preferredDateNote: String(body.preferredDateNote ?? "").trim().slice(0, 500) || null,
       status: "inquiry",
       nextAction: "Przejrzyj nowe zgłoszenie i odpowiedz klientowi",

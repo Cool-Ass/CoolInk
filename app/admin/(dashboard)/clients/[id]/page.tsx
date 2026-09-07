@@ -24,6 +24,7 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     kind: project.kind,
     consultationMode: project.consultationMode,
     status: project.status,
+    leadSource: project.leadSource,
     internalNotes: project.internalNotes,
     nextAction: project.nextAction,
     nextActionDueAt: project.nextActionDueAt?.toISOString() ?? null,
