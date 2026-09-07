@@ -264,21 +264,21 @@ export default function ProjectManager({
         />
       </label>
       <div className="mt-5 flex flex-wrap gap-3">
-        {canDeleteProject && <button
+        <button
           type="button"
           onClick={save}
           disabled={saving}
           className="border border-ink-gold px-4 py-2.5 text-xs tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black disabled:opacity-50"
         >
           {saving ? "ZAPISYWANIE…" : "ZAPISZ ZMIANY"}
-        </button>}
-        <button
+        </button>
+        {canDeleteProject && <button
           type="button"
           onClick={() => setProposalOpen((value) => !value)}
           className="border border-emerald-500/50 px-4 py-2.5 text-xs tracking-[0.08em] text-emerald-300 hover:bg-emerald-500/10"
         >
           ZAPROPONUJ TERMIN
-        </button>
+        </button>}
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}

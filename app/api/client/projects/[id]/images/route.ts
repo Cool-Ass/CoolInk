@@ -7,6 +7,7 @@ import {
 } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -15,6 +16,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const client = await getCurrentClient();
   const token = await getClientAccessToken();
   const { id } = await params;
@@ -23,6 +25,8 @@ export async function POST(
       { error: "Zaloguj się ponownie, aby przesłać plik." },
       { status: 401 },
     );
+  const limit = await rateLimit(request, "client-project-image", 12, 60 * 60_000, client.id);
+  if (!limit.allowed) return tooManyRequests(limit);
   const project = await prisma.tattooProject.findFirst({
     where: { id, clientId: client.id },
   });
@@ -80,6 +84,7 @@ export async function POST(
   const image = await prisma.projectImage.create({
     data: { projectId: project.id, url: objectPath, caption },
   });
+  await prisma.tattooProject.update({ where: { id: project.id }, data: { nextAction: "Sprawdź nową inspirację klienta", nextActionDueAt: new Date() } });
   await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")
     return NextResponse.json({ imageId: image.id }, { status: 201 });

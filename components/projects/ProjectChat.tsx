@@ -5,6 +5,7 @@ import AppModal from "@/components/ui/AppModal";
 import AppButton from "@/components/ui/AppButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { imageSource } from "@/lib/imageSource";
+import type { MessageTemplate } from "@/lib/messageTemplates";
 
 type Message = {
   id: string;
@@ -21,11 +22,13 @@ export default function ProjectChat({
   initial,
   role,
   autoFocus = false,
+  templates = [],
 }: {
   projectId: string;
   initial: Message[];
   role: "client" | "admin";
   autoFocus?: boolean;
+  templates?: MessageTemplate[];
 }) {
   const [messages, setMessages] = useState(initial);
   const [text, setText] = useState("");
@@ -183,6 +186,7 @@ export default function ProjectChat({
         )}
       </div>
       <div className="mt-4 border-t border-ink-white/10 pt-4">
+        {role === "admin" && templates.length > 0 && <div className="mb-3"><p className="mb-2 text-xs tracking-widest text-ink-grey">SZYBKIE ODPOWIEDZI</p><div className="flex gap-2 overflow-x-auto pb-1">{templates.map((template) => <button key={template.id} type="button" onClick={() => setText((value) => value.trim() ? `${value.trim()}\n\n${template.body}` : template.body)} className="shrink-0 border border-ink-white/15 px-3 py-2 text-xs text-ink-grey hover:border-ink-gold hover:text-ink-gold">{template.label}</button>)}</div></div>}
         <div className="flex flex-wrap gap-1">
           {EMOJI.map((emoji) => (
             <button

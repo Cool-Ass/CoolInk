@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function getPublicCalendarData(includeLoggedInPromotions = false) {
   const now = new Date();
   const [appointments, blocks, hours, overrides, availableSlots, promotions, events, settings] = await Promise.all([
-    prisma.appointment.findMany({ where: { status: { notIn: ["cancelled", "no_show"] }, endsAt: { gte: now } }, select: { startsAt: true, endsAt: true } }),
+    prisma.appointment.findMany({ where: { status: { notIn: ["cancelled", "no_show"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: now } } } }, endsAt: { gte: now } }, select: { startsAt: true, endsAt: true } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: now } }, select: { startsAt: true, endsAt: true } }),
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" }, select: { weekday: true, enabled: true, startsAt: true, endsAt: true } }),
     prisma.workingHoursOverride.findMany({ where: { date: { gte: now } }, select: { date: true, enabled: true, startsAt: true, endsAt: true } }),

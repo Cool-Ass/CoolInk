@@ -17,12 +17,13 @@ export async function POST(request: Request, { params }: Params) {
   const body = await request.json().catch(() => null);
   const response = String(body?.response ?? "");
   if (response !== "accept" && response !== "reject") return NextResponse.json({ error: "Nieprawidłowa odpowiedź." }, { status: 400 });
-  const appointment = await prisma.appointment.findFirst({ where: { id, project: { clientId: client.id } }, include: { project: true } });
+  const appointment = await prisma.appointment.findFirst({ where: { id, project: { clientId: client.id } }, include: { project: true, waitlistOffer: true } });
   if (!appointment) return NextResponse.json({ error: "Nie znaleziono wizyty." }, { status: 404 });
   // A request chosen by the client is deliberately not actionable by that
   // same client. Only a different term explicitly proposed by the studio can
   // be accepted or rejected here.
   if (appointment.status !== "proposed") return NextResponse.json({ error: "Studio nie zaproponowało jeszcze nowego terminu." }, { status: 409 });
+  if (appointment.waitlistOffer?.offerExpiresAt && appointment.waitlistOffer.offerExpiresAt <= new Date()) return NextResponse.json({ error: "Ta oferta z listy rezerwowej już wygasła. Termin wróci do puli." }, { status: 409 });
 
   const accepted = response === "accept";
   const nextProjectStatus = accepted ? (appointment.project.depositStatus === "awaiting" ? "awaiting_deposit" : "confirmed") : "awaiting_client";
@@ -35,7 +36,8 @@ export async function POST(request: Request, { params }: Params) {
       if (conflict.appointment || conflict.block) throw new Error("BOOKING_CONFLICT");
     }
     const updated = await tx.appointment.update({ where: { id }, data: { status: accepted ? "confirmed" : "cancelled" } });
-    await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: nextProjectStatus } });
+    await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: nextProjectStatus, ...(appointment.waitlistOffer ? { nextAction: accepted ? "Przygotuj potwierdzoną wizytę" : "Zaproponuj kolejny termin z listy rezerwowej", nextActionDueAt: null } : {}) } });
+    if (appointment.waitlistOffer) await tx.waitlistEntry.update({ where: { id: appointment.waitlistOffer.id }, data: accepted ? { status: "booked" } : { status: "active", offeredAppointmentId: null, offeredAt: null, offerExpiresAt: null } });
     await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: accepted ? "appointment_confirmed" : "appointment_cancelled", message: activityMessage(accepted ? "appointment_confirmed" : "appointment_cancelled"), visibility: "admin" } });
     return updated;
   }).catch((error: unknown) => {

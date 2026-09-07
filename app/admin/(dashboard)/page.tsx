@@ -17,13 +17,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const soon = new Date(now); soon.setDate(soon.getDate() + 14);
   const staleMessage = new Date(now.getTime() - 12 * 60 * 60 * 1000);
 
-  const [today, newProjects, actionProjects, upcoming, unreadMessages, syncIssues] = await Promise.all([
+  const [today, newProjects, actionProjects, upcoming, unreadMessages, syncIssues, waitlistEntries] = await Promise.all([
     prisma.appointment.findMany({ where: { startsAt: { gte: start, lte: end }, status: { notIn: ["cancelled", "no_show"] } }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" } }),
     prisma.tattooProject.findMany({ where: { status: { in: ["inquiry", "reviewing"] } }, include: { client: true }, orderBy: { createdAt: "asc" }, take: 12 }),
     prisma.tattooProject.findMany({ where: { OR: [{ nextAction: { not: null } }, { status: { in: ["awaiting_client", "awaiting_confirmation", "awaiting_deposit", "confirmed", "awaiting_next_session"] } }] }, include: { client: true }, orderBy: [{ nextActionDueAt: "asc" }, { updatedAt: "asc" }], take: 20 }),
     prisma.appointment.findMany({ where: { startsAt: { gt: end, lte: soon }, status: { in: ["confirmed", "proposed", "requested"] } }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" }, take: 8 }),
     prisma.projectMessage.findMany({ where: { author: "client", readAt: null }, include: { project: { include: { client: true } } }, orderBy: { createdAt: "asc" }, take: 30 }),
     prisma.googleCalendarEventSync.count({ where: { syncStatus: { in: ["ERROR", "CONFLICT"] } } }),
+    prisma.waitlistEntry.findMany({ where: { status: { in: ["active", "offered"] } }, include: { client: true, project: { select: { title: true } } }, orderBy: { createdAt: "asc" }, take: 20 }),
   ]);
 
   const actions: ActionItem[] = [];
@@ -35,6 +36,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     actions.push({ key: `project-${project.id}`, priority: overdue ? 1 : 2, label: project.kind === "consultation" ? "KONSULTACJA" : overdue ? "PO TERMINIE" : "NASTĘPNE DZIAŁANIE", title: `${project.client.firstName} ${project.client.lastName} · ${project.title}`, detail: project.nextAction || fallback[project.status] || ADMIN_STATUS_LABEL[project.status as keyof typeof ADMIN_STATUS_LABEL] || "Sprawdź projekt.", href: `/admin/clients/${project.client.id}?view=projects`, dueAt: project.nextActionDueAt });
   }
   for (const project of newProjects) if (!actions.some((item) => item.key === `project-${project.id}`)) actions.push({ key: `project-${project.id}`, priority: project.createdAt <= staleMessage ? 1 : 2, label: project.kind === "consultation" ? "NOWA KONSULTACJA" : "NOWE ZGŁOSZENIE", title: `${project.client.firstName} ${project.client.lastName} · ${project.title}`, detail: project.description, href: `/admin/clients/${project.client.id}?view=projects`, dueAt: project.createdAt });
+  for (const entry of waitlistEntries) {
+    const expired = entry.status === "offered" && entry.offerExpiresAt && entry.offerExpiresAt < now;
+    actions.push({ key: `waitlist-${entry.id}`, priority: expired ? 1 : 3, label: expired ? "OFERTA WYGASŁA" : entry.status === "offered" ? "LISTA · OCZEKUJE NA ODPOWIEDŹ" : "LISTA REZERWOWA", title: `${entry.client.firstName} ${entry.client.lastName} · ${entry.project.title}`, detail: expired ? "Zwolnij propozycję i zaoferuj kolejny termin." : entry.status === "offered" ? "Termin jest tymczasowo zablokowany dla klienta." : "Klient czeka na pasujący zwolniony termin.", href: "/admin/waitlist", dueAt: entry.offerExpiresAt ?? entry.createdAt });
+  }
   if (syncIssues > 0) actions.push({ key: "calendar-sync", priority: 1, label: "KALENDARZ", title: `${syncIssues} ${syncIssues === 1 ? "problem synchronizacji" : "problemy synchronizacji"}`, detail: "Sprawdź połączenie z Kalendarzem Google, aby uniknąć rozbieżności terminów.", href: "/admin/calendar" });
   actions.sort((a, b) => a.priority - b.priority || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER));
 

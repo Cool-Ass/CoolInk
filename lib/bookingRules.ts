@@ -31,7 +31,7 @@ export async function bookingConflict(startsAt: Date, endsAt: Date, excludeAppoi
   const bufferedStart = new Date(startsAt.getTime() - bufferMinutes * 60_000);
   const bufferedEnd = new Date(endsAt.getTime() + bufferMinutes * 60_000);
   const [appointment, block, externalBusy] = await Promise.all([
-    db.appointment.findFirst({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, startsAt: { lt: bufferedEnd }, endsAt: { gt: bufferedStart } } }),
+    db.appointment.findFirst({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: new Date() } } } }, startsAt: { lt: bufferedEnd }, endsAt: { gt: bufferedStart } } }),
     db.availabilityBlock.findFirst({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }),
     db.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", calendarEvent: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }, select: { id: true } }),
   ]);

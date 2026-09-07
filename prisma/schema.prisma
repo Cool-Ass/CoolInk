@@ -164,6 +164,7 @@ model Client {
   acceptances       DocumentAcceptance[]
   notifications     ClientNotification[]
   pushSubscriptions PushSubscription[]
+  waitlistEntries   WaitlistEntry[]
   deletionRequest   AccountDeletionRequest?
 }
 
@@ -216,7 +217,7 @@ model TattooProject {
   title                String
   description          String
   kind                 String            @default("tattoo") // tattoo | consultation
-  consultationMode     String?           // studio | phone | video
+  consultationMode     String? // studio | phone | video
   styles               String            @default("")
   placement            String?
   size                 String?
@@ -238,6 +239,7 @@ model TattooProject {
   appointments         Appointment[]
   activities           ProjectActivity[]
   messages             ProjectMessage[]
+  waitlistEntry        WaitlistEntry?
 
   @@index([kind, status, updatedAt])
   @@index([nextActionDueAt])
@@ -258,6 +260,35 @@ model Appointment {
   updatedAt          DateTime                 @updatedAt
   googleCalendarSync GoogleCalendarEventSync?
   reminderDeliveries ReminderDelivery[]
+  waitlistOffer      WaitlistEntry?           @relation("WaitlistOfferAppointment")
+}
+
+/// A client who wants an earlier or otherwise better fitting appointment.
+/// An offered appointment temporarily reserves the slot until the client
+/// accepts, declines, or the daily automation expires the offer.
+model WaitlistEntry {
+  id                   String        @id @default(cuid())
+  clientId             String
+  client               Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId            String        @unique
+  project              TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status               String        @default("active") // active | offered | booked | paused | closed
+  durationMinutes      Int           @default(120)
+  preferredWeekdays    String        @default("1,2,3,4,5")
+  timePreference       String        @default("any") // any | morning | afternoon | evening
+  earliestDate         DateTime?
+  latestDate           DateTime?
+  notes                String?
+  offeredAppointmentId String?       @unique
+  offeredAppointment   Appointment?  @relation("WaitlistOfferAppointment", fields: [offeredAppointmentId], references: [id], onDelete: SetNull)
+  offeredAt            DateTime?
+  offerExpiresAt       DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([clientId, status])
+  @@index([offerExpiresAt])
 }
 
 /// One browser/device that the client explicitly allowed to receive push

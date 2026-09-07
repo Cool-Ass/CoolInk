@@ -6,6 +6,7 @@ import {
   rateLimit,
   tooManyRequests,
 } from "@/lib/requestSecurity";
+import { sendPushToClient } from "@/lib/webPush";
 
 const MAX_MESSAGE_LENGTH = 2_000;
 
@@ -98,9 +99,13 @@ export async function POST(
       { error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` },
       { status: 400 },
     );
-  const result = await prisma.projectMessage.create({
-      data: { projectId: id, author: "admin", body: text },
-      include: { attachment: { select: { id: true, caption: true } } },
-    });
+  const result = await prisma.$transaction(async (tx) => {
+    const message = await tx.projectMessage.create({ data: { projectId: id, author: "admin", body: text }, include: { attachment: { select: { id: true, caption: true } } } });
+    const followUp = new Date(Date.now() + 3 * 24 * 60 * 60 * 1_000);
+    await tx.tattooProject.update({ where: { id }, data: { nextAction: "Oczekiwanie na odpowiedź klienta", nextActionDueAt: followUp } });
+    await tx.clientNotification.create({ data: { clientId: project.clientId, projectId: id, type: "NEW_STUDIO_MESSAGE", title: "Nowa wiadomość od studia", body: text.slice(0, 240), href: "/app/portal/messages" } });
+    return message;
+  });
+  await sendPushToClient(project.clientId, { title: "Nowa wiadomość od CoolInk", body: text.slice(0, 160), url: "/app/portal/messages", tag: `studio-message-${result.id}` }).catch(() => undefined);
   return NextResponse.json({ message: serialize(result) }, { status: 201 });
 }

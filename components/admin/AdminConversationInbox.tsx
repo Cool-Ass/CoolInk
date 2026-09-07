@@ -1,0 +1,18 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import ProjectChat from "@/components/projects/ProjectChat";
+import EmptyState from "@/components/ui/EmptyState";
+import type { MessageTemplate } from "@/lib/messageTemplates";
+
+type Message = { id: string; author: string; body: string; createdAt: string; readAt: string | null; attachment: { id: string; caption: string | null } | null };
+type Conversation = { id: string; title: string; kind: string; clientId: string; clientName: string; messages: Message[] };
+
+export default function AdminConversationInbox({ conversations, templates }: { conversations: Conversation[]; templates: MessageTemplate[] }) {
+  const [selectedId, setSelectedId] = useState(conversations.find((item) => item.messages.some((message) => message.author === "client" && !message.readAt))?.id ?? conversations[0]?.id ?? "");
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => conversations.filter((item) => `${item.clientName} ${item.title} ${item.messages.at(-1)?.body ?? ""}`.toLocaleLowerCase("pl-PL").includes(query.trim().toLocaleLowerCase("pl-PL"))), [conversations, query]);
+  const selected = conversations.find((item) => item.id === selectedId) ?? filtered[0] ?? conversations[0];
+  if (!conversations.length) return <EmptyState title="Nie ma jeszcze rozmów" description="Rozmowa pojawi się po pierwszej wiadomości klienta lub studia." />;
+  return <div className="grid min-h-[620px] overflow-hidden border border-ink-white/15 bg-ink-charcoal/20 lg:grid-cols-[320px_minmax(0,1fr)]"><aside className="border-b border-ink-white/10 lg:border-b-0 lg:border-r"><div className="border-b border-ink-white/10 p-4"><label className="text-xs tracking-[.12em] text-ink-grey">SZUKAJ<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Klient lub projekt" className="mt-2 w-full border border-ink-white/20 bg-ink-black p-3 text-sm text-ink-white" /></label></div><div className="max-h-72 overflow-y-auto lg:max-h-[660px]">{filtered.map((conversation) => { const last = conversation.messages.at(-1); const unread = conversation.messages.some((message) => message.author === "client" && !message.readAt); return <button key={conversation.id} type="button" onClick={() => setSelectedId(conversation.id)} className={`w-full border-b border-ink-white/10 p-4 text-left ${selected?.id === conversation.id ? "bg-ink-gold/10" : "hover:bg-ink-white/5"}`}><div className="flex items-start justify-between gap-2"><p className="text-sm text-ink-white">{conversation.clientName}</p>{unread && <span className="h-2 w-2 shrink-0 rounded-full bg-ink-gold" aria-label="Nieprzeczytana wiadomość" />}</div><p className="mt-1 text-xs text-ink-gold">{conversation.title}</p><p className="mt-2 line-clamp-2 text-sm text-ink-grey">{last?.body || (last?.attachment ? "Załączone zdjęcie" : "Brak wiadomości")}</p></button>; })}{!filtered.length && <p className="p-5 text-sm text-ink-grey">Brak pasujących rozmów.</p>}</div></aside>{selected && <section className="min-w-0 p-4 sm:p-6"><div className="mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-ink-white/10 pb-4"><div><p className="text-xs text-ink-gold">{selected.kind === "consultation" ? "KONSULTACJA" : "PROJEKT"}</p><h2 className="mt-1 font-display text-2xl">{selected.clientName} · {selected.title}</h2></div><a href={`/admin/clients/${selected.clientId}?view=projects`} className="border border-ink-white/15 px-3 py-2 text-xs text-ink-grey hover:border-ink-gold hover:text-ink-gold">KARTA KLIENTA</a></div><ProjectChat key={selected.id} projectId={selected.id} role="admin" initial={selected.messages} templates={templates} autoFocus /></section>}</div>;
+}

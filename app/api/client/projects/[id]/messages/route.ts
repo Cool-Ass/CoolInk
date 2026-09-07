@@ -103,9 +103,10 @@ export async function POST(
       { error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` },
       { status: 400 },
     );
-  const message = await prisma.projectMessage.create({
-    data: { projectId: id, author: "client", body: text },
-    include: { attachment: { select: { id: true, caption: true } } },
+  const message = await prisma.$transaction(async (tx) => {
+    const created = await tx.projectMessage.create({ data: { projectId: id, author: "client", body: text }, include: { attachment: { select: { id: true, caption: true } } } });
+    await tx.tattooProject.update({ where: { id }, data: { nextAction: "Odpowiedz na wiadomość klienta", nextActionDueAt: new Date() } });
+    return created;
   });
   await sendPushToAdmins({ title: "Nowa wiadomość od klienta", body: `${client.firstName} ${client.lastName}: ${text.slice(0, 120)}`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-message-${message.id}` }).catch(() => undefined);
   return NextResponse.json({ message: serialize(message) }, { status: 201 });

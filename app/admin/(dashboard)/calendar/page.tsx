@@ -10,7 +10,7 @@ export default async function CalendarPage() {
   const [appointments, projects, blocks, slots, promotions, events, clients, settings] = await Promise.all([
     // Cancelled appointments remain in client/project history, but do not take
     // part in the operational calendar dataset.
-    prisma.appointment.findMany({ include: { project: { include: { client: true } } }, where: { endsAt: { gte: from }, status: { not: "cancelled" } }, orderBy: { startsAt: "asc" } }),
+    prisma.appointment.findMany({ include: { project: { include: { client: true } } }, where: { endsAt: { gte: from }, status: { not: "cancelled" }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: new Date() } } } } }, orderBy: { startsAt: "asc" } }),
     prisma.tattooProject.findMany({ where: { status: { in: ["inquiry", "reviewing", "accepted", "scheduled"] } }, include: { client: true }, orderBy: { updatedAt: "desc" } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
     prisma.availableSlot.findMany({ where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
