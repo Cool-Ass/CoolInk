@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import CalendarItemEditor, { type CalendarEditorItem } from "@/components/admin/calendar/CalendarItemEditor";
 import CalendarSettingsEditor from "@/components/admin/calendar/CalendarSettingsEditor";
 import AppModal from "@/components/ui/AppModal";
-import { CONSULTATION_SLOT_TITLE, isConsultationSlot, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, startOfLocalDay } from "@/lib/calendarHub";
+import { CONSULTATION_SLOT_TITLE, isConsultationSlot, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, startOfLocalDay } from "@/lib/calendarHub";
 
 type Appointment = { id: string; startsAt: string; endsAt: string; status: string; price: number | null; notes: string | null; clientId: string; clientName: string; projectTitle: string };
 type Block = { id: string; startsAt: string; endsAt: string; reason: string | null };
@@ -90,7 +90,19 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
         {dates.map((date) => {
           const dayBlocks = matching(blocks, date);
           const daySlots = matching(slots, date);
-          const consultationSlots = daySlots.filter(isConsultationSlot);
+          const availableRanges = resolveAvailableRanges({
+            date,
+            recurring: [],
+            overrides: [],
+            slots: daySlots.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt), isPublic: item.isPublic })),
+            blocks: blocks.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) })),
+            appointments: appointments.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt), status: item.status })),
+            bufferMinutes,
+          }).map((range) => ({
+            ...range,
+            source: daySlots.find((item) => new Date(item.startsAt) <= range.startsAt && new Date(item.endsAt) >= range.endsAt),
+          }));
+          const consultationSlots = availableRanges.filter((item) => item.source && isConsultationSlot(item.source));
           const dayPromos = matching(promotions.filter((item) => item.active), date);
           const dayEvents = matching(events, date);
           const dayAppointments = activeAppointments(date);
@@ -98,18 +110,20 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
             ? { name: "NIEDOSTĘPNY", className: "bg-red-500/15", textClassName: "text-red-200" }
             : consultationSlots.length
               ? { name: CONSULTATION_SLOT_TITLE, className: "bg-blue-500/15", textClassName: "text-blue-200" }
-              : daySlots.length
+              : availableRanges.length
                 ? { name: "WOLNY", className: "bg-emerald-500/15", textClassName: "text-emerald-200" }
                 : date.getDay() === 0
                   ? { name: "NIEDZIELA", className: "bg-red-500/10", textClassName: "text-red-200" }
                   : { name: "NIEOZNACZONY", className: "bg-ink-white/[0.035]", textClassName: "text-ink-grey" };
-          const eventColor = !daySlots.length && !dayBlocks.length ? (dayEvents[0]?.color ?? dayPromos[0]?.color) : undefined;
+          const eventColor = !availableRanges.length && !dayBlocks.length ? (dayEvents[0]?.color ?? dayPromos[0]?.color) : undefined;
           return <div key={date.toISOString()} style={eventColor ? { backgroundColor: `${eventColor}26` } : undefined} className={`min-h-24 border-b border-r border-ink-white/10 p-1.5 sm:min-h-32 sm:p-2 ${explicit.className} ${selectedKeys.has(localDateKey(date)) ? "ring-1 ring-inset ring-ink-gold" : ""} ${date.getMonth() !== cursor.getMonth() ? "opacity-35" : ""}`}>
             <button type="button" onClick={(event) => selectDay(date, event)} className="w-full text-left"><b className="text-sm sm:text-base">{date.getDate()}</b><span className={`mt-1 block text-[7px] tracking-wide sm:text-[8px] ${explicit.textClassName}`}>{explicit.name}</span></button>
             <div className="mt-1 space-y-1">
-              {daySlots.slice(0, 2).map((item) => {
-                const consultation = isConsultationSlot(item);
-                return <button key={item.id} type="button" onClick={() => setEditor({ ...item, kind: consultation ? "consultation" : "freeTerm" })} className="block w-full truncate px-1 text-left text-[8px] text-ink-black" style={{ backgroundColor: item.color }}>{consultation ? CONSULTATION_SLOT_TITLE : "WOLNY"} · {time(item.startsAt)}–{time(item.endsAt)}</button>;
+              {availableRanges.slice(0, 2).map((item) => {
+                const source = item.source;
+                if (!source) return null;
+                const consultation = isConsultationSlot(source);
+                return <button key={`${source.id}-${item.startsAt.toISOString()}-${item.endsAt.toISOString()}`} type="button" onClick={() => setEditor({ ...source, kind: consultation ? "consultation" : "freeTerm" })} className="block w-full truncate px-1 text-left text-[8px] text-ink-black" style={{ backgroundColor: source.color }}>{consultation ? CONSULTATION_SLOT_TITLE : "WOLNY"} · {time(item.startsAt.toISOString())}–{time(item.endsAt.toISOString())}</button>;
               })}
               {dayBlocks.slice(0, 1).map((item) => <button key={item.id} type="button" onClick={() => setEditor({ ...item, kind: "dayOff" })} className="block w-full truncate bg-red-500/25 px-1 text-left text-[8px] text-red-100">◆ NIEDOSTĘPNY</button>)}
               {dayPromos.slice(0, 1).map((item) => <button key={item.id} type="button" onClick={() => setEditor({ ...item, kind: "promotion" })} className="block w-full truncate px-1 text-left text-[8px] text-ink-black" style={{ backgroundColor: item.color }}>{item.badge || "PROMO"}</button>)}

@@ -57,6 +57,12 @@ describe("Calendar Hub selection", () => {
     expect(ranges.map((range) => [range.startsAt.getHours(), range.startsAt.getMinutes(), range.endsAt.getHours(), range.endsAt.getMinutes()])).toEqual([[10, 0, 11, 30], [14, 30, 18, 0]]);
   });
 
+  it("does not expose a free range when an appointment consumes the whole explicit slot", () => {
+    const date = new Date(2026, 8, 17);
+    const ranges = resolveAvailableRanges({ date, recurring: [], overrides: [], slots: [{ startsAt: new Date(2026, 8, 17, 10), endsAt: new Date(2026, 8, 17, 12), isPublic: true }], blocks: [], appointments: [{ startsAt: new Date(2026, 8, 17, 10), endsAt: new Date(2026, 8, 17, 12), status: "confirmed" }], bufferMinutes: 30, publicOnly: true });
+    expect(ranges).toEqual([]);
+  });
+
   it("hides private slots from the client resolver while retaining them for an administrator", () => {
     const date = new Date(2026, 7, 26);
     const slots = [
