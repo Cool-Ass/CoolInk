@@ -27,10 +27,10 @@ export default function StatsBar({ content = defaultModuleData("stats") as unkno
   const stats = STATS.map((stat, index) => ({ ...stat, ...(content.items?.[index] || {}) }));
   return (
     <section className="relative border-y border-ink-white/10 bg-ink-black">
-      <div className="mx-auto flex max-w-[1536px] items-stretch px-6 py-8 md:px-10 lg:px-16">
-        <div className="grid flex-1 grid-cols-2 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
+      <div className="mx-auto flex max-w-[1536px] items-stretch px-4 py-8 sm:px-6 md:px-10 lg:px-16">
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-7 min-[400px]:grid-cols-2 sm:grid-cols-4 sm:gap-x-6 sm:gap-y-8">
           {stats.map((stat, index) => (
-            <div key={`${stat.label}-${index}`} className="flex items-center gap-4">
+            <div key={`${stat.label}-${index}`} className="flex min-w-0 items-center gap-3 sm:gap-4">
               <svg
                 viewBox="0 0 24 24"
                 className="h-9 w-9 shrink-0 text-ink-gold"
@@ -40,11 +40,11 @@ export default function StatsBar({ content = defaultModuleData("stats") as unkno
               >
                 <path d={stat.path} />
               </svg>
-              <div>
+              <div className="min-w-0">
                 <p className="font-display text-2xl leading-none text-ink-white md:text-3xl">
                   {stat.value}
                 </p>
-                <p className="mt-1.5 text-[10.5px] tracking-[0.12em] text-ink-grey">
+                <p className="mt-1.5 break-words text-[10.5px] leading-relaxed tracking-[0.1em] text-ink-grey sm:tracking-[0.12em]">
                   {stat.label}
                 </p>
               </div>

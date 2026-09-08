@@ -27,17 +27,17 @@ export default function Footer({
     <footer className="relative overflow-hidden border-t border-ink-white/10 bg-ink-black">
       <CalligraphyBackground opacity={0.04} position="60% 20%" />
 
-      <div className="relative mx-auto flex max-w-[1536px] flex-col gap-8 px-6 py-12 md:flex-row md:items-center md:justify-between md:px-10 lg:px-16">
+      <div className="relative mx-auto flex max-w-[1536px] flex-col items-start gap-7 px-4 py-10 sm:px-6 sm:py-12 md:flex-row md:items-center md:justify-between md:px-10 lg:px-16">
         <Link href="/#home" className="relative h-12 w-36 shrink-0">
           {logoSource ? <Image src={logoSource} alt={logoAlt} fill className="object-contain mix-blend-screen opacity-90" sizes="144px" /> : <span className="flex h-full items-center font-display text-lg tracking-[0.08em] text-ink-white">{brandName}</span>}
         </Link>
 
-        <nav className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[12px] tracking-[0.1em] text-ink-grey">
+        <nav className="flex w-full flex-col items-stretch text-[12px] tracking-[0.1em] text-ink-grey min-[420px]:w-auto min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-center min-[420px]:gap-x-7">
           {navLinks.map((item) => (
             <a
               key={item.id}
               href={item.href}
-              className="transition-colors hover:text-ink-gold"
+              className="flex min-h-11 items-center border-b border-ink-white/10 py-2 transition-colors hover:text-ink-gold min-[420px]:border-0"
             >
               {item.label}
             </a>
@@ -47,7 +47,7 @@ export default function Footer({
         <p className="text-[12px] tracking-[0.05em] text-ink-grey/70">
           © {new Date().getFullYear()} {text}
         </p>
-        {privacyLabel && <Link href={safeHref(privacyHref, "/polityka-prywatnosci")} className="text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">{privacyLabel}</Link>}
+        {privacyLabel && <Link href={safeHref(privacyHref, "/polityka-prywatnosci")} className="flex min-h-11 items-center text-[12px] tracking-[0.05em] text-ink-grey/70 hover:text-ink-gold">{privacyLabel}</Link>}
       </div>
     </footer>
   );

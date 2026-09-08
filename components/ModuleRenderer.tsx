@@ -82,22 +82,22 @@ function moduleLayoutClasses(style?: ModuleStyle, editable = false) {
   const padding = {
     none: "p-0",
     sm: "p-3 md:p-5",
-    md: "p-5 md:p-8",
-    lg: "p-8 md:p-12",
-    xl: "p-12 md:p-20",
+    md: "p-4 sm:p-5 md:p-8",
+    lg: "p-5 sm:p-8 md:p-12",
+    xl: "p-6 sm:p-12 md:p-20",
   }[style?.padding ?? "none"];
   const margin = {
     none: "my-0",
     sm: "my-3",
     md: "my-6",
-    lg: "my-10",
-    xl: "my-16",
+    lg: "my-8 sm:my-10",
+    xl: "my-10 sm:my-16",
   }[style?.margin ?? "none"];
   const width = {
     full: "w-full",
-    wide: "mx-auto w-[calc(100%_-_2rem)] max-w-[90rem]",
-    normal: "mx-auto w-[calc(100%_-_2rem)] max-w-[72rem]",
-    narrow: "mx-auto w-[calc(100%_-_2rem)] max-w-[52rem]",
+    wide: "mx-auto w-[calc(100%_-_1rem)] max-w-[90rem] sm:w-[calc(100%_-_2rem)]",
+    normal: "mx-auto w-[calc(100%_-_1rem)] max-w-[72rem] sm:w-[calc(100%_-_2rem)]",
+    narrow: "mx-auto w-[calc(100%_-_1rem)] max-w-[52rem] sm:w-[calc(100%_-_2rem)]",
   }[style?.contentWidth ?? "full"];
   const surface = {
     plain: "",
@@ -222,7 +222,7 @@ export default function ModuleRenderer({
         const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, onSelectWidget, onDeleteWidget, onColumnsChange });
 
         const visualStyle = moduleVisualStyle(mod);
-        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${hasTypography(mod.style) ? "builder-custom-typography" : ""} ${mod.style?.cssClass ?? ""}`;
+        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${hasTypography(mod.style) ? "builder-custom-typography" : ""} ${mod.style?.fontSize ? "builder-custom-font-size" : ""} ${mod.style?.cssClass ?? ""}`;
         const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
 
         if (!editable) {

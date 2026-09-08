@@ -52,7 +52,7 @@ export default async function Home() {
       : defaultHomepageModules();
 
   return (
-    <main style={siteThemeStyle(content.theme)} className="relative">
+    <main style={siteThemeStyle(content.theme)} className="public-site relative">
       {maintenanceEnabled && admin && (
         <aside className="fixed bottom-4 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 flex-col gap-3 border border-amber-400/50 bg-ink-black/95 px-4 py-3 text-ink-white shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between" aria-label="Tryb budowy">
           <p className="text-[13px] leading-relaxed text-amber-100">

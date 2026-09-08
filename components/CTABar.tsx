@@ -15,9 +15,9 @@ export default function CTABar({
   href = "#kalendarz",
 }: CTABarProps) {
   return (
-    <div className="relative mx-auto max-w-[1536px] overflow-hidden px-6 md:px-10 lg:px-16">
+    <div className="relative mx-auto max-w-[1536px] overflow-hidden px-4 sm:px-6 md:px-10 lg:px-16">
       <CalligraphyBackground opacity={0.05} position="70% 50%" />
-      <div className="reveal-up relative flex flex-col gap-6 border border-ink-gold/70 bg-ink-black/40 px-6 py-7 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-8 md:px-10">
+      <div className="reveal-up relative flex min-w-0 flex-col gap-6 border border-ink-gold/70 bg-ink-black/40 px-4 py-6 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-6 sm:py-7 md:px-10">
         <div className="flex flex-1 flex-col gap-6 sm:flex-row sm:items-center">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-ink-white/40 text-ink-white">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
@@ -39,7 +39,7 @@ export default function CTABar({
 
         {buttonLabel && <MagneticButton
           href={href}
-          className="inline-flex shrink-0 items-center justify-center gap-3 border border-ink-gold px-6 py-3.5 text-[13px] font-medium tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black"
+          className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-3 border border-ink-gold px-5 py-3.5 text-[13px] font-medium tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black sm:w-auto sm:px-6"
         >
           {buttonLabel}
           <span aria-hidden>→</span>

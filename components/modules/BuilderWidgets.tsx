@@ -63,26 +63,26 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
     case "heading": {
       const d = withDefaults("heading", module.data);
       const Tag = d.level;
-      return <section className={`px-6 py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`mb-4 h-10 w-10 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
+      return <section className={`px-4 py-8 sm:px-6 sm:py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`mb-4 h-10 w-10 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="break-words font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
     }
     case "text": {
       const d = withDefaults("text", module.data);
-      return <section className={`px-6 py-7 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}><p className="whitespace-pre-line text-base leading-relaxed text-ink-grey md:text-lg">{d.text}</p></section>;
+      return <section className={`px-4 py-7 sm:px-6 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}><p className="whitespace-pre-line break-words text-base leading-relaxed text-ink-grey md:text-lg">{d.text}</p></section>;
     }
     case "image": {
       const d = withDefaults("image", module.data);
       const source = imageSource(d.image);
       if (!source && !showEmpty) return null;
-      return <figure className="px-6 py-8 md:px-12">{source ? <div className="relative aspect-[16/9] overflow-hidden bg-ink-charcoal"><Image src={source} alt={d.alt} fill className="object-cover" sizes="100vw" /></div> : <div className="flex aspect-[16/9] items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wybierz zdjęcie w panelu po prawej</div>}{d.caption && <figcaption className="mt-2 text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
+      return <figure className="px-4 py-7 sm:px-6 sm:py-8 md:px-12">{source ? <div className="relative aspect-[16/9] overflow-hidden bg-ink-charcoal"><Image src={source} alt={d.alt} fill className="object-cover" sizes="100vw" /></div> : <div className="flex aspect-[16/9] items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wybierz zdjęcie w panelu po prawej</div>}{d.caption && <figcaption className="mt-2 break-words text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
     }
     case "button": {
       const d = withDefaults("button", module.data);
-      return <div className={`px-6 py-8 md:px-12 ${d.alignment === "center" ? "text-center" : d.alignment === "right" ? "text-right" : "text-left"}`}><a href={safeHref(d.href)} className={`inline-flex items-center justify-center gap-2 border px-5 py-3 text-sm tracking-[0.08em] transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold ${d.width === "full" ? "w-full" : ""} ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.icon && d.iconPosition !== "right" && <IconPreview name={d.icon} />}{d.label}{d.icon && d.iconPosition === "right" && <IconPreview name={d.icon} />}</a></div>;
+      return <div className={`px-4 py-7 sm:px-6 sm:py-8 md:px-12 ${d.alignment === "center" ? "text-center" : d.alignment === "right" ? "text-right" : "text-left"}`}><a href={safeHref(d.href)} className={`inline-flex min-h-11 max-w-full items-center justify-center gap-2 break-words border px-5 py-3 text-sm tracking-[0.08em] transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold ${d.width === "full" ? "w-full" : ""} ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.icon && d.iconPosition !== "right" && <IconPreview name={d.icon} />}{d.label}{d.icon && d.iconPosition === "right" && <IconPreview name={d.icon} />}</a></div>;
     }
     case "divider": {
       const d = withDefaults("divider", module.data);
       const source = imageSource(d.icon);
-      return <div className="px-6 py-8 md:px-12">{source && <img src={source} alt="" className="mx-auto mb-4 h-9 w-9 object-contain" />}{d.style === "space" ? <div className="h-12" /> : <div className={`h-px ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} />}</div>;
+      return <div className="px-4 py-7 sm:px-6 sm:py-8 md:px-12">{source && <img src={source} alt="" className="mx-auto mb-4 h-9 w-9 object-contain" />}{d.style === "space" ? <div className="h-12" /> : <div className={`h-px ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} />}</div>;
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);
@@ -97,7 +97,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
         "--builder-gallery-columns-tablet": String(galleryColumns.tablet),
         "--builder-gallery-columns-desktop": String(galleryColumns.desktop),
       } as CSSProperties & Record<"--builder-gallery-columns-mobile" | "--builder-gallery-columns-tablet" | "--builder-gallery-columns-desktop", string>;
-      return <div style={layoutStyle} className={`px-6 py-8 md:px-12 ${d.layout === "masonry" ? "builder-gallery-masonry" : "builder-gallery-grid grid"} ${gap}`}>{renderImages.map((image, index) => image ? <div key={index} className={`relative mb-3 aspect-square overflow-hidden bg-ink-charcoal ${radius}`}><Image src={image} alt={`Zdjęcie galerii ${index + 1}`} fill className="object-cover" sizes="33vw" /></div> : <div key={index} className="flex aspect-square items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-center text-xs text-ink-grey">Zdjęcie {index + 1}</div>)}</div>;
+      return <div style={layoutStyle} className={`px-4 py-7 sm:px-6 sm:py-8 md:px-12 ${d.layout === "masonry" ? "builder-gallery-masonry" : "builder-gallery-grid grid"} ${gap}`}>{renderImages.map((image, index) => image ? <div key={index} className={`relative mb-3 aspect-square overflow-hidden bg-ink-charcoal ${radius}`}><Image src={image} alt={`Zdjęcie galerii ${index + 1}`} fill className="object-cover" sizes="(max-width: 639px) 100vw, 33vw" /></div> : <div key={index} className="flex aspect-square items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-center text-xs text-ink-grey">Zdjęcie {index + 1}</div>)}</div>;
     }
     case "columns": {
       const d = withDefaults("columns", module.data);
@@ -138,7 +138,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       return <section className={`${background} px-4 md:px-8 ${padding}`}><div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>{columns.map((widgets, columnIndex) => <div key={columnIndex} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }} onDrop={(event) => handleDrop(event, columnIndex, widgets.length)} className={`min-w-0 ${editable ? "min-h-28 border border-dashed border-ink-gold/30 bg-ink-black/15 p-2" : ""}`}><div className="mb-2 flex items-center justify-between text-[9px] tracking-[.1em] text-ink-gold/70" hidden={!editable}><span>KOLUMNA {columnIndex + 1}</span><span>UPUŚĆ WIDGET</span></div>{widgets.length ? widgets.map((widget, widgetIndex) => {
         const selected = selectedWidgetId === widget.id;
         const typography = hasTypography(widget.style);
-        return <div key={widget.id} draggable={editable} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData(COLUMN_WIDGET_MIME, JSON.stringify({ moduleId: module.id, widgetId: widget.id, columnIndex })); event.dataTransfer.effectAllowed = "move"; }} onDragOver={(event) => { if (editable) event.preventDefault(); }} onDrop={(event) => handleDrop(event, columnIndex, widgetIndex)} onClick={(event) => { if (!editable) return; event.stopPropagation(); onSelectWidget?.(widget.id, columnIndex); }} style={widgetStyle(widget.style)} className={`group/widget relative ${typography ? "builder-custom-typography" : ""} ${editable ? `cursor-pointer outline outline-2 outline-offset-[-2px] ${selected ? "outline-ink-gold" : "outline-transparent hover:outline-ink-gold/55"}` : ""} ${widget.style?.cssClass ?? ""}`}>
+        return <div key={widget.id} draggable={editable} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData(COLUMN_WIDGET_MIME, JSON.stringify({ moduleId: module.id, widgetId: widget.id, columnIndex })); event.dataTransfer.effectAllowed = "move"; }} onDragOver={(event) => { if (editable) event.preventDefault(); }} onDrop={(event) => handleDrop(event, columnIndex, widgetIndex)} onClick={(event) => { if (!editable) return; event.stopPropagation(); onSelectWidget?.(widget.id, columnIndex); }} style={widgetStyle(widget.style)} className={`group/widget relative min-w-0 ${typography ? "builder-custom-typography" : ""} ${widget.style?.fontSize ? "builder-custom-font-size" : ""} ${editable ? `cursor-pointer outline outline-2 outline-offset-[-2px] ${selected ? "outline-ink-gold" : "outline-transparent hover:outline-ink-gold/55"}` : ""} ${widget.style?.cssClass ?? ""}`}>
           {editable && <div className={`absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-[9px] text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span><button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="border-l border-ink-black/20 px-2 py-1 hover:bg-black/10">×</button></div>}
           <BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} />
         </div>;
@@ -152,18 +152,18 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const d = withDefaults("video", module.data);
       const src = toEmbedUrl(d.url);
       if (!src && !showEmpty) return null;
-      return <figure className="px-6 py-10 md:px-12"><h2 className="mb-4 font-display text-3xl text-ink-white">{d.title}</h2>{src ? <div className="aspect-video overflow-hidden bg-ink-charcoal"><iframe className="h-full w-full" src={src} title={d.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <div className="flex aspect-video items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wklej link do filmu YouTube lub Vimeo</div>}{d.caption && <figcaption className="mt-3 text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
+      return <figure className="px-4 py-8 sm:px-6 sm:py-10 md:px-12"><h2 className="mb-4 break-words font-display text-3xl text-ink-white">{d.title}</h2>{src ? <div className="aspect-video overflow-hidden bg-ink-charcoal"><iframe className="h-full w-full" src={src} title={d.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <div className="flex aspect-video items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wklej link do filmu YouTube lub Vimeo</div>}{d.caption && <figcaption className="mt-3 break-words text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
     }
     case "map": {
       const d = withDefaults("map", module.data);
       if (!d.embedUrl && !showEmpty) return null;
       const height = d.height === "sm" ? "h-64" : d.height === "lg" ? "h-[32rem]" : "h-96";
       const embedUrl = safeMapEmbedUrl(d.embedUrl);
-      return <section className="px-6 py-10 md:px-12"><h2 className="font-display text-3xl text-ink-white">{d.title}</h2>{d.address && <p className="mt-2 text-sm text-ink-grey">{d.address}</p>}{embedUrl ? <iframe className={`mt-5 w-full border-0 ${height}`} src={embedUrl} title={d.title} loading="lazy" referrerPolicy="no-referrer-when-downgrade" /> : <div className={`mt-5 flex ${height} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey`}>Wklej link „src” z opcji Udostępnij → Umieść mapę</div>}</section>;
+      return <section className="px-4 py-8 sm:px-6 sm:py-10 md:px-12"><h2 className="break-words font-display text-3xl text-ink-white">{d.title}</h2>{d.address && <p className="mt-2 break-words text-sm text-ink-grey">{d.address}</p>}{embedUrl ? <iframe className={`mt-5 w-full border-0 ${height}`} src={embedUrl} title={d.title} loading="lazy" referrerPolicy="no-referrer-when-downgrade" /> : <div className={`mt-5 flex ${height} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey`}>Wklej link „src” z opcji Udostępnij → Umieść mapę</div>}</section>;
     }
     case "quote": {
       const d = withDefaults("quote", module.data);
-      const quoteStyle = d.variant === "centered" ? "mx-auto max-w-4xl text-center" : d.variant === "card" ? "mx-6 border border-ink-white/15 bg-ink-charcoal px-7 shadow-xl shadow-black/30 md:mx-12 md:px-10" : "mx-6 border-l-2 border-ink-gold bg-ink-charcoal/50 px-6 md:mx-12";
+      const quoteStyle = d.variant === "centered" ? "mx-auto max-w-4xl px-4 text-center sm:px-6" : d.variant === "card" ? "mx-4 border border-ink-white/15 bg-ink-charcoal px-5 shadow-xl shadow-black/30 sm:mx-6 sm:px-7 md:mx-12 md:px-10" : "mx-4 border-l-2 border-ink-gold bg-ink-charcoal/50 px-4 sm:mx-6 sm:px-6 md:mx-12";
       return <blockquote className={`my-10 py-8 ${quoteStyle}`}><p className={`${d.variant === "centered" ? "text-3xl md:text-5xl" : "text-2xl"} font-display leading-relaxed text-ink-white`}>„{d.quote}”</p><footer className="mt-5 text-sm text-ink-gold">{d.author}{d.role && <span className="text-ink-grey"> · {d.role}</span>}</footer></blockquote>;
     }
     case "iconList": {
@@ -171,13 +171,13 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const icons = { check: "✓", dot: "•", arrow: "→" };
       const columns = d.columns === "three" ? "md:grid-cols-3" : d.columns === "two" ? "md:grid-cols-2" : "grid-cols-1";
       const listClass = d.layout === "list" ? "space-y-3" : `grid gap-4 ${columns}`;
-      return <section className="px-6 py-10 md:px-12"><h2 className="mb-5 font-display text-3xl text-ink-white">{d.title}</h2><ol className={listClass}>{d.items.filter(Boolean).map((item, index) => <li key={index} className={`flex gap-3 text-base text-ink-grey ${d.layout === "cards" ? "border border-ink-white/12 bg-ink-charcoal/60 p-5" : d.layout === "steps" ? "items-start border-t border-ink-white/15 py-5" : ""}`}><span className={`${d.layout === "steps" ? "font-display text-3xl" : "text-lg"} shrink-0 text-ink-gold`}>{d.layout === "steps" ? String(index + 1).padStart(2, "0") : icons[d.style]}</span><span className={d.layout === "steps" ? "pt-1" : ""}>{item}</span></li>)}</ol></section>;
+      return <section className="px-4 py-8 sm:px-6 sm:py-10 md:px-12"><h2 className="mb-5 break-words font-display text-3xl text-ink-white">{d.title}</h2><ol className={listClass}>{d.items.filter(Boolean).map((item, index) => <li key={index} className={`flex min-w-0 gap-3 break-words text-base text-ink-grey ${d.layout === "cards" ? "border border-ink-white/12 bg-ink-charcoal/60 p-4 sm:p-5" : d.layout === "steps" ? "items-start border-t border-ink-white/15 py-5" : ""}`}><span className={`${d.layout === "steps" ? "font-display text-3xl" : "text-lg"} shrink-0 text-ink-gold`}>{d.layout === "steps" ? String(index + 1).padStart(2, "0") : icons[d.style]}</span><span className={d.layout === "steps" ? "pt-1" : ""}>{item}</span></li>)}</ol></section>;
     }
     case "callout": {
       const d = withDefaults("callout", module.data);
       const styles = { charcoal: "bg-ink-charcoal text-ink-white", gold: "bg-ink-gold text-ink-black", outline: "border border-ink-gold text-ink-white" };
       const muted = d.style === "gold" ? "text-ink-black/70" : "text-ink-grey";
-      return <section className={`mx-6 my-10 px-6 py-10 md:mx-12 md:px-10 ${styles[d.style]}`}><p className={`text-[11px] tracking-[0.16em] ${d.style === "gold" ? "text-ink-black/70" : "text-ink-gold"}`}>{d.eyebrow}</p><h2 className="mt-3 font-display text-3xl">{d.title}</h2><p className={`mt-3 max-w-2xl whitespace-pre-line leading-relaxed ${muted}`}>{d.body}</p>{d.buttonLabel && <a href={safeHref(d.href)} className={`mt-6 inline-flex border px-5 py-3 text-sm tracking-[0.08em] ${d.style === "gold" ? "border-ink-black text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.buttonLabel}</a>}</section>;
+      return <section className={`mx-4 my-8 px-4 py-8 sm:mx-6 sm:my-10 sm:px-6 sm:py-10 md:mx-12 md:px-10 ${styles[d.style]}`}><p className={`break-words text-[11px] tracking-[0.16em] ${d.style === "gold" ? "text-ink-black/70" : "text-ink-gold"}`}>{d.eyebrow}</p><h2 className="mt-3 break-words font-display text-3xl">{d.title}</h2><p className={`mt-3 max-w-2xl whitespace-pre-line break-words leading-relaxed ${muted}`}>{d.body}</p>{d.buttonLabel && <a href={safeHref(d.href)} className={`mt-6 inline-flex min-h-11 max-w-full items-center break-words border px-5 py-3 text-sm tracking-[0.08em] ${d.style === "gold" ? "border-ink-black text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.buttonLabel}</a>}</section>;
     }
     case "customCode": {
       const d = withDefaults("customCode", module.data);
@@ -196,7 +196,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
 function FaqWidget({ title, items, variant, initiallyOpen }: { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first" }) {
   const [openIndex, setOpenIndex] = useState<number | null>(initiallyOpen === "first" ? 0 : null);
   const id = useId();
-  const sectionClass = variant === "split" ? "grid gap-8 px-6 py-12 md:px-12 lg:grid-cols-[.55fr_1fr]" : "px-6 py-12 md:px-12";
+  const sectionClass = variant === "split" ? "grid gap-8 px-4 py-10 sm:px-6 sm:py-12 md:px-12 lg:grid-cols-[.55fr_1fr]" : "px-4 py-10 sm:px-6 sm:py-12 md:px-12";
   const listClass = variant === "cards" ? "grid gap-3" : "divide-y divide-ink-white/15 border-y border-ink-white/15";
   return <section className={sectionClass}><h2 className={`${variant === "split" ? "lg:sticky lg:top-24 lg:self-start" : "mb-6"} font-display text-3xl text-ink-white`}>{title}</h2><div className={listClass}>{items.map((item, index) => {
     const open = openIndex === index;

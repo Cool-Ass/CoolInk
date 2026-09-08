@@ -18,7 +18,7 @@ export default function About({
   return (
     <section
       id="artists"
-      className="relative overflow-hidden bg-ink-black py-24 md:py-32"
+      className="relative overflow-hidden bg-ink-black py-16 sm:py-20 md:py-32"
     >
       <CalligraphyBackground opacity={0.05} position="80% 30%" />
 
@@ -32,20 +32,20 @@ export default function About({
         }}
       />
 
-      <div className="relative mx-auto flex max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <div className={`grid w-full items-center gap-14 lg:gap-10 ${hasImages ? "lg:grid-cols-2" : ""}`}>
+      <div className="relative mx-auto flex max-w-[1536px] px-4 sm:px-6 md:px-10 lg:px-16">
+        <div className={`grid min-w-0 w-full items-center gap-10 sm:gap-14 lg:gap-10 ${hasImages ? "lg:grid-cols-2" : ""}`}>
           {/* Text column */}
           <div className="reveal-up max-w-xl">
-            <p className="mb-4 text-[13px] font-medium tracking-[0.35em] text-ink-gold">
+            <p className="mb-4 break-words text-xs font-medium tracking-[0.25em] text-ink-gold sm:text-[13px] sm:tracking-[0.35em]">
               {content.eyebrow}
             </p>
 
-            <h2 className="headline-texture -ml-1 text-[13vw] leading-[0.86] tracking-tight sm:text-[7.5vw] md:text-[5vw] lg:text-[3.6vw]">
+            <h2 className="headline-texture -ml-1 break-words text-[clamp(2.75rem,13vw,4.5rem)] leading-[0.88] tracking-tight sm:text-[7.5vw] md:text-[5vw] lg:text-[3.6vw]">
               <span className="block">{content.heading1}</span>
               <span className="block">{content.heading2}</span>
             </h2>
 
-            <div className="gold-underline mt-5 h-3 w-56 md:w-64" aria-hidden />
+            <div className="gold-underline mt-5 h-3 w-40 sm:w-56 md:w-64" aria-hidden />
 
             <p className="mt-8 max-w-md text-[15px] leading-relaxed text-ink-grey">
               <MultilineText text={content.body} />
@@ -62,7 +62,7 @@ export default function About({
           </div>
 
           {/* Image collage */}
-          {hasImages && <div className="reveal-up relative mx-auto h-[520px] w-full max-w-md lg:h-[620px] lg:max-w-none">
+          {hasImages && <div className="reveal-up relative mx-auto h-[420px] w-full max-w-md sm:h-[520px] lg:h-[620px] lg:max-w-none">
 
             {mainImage && <div className="absolute left-0 top-0 h-[85%] w-[62%] -rotate-2 border-[6px] border-ink-white/95 bg-ink-white shadow-2xl shadow-black/60">
               <div className="relative h-full w-full overflow-hidden">

@@ -76,15 +76,15 @@ export default function Header({
       }`}
     >
       <div
-        className={`mx-auto flex max-w-[1536px] items-center justify-between px-6 transition-[padding] duration-500 md:px-10 lg:px-16 ${
-          scrolled ? "py-4" : "py-6"
+        className={`mx-auto flex max-w-[1536px] items-center justify-between px-4 transition-[padding] duration-500 sm:px-6 md:px-10 lg:px-16 ${
+          scrolled ? "py-3 sm:py-4" : "py-4 sm:py-6"
         }`}
       >
         {/* Logo */}
         <Link
           href="/#home"
           className={`relative shrink-0 transition-all duration-500 ${
-            scrolled ? "h-11 w-32 md:h-12 md:w-36" : "h-14 w-40 md:h-16 md:w-48"
+            scrolled ? "h-10 w-28 sm:h-11 sm:w-32 md:h-12 md:w-36" : "h-11 w-32 sm:h-14 sm:w-40 md:h-16 md:w-48"
           }`}
         >
           {logoSource ? <Image src={logoSource} alt={logoAlt} fill priority className="object-contain mix-blend-screen" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">{brandName}</span>}
@@ -128,7 +128,7 @@ export default function Header({
           onClick={() => setMobileMenuOpen((open) => !open)}
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-navigation"
-          className="inline-flex h-10 w-10 flex-col items-center justify-center gap-1.5 lg:hidden"
+          className="inline-flex h-11 w-11 flex-col items-center justify-center gap-1.5 lg:hidden"
           aria-label={mobileMenuOpen ? "Zamknij menu" : "Otwórz menu"}
         >
           <span className="h-px w-6 bg-ink-white" />
@@ -140,16 +140,16 @@ export default function Header({
       {mobileMenuOpen && (
         <nav
           id="mobile-navigation"
-          className="border-t border-ink-white/10 bg-ink-black px-6 py-5 lg:hidden"
+          className="max-h-[calc(100dvh-4.75rem)] overflow-y-auto border-t border-ink-white/10 bg-ink-black px-4 py-3 sm:px-6 sm:py-5 lg:hidden"
           aria-label="Nawigacja mobilna"
         >
-          <div className="mx-auto flex max-w-[1536px] flex-col items-start gap-4">
+          <div className="mx-auto flex max-w-[1536px] flex-col items-stretch gap-1">
             {navLinks.map((item) => (
               <a
                 key={item.id}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-[13px] font-medium tracking-[0.1em] text-ink-white transition-colors hover:text-ink-gold"
+                className="flex min-h-11 items-center py-2 text-[13px] font-medium tracking-[0.1em] text-ink-white transition-colors hover:text-ink-gold"
               >
                 {item.label}
               </a>
@@ -157,14 +157,14 @@ export default function Header({
             {clientAreaLabel && <Link
               href={safeHref(clientAreaHref, "/app")}
               onClick={() => setMobileMenuOpen(false)}
-              className="border border-ink-white/30 px-5 py-3 text-[12px] tracking-[0.08em] text-ink-white"
+              className="mt-2 flex min-h-11 items-center justify-center border border-ink-white/30 px-5 py-3 text-[12px] tracking-[0.08em] text-ink-white"
             >
               {clientAreaLabel}
             </Link>}
             {bookLabel && <Link
               href={safeHref(bookHref, "/#kalendarz")}
               onClick={() => setMobileMenuOpen(false)}
-              className="mt-2 border border-ink-gold px-5 py-3 text-[12px] tracking-[0.08em] text-ink-gold"
+              className="mt-2 flex min-h-11 items-center justify-center border border-ink-gold px-5 py-3 text-[12px] tracking-[0.08em] text-ink-gold"
             >
               {bookLabel}
             </Link>}

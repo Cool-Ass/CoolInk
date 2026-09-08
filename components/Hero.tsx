@@ -29,6 +29,10 @@ export default function Hero({
     ).matches;
     if (prefersReducedMotion || !scopeRef.current) return;
 
+    const portraitOpacity = window.matchMedia("(min-width: 1024px)").matches
+      ? 1
+      : 0.55;
+
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
@@ -39,7 +43,7 @@ export default function Hero({
         .to(".hero-line-2", { clipPath: "inset(0 0 0% 0)", duration: 0.9 }, 0.32)
         .to(
           ".hero-portrait",
-          { opacity: 1, scale: 1, x: 0, duration: 1.3, ease: "power2.out" },
+          { opacity: portraitOpacity, scale: 1, x: 0, duration: 1.3, ease: "power2.out" },
           0.05
         )
         .to(
@@ -56,7 +60,7 @@ export default function Hero({
     <section
       id="home"
       ref={scopeRef}
-      className="relative min-h-[860px] w-full overflow-hidden bg-ink-black lg:h-screen"
+      className="relative min-h-[100svh] w-full overflow-hidden bg-ink-black sm:min-h-[760px] md:min-h-[860px] lg:h-screen"
     >
       {/* Background texture */}
       <div className="absolute inset-0 overflow-hidden">
@@ -70,12 +74,12 @@ export default function Hero({
             sizes="100vw"
           />}
         </Parallax>
-        <div className="absolute inset-0 bg-gradient-to-r from-ink-black via-ink-black/70 to-ink-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink-black via-ink-black/80 to-ink-black/40 lg:via-ink-black/70 lg:to-ink-black/30" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink-black via-transparent to-ink-black/40" />
       </div>
 
       {/* Portrait */}
-      {portraitImage && <div className="hero-portrait absolute right-0 top-0 h-full w-full overflow-hidden lg:w-[58%]">
+      {portraitImage && <div className="hero-portrait absolute right-0 top-0 h-full w-full overflow-hidden opacity-55 lg:w-[58%] lg:opacity-100">
         <div className="portrait-fade relative h-full w-full">
           <Parallax speed={0.12} className="absolute inset-x-0 -top-[10%] h-[120%]">
             <Image
@@ -94,13 +98,13 @@ export default function Hero({
       <StudioStamp ringText={content.stampRingText} leftText={content.stampLeftText} centerText={content.stampCenterText} rightText={content.stampRightText} />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto flex h-full max-w-[1536px] px-6 pt-[168px] md:px-10 lg:px-16">
-        <div className="flex max-w-2xl flex-col justify-center pb-16 pt-6">
-          <p className="hero-fade mb-4 text-[13px] font-medium tracking-[0.35em] text-ink-gold">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1536px] px-4 pt-28 sm:min-h-[760px] sm:px-6 sm:pt-36 md:min-h-[860px] md:px-10 md:pt-[168px] lg:h-full lg:min-h-0 lg:px-16">
+        <div className="flex min-w-0 max-w-2xl flex-col justify-center pb-12 pt-5 sm:pb-16 sm:pt-6">
+          <p className="hero-fade mb-4 break-words text-xs font-medium tracking-[0.25em] text-ink-gold sm:text-[13px] sm:tracking-[0.35em]">
             {content.eyebrow}
           </p>
 
-          <h1 className="headline-texture -ml-1 text-[15vw] leading-[0.86] tracking-tight sm:text-[9vw] md:text-[6.2vw] lg:text-[5.4vw]">
+          <h1 className="headline-texture -ml-1 break-words text-[clamp(3rem,15vw,5rem)] leading-[0.88] tracking-tight sm:text-[9vw] md:text-[6.2vw] lg:text-[5.4vw]">
             <span className="hero-reveal hero-line-1 block overflow-hidden">
               {content.heading1}
             </span>
@@ -110,7 +114,7 @@ export default function Hero({
           </h1>
 
           <div
-            className="gold-underline hero-fade mt-5 h-3 w-64 md:w-80"
+            className="gold-underline hero-fade mt-5 h-3 w-40 sm:w-64 md:w-80"
             aria-hidden
           />
 
@@ -118,10 +122,10 @@ export default function Hero({
             <MultilineText text={content.body} />
           </p>
 
-          <div className="hero-fade mt-10 flex flex-wrap items-center gap-8">
+          <div className="hero-fade mt-8 flex flex-wrap items-center gap-4 sm:mt-10 sm:gap-8">
             {content.primaryBtnLabel && <MagneticButton
               href={content.primaryBtnHref}
-              className="inline-flex items-center gap-3 border border-ink-white/70 px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold"
+              className="inline-flex min-h-11 items-center gap-3 border border-ink-white/70 px-6 py-3.5 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold sm:px-7 sm:py-4"
             >
               {content.primaryBtnLabel}
               <span aria-hidden>→</span>

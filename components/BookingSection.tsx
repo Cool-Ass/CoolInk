@@ -26,10 +26,10 @@ export default function BookingSection({
   const { eyebrow, heading, body, ...copy } = content;
 
   return (
-    <section id="kalendarz" className="bg-ink-black px-4 py-16 text-ink-white sm:px-6 lg:px-10">
+    <section id="kalendarz" className="overflow-hidden bg-ink-black px-3 py-14 text-ink-white min-[400px]:px-4 sm:px-6 sm:py-16 lg:px-10">
       <div className="mx-auto max-w-7xl">
         {eyebrow && <p className="text-[11px] tracking-[.2em] text-ink-gold">{eyebrow}</p>}
-        {heading && <h2 className="mt-3 font-display text-4xl sm:text-6xl">{heading}</h2>}
+        {heading && <h2 className="mt-3 break-words font-display text-4xl sm:text-6xl">{heading}</h2>}
         {body && <p className="mt-4 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-ink-grey">{body}</p>}
         <PublicBookingCalendar {...calendar} copy={copy} />
       </div>

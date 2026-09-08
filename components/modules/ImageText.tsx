@@ -11,7 +11,7 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
   const showImage = Boolean(source || data.emptyMessage);
 
   return (
-    <section className="relative overflow-hidden bg-ink-black py-20 md:py-28">
+    <section className="relative overflow-hidden bg-ink-black py-16 sm:py-20 md:py-28">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 w-1/2 opacity-40"
@@ -22,14 +22,14 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
           } 40%, rgba(201,154,74,0.10), transparent 65%)`,
         }}
       />
-      <div className="relative mx-auto max-w-[1536px] px-6 md:px-10 lg:px-16">
-        <div className={`grid items-center gap-14 lg:gap-10 ${showImage ? "lg:grid-cols-2" : ""}`}>
+      <div className="relative mx-auto max-w-[1536px] px-4 sm:px-6 md:px-10 lg:px-16">
+        <div className={`grid min-w-0 items-center gap-10 sm:gap-14 lg:gap-10 ${showImage ? "lg:grid-cols-2" : ""}`}>
           <div className={`reveal-up max-w-xl ${reversed ? "lg:order-2" : ""}`}>
-            <h2 className="headline-texture text-[11vw] leading-[0.9] tracking-tight sm:text-[7vw] md:text-[4.5vw] lg:text-[3.2vw]">
+            <h2 className="headline-texture break-words text-[clamp(2.5rem,11vw,4.25rem)] leading-[0.9] tracking-tight sm:text-[7vw] md:text-[4.5vw] lg:text-[3.2vw]">
               <span className="block">{data.heading1}</span>
               {data.heading2 && <span className="block">{data.heading2}</span>}
             </h2>
-            <div className="gold-underline mt-5 h-3 w-56" aria-hidden />
+            <div className="gold-underline mt-5 h-3 w-40 sm:w-56" aria-hidden />
             {data.body && (
               <p className="mt-8 text-[15px] leading-relaxed text-ink-grey">
                 <MultilineText text={data.body} />
@@ -39,7 +39,7 @@ export default function ImageText({ data }: { data: ImageTextModuleData }) {
               <div className="mt-9">
                 <MagneticButton
                   href={data.buttonUrl}
-                  className="inline-flex items-center gap-3 border border-ink-white/70 px-7 py-4 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold"
+                  className="inline-flex min-h-11 items-center gap-3 border border-ink-white/70 px-6 py-3.5 text-[13px] font-medium tracking-[0.08em] text-ink-white hover:border-ink-gold hover:text-ink-gold sm:px-7 sm:py-4"
                 >
                   {data.buttonLabel}
                   <span aria-hidden>→</span>

@@ -32,21 +32,21 @@ export default function Contact({
   ];
   const { eyebrow: bookingEyebrow, heading: bookingHeading, body: bookingBody, ...calendarCopy } = content.booking;
 
-  return <section id="contact" className="relative overflow-hidden bg-ink-black py-20 md:py-28">
+  return <section id="contact" className="relative overflow-hidden bg-ink-black py-16 sm:py-20 md:py-28">
     <CalligraphyBackground opacity={0.05} position="50% 90%" />
     <div aria-hidden className="pointer-events-none absolute inset-y-0 left-1/3 w-1/2 opacity-60" style={{ background: "radial-gradient(ellipse 420px 300px at 40% 30%, rgba(201,154,74,0.13), transparent 65%)" }} />
-    <div className="relative mx-auto max-w-[1536px] px-6 md:px-10 lg:px-16">
+    <div className="relative mx-auto max-w-[1536px] px-4 sm:px-6 md:px-10 lg:px-16">
       <div className="grid gap-10 xl:grid-cols-[.36fr_.64fr] xl:gap-12">
         <div className="reveal-up max-w-xl">
-          <p className="mb-4 text-[13px] font-medium tracking-[0.35em] text-ink-gold">{content.eyebrow}</p>
-          <h2 className="headline-texture -ml-1 text-[13vw] leading-[0.86] tracking-tight sm:text-[7.5vw] md:text-[5vw] xl:text-[3.35vw]"><span className="block">{content.heading1}</span><span className="block">{content.heading2}</span></h2>
-          <div className="gold-underline mt-5 h-3 w-56 md:w-64" aria-hidden />
+          <p className="mb-4 break-words text-xs font-medium tracking-[0.25em] text-ink-gold sm:text-[13px] sm:tracking-[0.35em]">{content.eyebrow}</p>
+          <h2 className="headline-texture -ml-1 break-words text-[clamp(2.75rem,13vw,4.5rem)] leading-[0.88] tracking-tight sm:text-[7.5vw] md:text-[5vw] xl:text-[3.35vw]"><span className="block">{content.heading1}</span><span className="block">{content.heading2}</span></h2>
+          <div className="gold-underline mt-5 h-3 w-40 sm:w-56 md:w-64" aria-hidden />
           <p className="mt-8 max-w-md text-[15px] leading-relaxed text-ink-grey"><MultilineText text={content.body} /></p>
           <dl className="mt-9 grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
-            {details.filter((detail) => detail.value).map((detail) => <div key={detail.label} className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink-gold/60 text-ink-gold"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d={detail.path} /></svg></span><div><dt className="text-[9px] tracking-[0.18em] text-ink-grey">{detail.label}</dt><dd className="text-[13px] text-ink-white">{detail.value}</dd></div></div>)}
+            {details.filter((detail) => detail.value).map((detail) => <div key={detail.label} className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink-gold/60 text-ink-gold"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d={detail.path} /></svg></span><div className="min-w-0"><dt className="text-[9px] tracking-[0.18em] text-ink-grey">{detail.label}</dt><dd className="break-words text-[13px] text-ink-white">{detail.value}</dd></div></div>)}
           </dl>
         </div>
-        <div className="reveal-up border border-ink-white/15 bg-ink-charcoal/50 p-4 backdrop-blur-sm sm:p-6">
+        <div className="reveal-up min-w-0 border border-ink-white/15 bg-ink-charcoal/50 p-2 backdrop-blur-sm min-[400px]:p-3 sm:p-6">
           {bookingEyebrow && <p className="text-[10px] tracking-[.2em] text-ink-gold">{bookingEyebrow}</p>}
           {bookingHeading && <h3 className="mt-2 font-display text-3xl sm:text-4xl">{bookingHeading}</h3>}
           {bookingBody && <p className="mt-2 max-w-2xl whitespace-pre-line text-xs leading-relaxed text-ink-grey">{bookingBody}</p>}

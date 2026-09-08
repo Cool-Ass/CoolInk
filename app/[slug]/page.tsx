@@ -55,7 +55,7 @@ export default async function CmsPage({ params }: Props) {
   const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl, contact: content.contact, calendar };
 
   return (
-    <main style={siteThemeStyle(content.theme)} className="relative min-h-screen bg-ink-black">
+    <main style={siteThemeStyle(content.theme)} className="public-site relative min-h-screen bg-ink-black">
       <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
 
       {modules.length > 0 ? (

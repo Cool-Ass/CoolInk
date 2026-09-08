@@ -35,6 +35,26 @@ body {
   }
 }
 
+/* Public pages must remain usable even when an editor saves desktop-sized
+   typography or unusually large column gaps. The desktop design stays intact. */
+@media (max-width: 639px) {
+  .public-site {
+    overflow-wrap: anywhere;
+  }
+
+  .public-site .builder-columns-grid {
+    gap: min(8vw, 2rem) !important;
+  }
+
+  .public-site .builder-custom-font-size :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote) {
+    font-size: clamp(0.875rem, var(--builder-font-size), 15vw) !important;
+  }
+
+  .public-site :where(img, video, iframe, svg) {
+    max-width: 100%;
+  }
+}
+
 .builder-custom-typography :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote) {
   color: var(--builder-text-color, inherit) !important;
   font-family: var(--builder-font-family, inherit) !important;

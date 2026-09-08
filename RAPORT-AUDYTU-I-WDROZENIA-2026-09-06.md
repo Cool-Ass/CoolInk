@@ -82,6 +82,18 @@ Globalna paleta sześciu kolorów jest edytowalna w „Treściach globalnych” 
 
 Konto klienta i panel administratora są instalowalnymi aplikacjami PWA z własnymi manifestami, ikonami, service workerem i ustawieniami powiadomień. Jeden responsywny produkt jest obecnie właściwszy niż osobna aplikacja natywna: wykorzystuje ten sam backend, działa z linku z Instagrama i nie wymaga instalacji ze sklepu. Osobna aplikacja Android pozostaje świadomie odłożona na później. Builder pozwala kontrolować wygląd osobno dla trzech szerokości i ukrywać moduły zależnie od urządzenia.
 
+Aktualizacja z 8 września 2026 objęła pełną korektę widoku publicznego dla telefonów:
+nawigację i jej pola dotykowe, hero, sekcje treści, portfolio, studio, CTA, stopkę,
+ekran trybu budowy, moduły buildera oraz kalendarz rezerwacji. Zweryfikowano brak
+poziomego przepełnienia przy szerokościach 320, 375, 390 i 430 px. Kalendarz zachowuje
+pełne opisy statusów dla czytników ekranu, a na najmniejszych ekranach ogranicza tekst
+wizualny, aby siedem kolumn pozostało czytelnych.
+
+Usunięto również błąd wspólnego komponentu popupów, przez który każda zmiana w polu
+formularza ponownie ustawiała fokus na przycisku zamknięcia. Popup stabilnie utrzymuje
+fokus w edytowanym polu, obsługuje klawisze Tab, Shift+Tab i Escape oraz otwiera się na
+telefonie jako przewijalny panel o wysokości bezpiecznej dla mobilnej klawiatury.
+
 Zdjęcia przesyłane przez CMS są automatycznie obracane według EXIF, skalowane maksymalnie do 2400 px i konwertowane do WebP. Next.js generuje AVIF/WebP tam, gdzie korzysta z komponentu optymalizacji obrazu. Animacje respektują `prefers-reduced-motion`. W pełnym redesignie warto utrzymać zasadę: ruch tylko tam, gdzie pomaga hierarchii; bez obowiązkowego „odkrywania” treści przewijaniem.
 
 ## 6. Bezpieczeństwo
