@@ -381,6 +381,8 @@ function renderFields(
         <ImageUploadField label="Zdjęcie" value={d.image} onChange={(v) => onChange({ ...d, image: v })} />
         <TextField label="Opis alternatywny (dla dostępności i Google)" value={d.alt} onChange={(v) => onChange({ ...d, alt: v })} placeholder="Np. tatuaż realistyczny na przedramieniu" />
         <TextField label="Podpis pod zdjęciem (opcjonalnie)" value={d.caption} onChange={(v) => onChange({ ...d, caption: v })} />
+        <div className="grid grid-cols-2 gap-2"><SelectField label="PROPORCJE" value={d.aspect ?? "landscape"} onChange={(aspect) => onChange({ ...d, aspect })} options={[{ value: "landscape", label: "16:9" }, { value: "wide", label: "Szerokie 5:2" }, { value: "square", label: "Kwadrat" }, { value: "portrait", label: "Portret 4:5" }]} /><SelectField label="DOPASOWANIE" value={d.fit ?? "cover"} onChange={(fit) => onChange({ ...d, fit })} options={[{ value: "cover", label: "Wypełnij" }, { value: "contain", label: "Pokaż całe" }]} /></div>
+        <div className="grid grid-cols-2 gap-2"><NumberField label="MAKS. SZEROKOŚĆ (PX)" value={d.maxWidth ?? 0} min={0} max={1600} onChange={(maxWidth) => onChange({ ...d, maxWidth })} /><SelectField label="WYRÓWNANIE" value={d.alignment ?? "left"} onChange={(alignment) => onChange({ ...d, alignment })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Do środka" }, { value: "right", label: "Do prawej" }]} /></div>
       </>;
     }
     case "button": {
@@ -393,6 +395,14 @@ function renderFields(
         <SelectField label="Styl" value={d.style} onChange={(v) => onChange({ ...d, style: v })} options={[{ value: "primary", label: "Złote wypełnienie" }, { value: "outline", label: "Złoty obrys" }]} />
         <SelectField label="Wyrównanie" value={d.alignment} onChange={(v) => onChange({ ...d, alignment: v })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Wyśrodkowane" }, { value: "right", label: "Do prawej" }]} />
         <SelectField label="Szerokość" value={d.width ?? "auto"} onChange={(width) => onChange({ ...d, width })} options={[{ value: "auto", label: "Dopasowana" }, { value: "full", label: "Pełna szerokość" }]} />
+      </>;
+    }
+    case "navigation": {
+      const d = withDefaults("navigation", module.data);
+      return <>
+        <div className="grid grid-cols-2 gap-2"><SelectField label="WYRÓWNANIE" value={d.alignment} onChange={(alignment) => onChange({ ...d, alignment })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Do środka" }, { value: "right", label: "Do prawej" }]} /><SelectField label="STYL" value={d.style} onChange={(style) => onChange({ ...d, style })} options={[{ value: "plain", label: "Minimalny" }, { value: "pills", label: "Przyciski" }]} /></div>
+        <TextField label="NAZWA MENU NA TELEFONIE" value={d.mobileLabel} onChange={(mobileLabel) => onChange({ ...d, mobileLabel })} />
+        <FieldGroup title="POZYCJE MENU" defaultOpen>{d.items.map((item, index) => <div key={item.id || index} className="grid grid-cols-[1fr_1fr_auto] gap-1.5"><TextField label="Nazwa" value={item.label} onChange={(label) => onChange({ ...d, items: d.items.map((current, itemIndex) => itemIndex === index ? { ...current, label } : current) })} /><TextField label="Link" value={item.href} onChange={(href) => onChange({ ...d, items: d.items.map((current, itemIndex) => itemIndex === index ? { ...current, href } : current) })} /><button type="button" aria-label={`Usuń ${item.label}`} onClick={() => onChange({ ...d, items: d.items.filter((_, itemIndex) => itemIndex !== index) })} className="mt-5 h-8 w-8 border border-red-400/35 text-red-300">×</button></div>)}<button type="button" onClick={() => onChange({ ...d, items: [...d.items, { id: crypto.randomUUID(), label: "NOWA POZYCJA", href: "#" }] })} className="border border-ink-gold/50 px-3 py-2 text-[10px] text-ink-gold">+ DODAJ POZYCJĘ</button></FieldGroup>
       </>;
     }
     case "divider": {
@@ -416,6 +426,7 @@ function renderFields(
         }} options={[{ value: "one", label: "1 kolumna" }, { value: "two", label: "2 kolumny" }, { value: "three", label: "3 kolumny" }, { value: "four", label: "4 kolumny" }]} />
         <NumberField label="ODSTĘP MIĘDZY KOLUMNAMI (PX)" value={d.gap ?? 24} min={0} max={160} onChange={(gap) => onChange({ ...d, gap })} />
         <SelectField label="WYRÓWNANIE PIONOWE" value={d.verticalAlign ?? "start"} onChange={(verticalAlign) => onChange({ ...d, verticalAlign })} options={[{ value: "start", label: "Do góry" }, { value: "center", label: "Do środka" }, { value: "end", label: "Do dołu" }, { value: "stretch", label: "Rozciągnij" }]} />
+        <SelectField label="UKŁAD NA TELEFONIE" value={d.mobileLayout ?? "stack"} onChange={(mobileLayout) => onChange({ ...d, mobileLayout })} options={[{ value: "stack", label: "Kolumny jedna pod drugą" }, { value: "row", label: "Zachowaj kolumny w wierszu" }]} />
         <SelectField label="Tło całego układu" value={d.background} onChange={(v) => onChange({ ...d, background: v })} options={[{ value: "transparent", label: "Bez tła" }, { value: "charcoal", label: "Ciemne" }, { value: "gold", label: "Złote" }]} />
         <SelectField label="Odstęp góra / dół" value={d.padding} onChange={(v) => onChange({ ...d, padding: v })} options={[{ value: "sm", label: "Mały" }, { value: "md", label: "Średni" }, { value: "lg", label: "Duży" }]} />
       </>;

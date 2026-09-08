@@ -1,12 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { defaultHomepageModules, withDefaults } from "../lib/modules";
+import { cloneBuilderModule, defaultHomepageModules, withDefaults } from "../lib/modules";
 
 describe("homepage builder content", () => {
-  it("includes the editable booking calendar inside contact without a duplicate", () => {
+  it("builds the public page entirely from sections, columns and individual widgets", () => {
     const modules = defaultHomepageModules();
-    expect(modules.filter((module) => module.type === "booking")).toHaveLength(0);
-    const contact = modules.find((module) => module.type === "contact");
-    expect(withDefaults("contact", contact?.data).booking.calendarLabel).toBeTruthy();
+    expect(modules.every((module) => module.type === "columns")).toBe(true);
+    const widgets = modules.flatMap((module) => withDefaults("columns", module.data).columns.flat());
+    expect(widgets.some((widget) => widget.type === "portfolio")).toBe(true);
+    expect(widgets.some((widget) => widget.type === "booking")).toBe(true);
+    expect(widgets.some((widget) => widget.type === "heading")).toBe(true);
+    expect(widgets.some((widget) => widget.type === "image")).toBe(true);
+  });
+
+  it("duplicates a section deeply and regenerates nested widget identifiers", () => {
+    const original = defaultHomepageModules()[0];
+    const clone = cloneBuilderModule(original);
+    expect(clone.id).not.toBe(original.id);
+    const originalWidgets = withDefaults("columns", original.data).columns.flat();
+    const clonedWidgets = withDefaults("columns", clone.data).columns.flat();
+    expect(clonedWidgets).toHaveLength(originalWidgets.length);
+    expect(clonedWidgets.map((widget) => widget.id)).not.toEqual(originalWidgets.map((widget) => widget.id));
+    clonedWidgets[0].data.text = "Zmiana tylko w kopii";
+    expect(originalWidgets[0].data.text).not.toBe("Zmiana tylko w kopii");
   });
 
   it("backfills newly editable fields without overwriting saved copy", () => {

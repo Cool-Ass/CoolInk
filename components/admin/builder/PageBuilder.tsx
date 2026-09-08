@@ -10,7 +10,7 @@ import PageSettingsModal, {
   type PageSettingsValues,
 } from "@/components/admin/builder/PageSettingsModal";
 import { useToast } from "@/components/admin/ToastProvider";
-import { createModule, isColumnWidgetType, withDefaults, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
+import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, withDefaults, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import { PALETTE_WIDGET_MIME } from "@/lib/builderDnd";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { siteThemeStyle } from "@/lib/siteTheme";
@@ -134,10 +134,7 @@ export default function PageBuilder({
     setModules((prev) => {
       const index = prev.findIndex((m) => m.id === id);
       if (index === -1) return prev;
-      const clone: Module = {
-        ...prev[index],
-        id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      };
+      const clone = cloneBuilderModule(prev[index]);
       const next = [...prev];
       next.splice(index + 1, 0, clone);
       return next;
@@ -166,6 +163,41 @@ export default function PageBuilder({
     });
     setSelectedId(newModule.id);
     setSelectedWidgetId(widgetId);
+  }
+
+  function duplicateWidget(moduleId: string, widgetId: string, columnIndex: number) {
+    const target = modules.find((module) => module.id === moduleId);
+    if (!target || target.type !== "columns") return;
+    const data = withDefaults("columns", target.data);
+    const next = data.columns.map((column) => [...column]);
+    const widgetIndex = next[columnIndex]?.findIndex((widget) => widget.id === widgetId) ?? -1;
+    if (widgetIndex < 0) return;
+    const clone = cloneColumnWidget(next[columnIndex][widgetIndex]);
+    next[columnIndex].splice(widgetIndex + 1, 0, clone);
+    updateColumns(moduleId, next);
+    setSelectedId(moduleId);
+    setSelectedWidgetId(clone.id);
+  }
+
+  function duplicateColumn(moduleId: string, columnIndex: number) {
+    const target = modules.find((module) => module.id === moduleId);
+    if (!target || target.type !== "columns") return;
+    const data = withDefaults("columns", target.data);
+    if (data.columns.length >= 4) {
+      showToast("Sekcja może mieć maksymalnie 4 kolumny.", "error");
+      return;
+    }
+    const columns = data.columns.map((column) => [...column]);
+    const clone = (columns[columnIndex] ?? []).map(cloneColumnWidget);
+    columns.splice(columnIndex + 1, 0, clone);
+    const layout = (["one", "two", "three", "four"] as const)[columns.length - 1];
+    const evenWidth = Math.round((100 / columns.length) * 100) / 100;
+    setModules((current) => current.map((module) => module.id === moduleId ? {
+      ...module,
+      data: { ...data, layout, columns, columnWidths: Array(columns.length).fill(evenWidth) },
+    } : module));
+    setSelectedId(moduleId);
+    setSelectedWidgetId(clone[0]?.id ?? null);
   }
 
   function dropOnCanvas(event: DragEvent<HTMLDivElement>) {
@@ -306,9 +338,9 @@ export default function PageBuilder({
               selectedId={selectedId}
               onSelect={(id) => { setSelectedId(id); setSelectedWidgetId(null); }}
               onMove={moveModule}
-              onDuplicate={isSystemPage ? undefined : duplicateModule}
+              onDuplicate={duplicateModule}
               onDelete={deleteModule}
-              onToggleHidden={isSystemPage ? undefined : toggleHidden}
+              onToggleHidden={toggleHidden}
               onReorder={reorderModules}
               selectedWidgetId={selectedWidgetId}
               onSelectWidget={(moduleId, widgetId) => { setSelectedId(moduleId); setSelectedWidgetId(widgetId); }}
@@ -319,6 +351,8 @@ export default function PageBuilder({
                 updateColumns(moduleId, data.columns.map((column) => column.filter((widget) => widget.id !== widgetId)));
                 if (selectedWidgetId === widgetId) setSelectedWidgetId(null);
               }}
+              onDuplicateWidget={duplicateWidget}
+              onDuplicateColumn={duplicateColumn}
               onColumnsChange={updateColumns}
             />
             <div className="m-3 flex min-h-16 items-center justify-center border border-dashed border-ink-gold/25 bg-ink-gold/[0.025] text-[10px] tracking-[.08em] text-ink-grey">

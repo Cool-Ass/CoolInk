@@ -2,12 +2,17 @@
 
 import Image from "next/image";
 import { useId, useRef, useState, type CSSProperties, type DragEvent } from "react";
+import { Copy, Menu, X } from "lucide-react";
 import { IconPreview } from "@/components/admin/builder/IconPicker";
 import { defaultModuleData, isColumnWidgetType, MODULE_LABELS, withDefaults, type ColumnWidget, type Module, type ModuleStyle } from "@/lib/modules";
 import { imageSource } from "@/lib/imageSource";
 import { safeHref, safeMapEmbedUrl } from "@/lib/safeHref";
 import { COLUMN_WIDGET_MIME, PALETTE_WIDGET_MIME, readColumnDragPayload } from "@/lib/builderDnd";
 import { parseSafeCssDeclarations } from "@/lib/moduleStyle";
+import Portfolio from "@/components/Portfolio";
+import BookingSection from "@/components/BookingSection";
+import type { PortfolioWork } from "@/lib/portfolio";
+import type { PublicCalendarData } from "@/lib/publicCalendar";
 
 interface BuilderWidgetProps {
   module: Module;
@@ -16,7 +21,11 @@ interface BuilderWidgetProps {
   selectedWidgetId?: string | null;
   onSelectWidget?: (widgetId: string, columnIndex: number) => void;
   onDeleteWidget?: (widgetId: string, columnIndex: number) => void;
+  onDuplicateWidget?: (widgetId: string, columnIndex: number) => void;
+  onDuplicateColumn?: (columnIndex: number) => void;
   onColumnsChange?: (columns: ColumnWidget[][]) => void;
+  portfolioWorks?: PortfolioWork[];
+  calendar?: PublicCalendarData;
 }
 
 function widgetStyle(style?: ModuleStyle): CSSProperties | undefined {
@@ -56,29 +65,42 @@ function hasTypography(style?: ModuleStyle) {
   return Boolean(style?.fontSize || style?.lineHeight || style?.letterSpacing || style?.fontWeight || (style?.fontFamily && style.fontFamily !== "inherit") || style?.textAlign || style?.textTransform || style?.color);
 }
 
-export default function BuilderWidgets({ module, showEmpty = false, editable = false, selectedWidgetId, onSelectWidget, onDeleteWidget, onColumnsChange }: BuilderWidgetProps) {
+export default function BuilderWidgets({ module, showEmpty = false, editable = false, selectedWidgetId, onSelectWidget, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onColumnsChange, portfolioWorks = [], calendar }: BuilderWidgetProps) {
   const widgetIdBase = useId().replace(/:/g, "");
   const widgetIdCounter = useRef(0);
   switch (module.type) {
     case "heading": {
       const d = withDefaults("heading", module.data);
       const Tag = d.level;
-      return <section className={`px-4 py-8 sm:px-6 sm:py-10 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`mb-4 h-10 w-10 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="break-words font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
+      return <section className={`px-2 py-2 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`mb-3 h-9 w-9 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="whitespace-pre-line break-words font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
     }
     case "text": {
       const d = withDefaults("text", module.data);
-      return <section className={`px-4 py-7 sm:px-6 md:px-12 ${d.alignment === "center" ? "text-center" : "text-left"}`}><p className="whitespace-pre-line break-words text-base leading-relaxed text-ink-grey md:text-lg">{d.text}</p></section>;
+      return <section className={`px-2 py-2 ${d.alignment === "center" ? "text-center" : "text-left"}`}><p className="whitespace-pre-line break-words text-base leading-relaxed text-ink-grey md:text-lg">{d.text}</p></section>;
     }
     case "image": {
       const d = withDefaults("image", module.data);
       const source = imageSource(d.image);
       if (!source && !showEmpty) return null;
-      return <figure className="px-4 py-7 sm:px-6 sm:py-8 md:px-12">{source ? <div className="relative aspect-[16/9] overflow-hidden bg-ink-charcoal"><Image src={source} alt={d.alt} fill className="object-cover" sizes="100vw" /></div> : <div className="flex aspect-[16/9] items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey">Wybierz zdjęcie w panelu po prawej</div>}{d.caption && <figcaption className="mt-2 break-words text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
+      const aspect = d.aspect === "square" ? "aspect-square" : d.aspect === "portrait" ? "aspect-[4/5]" : d.aspect === "wide" ? "aspect-[5/2]" : "aspect-[16/9]";
+      const alignment = d.alignment === "right" ? "ml-auto" : d.alignment === "center" ? "mx-auto" : "mr-auto";
+      return <figure className={`px-2 py-2 ${alignment}`} style={d.maxWidth ? { maxWidth: `${Math.min(1600, Math.max(40, d.maxWidth))}px` } : undefined}>{source ? <div className={`relative ${aspect} overflow-hidden bg-ink-charcoal`}><Image src={source} alt={d.alt} fill className={d.fit === "contain" ? "object-contain" : "object-cover"} sizes="100vw" /></div> : <div className={`flex ${aspect} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey`}>Wybierz zdjęcie w panelu po lewej</div>}{d.caption && <figcaption className="mt-2 break-words text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
     }
     case "button": {
       const d = withDefaults("button", module.data);
-      return <div className={`px-4 py-7 sm:px-6 sm:py-8 md:px-12 ${d.alignment === "center" ? "text-center" : d.alignment === "right" ? "text-right" : "text-left"}`}><a href={safeHref(d.href)} className={`inline-flex min-h-11 max-w-full items-center justify-center gap-2 break-words border px-5 py-3 text-sm tracking-[0.08em] transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold ${d.width === "full" ? "w-full" : ""} ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.icon && d.iconPosition !== "right" && <IconPreview name={d.icon} />}{d.label}{d.icon && d.iconPosition === "right" && <IconPreview name={d.icon} />}</a></div>;
+      return <div className={`px-2 py-2 ${d.alignment === "center" ? "text-center" : d.alignment === "right" ? "text-right" : "text-left"}`}><a href={safeHref(d.href)} className={`inline-flex min-h-11 max-w-full items-center justify-center gap-2 break-words border px-5 py-3 text-sm tracking-[0.08em] transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold ${d.width === "full" ? "w-full" : ""} ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.icon && d.iconPosition !== "right" && <IconPreview name={d.icon} />}{d.label}{d.icon && d.iconPosition === "right" && <IconPreview name={d.icon} />}</a></div>;
     }
+    case "navigation": {
+      const d = withDefaults("navigation", module.data);
+      return <NavigationWidget items={d.items} alignment={d.alignment} mobileLabel={d.mobileLabel} variant={d.style} />;
+    }
+    case "portfolio": {
+      const d = withDefaults("portfolio", module.data);
+      const works = d.selectionMode === "selected" ? portfolioWorks.filter((work) => d.selectedIds.includes(work.id)) : portfolioWorks;
+      return <Portfolio content={{ ...d, primaryBtnHref: safeHref(d.primaryBtnHref), secondaryBtnHref: safeHref(d.secondaryBtnHref) }} works={works} />;
+    }
+    case "booking":
+      return <BookingSection content={withDefaults("booking", module.data)} calendar={calendar} />;
     case "divider": {
       const d = withDefaults("divider", module.data);
       const source = imageSource(d.icon);
@@ -103,7 +125,8 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const d = withDefaults("columns", module.data);
       const columnCount = d.layout === "four" ? 4 : d.layout === "three" ? 3 : d.layout === "two" ? 2 : 1;
       const columns = Array.from({ length: columnCount }, (_, index) => d.columns[index] ?? []);
-      const background = d.background === "charcoal" ? "bg-ink-charcoal" : d.background === "gold" ? "bg-ink-gold text-ink-black" : "bg-transparent";
+      const backgroundTone = d.background === "charcoal" ? "bg-ink-charcoal" : d.background === "gold" ? "bg-ink-gold text-ink-black" : "bg-transparent";
+      const background = `${backgroundTone} ${d.mobileLayout === "row" ? "builder-columns-row-mobile" : ""}`;
       const padding = d.padding === "sm" ? "py-8" : d.padding === "lg" ? "py-20" : "py-12";
       const gridTemplate = (d.columnWidths?.length === columnCount ? d.columnWidths : Array(columnCount).fill(100 / columnCount)).map((width) => `${Math.max(5, Number(width) || 0)}fr`).join(" ");
       const alignment = d.verticalAlign === "center" ? "items-center" : d.verticalAlign === "end" ? "items-end" : d.verticalAlign === "stretch" ? "items-stretch" : "items-start";
@@ -135,12 +158,12 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
         moveWidget(readColumnDragPayload(event.dataTransfer.getData(COLUMN_WIDGET_MIME)), columnIndex, beforeIndex);
       }
 
-      return <section className={`${background} px-4 md:px-8 ${padding}`}><div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>{columns.map((widgets, columnIndex) => <div key={columnIndex} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }} onDrop={(event) => handleDrop(event, columnIndex, widgets.length)} className={`min-w-0 ${editable ? "min-h-28 border border-dashed border-ink-gold/30 bg-ink-black/15 p-2" : ""}`}><div className="mb-2 flex items-center justify-between text-[9px] tracking-[.1em] text-ink-gold/70" hidden={!editable}><span>KOLUMNA {columnIndex + 1}</span><span>UPUŚĆ WIDGET</span></div>{widgets.length ? widgets.map((widget, widgetIndex) => {
+      return <section className={`${background} px-4 md:px-8 ${padding}`}><div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>{columns.map((widgets, columnIndex) => <div key={columnIndex} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }} onDrop={(event) => handleDrop(event, columnIndex, widgets.length)} className={`min-w-0 ${editable ? "min-h-28 border border-dashed border-ink-gold/30 bg-ink-black/15 p-2" : ""}`}><div className="mb-2 flex items-center justify-between text-[9px] tracking-[.1em] text-ink-gold/70" hidden={!editable}><span>KOLUMNA {columnIndex + 1}</span><span className="flex items-center gap-2"><span>UPUŚĆ WIDGET</span>{onDuplicateColumn && <button type="button" title="Duplikuj kolumnę" aria-label={`Duplikuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onDuplicateColumn(columnIndex); }} className="pointer-events-auto flex h-6 w-6 items-center justify-center border border-ink-gold/30 text-ink-gold transition hover:bg-ink-gold/10"><Copy className="h-3 w-3" /></button>}</span></div>{widgets.length ? widgets.map((widget, widgetIndex) => {
         const selected = selectedWidgetId === widget.id;
         const typography = hasTypography(widget.style);
         return <div key={widget.id} draggable={editable} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData(COLUMN_WIDGET_MIME, JSON.stringify({ moduleId: module.id, widgetId: widget.id, columnIndex })); event.dataTransfer.effectAllowed = "move"; }} onDragOver={(event) => { if (editable) event.preventDefault(); }} onDrop={(event) => handleDrop(event, columnIndex, widgetIndex)} onClick={(event) => { if (!editable) return; event.stopPropagation(); onSelectWidget?.(widget.id, columnIndex); }} style={widgetStyle(widget.style)} className={`group/widget relative min-w-0 ${typography ? "builder-custom-typography" : ""} ${widget.style?.fontSize ? "builder-custom-font-size" : ""} ${editable ? `cursor-pointer outline outline-2 outline-offset-[-2px] ${selected ? "outline-ink-gold" : "outline-transparent hover:outline-ink-gold/55"}` : ""} ${widget.style?.cssClass ?? ""}`}>
-          {editable && <div className={`absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-[9px] text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span><button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="border-l border-ink-black/20 px-2 py-1 hover:bg-black/10">×</button></div>}
-          <BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} />
+          {editable && <div className={`pointer-events-auto absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-[9px] text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span>{onDuplicateWidget && <button type="button" title="Duplikuj widget" aria-label={`Duplikuj: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDuplicateWidget(widget.id, columnIndex); }} className="border-l border-ink-black/20 px-2 py-1 hover:bg-black/10"><Copy className="h-3 w-3" /></button>}<button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="border-l border-ink-black/20 px-2 py-1 hover:bg-black/10">×</button></div>}
+          <BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} portfolioWorks={portfolioWorks} calendar={calendar} />
         </div>;
       }) : editable ? <div className="flex min-h-24 items-center justify-center p-4 text-center text-[10px] leading-relaxed text-ink-grey">Przeciągnij widget z lewego panelu tutaj</div> : null}</div>)}</div></section>;
     }
@@ -191,6 +214,19 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
     }
     default: return null;
   }
+}
+
+function NavigationWidget({ items, alignment, mobileLabel, variant }: { items: { id: string; label: string; href: string }[]; alignment: "left" | "center" | "right"; mobileLabel: string; variant: "plain" | "pills" }) {
+  const [open, setOpen] = useState(false);
+  const validItems = items.filter((item) => item.label.trim() && safeHref(item.href, ""));
+  const align = alignment === "right" ? "justify-end" : alignment === "center" ? "justify-center" : "justify-start";
+  const linkClass = variant === "pills" ? "border border-ink-white/15 px-3 py-2 hover:border-ink-gold" : "px-2 py-2 hover:text-ink-gold";
+  return <nav className="relative px-2 py-2" aria-label={mobileLabel || "Menu strony"}>
+    <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="ml-auto flex min-h-10 items-center gap-2 border border-ink-white/20 px-3 text-[11px] tracking-[.1em] text-ink-white md:hidden">{open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}{mobileLabel || "MENU"}</button>
+    <div className={`${open ? "flex" : "hidden"} absolute right-0 top-full z-50 min-w-52 flex-col border border-ink-white/15 bg-ink-black/95 p-2 shadow-2xl md:static md:flex md:min-w-0 md:flex-row md:flex-wrap md:border-0 md:bg-transparent md:p-0 md:shadow-none ${align}`}>
+      {validItems.map((item) => <a key={item.id} href={safeHref(item.href)} onClick={() => setOpen(false)} className={`text-[11px] tracking-[.08em] text-ink-white transition-colors ${linkClass}`}>{item.label}</a>)}
+    </div>
+  </nav>;
 }
 
 function FaqWidget({ title, items, variant, initiallyOpen }: { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first" }) {

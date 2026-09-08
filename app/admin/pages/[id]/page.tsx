@@ -9,6 +9,8 @@ import { parseModules } from "@/lib/pageModules";
 import { getPublicCalendarData } from "@/lib/publicCalendar";
 import { ensureEditableHomepage } from "@/lib/homepage";
 import { requireAdminPage } from "@/lib/adminPage";
+import { getPublicNavLinks } from "@/lib/nav";
+import { ensureSystemPages, isSystemPageSlug } from "@/lib/systemPages";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,12 @@ export default async function PageBuilderRoute({ params }: Props) {
   ]);
 
   if (!page) notFound();
-  const editablePage = page.isHomepage ? await ensureEditableHomepage() : page;
+  let editablePage = page.isHomepage ? await ensureEditableHomepage() : page;
+  if (isSystemPageSlug(page.slug)) {
+    const navLinks = await getPublicNavLinks(content.navigation);
+    const systemPages = await ensureSystemPages(content, navLinks);
+    editablePage = systemPages.find((item) => item.id === page.id) ?? editablePage;
+  }
 
   return (
     <ToastProvider>

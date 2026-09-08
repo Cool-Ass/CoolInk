@@ -50,6 +50,10 @@ body {
   grid-template-columns: 1fr;
 }
 
+.builder-columns-row-mobile > .builder-columns-grid {
+  grid-template-columns: var(--builder-column-template, 1fr);
+}
+
 @media (min-width: 768px) {
   .builder-columns-grid {
     grid-template-columns: var(--builder-column-template, 1fr);

@@ -3,7 +3,7 @@ import { createModule, defaultHomepageModules, type Module } from "./modules";
 import { parseModules, serializeModules } from "./pageModules";
 
 const HOMEPAGE_BUILDER_VERSION_KEY = "site.homepageBuilderVersion";
-const HOMEPAGE_BUILDER_VERSION = "2";
+const HOMEPAGE_BUILDER_VERSION = "3";
 
 export function addBookingModuleIfMissing(modules: Module[]) {
   if (modules.some((module) => module.type === "booking")) return modules;
@@ -25,10 +25,12 @@ export async function ensureEditableHomepage() {
   if (existing && version?.value === HOMEPAGE_BUILDER_VERSION) return existing;
 
   if (existing) {
-    const modules = addBookingModuleIfMissing(parseModules(existing.modules));
-    const publishedModules = existing.publishedModules
-      ? addBookingModuleIfMissing(parseModules(existing.publishedModules))
-      : null;
+    // v3 deliberately replaces the old monolithic homepage templates with a
+    // builder-native composition. The site is in maintenance mode and this
+    // one-time migration is the requested visual redesign; later edits are
+    // left untouched once the version marker has been written.
+    const modules = defaultHomepageModules();
+    const publishedModules = existing.publishedModules ? defaultHomepageModules() : null;
     const [page] = await prisma.$transaction([
       prisma.page.update({
         where: { id: existing.id },

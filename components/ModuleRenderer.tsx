@@ -137,10 +137,12 @@ export interface ModuleRendererProps {
   selectedWidgetId?: string | null;
   onSelectWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
   onDeleteWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
+  onDuplicateWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
+  onDuplicateColumn?: (moduleId: string, columnIndex: number) => void;
   onColumnsChange?: (moduleId: string, columns: ColumnWidget[][]) => void;
 }
 
-function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "onSelectWidget" | "onDeleteWidget" | "onColumnsChange">) {
+function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "onSelectWidget" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onColumnsChange">) {
   switch (mod.type) {
     case "siteHeader": {
       const data = withDefaults("siteHeader", mod.data);
@@ -204,11 +206,11 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     }
     case "spacer":
       return <Spacer data={withDefaults("spacer", mod.data)} />;
-    case "heading": case "text": case "image": case "button": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout": case "customCode": {
+    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout": case "customCode": {
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
-      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} />;
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex) => nested?.onDuplicateColumn?.(mod.id, columnIndex)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
     }
     default:
       return null;
@@ -230,6 +232,8 @@ export default function ModuleRenderer({
   selectedWidgetId,
   onSelectWidget,
   onDeleteWidget,
+  onDuplicateWidget,
+  onDuplicateColumn,
   onColumnsChange,
 }: ModuleRendererProps) {
   const visible = modules.filter((m) => editable || !m.hidden);
@@ -237,14 +241,14 @@ export default function ModuleRenderer({
   return (
     <>
       {visible.map((mod, i) => {
-        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, onSelectWidget, onDeleteWidget, onColumnsChange });
+        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, onSelectWidget, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onColumnsChange });
 
         const visualStyle = moduleVisualStyle(mod);
         const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${hasTypography(mod.style) ? "builder-custom-typography" : ""} ${mod.style?.fontSize ? "builder-custom-font-size" : ""} ${mod.style?.cssClass ?? ""}`;
         const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
 
         if (!editable) {
-          return <div key={mod.id} id={mod.style?.anchorId} className={`relative ${mod.type === "siteHeader" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} style={visualStyle}>{overlay}<div className="relative">{content}</div></div>;
+          return <div key={mod.id} id={mod.style?.anchorId} className={`relative ${mod.type === "siteHeader" || mod.style?.anchorId === "site-header" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} style={visualStyle}>{overlay}<div className="relative">{content}</div></div>;
         }
 
         const isSelected = selectedId === mod.id;

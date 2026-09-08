@@ -19,6 +19,7 @@ export type ModuleType =
   | "text"
   | "image"
   | "button"
+  | "navigation"
   | "divider"
   | "gallery"
   | "columns"
@@ -272,8 +273,9 @@ export interface SpacerModuleData {
 /** Neutral, reusable builder widgets. They do not carry any Coolink homepage copy. */
 export interface HeadingModuleData { text: string; level: "h1" | "h2" | "h3"; alignment: "left" | "center"; icon?: string; }
 export interface TextModuleData { text: string; alignment: "left" | "center"; }
-export interface ImageModuleData { image: string; alt: string; caption: string; }
+export interface ImageModuleData { image: string; alt: string; caption: string; aspect?: "square" | "portrait" | "landscape" | "wide"; fit?: "cover" | "contain"; maxWidth?: number; alignment?: "left" | "center" | "right"; }
 export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center" | "right"; style: "primary" | "outline"; icon?: string; iconPosition?: "left" | "right"; width?: "auto" | "full"; }
+export interface NavigationModuleData { items: { id: string; label: string; href: string }[]; alignment: "left" | "center" | "right"; mobileLabel: string; style: "plain" | "pills"; }
 export interface DividerModuleData { style: "line" | "gold" | "space"; icon?: string; }
 export interface GalleryModuleData { image1: string; image2: string; image3: string; images?: string[]; layout?: "grid" | "masonry"; columns?: { desktop: number; tablet: number; mobile: number }; gap?: "sm" | "md" | "lg"; radius?: "none" | "sm" | "md" | "lg"; lightbox?: boolean; }
 export type ColumnWidgetType =
@@ -281,6 +283,9 @@ export type ColumnWidgetType =
   | "text"
   | "image"
   | "button"
+  | "navigation"
+  | "portfolio"
+  | "booking"
   | "divider"
   | "spacer"
   | "gallery"
@@ -300,6 +305,7 @@ export interface ColumnsModuleData {
   gap?: number;
   verticalAlign?: "start" | "center" | "end" | "stretch";
   columnWidths?: number[];
+  mobileLayout?: "stack" | "row";
 }
 export interface FaqModuleData { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first"; }
 export interface VideoModuleData { url: string; title: string; caption: string; }
@@ -339,6 +345,8 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? ImageModuleData
   : T extends "button"
   ? ButtonModuleData
+  : T extends "navigation"
+  ? NavigationModuleData
   : T extends "divider"
   ? DividerModuleData
   : T extends "gallery"
@@ -396,6 +404,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   text: "Tekst",
   image: "Obraz",
   button: "Przycisk",
+  navigation: "Menu nawigacyjne",
   divider: "Separator",
   gallery: "Galeria zdjęć",
   columns: "Sekcja / kolumny",
@@ -428,6 +437,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   text: "Dowolny akapit lub krótki opis.",
   image: "Pojedyncze zdjęcie z opcjonalnym opisem.",
   button: "Link lub wezwanie do działania.",
+  navigation: "Edytowalne menu strony z automatycznym wariantem mobilnym.",
   divider: "Delikatna linia albo oddech między elementami.",
   gallery: "Prosta galeria trzech własnych zdjęć.",
   columns: "Sekcja dzielona na 1–4 kolumny z widgetami przeciąganymi do środka.",
@@ -441,7 +451,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
 };
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
-  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
+  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
   siteHeader: "templates", siteFooter: "templates", maintenance: "templates", hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
@@ -450,6 +460,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "text",
   "image",
   "button",
+  "navigation",
   "gallery",
   "columns",
   "callout",
@@ -477,7 +488,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
 ];
 
 export const COLUMN_WIDGET_TYPES: ColumnWidgetType[] = [
-  "heading", "text", "image", "button", "gallery", "callout", "iconList",
+  "heading", "text", "image", "button", "navigation", "portfolio", "booking", "gallery", "callout", "iconList",
   "faq", "quote", "video", "map", "divider", "spacer", "customCode",
 ];
 
@@ -485,8 +496,33 @@ export function isColumnWidgetType(type: string): type is ColumnWidgetType {
   return (COLUMN_WIDGET_TYPES as string[]).includes(type);
 }
 
-function generateModuleId() {
-  return `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+export function generateModuleId(prefix = "m") {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function cloneValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+export function cloneColumnWidget(widget: ColumnWidget): ColumnWidget {
+  return {
+    ...cloneValue(widget),
+    id: generateModuleId("w"),
+  };
+}
+
+/** Deep builder clone: nested widget IDs must never be shared by two sections. */
+export function cloneBuilderModule(module: Module): Module {
+  const clone = cloneValue(module);
+  clone.id = generateModuleId();
+  if (clone.type === "columns") {
+    const data = withDefaults("columns", clone.data);
+    clone.data = {
+      ...data,
+      columns: data.columns.map((column) => column.map(cloneColumnWidget)),
+    };
+  }
+  return clone;
 }
 
 /** Default `data` for a freshly-added module of the given type. */
@@ -662,9 +698,11 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "text":
       return { text: "Wpisz tutaj swoją treść.", alignment: "left" } satisfies TextModuleData;
     case "image":
-      return { image: "", alt: "", caption: "" } satisfies ImageModuleData;
+      return { image: "", alt: "", caption: "", aspect: "landscape", fit: "cover", maxWidth: 0, alignment: "left" } satisfies ImageModuleData;
     case "button":
       return { label: "Dowiedz się więcej", href: "#", alignment: "left", style: "primary", icon: "", iconPosition: "left", width: "auto" } satisfies ButtonModuleData;
+    case "navigation":
+      return { items: [{ id: "start", label: "START", href: "/#home" }, { id: "portfolio", label: "PORTFOLIO", href: "/#portfolio" }, { id: "booking", label: "REZERWACJA", href: "/#kalendarz" }], alignment: "center", mobileLabel: "MENU", style: "plain" } satisfies NavigationModuleData;
     case "divider":
       return { style: "line", icon: "" } satisfies DividerModuleData;
     case "gallery":
@@ -677,6 +715,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         gap: 24,
         verticalAlign: "start",
         columnWidths: [100],
+        mobileLayout: "stack",
         columns: [[]],
       } satisfies ColumnsModuleData;
     case "faq":
@@ -713,24 +752,74 @@ export function createModule(type: ModuleType): Module {
   };
 }
 
-/** Default homepage structure — used only to seed the homepage the first time. */
+function homepageWidget(type: ColumnWidgetType, data: Record<string, unknown>, style?: ModuleStyle): ColumnWidget {
+  return { id: generateModuleId("w"), type, data: { ...defaultModuleData(type), ...data }, style };
+}
+
+function homepageSection(columns: ColumnWidget[][], options: { padding?: "sm" | "md" | "lg"; gap?: number; widths?: number[]; background?: "transparent" | "charcoal" | "gold"; style?: ModuleStyle } = {}): Module {
+  const count = columns.length;
+  return { id: generateModuleId(), type: "columns", hidden: false, data: {
+    ...defaultModuleData("columns"),
+    layout: (["one", "two", "three", "four"] as const)[count - 1],
+    columns,
+    background: options.background ?? "transparent",
+    padding: options.padding ?? "md",
+    gap: options.gap ?? 24,
+    verticalAlign: "center",
+    columnWidths: options.widths ?? Array(count).fill(100 / count),
+  }, style: options.style };
+}
+
+/** Builder-native public site: every visible part is an independently editable widget. */
 export function defaultHomepageModules(): Module[] {
+  const booking = defaultModuleData("booking");
+  const portfolio = defaultModuleData("portfolio");
   return [
-    { id: generateModuleId(), type: "hero", hidden: false, data: defaultModuleData("hero") },
-    { id: generateModuleId(), type: "iconList", hidden: false, data: { title: "Od pomysłu do zagojonego tatuażu", style: "arrow", items: ["Krótki brief i wybór bezpiecznego wolnego terminu", "Konsultacja, indywidualny projekt i jasne ustalenia", "Sesja w kameralnym studiu oraz instrukcja pielęgnacji"] } },
-    { id: generateModuleId(), type: "stats", hidden: false, data: { items: [{ value: "ZIELONA GÓRA", label: "STUDIO STACJONARNE" }, { value: "1 / 1", label: "INDYWIDUALNY PROJEKT" }, { value: "WT–SOB", label: "11:00–18:00" }, { value: "ONLINE", label: "REZERWACJE I KONTO" }] } },
-    { id: generateModuleId(), type: "about", hidden: false, data: defaultModuleData("about") },
-    { id: generateModuleId(), type: "ctaBar", hidden: false, data: defaultModuleData("ctaBar") },
-    { id: generateModuleId(), type: "portfolio", hidden: false, data: defaultModuleData("portfolio") },
-    { id: generateModuleId(), type: "studio", hidden: false, data: defaultModuleData("studio") },
-    { id: generateModuleId(), type: "faq", hidden: false, data: { title: "Zanim zarezerwujesz", items: [
-      { question: "Jak wygląda rezerwacja?", answer: "Wybierz dostępny termin i opisz pomysł. Po zalogowaniu wyślesz prośbę, a studio potwierdzi szczegóły w Twoim koncie." },
-      { question: "Czy projekt jest indywidualny?", answer: "Tak. Kierunek projektu, rozmiar i miejsce ustalamy przed sesją. Podgląd i wiadomości znajdziesz w koncie klienta." },
-      { question: "Jak przygotować się do wizyty?", answer: "Przed terminem otrzymasz aktualne zalecenia w koncie. Nie opalaj miejsca, odpocznij, zjedz posiłek i poinformuj studio o przeciwwskazaniach." },
-      { question: "Gdzie znajduje się studio?", answer: "al. Konstytucji 3 Maja 10, 65-001 Zielona Góra. Aktualne godziny i dane kontaktowe są w sekcji Kontakt." }
-    ] } },
-    { id: generateModuleId(), type: "callout", hidden: false, data: { eyebrow: "GOTOWY NA PIERWSZY KROK?", title: "Sprawdź realnie dostępne terminy", body: "Zamiast czekać na odpowiedź w wiadomościach, wybierz termin i śledź cały proces w jednym miejscu.", buttonLabel: "ZOBACZ WOLNE TERMINY", href: "#kalendarz", style: "outline" } },
-    { id: generateModuleId(), type: "contact", hidden: false, data: defaultModuleData("contact") },
+    homepageSection([
+      [
+        homepageWidget("text", { text: "COOLINK / PRIVATE TATTOO STUDIO", alignment: "left" }, { color: "#c99a4a", fontSize: 12, letterSpacing: 2.6, textTransform: "uppercase" }),
+        homepageWidget("heading", { text: "TATUAŻ, KTÓRY NIE POTRZEBUJE WYJAŚNIEŃ.", level: "h1", alignment: "left" }, { fontSize: 78, lineHeight: .92, letterSpacing: -.8 }),
+        homepageWidget("text", { text: "Indywidualne projekty, mocny detal i spokojny proces — od pierwszej rozmowy do zagojonej pracy.", alignment: "left" }, { fontSize: 18, lineHeight: 1.55, color: "#b7b2aa" }),
+        homepageWidget("button", { label: "SPRAWDŹ WOLNE TERMINY", href: "#kalendarz", alignment: "left", style: "primary", width: "auto", icon: "ArrowDown", iconPosition: "right" }),
+        homepageWidget("button", { label: "ZOBACZ PORTFOLIO", href: "#portfolio", alignment: "left", style: "outline", width: "auto" }),
+      ],
+      [homepageWidget("image", { image: "/images/portrait.jpg", alt: "Patryk — artysta CoolInk Tattoo Studio", caption: "", aspect: "portrait", fit: "cover", maxWidth: 620, alignment: "center" }, { radius: "lg", shadow: "lg" })],
+    ], { padding: "lg", gap: 48, widths: [54, 46], style: { minHeight: 760, backgroundColor: "#0a0908", backgroundImage: "/images/texture-bg.jpg", overlayColor: "#0a0908", overlayOpacity: 72, anchorId: "home" } }),
+
+    homepageSection([
+      [homepageWidget("heading", { text: "01 / POMYSŁ", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 24 }), homepageWidget("text", { text: "Opisz kierunek, miejsce i klimat. Nie musisz mieć gotowego projektu.", alignment: "left" }, { fontSize: 14 })],
+      [homepageWidget("heading", { text: "02 / PROJEKT", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 24 }), homepageWidget("text", { text: "Tworzę kompozycję pod Twoją anatomię, nie z katalogowego szablonu.", alignment: "left" }, { fontSize: 14 })],
+      [homepageWidget("heading", { text: "03 / SESJA", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 24 }), homepageWidget("text", { text: "Kameralne studio, jasne ustalenia i opieka również po wykonaniu tatuażu.", alignment: "left" }, { fontSize: 14 })],
+    ], { background: "charcoal", padding: "md", gap: 16, style: { contentWidth: "wide", surface: "outline" } }),
+
+    homepageSection([[homepageWidget("portfolio", { ...portfolio, eyebrow: "SELECTED WORK", heading1: "PRACE, KTÓRE", heading2: "ZOSTAJĄ.", body: "Czerń, kontrast, detal i kompozycje dopasowane do ciała." })]], { padding: "sm", style: { anchorId: "portfolio" } }),
+
+    homepageSection([
+      [homepageWidget("image", { image: "/images/crops/about-main.jpg", alt: "Detal realistycznego tatuażu CoolInk", caption: "", aspect: "portrait", fit: "cover", maxWidth: 620, alignment: "center" }, { radius: "md" })],
+      [
+        homepageWidget("text", { text: "O ARTYŚCIE", alignment: "left" }, { color: "#c99a4a", fontSize: 12, letterSpacing: 2.4 }),
+        homepageWidget("heading", { text: "TECHNIKA MA ZNACZENIE. CHARAKTER JESZCZE WIĘKSZE.", level: "h2", alignment: "left" }, { fontSize: 58, lineHeight: .98 }),
+        homepageWidget("text", { text: "Nazywam się Patryk. Projektuję tatuaże, które pracują razem z sylwetką — mocne, precyzyjne i osobiste. Każdy klient ma własny projekt, historię i bezpośredni kontakt w aplikacji CoolInk.", alignment: "left" }, { fontSize: 17, lineHeight: 1.65 }),
+        homepageWidget("iconList", { title: "STANDARD COOLINK", items: ["Indywidualny projekt 1:1", "Przejrzysty proces i historia ustaleń", "Sterylność, jakość i opieka po sesji"], style: "check", layout: "list", columns: "one" }),
+      ],
+    ], { padding: "lg", gap: 44, widths: [44, 56], style: { anchorId: "artists", contentWidth: "wide" } }),
+
+    homepageSection([
+      [homepageWidget("quote", { quote: "Dobry tatuaż nie kończy się na ładnym obrazku. Musi pasować do człowieka, ruchu i czasu.", author: "Patryk", role: "CoolInk Tattoo Studio", variant: "editorial" })],
+      [homepageWidget("faq", { title: "Zanim zarezerwujesz", items: [
+        { question: "Jak wygląda rezerwacja?", answer: "Wybierz dostępny termin, zaloguj się i opisz pomysł. Potwierdzenie oraz dalsze ustalenia zobaczysz w koncie klienta." },
+        { question: "Czy projekt jest indywidualny?", answer: "Tak. Kierunek, rozmiar i miejsce ustalamy przed sesją, a kompozycja powstaje dla konkretnej osoby." },
+        { question: "Jak przygotować się do wizyty?", answer: "Przed terminem otrzymasz aktualne zalecenia w aplikacji. Odpocznij, zjedz posiłek i poinformuj studio o przeciwwskazaniach." },
+      ], variant: "lines", initiallyOpen: "none" })],
+    ], { background: "charcoal", padding: "lg", gap: 28, widths: [40, 60], style: { contentWidth: "wide" } }),
+
+    homepageSection([[homepageWidget("booking", { ...booking, eyebrow: "REZERWACJE ONLINE", heading: "Wybierz termin, który naprawdę jest wolny.", body: "Kalendarz jest połączony z systemem studia. Po zalogowaniu dokończysz zgłoszenie bez ponownego wybierania daty." })]], { padding: "sm", style: { anchorId: "kalendarz" } }),
+
+    homepageSection([
+      [homepageWidget("heading", { text: "ZIELONA GÓRA", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 26 }), homepageWidget("text", { text: "al. Konstytucji 3 Maja 10\n65-001 Zielona Góra", alignment: "left" }, { fontSize: 14 })],
+      [homepageWidget("heading", { text: "KONTAKT", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 26 }), homepageWidget("button", { label: "kontakt@coolinktattoo.pl", href: "mailto:kontakt@coolinktattoo.pl", alignment: "left", style: "outline", width: "auto" })],
+      [homepageWidget("heading", { text: "GODZINY", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 26 }), homepageWidget("text", { text: "Wt–Sob / 11:00–18:00\nWizyty po potwierdzeniu", alignment: "left" }, { fontSize: 14 })],
+    ], { background: "charcoal", padding: "md", gap: 24, style: { anchorId: "contact", contentWidth: "wide" } }),
   ];
 }
 
