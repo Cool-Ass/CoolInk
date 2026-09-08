@@ -36,21 +36,21 @@ export default function ClientPortalShell({ firstName, unreadMessages, unreadNot
   const logo = logoFailed ? <span className="font-display text-base tracking-[.08em] text-ink-white">COOLINK</span> : <Image src="/images/logo-white.jpg" alt="CoolInk Tattoo Studio" width={112} height={34} priority onError={() => setLogoFailed(true)} className="h-full w-full object-contain object-left mix-blend-screen" />;
 
   return <main className="client-shell flex min-h-screen bg-ink-black text-ink-white">
-    <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-ink-white/10 bg-ink-charcoal/55 shadow-[12px_0_40px_rgba(0,0,0,.16)] backdrop-blur md:flex">
-      <Link href="/" aria-label="CoolInk Tattoo Studio" className="flex h-[65px] items-center border-b border-ink-white/10 px-5"><span className="h-8 w-24">{logo}</span></Link>
+    <aside className="studio-sidebar">
+      <Link href="/" aria-label="CoolInk Tattoo Studio" className="studio-sidebar-logo"><span className="h-8 w-24">{logo}</span></Link>
       <div className="px-5 pb-2 pt-4"><p className="text-[9px] font-semibold tracking-[.18em] text-ink-grey/60">TWOJE KONTO</p><p className="mt-1 truncate text-sm text-ink-white">{firstName}</p></div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-2">
-        {links.map(({ href, label, icon: Icon, exact }) => <Link key={href} href={href} className={`flex min-h-9 items-center gap-2.5 border-l-2 px-3 py-2 text-[12px] tracking-[.02em] ${active(href, exact) ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-transparent text-ink-grey hover:text-ink-white"}`}><Icon className="h-3.5 w-3.5 shrink-0" />{label}{label === "Wiadomości" && unreadMessages > 0 && <span className="ml-auto rounded-full bg-ink-gold px-1.5 text-[9px] text-ink-black">{unreadMessages}</span>}</Link>)}
+        {links.map(({ href, label, icon: Icon, exact }) => { const isActive = active(href, exact); return <Link key={href} href={href} data-active={isActive} className={`studio-nav-link ${isActive ? "text-ink-gold" : "text-ink-grey hover:text-ink-white"}`}><Icon className="h-3.5 w-3.5 shrink-0" />{label}{label === "Wiadomości" && unreadMessages > 0 && <span className="ml-auto rounded-full bg-ink-gold px-1.5 text-[9px] text-ink-black">{unreadMessages}</span>}</Link>; })}
       </nav>
       <div className="border-t border-ink-white/10 px-5 py-3.5"><Link href="/" className="text-[10px] tracking-[.1em] text-ink-grey hover:text-ink-gold">↗ ZOBACZ STRONĘ</Link></div>
     </aside>
 
     <div className="flex min-w-0 flex-1 flex-col">
-      <header className="sticky top-0 z-40 flex min-h-[61px] items-center justify-between border-b border-ink-white/10 bg-ink-black/85 px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,.12)] backdrop-blur-xl sm:px-5 md:px-6">
+      <header className="studio-topbar">
         <div className="flex min-w-0 items-center gap-3"><Link href="/" aria-label="CoolInk Tattoo Studio" className="h-8 w-24 md:hidden">{logo}</Link><p className="hidden truncate text-xs tracking-[.04em] text-ink-grey md:block">Klient · <span className="text-ink-white">{firstName}</span></p></div>
         <div className="flex items-center gap-2"><ClientHeaderUtilities messages={messages} notifications={notifications} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} /><span className="hidden border border-ink-white/20 px-4 py-2.5 sm:block"><ClientLogoutButton /></span></div>
       </header>
-      <div className="client-workspace flex-1 p-3 pb-24 sm:p-4 sm:pb-24 md:p-6 md:pb-6 xl:p-7"><div className="mx-auto w-full max-w-[1800px]">{children}</div></div>
+      <div className="client-workspace studio-workspace"><div className="mx-auto w-full max-w-[1800px]">{children}</div></div>
     </div>
 
     <nav aria-label="Główna nawigacja klienta" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-white/15 bg-ink-charcoal/95 px-1 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_36px_rgba(0,0,0,.35)] backdrop-blur-xl md:hidden">

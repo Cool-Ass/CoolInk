@@ -95,7 +95,7 @@ export default function Topbar({
     router.refresh();
   }
 
-  return <header className="sticky top-0 z-40 flex items-center justify-between border-b border-ink-white/10 bg-ink-black/85 px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,.12)] backdrop-blur-xl sm:px-5 md:px-6">
+  return <header className="studio-topbar">
     <div className="flex min-w-0 items-center gap-3">
       <button type="button" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-label="Otwórz nawigację administratora" className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink-white/20 text-lg text-ink-white hover:border-ink-gold hover:text-ink-gold md:hidden">☰</button>
       {pathname !== "/admin" && <Link href="/admin" aria-label="Wróć do panelu głównego" className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink-white/20 text-lg text-ink-white hover:border-ink-gold hover:text-ink-gold md:hidden">←</Link>}

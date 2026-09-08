@@ -18,9 +18,6 @@ function serialize(message: {
   readAt: Date | null;
   attachment: { id: string; caption: string | null } | null;
 }) {
-  // Attachment URLs are served through the existing client-authorized endpoint.
-  // The admin view still exposes the attachment record and caption without
-  // broadening Supabase Storage/Data API access.
   return {
     id: message.id,
     author: message.author,
@@ -28,7 +25,7 @@ function serialize(message: {
     createdAt: message.createdAt.toISOString(),
     readAt: message.readAt?.toISOString() ?? null,
     attachment: message.attachment
-      ? { id: message.attachment.id, caption: message.attachment.caption }
+      ? { id: message.attachment.id, caption: message.attachment.caption, url: `/api/admin/images/${message.attachment.id}` }
       : null,
   };
 }

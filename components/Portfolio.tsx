@@ -7,6 +7,7 @@ import PlayButton from "@/components/PlayButton";
 import Parallax from "@/components/Parallax";
 import MultilineText from "@/components/MultilineText";
 import CalligraphyBackground from "@/components/CalligraphyBackground";
+import AppModal from "@/components/ui/AppModal";
 import { defaultModuleData, type PortfolioModuleData } from "@/lib/modules";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { imageSource } from "@/lib/imageSource";
@@ -26,6 +27,7 @@ export default function Portfolio({
   works?: PortfolioWork[];
 }) {
   const [active, setActive] = useState(0);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const validWorks = works.flatMap((work) => {
     const source = imageSource(work.src);
     return source ? [{ ...work, src: source }] : [];
@@ -37,6 +39,9 @@ export default function Portfolio({
   }
   function next() {
     setActive((i) => (i + 1) % validWorks.length);
+  }
+  function previewStep(direction: -1 | 1) {
+    setPreviewIndex((index) => index === null ? null : (index + direction + validWorks.length) % validWorks.length);
   }
 
   return (
@@ -92,9 +97,11 @@ export default function Portfolio({
                   {validWorks.map((work, i) => (
                     <button
                       key={work.id}
-                      onClick={() => setActive(i)}
-                      aria-label={`Zobacz pracę ${i + 1}`}
-                      className="group relative flex-1 overflow-hidden transition-all duration-500 ease-out"
+                      onPointerEnter={() => setActive(i)}
+                      onFocus={() => setActive(i)}
+                      onClick={() => { setActive(i); setPreviewIndex(i); }}
+                      aria-label={`Otwórz pełny podgląd pracy ${i + 1}`}
+                      className="group relative flex-1 cursor-zoom-in overflow-hidden transition-all duration-500 ease-out"
                       style={{ flexGrow: active === i ? 1.6 : 1 }}
                     >
                       <Parallax
@@ -146,6 +153,27 @@ export default function Portfolio({
           </div>
         </div>
       </div>
+      {previewIndex !== null && validWorks[previewIndex] && (
+        <AppModal
+          title={validWorks[previewIndex].alt || `Praca ${previewIndex + 1}`}
+          subtitle={`${previewIndex + 1} z ${validWorks.length}`}
+          size="xl"
+          priority
+          onClose={() => setPreviewIndex(null)}
+        >
+          <div className="relative flex min-h-[50vh] items-center justify-center bg-ink-black/55 sm:min-h-[65vh]">
+            <img
+              src={validWorks[previewIndex].src}
+              alt={validWorks[previewIndex].alt}
+              className="max-h-[72dvh] w-auto max-w-full object-contain"
+            />
+            {validWorks.length > 1 && <>
+              <button type="button" onClick={() => previewStep(-1)} aria-label="Poprzednie zdjęcie" className="absolute left-2 flex h-11 w-11 items-center justify-center rounded-full border border-ink-white/25 bg-ink-black/75 text-xl text-ink-white hover:border-ink-gold hover:text-ink-gold sm:left-4">←</button>
+              <button type="button" onClick={() => previewStep(1)} aria-label="Następne zdjęcie" className="absolute right-2 flex h-11 w-11 items-center justify-center rounded-full border border-ink-white/25 bg-ink-black/75 text-xl text-ink-white hover:border-ink-gold hover:text-ink-gold sm:right-4">→</button>
+            </>}
+          </div>
+        </AppModal>
+      )}
     </section>
   );
 }

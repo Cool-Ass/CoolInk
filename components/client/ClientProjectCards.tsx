@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
 import EmptyState from "@/components/ui/EmptyState";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -8,6 +9,7 @@ import InspirationPreview from "@/components/client/InspirationPreview";
 import ClientAppointmentModal from "@/components/client/ClientAppointmentModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import AppButton from "@/components/ui/AppButton";
+import ActionIcon from "@/components/ui/ActionIcon";
 import { imageSource } from "@/lib/imageSource";
 
 type Appointment = {
@@ -52,6 +54,9 @@ export default function ClientProjectCards({
   } | null>(null);
   const [cancelProject, setCancelProject] = useState<Project | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [deleteProject, setDeleteProject] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [visibleProjects, setVisibleProjects] = useState(projects);
   function markAppointmentCancelled(appointmentId: string, projectStatus: string) {
     const update = (project: Project) => ({
@@ -78,9 +83,26 @@ export default function ClientProjectCards({
       setSelected(null); setCancelProject(null);
     } catch { /* the existing project remains visible if the request fails */ } finally { setCancelling(false); }
   }
+  async function deleteSelectedProject() {
+    if (!deleteProject) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const response = await fetch(`/api/client/projects/${deleteProject.id}`, { method: "DELETE" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Nie udało się usunąć projektu.");
+      setVisibleProjects((items) => items.filter((item) => item.id !== deleteProject.id));
+      if (selected?.id === deleteProject.id) setSelected(null);
+      setDeleteProject(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Nie udało się usunąć projektu.");
+    } finally {
+      setDeleting(false);
+    }
+  }
   return (
     <section id="projekty" className="mt-2 scroll-mt-6">
-      <p className="text-[11px] tracking-[.18em] text-ink-gold">
+      <p className="studio-eyebrow">
         PROJEKTY / ZGŁOSZENIA
       </p>
       <h2 className="mt-1 font-display text-3xl">Twoje projekty</h2>
@@ -92,40 +114,43 @@ export default function ClientProjectCards({
           />
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visibleProjects.map((project) => {
             const previewSource = imageSource(project.images[0]?.url);
-            return <button
-              key={project.id}
-              type="button"
-              onClick={() => setSelected(project)}
-              className="overflow-hidden border border-ink-white/15 bg-ink-charcoal/30 text-left transition-colors hover:border-ink-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-gold"
-            >
+            return <article key={project.id} className="studio-panel relative overflow-hidden p-0 transition-colors hover:border-ink-gold">
+              <button
+                type="button"
+                onClick={() => setSelected(project)}
+                className="block h-full w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-gold"
+              >
               {previewSource && (
                 <img
                   src={previewSource}
                   alt="Inspiracja projektu"
-                  className="aspect-[16/7] w-full object-cover"
+                  className="aspect-[16/5] max-h-28 w-full object-cover"
                 />
               )}
-              <div className="p-4">
+              <div className="p-3 pr-12">
                 <div className="flex items-start justify-between gap-3">
-                  <div>{project.kind === "consultation" && <span className="mb-1 inline-block border border-blue-400/40 px-2 py-1 text-[10px] text-blue-200">KONSULTACJA</span>}<h3 className="font-display text-xl">{project.title}</h3></div>
+                  <div className="min-w-0">{project.kind === "consultation" && <span className="mb-1 inline-block border border-blue-400/40 px-1.5 py-0.5 text-[9px] text-blue-200">KONSULTACJA</span>}<h3 className="truncate font-display text-lg">{project.title}</h3></div>
                   <StatusBadge status={project.status} />
                 </div>
-                <p className="mt-2 line-clamp-2 text-xs text-ink-grey">
+                <p className="mt-1.5 line-clamp-1 text-[11px] text-ink-grey">
                   {project.next}
                 </p>
-                <p className="mt-3 text-[10px] text-ink-gold">
+                <p className="mt-2 text-[10px] text-ink-gold">
                   {project.appointments.length}{" "}
                   {project.kind === "consultation" ? "termin konsultacji" : project.appointments.length === 1 ? "sesja" : "sesje"}
                 </p>
-                {project.kind !== "consultation" && <p className="mt-2 text-xs text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : "Wycena w trakcie ustalania"}</p>}
+                {project.kind !== "consultation" && <p className="mt-1 line-clamp-1 text-[11px] text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice ? `Wycena: ${project.estimatedPrice} zł` : "Wycena w trakcie ustalania"}</p>}
               </div>
-            </button>;
+              </button>
+              <ActionIcon icon={Trash2} label={`Usuń projekt ${project.title}`} tone="destructive" className="absolute right-2 top-2 z-10" onClick={() => setDeleteProject(project)} />
+            </article>;
           })}
         </div>
       )}
+      {deleteError && <p role="alert" className="mt-3 text-xs text-red-300">{deleteError}</p>}
       {selected && (
         <AppModal
           title={selected.title}
@@ -183,6 +208,7 @@ export default function ClientProjectCards({
         </AppModal>
       )}
       {cancelProject && <ConfirmModal message="Anulować projekt? Aktywne terminy zostaną anulowane. Historia, dokumenty i inspiracje pozostaną zachowane." onConfirm={() => { void cancelSelectedProject(); }} onCancel={() => { if (!cancelling) setCancelProject(null); }} pending={cancelling} pendingLabel="ANULOWANIE…" />}
+      {deleteProject && <ConfirmModal message={`Usunąć projekt „${deleteProject.title}” na stałe? Znikną także jego wizyty, rozmowa i inspiracje.`} onConfirm={() => { void deleteSelectedProject(); }} onCancel={() => { if (!deleting) setDeleteProject(null); }} pending={deleting} pendingLabel="USUWANIE…" />}
       {appointment && (
         <ClientAppointmentModal
           appointment={appointment.item}

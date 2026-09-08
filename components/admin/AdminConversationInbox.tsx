@@ -5,7 +5,7 @@ import ProjectChat from "@/components/projects/ProjectChat";
 import EmptyState from "@/components/ui/EmptyState";
 import type { MessageTemplate } from "@/lib/messageTemplates";
 
-type Message = { id: string; author: string; body: string; createdAt: string; readAt: string | null; attachment: { id: string; caption: string | null } | null };
+type Message = { id: string; author: string; body: string; createdAt: string; readAt: string | null; attachment: { id: string; caption: string | null; url?: string } | null };
 type Conversation = { id: string; title: string; kind: string; clientId: string; clientName: string; messages: Message[] };
 
 export default function AdminConversationInbox({ conversations, templates }: { conversations: Conversation[]; templates: MessageTemplate[] }) {

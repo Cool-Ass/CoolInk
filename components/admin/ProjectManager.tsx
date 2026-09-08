@@ -1,5 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/ToastProvider";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -298,9 +299,9 @@ export default function ProjectManager({
         {canDeleteProject && <button
           type="button"
           onClick={() => setDeleteOpen(true)}
-          className="border border-red-500/60 px-4 py-2.5 text-xs tracking-[0.08em] text-red-300 hover:bg-red-500/10"
+          className="inline-flex items-center gap-2 border border-red-500/60 px-4 py-2.5 text-xs tracking-[0.08em] text-red-300 hover:bg-red-500/10"
         >
-          USUŃ PROJEKT
+          <Trash2 className="h-3.5 w-3.5" />USUŃ PROJEKT
         </button>}
       </div>
       {proposalOpen && (

@@ -55,8 +55,8 @@ export default function Sidebar({
   const sections = getAdminSections(role);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-ink-white/10 bg-ink-charcoal/55 shadow-[12px_0_40px_rgba(0,0,0,.16)] backdrop-blur md:flex">
-      <div className="flex items-center gap-2 border-b border-ink-white/10 px-5 py-4">
+    <aside className="studio-sidebar">
+      <div className="studio-sidebar-logo gap-2">
         <div className="relative h-8 w-24">
           {logoSource ? <Image src={logoSource} alt="CoolInk" fill className="object-contain mix-blend-screen" sizes="112px" /> : <span className="flex h-full items-center font-display text-base tracking-[0.08em] text-ink-white">COOLINK</span>}
         </div>
@@ -78,11 +78,8 @@ export default function Sidebar({
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex min-h-9 items-center gap-2.5 px-3 py-2 text-[12px] tracking-[0.02em] transition-colors ${
-                      active
-                        ? "border-l-2 border-ink-gold bg-ink-gold/10 text-ink-gold"
-                        : "border-l-2 border-transparent text-ink-grey hover:text-ink-white"
-                    }`}
+                    data-active={active}
+                    className={`studio-nav-link transition-colors ${active ? "text-ink-gold" : "text-ink-grey hover:text-ink-white"}`}
                   >
                     <Icon className="h-3.5 w-3.5 shrink-0" />{link.label}
                   </Link>

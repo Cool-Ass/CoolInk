@@ -15,7 +15,11 @@ type Message = {
   readAt: string | null;
   attachment: { id: string; caption: string | null; url?: string } | null;
 };
-const EMOJI = ["🙂", "👍", "❤️", "🔥", "🎨", "✨"];
+const EMOJI = [
+  "🙂", "😊", "😂", "😍", "🤩", "😎", "👍", "👌",
+  "🙌", "🤝", "💪", "🙏", "❤️", "🖤", "🔥", "✨",
+  "🎨", "🖌️", "📸", "✅", "💯", "🤘", "🌙", "☀️",
+];
 
 export default function ProjectChat({
   projectId,
@@ -191,13 +195,13 @@ export default function ProjectChat({
       </div>
       <div className="border-t border-ink-white/10 bg-ink-black/35 p-3 sm:p-4">
         {role === "admin" && templates.length > 0 && <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">{templates.map((template) => <button key={template.id} type="button" onClick={() => setText((value) => value.trim() ? `${value.trim()}\n\n${template.body}` : template.body)} className="shrink-0 rounded-full border border-ink-white/15 px-3 py-1.5 text-[10px] text-ink-grey hover:border-ink-gold hover:text-ink-gold">{template.label}</button>)}</div>}
-        {showEmoji && <div className="mb-2 flex flex-wrap gap-1">
+        {showEmoji && <div className="mb-2 grid max-w-sm grid-cols-8 gap-1 rounded-[14px] border border-ink-white/10 bg-ink-black/45 p-2">
           {EMOJI.map((emoji) => (
             <button
               key={emoji}
               type="button"
               onClick={() => setText((value) => `${value}${emoji}`)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-white/[.06] text-sm hover:bg-ink-white/[.12]"
+              className="flex aspect-square min-h-8 items-center justify-center rounded-full bg-ink-white/[.06] text-sm hover:bg-ink-white/[.12]"
               aria-label={`Dodaj ${emoji}`}
             >
               {emoji}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { del as deleteBlob } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/adminApi";
 import {
@@ -9,6 +10,7 @@ import {
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { hasAdminPermission } from "@/lib/adminPermissions";
 import { normalizeLeadSource } from "@/lib/leadSource";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -111,19 +113,23 @@ export async function DELETE(request: Request, { params }: Params) {
   const { id } = await params;
   const project = await prisma.tattooProject.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, appointments: { select: { id: true } }, images: { select: { url: true } } },
   });
   if (!project)
     return NextResponse.json(
       { error: "Projekt nie istnieje." },
       { status: 404 },
     );
-  // Database relations (appointments, activities, messages and inspirations)
-  // use ON DELETE CASCADE. Storage objects remain private and unreachable;
-  // their lifecycle is handled by the bucket retention policy.
+  const appointmentIds = project.appointments.map((appointment) => appointment.id);
+  if (appointmentIds.length) {
+    await prisma.appointment.updateMany({ where: { id: { in: appointmentIds } }, data: { status: "cancelled" } });
+    await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
+  }
   await prisma.$transaction(async (tx) => {
     await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "project.delete", targetType: "TattooProject", targetId: id, summary: "Usunięto projekt wraz z powiązaną historią." } });
     await tx.tattooProject.delete({ where: { id } });
   });
+  const blobUrls = project.images.map((image) => image.url).filter((url) => url.includes(".blob.vercel-storage.com"));
+  if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) await deleteBlob(blobUrls).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }
