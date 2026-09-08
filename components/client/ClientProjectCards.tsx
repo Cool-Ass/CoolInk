@@ -101,11 +101,11 @@ export default function ClientProjectCards({
     }
   }
   return (
-    <section id="projekty" className="mt-2 scroll-mt-6">
-      <p className="studio-eyebrow">
-        PROJEKTY / ZGŁOSZENIA
-      </p>
-      <h2 className="mt-1 font-display text-3xl">Twoje projekty</h2>
+    <section id="projekty" className="scroll-mt-6">
+      <header>
+        <p className="studio-eyebrow">PROJEKTY / ZGŁOSZENIA</p>
+        <h1 className="studio-page-title">Twoje projekty</h1>
+      </header>
       {visibleProjects.length === 0 ? (
         <div className="mt-5">
           <EmptyState

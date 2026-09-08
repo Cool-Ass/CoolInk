@@ -123,8 +123,8 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     { label: "AKTYWNA LISTA REZERWOWA", value: String(waitlist.filter((entry) => ["active", "offered"].includes(entry.status)).length), hint: `${waitlist.length} wpisów w okresie` },
   ];
 
-  return <div className="space-y-6">
-    <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="text-[11px] tracking-[.18em] text-ink-gold">ANALITYKA STUDIA</p><h1 className="mt-2 font-display text-4xl">Statystyki operacyjne</h1><p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-grey">Zgłoszenia, obsługa klientów, wizyty, obłożenie i źródła pozyskania. Finanse i płatności pozostają poza tym etapem.</p></div><nav aria-label="Zakres statystyk" className="flex flex-wrap gap-2">{PERIODS.map(([value, label]) => <Link key={value} href={`/admin/statistics?period=${value}`} className={`border px-3 py-2 text-xs ${period === value ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-white/40 hover:text-ink-white"}`}>{label}</Link>)}</nav></header>
+  return <div className="studio-page">
+    <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="studio-eyebrow">ANALITYKA STUDIA</p><h1 className="studio-page-title">Statystyki operacyjne</h1><p className="studio-page-description">Zgłoszenia, obsługa klientów, wizyty, obłożenie i źródła pozyskania. Finanse i płatności pozostają poza tym etapem.</p></div><nav aria-label="Zakres statystyk" className="flex flex-wrap gap-2">{PERIODS.map(([value, label]) => <Link key={value} href={`/admin/statistics?period=${value}`} className={`border px-3 py-2 text-xs ${period === value ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-white/40 hover:text-ink-white"}`}>{label}</Link>)}</nav></header>
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
 

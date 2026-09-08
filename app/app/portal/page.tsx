@@ -25,15 +25,17 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
   const nextVisit = projects.flatMap((project) => project.appointments.map((appointment) => ({ ...appointment, project }))).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
   const nextCopy = primary ? CLIENT_STATUS[primary.status as keyof typeof CLIENT_STATUS]?.next ?? "Studio wróci z kolejnym krokiem." : "Wybierz termin lub opowiedz o swoim pomyśle.";
 
-  return <div>
-    <p className="text-xs tracking-[.18em] text-ink-gold">STREFA KLIENTA</p>
-    <h1 className="mt-1 font-display text-3xl sm:text-4xl">Cześć, {client.firstName}.</h1>
-    <section className="mt-4 border-l-2 border-ink-gold bg-ink-gold/5 p-4">
+  return <div className="studio-page">
+    <header>
+      <p className="studio-eyebrow">STREFA KLIENTA</p>
+      <h1 className="studio-page-title">Cześć, {client.firstName}.</h1>
+    </header>
+    <section className="border-l-2 border-ink-gold bg-ink-gold/5 p-4">
       <p className="text-xs tracking-[.14em] text-ink-gold">TWÓJ NASTĘPNY KROK</p>
       {primary ? <><div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="font-display text-xl sm:text-2xl">{primary.title}</h2>{primary.kind === "consultation" && <span className="border border-blue-400/50 px-2 py-1 text-[10px] text-blue-200">KONSULTACJA</span>}<StatusBadge status={primary.status} /></div><p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-grey">{nextCopy}</p><Link href="/app/portal/projects" className="mt-3 inline-block border border-ink-gold px-3 py-2 text-[10px] text-ink-gold hover:bg-ink-gold hover:text-ink-black">OTWÓRZ SZCZEGÓŁY →</Link></> : <><h2 className="mt-2 font-display text-2xl">Rozpocznij nowy projekt.</h2><p className="mt-2 text-sm text-ink-grey">Wybierz udostępniony termin albo konsultację w kalendarzu.</p></>}
     </section>
 
-    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {nextVisit && <Link href="/app/portal/projects" className="border border-blue-400/30 bg-blue-400/5 p-4 hover:border-blue-300"><p className="text-[10px] tracking-widest text-blue-200">NAJBLIŻSZY TERMIN</p><p className="mt-2 font-display text-xl">{nextVisit.startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}</p><p className="mt-1 text-xs text-ink-grey">{nextVisit.project.title}</p></Link>}
       <Link href="/app/portal/projects" className="border border-ink-white/15 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><p className="text-[10px] tracking-widest text-ink-gold">PROJEKTY I KONSULTACJE</p><p className="mt-2 font-display text-2xl">{projects.length}</p><p className="mt-1 text-xs text-ink-grey">Historia, terminy, zdjęcia i status.</p></Link>
       <Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="border border-emerald-500/35 bg-emerald-500/5 p-4 hover:border-emerald-400"><p className="text-[10px] tracking-widest text-emerald-300">KALENDARZ</p><p className="mt-2 font-display text-2xl">Wolne terminy</p><p className="mt-1 text-xs text-ink-grey">Wizyta lub konsultacja.</p></Link>
