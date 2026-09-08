@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { del as deleteBlob } from "@vercel/blob";
 import { requireAdminApi } from "@/lib/adminApi";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { prisma } from "@/lib/prisma";
 
@@ -31,10 +33,33 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   try {
+    const client = await prisma.client.findUnique({
+      where: { id },
+      select: {
+        firstName: true,
+        lastName: true,
+        projects: {
+          select: {
+            appointments: { select: { id: true } },
+            images: { select: { url: true } },
+          },
+        },
+      },
+    });
+    if (!client) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
+
+    const appointmentIds = client.projects.flatMap((project) => project.appointments.map((appointment) => appointment.id));
+    if (appointmentIds.length) {
+      await prisma.appointment.updateMany({ where: { id: { in: appointmentIds } }, data: { status: "cancelled" } });
+      await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
+    }
+
     await prisma.$transaction(async (tx) => {
-      await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "client.delete", targetType: "Client", targetId: id, summary: "Usunięto konto klienta wraz z powiązanymi danymi." } });
+      await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "client.delete", targetType: "Client", targetId: id, summary: `Usunięto konto klienta ${client.firstName} ${client.lastName} wraz z powiązanymi danymi.` } });
       await tx.client.delete({ where: { id } });
     });
+    const blobUrls = client.projects.flatMap((project) => project.images.map((image) => image.url)).filter((url) => url.includes(".blob.vercel-storage.com"));
+    if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) await deleteBlob(blobUrls).catch(() => undefined);
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Nie udało się usunąć konta klienta." }, { status: 409 }); }
 }
