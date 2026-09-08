@@ -39,12 +39,12 @@ export default function ProfileSettings({ client }: { client: Profile }) {
     finally { setBusy(false); }
   }
 
-  return <section id="profil" className="mt-10 scroll-mt-6 border border-ink-white/15 bg-ink-charcoal/30 p-5">
+  return <section id="profil" className="scroll-mt-6 border border-ink-white/10 bg-ink-charcoal/30 p-4">
     <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-3">
       {avatarSource ? <img src={avatarSource} alt="Zdjęcie profilowe" className="h-12 w-12 rounded-full border border-ink-gold/50 object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-full border border-ink-gold/50 font-display text-lg text-ink-gold">{value.firstName.slice(0, 1)}{value.lastName.slice(0, 1)}</span>}
       <div><p className="text-[10px] tracking-[.14em] text-ink-gold">TWÓJ PROFIL</p><p className="mt-1 text-sm text-ink-white">{value.firstName} {value.lastName}</p>{value.email && <p className="text-xs text-ink-grey">{value.email}</p>}</div>
     </div><AppButton onClick={() => setOpen(true)}>EDYTUJ</AppButton></div>
-    <Link href="/polityka-prywatnosci" className="mt-5 inline-block text-xs text-ink-gold underline">Polityka prywatności i informacja RODO</Link>
+    <Link href="/polityka-prywatnosci" className="mt-3 inline-block text-[10px] text-ink-gold underline">Prywatność i RODO</Link>
     {open && <AppModal title="Edytuj profil" subtitle="Podstawowe dane potrzebne do obsługi wizyt." onClose={busy ? () => undefined : () => setOpen(false)} footer={<div className="flex justify-between gap-3"><AppButton variant="destructive" type="button" onClick={() => setConfirmDelete(true)}>ZGŁOŚ USUNIĘCIE</AppButton><div className="flex gap-2"><AppButton variant="ghost" type="button" onClick={() => setOpen(false)} disabled={busy}>ANULUJ</AppButton><AppButton variant="primary" type="button" onClick={save} disabled={busy}>{busy ? "ZAPIS…" : "ZAPISZ"}</AppButton></div></div>}>
       <div className="grid gap-4 sm:grid-cols-2">{(["firstName", "lastName", "phone"] as const).map((key) => <label key={key} className={`text-[11px] tracking-[.1em] text-ink-grey ${key === "phone" ? "sm:col-span-2" : ""}`}>{({ firstName: "IMIĘ", lastName: "NAZWISKO", phone: "TELEFON" } as const)[key]}<input value={value[key] ?? ""} onChange={(event) => setValue({ ...value, [key]: event.target.value })} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>)}</div>
       {message && <p role="status" className="mt-4 text-sm text-ink-grey">{message}</p>}

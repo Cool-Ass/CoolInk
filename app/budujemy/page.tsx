@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import MaintenanceScreen from "@/components/MaintenanceScreen";
+import ModuleRenderer from "@/components/ModuleRenderer";
 import { getSiteContent } from "@/lib/content";
+import { getPublicNavLinks } from "@/lib/nav";
+import { getPublishedSystemModules } from "@/lib/systemPages";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +14,7 @@ export const metadata: Metadata = {
 
 export default async function ConstructionPage() {
   const content = await getSiteContent();
-  return <MaintenanceScreen content={content.maintenance} theme={content.theme} />;
+  const navLinks = await getPublicNavLinks(content.navigation);
+  const modules = await getPublishedSystemModules("maintenance", content, navLinks);
+  return <ModuleRenderer modules={modules} globals={{ theme: content.theme }} />;
 }

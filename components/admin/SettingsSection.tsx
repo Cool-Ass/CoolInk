@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/admin/ToastProvider";
+import CollapsibleAdminSection from "@/components/admin/CollapsibleAdminSection";
 
 interface Field {
   key: string;
@@ -42,8 +43,7 @@ export default function SettingsSection({
   }
 
   return (
-    <div className="border border-ink-white/10 bg-ink-charcoal/30 p-6">
-      <p className="mb-5 text-[13px] tracking-[0.15em] text-ink-gold">{title}</p>
+    <CollapsibleAdminSection title={title.toUpperCase()} summary={`${fields.length} ${fields.length === 1 ? "ustawienie" : "ustawień"}`} storageKey={`settings:${title}`}>
       <div className="flex flex-col gap-5">
         {fields.map((field) => (
           <label
@@ -91,6 +91,6 @@ export default function SettingsSection({
       >
         {saving ? "ZAPISYWANIE…" : `ZAPISZ: ${title.toUpperCase()}`}
       </button>
-    </div>
+    </CollapsibleAdminSection>
   );
 }

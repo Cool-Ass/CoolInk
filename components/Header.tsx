@@ -17,6 +17,7 @@ export default function Header({
   logoUrl = "/images/logo-white.jpg",
   logoAlt = "CoolInk Tattoo Studio — logo",
   brandName = "COOLINK",
+  preview = false,
 }: {
   navLinks?: NavLink[];
   bookLabel?: string;
@@ -26,6 +27,7 @@ export default function Header({
   logoUrl?: string;
   logoAlt?: string;
   brandName?: string;
+  preview?: boolean;
 }) {
   const [active, setActive] = useState("home");
   const [scrolled, setScrolled] = useState(false);
@@ -69,7 +71,7 @@ export default function Header({
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
+      className={`${preview ? "relative" : "fixed inset-x-0 top-0"} z-50 transition-colors duration-500 ${
         scrolled
           ? "border-b border-ink-white/10 bg-ink-black/85 backdrop-blur-md"
           : "border-b border-ink-white/10 bg-ink-black/55 backdrop-blur-sm"

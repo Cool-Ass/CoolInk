@@ -312,7 +312,7 @@ export default function ProjectManager({
             Klient zobaczy proponowany termin na swoim koncie.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2"><p className="text-[11px] tracking-[0.1em] text-ink-grey">WYBIERZ DZIEŃ</p><div className="mt-2 border border-ink-white/15 bg-ink-black/20 p-3"><AdminProposalCalendarPicker value={proposal.startsAt} onChange={(startsAt) => setProposal({ ...proposal, startsAt })} /></div></div>
+            <div className="sm:col-span-2"><p className="text-[11px] tracking-[0.1em] text-ink-grey">WYBIERZ WOLNY TERMIN</p><div className="mt-2 border border-ink-white/15 bg-ink-black/20 p-3"><AdminProposalCalendarPicker value={proposal.startsAt} durationMinutes={Number(proposal.duration)} onChange={(startsAt) => setProposal({ ...proposal, startsAt })} /></div></div>
             <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
               GODZINA
               <input required type="time" step="1800" value={proposal.startsAt ? proposal.startsAt.slice(11, 16) : ""} onChange={(event) => proposal.startsAt && setProposal({ ...proposal, startsAt: `${proposal.startsAt.slice(0, 10)}T${event.target.value}` })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white" />
@@ -322,7 +322,7 @@ export default function ProjectManager({
               <select
                 value={proposal.duration}
                 onChange={(event) =>
-                  setProposal({ ...proposal, duration: event.target.value })
+                  setProposal({ ...proposal, duration: event.target.value, startsAt: "" })
                 }
                 className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-ink-white"
               >

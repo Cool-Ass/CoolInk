@@ -8,13 +8,19 @@ import { sanitizeRichText } from "@/lib/richText";
 import { isValidIconName } from "@/lib/icons";
 import { isSameOrigin } from "@/lib/requestSecurity";
 
-type CalendarKind = "dayOff" | "freeTerm" | "consultation" | "promotion" | "event" | "workingHours" | "clearStatus";
+type CalendarKind = "occupied" | "dayOff" | "freeTerm" | "consultation" | "promotion" | "event" | "workingHours" | "clearStatus";
 const text = (value: unknown) => String(value ?? "").trim();
 const toDate = (value: unknown) => new Date(String(value ?? ""));
 const validRange = (from: Date, to: Date) => !Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime()) && from < to;
 const validTime = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 const safeColor = (value: unknown, fallback: string) => isHexColor(text(value)) ? text(value) : fallback;
 const safeIcon = (value: unknown) => isValidIconName(text(value)) ? text(value) : null;
+const blockReason = (kind: "occupied" | "dayOff", value: unknown) => {
+  const reason = text(value);
+  if (kind === "dayOff") return reason || "Niedostępny";
+  if (!reason || reason.toLocaleUpperCase("pl-PL") === "ZAJĘTY") return "ZAJĘTY";
+  return reason.toLocaleUpperCase("pl-PL").startsWith("ZAJĘTY") ? reason : `ZAJĘTY · ${reason}`;
+};
 
 async function adminOnly() {
   return (await getCurrentAdmin()) ? null : NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
@@ -55,10 +61,11 @@ export async function POST(request: Request) {
     await prisma.$transaction(async (tx) => Promise.all(dates.map((date) => tx.workingHoursOverride.upsert({ where: { date }, update: { enabled: hours?.enabled !== false, startsAt: from, endsAt: to, breakStart: text(hours?.breakStart) || null, breakEnd: text(hours?.breakEnd) || null }, create: { date, enabled: hours?.enabled !== false, startsAt: from, endsAt: to, breakStart: text(hours?.breakStart) || null, breakEnd: text(hours?.breakEnd) || null } }))));
     return NextResponse.json({ ok: true });
   }
-  if (kind === "dayOff") {
+  if (kind === "dayOff" || kind === "occupied") {
     if (!validRange(startsAt, endsAt)) return NextResponse.json({ error: "Podaj poprawny zakres dnia wolnego." }, { status: 400 });
-    if (dates.length > 1) { await prisma.$transaction(async (tx) => Promise.all(dates.map((date) => { const end = new Date(date); end.setDate(end.getDate() + 1); return tx.availabilityBlock.create({ data: { startsAt: date, endsAt: end, reason: text(body?.reason) || "Dzień wolny" } }); }))); return NextResponse.json({ ok: true }, { status: 201 }); }
-    return NextResponse.json({ item: await prisma.availabilityBlock.create({ data: { startsAt, endsAt, reason: text(body?.reason) || "Dzień wolny" } }) }, { status: 201 });
+    const reason = blockReason(kind, body?.reason);
+    if (dates.length > 1) { await prisma.$transaction(async (tx) => Promise.all(dates.map((date) => { const end = new Date(date); end.setDate(end.getDate() + 1); return tx.availabilityBlock.create({ data: { startsAt: date, endsAt: end, reason } }); }))); return NextResponse.json({ ok: true }, { status: 201 }); }
+    return NextResponse.json({ item: await prisma.availabilityBlock.create({ data: { startsAt, endsAt, reason } }) }, { status: 201 });
   }
   if (!validRange(startsAt, endsAt)) return NextResponse.json({ error: "Podaj poprawny zakres dat i godzin." }, { status: 400 });
   const data = content(kind, body, startsAt, endsAt);
@@ -86,7 +93,7 @@ export async function PATCH(request: Request) {
   if (!id) return NextResponse.json({ error: "Brakuje identyfikatora elementu." }, { status: 400 });
   if (kind === "workingHours") { const hours = body?.hours as Record<string, unknown> | undefined; const from = text(hours?.startsAt); const to = text(hours?.endsAt); if (!validTime(from) || !validTime(to) || from >= to) return NextResponse.json({ error: "Podaj poprawne godziny pracy." }, { status: 400 }); return NextResponse.json({ item: await prisma.workingHoursOverride.update({ where: { id }, data: { enabled: hours?.enabled !== false, startsAt: from, endsAt: to, breakStart: text(hours?.breakStart) || null, breakEnd: text(hours?.breakEnd) || null } }) }); }
   if (!validRange(startsAt, endsAt)) return NextResponse.json({ error: "Podaj poprawny zakres dat i godzin." }, { status: 400 });
-  if (kind === "dayOff") return NextResponse.json({ item: await prisma.availabilityBlock.update({ where: { id }, data: { startsAt, endsAt, reason: text(body?.reason) || null } }) });
+  if (kind === "dayOff" || kind === "occupied") return NextResponse.json({ item: await prisma.availabilityBlock.update({ where: { id }, data: { startsAt, endsAt, reason: blockReason(kind, body?.reason) } }) });
   const data = content(kind, body, startsAt, endsAt); if (!data || ((kind === "promotion" || kind === "event") && !data.title)) return NextResponse.json({ error: "Uzupełnij wymagane dane elementu." }, { status: 400 });
   if (kind === "freeTerm" || kind === "consultation") { if (!(await availableForSlot(startsAt, endsAt))) return NextResponse.json({ error: "Termin koliduje z wizytą, buforem albo dniem wolnym." }, { status: 409 }); return NextResponse.json({ item: await prisma.availableSlot.update({ where: { id }, data }) }); }
   if (kind === "promotion") return NextResponse.json({ item: await prisma.promotion.update({ where: { id }, data: data as Prisma.PromotionUncheckedUpdateInput }) });
@@ -113,7 +120,7 @@ export async function DELETE(request: Request) {
   }
   if (!id || !kind) return NextResponse.json({ error: "Brakuje danych elementu." }, { status: 400 });
   if (ids.length > 1) {
-    if (kind === "dayOff") await prisma.$transaction((tx) => Promise.all(ids.map((item) => tx.availabilityBlock.delete({ where: { id: item } }))));
+    if (kind === "dayOff" || kind === "occupied") await prisma.$transaction((tx) => Promise.all(ids.map((item) => tx.availabilityBlock.delete({ where: { id: item } }))));
     else if (kind === "freeTerm" || kind === "consultation") await prisma.$transaction((tx) => Promise.all(ids.map((item) => tx.availableSlot.delete({ where: { id: item } }))));
     else if (kind === "promotion") await prisma.$transaction((tx) => Promise.all(ids.map((item) => tx.promotion.delete({ where: { id: item } }))));
     else if (kind === "event") await prisma.$transaction((tx) => Promise.all(ids.map((item) => tx.calendarEvent.delete({ where: { id: item } }))));
@@ -121,6 +128,6 @@ export async function DELETE(request: Request) {
     else return NextResponse.json({ error: "Nieznany typ elementu kalendarza." }, { status: 400 });
     return NextResponse.json({ ok: true });
   }
-  if (kind === "dayOff") await prisma.availabilityBlock.delete({ where: { id } }); else if (kind === "freeTerm" || kind === "consultation") await prisma.availableSlot.delete({ where: { id } }); else if (kind === "promotion") await prisma.promotion.delete({ where: { id } }); else if (kind === "event") await prisma.calendarEvent.delete({ where: { id } }); else if (kind === "workingHours") await prisma.workingHoursOverride.delete({ where: { id } }); else return NextResponse.json({ error: "Nieznany typ elementu kalendarza." }, { status: 400 });
+  if (kind === "dayOff" || kind === "occupied") await prisma.availabilityBlock.delete({ where: { id } }); else if (kind === "freeTerm" || kind === "consultation") await prisma.availableSlot.delete({ where: { id } }); else if (kind === "promotion") await prisma.promotion.delete({ where: { id } }); else if (kind === "event") await prisma.calendarEvent.delete({ where: { id } }); else if (kind === "workingHours") await prisma.workingHoursOverride.delete({ where: { id } }); else return NextResponse.json({ error: "Nieznany typ elementu kalendarza." }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

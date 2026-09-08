@@ -18,9 +18,10 @@ interface Props {
   onStyleChange: (style: ModuleStyle) => void;
   onClose: () => void;
   portfolioItems: PortfolioWork[];
+  globalContact?: { address: string; phone: string; email: string; hours: string };
 }
 
-export default function ModuleSettingsSidebar({ module, onChange, onStyleChange, onClose, portfolioItems }: Props) {
+export default function ModuleSettingsSidebar({ module, onChange, onStyleChange, onClose, portfolioItems, globalContact }: Props) {
   const [tab, setTab] = useState<"content" | "style" | "advanced">("content");
   const tabs = [
     { id: "content" as const, label: module.type === "columns" ? "UKŁAD" : "TREŚĆ", icon: FileText },
@@ -36,7 +37,7 @@ export default function ModuleSettingsSidebar({ module, onChange, onStyleChange,
 
       <div className="grid grid-cols-3 border-b border-white/10">{tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 border-b-2 px-1 text-[8px] transition ${tab === id ? "border-white text-white" : "border-transparent text-white/45 hover:text-white/75"}`}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</div>
       <div className="flex flex-col gap-3 p-3">
-        {tab === "content" && renderFields(module, onChange, portfolioItems)}
+        {tab === "content" && renderFields(module, onChange, portfolioItems, globalContact)}
         {tab === "style" && <BackgroundControls value={module.style} onChange={onStyleChange} />}
         {tab === "advanced" && <AdvancedControls value={module.style} onChange={onStyleChange} />}
       </div>
@@ -47,7 +48,7 @@ function AdvancedControls({ value, onChange }: { value?: ModuleStyle; onChange: 
   const style = value ?? {};
   const set = (patch: Partial<ModuleStyle>) => onChange({ ...style, ...patch });
   return <div className="flex flex-col">
-    <PanelSection title="Odstępy" defaultOpen><BoxSpacingField label="MARGINES" value={style.marginBox} onChange={(marginBox) => set({ marginBox })} /><BoxSpacingField label="DOPEŁNIENIE" value={style.paddingBox} onChange={(paddingBox) => set({ paddingBox })} /></PanelSection>
+    <PanelSection title="Odstępy"><BoxSpacingField label="MARGINES" value={style.marginBox} onChange={(marginBox) => set({ marginBox })} /><BoxSpacingField label="DOPEŁNIENIE" value={style.paddingBox} onChange={(paddingBox) => set({ paddingBox })} /></PanelSection>
     <PanelSection title="Układ"><SelectField label="SZEROKOŚĆ MODUŁU" value={style.contentWidth ?? "full"} onChange={(contentWidth) => set({ contentWidth })} options={[{ value: "full", label: "Pełna szerokość" }, { value: "wide", label: "Szeroka" }, { value: "normal", label: "Standardowa" }, { value: "narrow", label: "Wąska" }]} /><div className="grid grid-cols-2 gap-2"><NumberField label="MIN. WYSOKOŚĆ" value={style.minHeight ?? 0} min={0} max={1600} onChange={(minHeight) => set({ minHeight })} /><NumberField label="Z-INDEX" value={style.zIndex ?? 0} min={-10} max={999} onChange={(zIndex) => set({ zIndex })} /></div></PanelSection>
     <PanelSection title="Identyfikacja CSS"><TextField label="IDENTYFIKATOR CSS" value={style.anchorId ?? ""} onChange={(anchorId) => set({ anchorId })} placeholder="np. kontakt" /><TextField label="KLASY CSS" value={style.cssClass ?? ""} onChange={(cssClass) => set({ cssClass })} placeholder="np. moja-sekcja" /></PanelSection>
     <PanelSection title="Responsywne"><div className="grid gap-2 text-[11px] text-ink-grey">{([['mobile','Ukryj na telefonie'],['tablet','Ukryj na tablecie'],['desktop','Ukryj na komputerze']] as const).map(([key,label]) => <label key={key} className="flex items-center gap-2"><input type="checkbox" checked={Boolean(style.hiddenOn?.[key])} onChange={(event) => set({ hiddenOn: { ...style.hiddenOn, [key]: event.target.checked } })} />{label}</label>)}</div></PanelSection>
@@ -58,9 +59,31 @@ function AdvancedControls({ value, onChange }: { value?: ModuleStyle; onChange: 
 function renderFields(
   module: Module,
   onChange: (data: Record<string, unknown>) => void,
-  portfolioItems: PortfolioWork[]
+  portfolioItems: PortfolioWork[],
+  globalContact?: { address: string; phone: string; email: string; hours: string },
 ) {
   switch (module.type) {
+    case "siteHeader": {
+      const d = withDefaults("siteHeader", module.data);
+      return <>
+        <FieldGroup title="MARKA"><ImageUploadField label="Logo" value={d.logoUrl} onChange={(logoUrl) => onChange({ ...d, logoUrl })} /><TextField label="Opis logo" value={d.logoAlt} onChange={(logoAlt) => onChange({ ...d, logoAlt })} /><TextField label="Nazwa awaryjna" value={d.brandName} onChange={(brandName) => onChange({ ...d, brandName })} /></FieldGroup>
+        <FieldGroup title="PRZYCISKI"><TextField label="Konto klienta" value={d.clientAreaLabel} onChange={(clientAreaLabel) => onChange({ ...d, clientAreaLabel })} /><TextField label="Link konta" value={d.clientAreaHref} onChange={(clientAreaHref) => onChange({ ...d, clientAreaHref })} /><TextField label="Rezerwacja" value={d.bookLabel} onChange={(bookLabel) => onChange({ ...d, bookLabel })} /><TextField label="Link rezerwacji" value={d.bookHref} onChange={(bookHref) => onChange({ ...d, bookHref })} /></FieldGroup>
+        <FieldGroup title="MENU">{d.navItems.map((item, index) => <div key={item.id || index} className="grid grid-cols-[1fr_1fr_auto] gap-1.5"><TextField label="Nazwa" value={item.label} onChange={(label) => onChange({ ...d, navItems: d.navItems.map((current, itemIndex) => itemIndex === index ? { ...current, label } : current) })} /><TextField label="Link" value={item.href} onChange={(href) => onChange({ ...d, navItems: d.navItems.map((current, itemIndex) => itemIndex === index ? { ...current, href } : current) })} /><button type="button" aria-label={`Usuń ${item.label}`} onClick={() => onChange({ ...d, navItems: d.navItems.filter((_, itemIndex) => itemIndex !== index) })} className="mt-5 h-8 w-8 border border-red-400/35 text-red-300">×</button></div>)}<button type="button" onClick={() => onChange({ ...d, navItems: [...d.navItems, { id: crypto.randomUUID(), label: "NOWA POZYCJA", href: "#" }] })} className="border border-ink-gold/50 px-3 py-2 text-[10px] text-ink-gold">+ DODAJ POZYCJĘ</button></FieldGroup>
+      </>;
+    }
+    case "siteFooter": {
+      const d = withDefaults("siteFooter", module.data);
+      return <>
+        <FieldGroup title="MARKA"><ImageUploadField label="Logo" value={d.logoUrl} onChange={(logoUrl) => onChange({ ...d, logoUrl })} /><TextField label="Opis logo" value={d.logoAlt} onChange={(logoAlt) => onChange({ ...d, logoAlt })} /><TextField label="Nazwa awaryjna" value={d.brandName} onChange={(brandName) => onChange({ ...d, brandName })} /></FieldGroup>
+        <TextareaField label="Tekst stopki" value={d.text} onChange={(text) => onChange({ ...d, text })} rows={3} />
+        <TextField label="Polityka prywatności" value={d.privacyLabel} onChange={(privacyLabel) => onChange({ ...d, privacyLabel })} /><TextField label="Link polityki" value={d.privacyHref} onChange={(privacyHref) => onChange({ ...d, privacyHref })} />
+        <FieldGroup title="MENU">{d.navItems.map((item, index) => <div key={item.id || index} className="grid grid-cols-[1fr_1fr_auto] gap-1.5"><TextField label="Nazwa" value={item.label} onChange={(label) => onChange({ ...d, navItems: d.navItems.map((current, itemIndex) => itemIndex === index ? { ...current, label } : current) })} /><TextField label="Link" value={item.href} onChange={(href) => onChange({ ...d, navItems: d.navItems.map((current, itemIndex) => itemIndex === index ? { ...current, href } : current) })} /><button type="button" aria-label={`Usuń ${item.label}`} onClick={() => onChange({ ...d, navItems: d.navItems.filter((_, itemIndex) => itemIndex !== index) })} className="mt-5 h-8 w-8 border border-red-400/35 text-red-300">×</button></div>)}<button type="button" onClick={() => onChange({ ...d, navItems: [...d.navItems, { id: crypto.randomUUID(), label: "NOWA POZYCJA", href: "#" }] })} className="border border-ink-gold/50 px-3 py-2 text-[10px] text-ink-gold">+ DODAJ POZYCJĘ</button></FieldGroup>
+      </>;
+    }
+    case "maintenance": {
+      const d = withDefaults("maintenance", module.data);
+      return <><TextField label="Nazwa studia" value={d.brandLabel} onChange={(brandLabel) => onChange({ ...d, brandLabel })} /><TextField label="Nadpis" value={d.statusLabel} onChange={(statusLabel) => onChange({ ...d, statusLabel })} /><TextField label="Nagłówek — linia 1" value={d.headingLine1} onChange={(headingLine1) => onChange({ ...d, headingLine1 })} /><TextField label="Nagłówek — linia 2" value={d.headingLine2} onChange={(headingLine2) => onChange({ ...d, headingLine2 })} /><TextareaField label="Wiadomość" value={d.message} onChange={(message) => onChange({ ...d, message })} rows={4} /><TextField label="Znak na dole" value={d.mark} onChange={(mark) => onChange({ ...d, mark })} /></>;
+    }
     case "hero": {
       const d = withDefaults("hero", module.data);
       return (
@@ -85,6 +108,10 @@ function renderFields(
               <TextField label="Środek" value={d.stampCenterText} onChange={(v) => onChange({ ...d, stampCenterText: v })} />
               <TextField label="Prawy tekst" value={d.stampRightText} onChange={(v) => onChange({ ...d, stampRightText: v })} />
             </div>
+          </FieldGroup>
+          <FieldGroup title="SOCIAL MEDIA">
+            <TextField label="Instagram" value={d.instagramUrl} onChange={(instagramUrl) => onChange({ ...d, instagramUrl })} placeholder="https://instagram.com/..." />
+            <TextField label="Facebook" value={d.facebookUrl} onChange={(facebookUrl) => onChange({ ...d, facebookUrl })} placeholder="https://facebook.com/..." />
           </FieldGroup>
         </>
       );
@@ -215,7 +242,9 @@ function renderFields(
       );
     }
     case "contact": {
-      const d = withDefaults("contact", module.data);
+      const stored = withDefaults("contact", module.data);
+      const d = stored.contactSource === "global" && globalContact ? { ...stored, ...globalContact } : stored;
+      const setContact = (patch: Partial<typeof d>) => onChange({ ...d, contactSource: "module", ...patch });
       return (
         <>
           <TextField label="Nadpis (eyebrow)" value={d.eyebrow} onChange={(v) => onChange({ ...d, eyebrow: v })} />
@@ -223,13 +252,11 @@ function renderFields(
           <TextField label="Nagłówek — linia 2" value={d.heading2} onChange={(v) => onChange({ ...d, heading2: v })} />
           <TextareaField label="Opis" value={d.body} onChange={(v) => onChange({ ...d, body: v })} rows={3} />
           <FieldGroup title="DANE KONTAKTOWE">
-            <SelectField label="Źródło danych" value={d.contactSource} onChange={(v) => onChange({ ...d, contactSource: v })} options={[{ value: "global", label: "Treści globalne" }, { value: "module", label: "Tylko ta sekcja" }]} />
-            {d.contactSource === "global" ? <p className="text-[11px] leading-relaxed text-ink-grey">Adres, telefon, e-mail i godziny zmienisz w Treści globalne. Etykiety poniżej nadal należą do tej sekcji.</p> : <>
-              <TextField label="Adres" value={d.address} onChange={(v) => onChange({ ...d, address: v })} />
-              <TextField label="Telefon" value={d.phone} onChange={(v) => onChange({ ...d, phone: v })} />
-              <TextField label="Email" value={d.email} onChange={(v) => onChange({ ...d, email: v })} />
-              <TextField label="Godziny otwarcia" value={d.hours} onChange={(v) => onChange({ ...d, hours: v })} />
-            </>}
+            <p className="text-[10px] leading-relaxed text-ink-grey">Te dane zapisują się w tym module i zmieniają się od razu w podglądzie.</p>
+            <TextField label="Adres" value={d.address} onChange={(address) => setContact({ address })} />
+            <TextField label="Telefon" value={d.phone} onChange={(phone) => setContact({ phone })} />
+            <TextField label="Email" value={d.email} onChange={(email) => setContact({ email })} />
+            <TextField label="Godziny otwarcia" value={d.hours} onChange={(hours) => setContact({ hours })} />
             <TextField label="Etykieta adresu" value={d.addressLabel} onChange={(v) => onChange({ ...d, addressLabel: v })} />
             <TextField label="Etykieta telefonu" value={d.phoneLabel} onChange={(v) => onChange({ ...d, phoneLabel: v })} />
             <TextField label="Etykieta e-maila" value={d.emailLabel} onChange={(v) => onChange({ ...d, emailLabel: v })} />
@@ -261,7 +288,6 @@ function renderFields(
           <TextField label="Etykieta wolnego terminu" value={d.freeLabel} onChange={(v) => onChange({ ...d, freeLabel: v })} />
           <TextField label="Etykieta konsultacji" value={d.consultationLabel} onChange={(v) => onChange({ ...d, consultationLabel: v })} />
           <TextField label="Etykieta niedostępnego dnia" value={d.unavailableLabel} onChange={(v) => onChange({ ...d, unavailableLabel: v })} />
-          <TextField label="Etykieta dnia bez oznaczenia" value={d.unmarkedLabel} onChange={(v) => onChange({ ...d, unmarkedLabel: v })} />
           <TextareaField label="Komunikat o braku terminu" value={d.unavailableMessage} onChange={(v) => onChange({ ...d, unavailableMessage: v })} rows={2} />
           <TextareaField label="Komunikat o częściowo zajętym terminie" value={d.partiallyBookedMessage} onChange={(v) => onChange({ ...d, partiallyBookedMessage: v })} rows={3} />
           <TextField label="Etykieta wyboru projektu" value={d.addToProjectLabel} onChange={(v) => onChange({ ...d, addToProjectLabel: v })} />

@@ -3,6 +3,7 @@ import { requireAdminApi } from "@/lib/adminApi";
 import { writeAdminAudit } from "@/lib/adminAudit";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -20,5 +21,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     await tx.projectActivity.create({ data: { projectId: entry.projectId, type: "waitlist_status_changed", message: `Status listy rezerwowej zmieniono na: ${status}.`, visibility: "admin" } });
   });
   await writeAdminAudit({ adminUserId: auth.admin.id, action: "waitlist.status", targetType: "WaitlistEntry", targetId: id, summary: `Zmieniono status listy rezerwowej na ${status}.` });
+  if (entry.offeredAppointment?.status === "proposed") await syncAppointmentToGoogle(entry.offeredAppointment.id).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }

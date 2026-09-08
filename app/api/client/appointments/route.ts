@@ -9,6 +9,7 @@ import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { sendPushToAdmins } from "@/lib/webPush";
 import { isConsultationSlot } from "@/lib/calendarHub";
 import { normalizeLeadSource } from "@/lib/leadSource";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -55,5 +56,6 @@ export async function POST(request: Request) {
   });
   if (!result) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
   await sendPushToAdmins({ title: result.serviceType === "consultation" ? "Nowa konsultacja" : "Nowa prośba o wizytę", body: `${client.firstName} ${client.lastName}: ${formatCoolinkDateTime(startsAt)}`, url: `/admin/clients/${client.id}`, tag: `client-appointment-${result.appointment.id}` }).catch(() => undefined);
+  await syncAppointmentToGoogle(result.appointment.id).catch(() => undefined);
   return NextResponse.json(result, { status: 201 });
 }

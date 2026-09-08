@@ -5,6 +5,9 @@ import MaintenanceModeCard from "@/components/admin/MaintenanceModeCard";
 import { getMaintenanceMode } from "@/lib/maintenance";
 import { ensureEditableHomepage } from "@/lib/homepage";
 import { requireAdminPage } from "@/lib/adminPage";
+import { getSiteContent } from "@/lib/content";
+import { getPublicNavLinks } from "@/lib/nav";
+import { ensureSystemPages, isSystemPageSlug } from "@/lib/systemPages";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +19,16 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default async function PagesListPage() {
   await requireAdminPage("content.manage");
-  const [homepage, maintenanceEnabled] = await Promise.all([
+  const [homepage, maintenanceEnabled, content] = await Promise.all([
     ensureEditableHomepage(),
     getMaintenanceMode(),
+    getSiteContent(),
   ]);
-  const pages = await prisma.page.findMany({
+  const navLinks = await getPublicNavLinks(content.navigation);
+  const systemPages = await ensureSystemPages(content, navLinks);
+  const pages = (await prisma.page.findMany({
     orderBy: [{ isHomepage: "desc" }, { updatedAt: "desc" }],
-  });
+  })).filter((page) => !isSystemPageSlug(page.slug));
 
   return (
     <div className="flex flex-col gap-8">
@@ -40,6 +46,11 @@ export default async function PagesListPage() {
       </div>
 
       <MaintenanceModeCard initialEnabled={maintenanceEnabled} homepageId={homepage.id} />
+
+      <section>
+        <div className="mb-3"><p className="text-[10px] tracking-[.18em] text-ink-gold">ELEMENTY GLOBALNE</p><h2 className="mt-1 font-display text-2xl">Edytuj bezpośrednio w builderze</h2><p className="mt-1 text-xs text-ink-grey">Nagłówek, stopka i ekran budowy mają własny podgląd, wersję roboczą i publikację.</p></div>
+        <div className="grid gap-3 md:grid-cols-3">{systemPages.map((page) => <Link key={page.id} href={`/admin/pages/${page.id}`} className="border border-ink-white/10 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><div className="flex items-center justify-between gap-3"><p className="font-display text-xl">{page.title}</p><span className="text-ink-gold">EDYTUJ →</span></div><p className="mt-2 text-[10px] tracking-[.1em] text-ink-grey">GLOBALNY · {page.status === "published" ? "OPUBLIKOWANY" : "WERSJA ROBOCZA"}</p></Link>)}</div>
+      </section>
 
       {pages.length === 0 ? (
         <p className="border border-dashed border-ink-white/15 px-6 py-10 text-center text-[14px] text-ink-grey">

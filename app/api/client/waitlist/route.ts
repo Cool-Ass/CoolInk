@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isSameOrigin, rateLimit, setRateLimitHeaders, tooManyRequests } from "@/lib/requestSecurity";
 import { normalizeWaitlistDuration, normalizeWaitlistTime, normalizeWaitlistWeekdays, parseWaitlistDate } from "@/lib/waitlist";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -57,5 +58,6 @@ export async function DELETE(request: Request) {
     await tx.projectActivity.create({ data: { projectId: entry.projectId, type: "waitlist_left", message: "Klient zrezygnował z listy rezerwowej.", visibility: "admin" } });
   });
   await sendPushToAdmins({ title: "Zmiana na liście rezerwowej", body: `${client.firstName} ${client.lastName} zrezygnował z oczekiwania na termin.`, url: "/admin/waitlist", tag: `waitlist-close-${entry.id}` }).catch(() => undefined);
+  if (entry.offeredAppointment?.status === "proposed") await syncAppointmentToGoogle(entry.offeredAppointment.id).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }

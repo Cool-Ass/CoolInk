@@ -17,6 +17,7 @@ interface BuilderTopBarProps {
   onUnpublish: () => void;
   onOpenSettings: () => void;
   isHomepage: boolean;
+  isSystemPage?: boolean;
   slug: string;
 }
 
@@ -39,6 +40,7 @@ export default function BuilderTopBar({
   onUnpublish,
   onOpenSettings,
   isHomepage,
+  isSystemPage = false,
   slug,
 }: BuilderTopBarProps) {
   return (
@@ -53,7 +55,7 @@ export default function BuilderTopBar({
         <div className="min-w-0">
           <p className="truncate text-[14px] text-ink-white">{title || "Bez tytułu"}</p>
           <p className="truncate text-[11px] text-ink-grey">
-            {isHomepage ? "Strona główna" : `/${slug}`}
+            {isHomepage ? "Strona główna" : isSystemPage ? "Element globalny" : `/${slug}`}
           </p>
         </div>
         <span
@@ -102,13 +104,13 @@ export default function BuilderTopBar({
           ))}
         </div>
 
-        <button
+        {!isSystemPage && <button
           type="button"
           onClick={onOpenSettings}
           className="border border-ink-white/20 px-4 py-2 text-[12px] tracking-[0.08em] text-ink-white transition-colors hover:border-ink-gold hover:text-ink-gold"
         >
           USTAWIENIA STRONY
-        </button>
+        </button>}
 
         <button
           type="button"
@@ -119,7 +121,7 @@ export default function BuilderTopBar({
           {saving ? "ZAPISYWANIE…" : dirty ? "ZAPISZ ZMIANY" : "ZAPISANO"}
         </button>
 
-        {status === "published" && (
+        {status === "published" && !isSystemPage && (
           <button
             type="button"
             onClick={onUnpublish}

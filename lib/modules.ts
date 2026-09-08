@@ -1,6 +1,9 @@
 import type { SiteContent } from "@/lib/content";
 
 export type ModuleType =
+  | "siteHeader"
+  | "siteFooter"
+  | "maintenance"
   | "hero"
   | "about"
   | "stats"
@@ -68,6 +71,36 @@ export interface ModuleStyle {
   zIndex?: number;
 }
 
+export interface SiteHeaderModuleData {
+  logoUrl: string;
+  logoAlt: string;
+  brandName: string;
+  bookLabel: string;
+  bookHref: string;
+  clientAreaLabel: string;
+  clientAreaHref: string;
+  navItems: { id: string; label: string; href: string }[];
+}
+
+export interface SiteFooterModuleData {
+  logoUrl: string;
+  logoAlt: string;
+  brandName: string;
+  text: string;
+  privacyLabel: string;
+  privacyHref: string;
+  navItems: { id: string; label: string; href: string }[];
+}
+
+export interface MaintenanceModuleData {
+  brandLabel: string;
+  statusLabel: string;
+  headingLine1: string;
+  headingLine2: string;
+  message: string;
+  mark: string;
+}
+
 export interface SpacingBox {
   top: number;
   right: number;
@@ -95,6 +128,8 @@ export interface HeroModuleData {
   stampLeftText: string;
   stampCenterText: string;
   stampRightText: string;
+  instagramUrl: string;
+  facebookUrl: string;
 }
 
 export interface AboutModuleData {
@@ -324,6 +359,12 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? CalloutModuleData
   : T extends "customCode"
   ? CustomCodeModuleData
+  : T extends "siteHeader"
+  ? SiteHeaderModuleData
+  : T extends "siteFooter"
+  ? SiteFooterModuleData
+  : T extends "maintenance"
+  ? MaintenanceModuleData
   : never;
 
 /** A module as it lives inside Page.modules (JSON) — loosely typed data, validated on render. */
@@ -337,6 +378,9 @@ export interface Module {
 
 /** Polish display labels for every module type, used throughout the builder UI. */
 export const MODULE_LABELS: Record<ModuleType, string> = {
+  siteHeader: "Nagłówek strony",
+  siteFooter: "Stopka strony",
+  maintenance: "Ekran budowy",
   hero: "Hero",
   about: "O mnie / O artyście",
   stats: "Pasek statystyk",
@@ -366,6 +410,9 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
 
 /** Short helper description shown in the "add module" picker. */
 export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
+  siteHeader: "Globalny nagłówek z logo, menu i przyciskami.",
+  siteFooter: "Globalna stopka z menu, logo i informacjami prawnymi.",
+  maintenance: "Ekran widoczny dla klientów podczas trybu budowy.",
   hero: "Główna sekcja powitalna z nagłówkiem, opisem i przyciskami.",
   about: "Historia artysty, zdjęcia i podpis.",
   stats: "Liczby: doświadczenie, klienci, zaangażowanie, projekty.",
@@ -395,7 +442,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
   heading: "widgets", text: "widgets", image: "widgets", button: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
-  hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
+  siteHeader: "templates", siteFooter: "templates", maintenance: "templates", hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
 export const MODULE_TYPE_ORDER: ModuleType[] = [
@@ -414,6 +461,9 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "map",
   "divider",
   "spacer",
+  "siteHeader",
+  "siteFooter",
+  "maintenance",
   "hero",
   "about",
   "stats",
@@ -442,6 +492,19 @@ function generateModuleId() {
 /** Default `data` for a freshly-added module of the given type. */
 export function defaultModuleData(type: ModuleType): Record<string, unknown> {
   switch (type) {
+    case "siteHeader":
+      return {
+        logoUrl: "/images/logo-white.jpg", logoAlt: "CoolInk Tattoo Studio — logo", brandName: "COOLINK",
+        bookLabel: "UMÓW WIZYTĘ", bookHref: "/#kalendarz", clientAreaLabel: "KONTO KLIENTA", clientAreaHref: "/app",
+        navItems: [{ id: "home", label: "STRONA GŁÓWNA", href: "/#home" }, { id: "artists", label: "O MNIE", href: "/#artists" }, { id: "portfolio", label: "PORTFOLIO", href: "/#portfolio" }, { id: "studio", label: "STUDIO", href: "/#studio" }, { id: "contact", label: "KONTAKT", href: "/#contact" }],
+      } satisfies SiteHeaderModuleData;
+    case "siteFooter":
+      return {
+        logoUrl: "/images/logo-white.jpg", logoAlt: "CoolInk Tattoo Studio — logo", brandName: "COOLINK", text: "CoolInk Tattoo Studio. Wszelkie prawa zastrzeżone.", privacyLabel: "POLITYKA PRYWATNOŚCI", privacyHref: "/polityka-prywatnosci",
+        navItems: [{ id: "home", label: "STRONA GŁÓWNA", href: "/#home" }, { id: "portfolio", label: "PORTFOLIO", href: "/#portfolio" }, { id: "contact", label: "KONTAKT", href: "/#contact" }],
+      } satisfies SiteFooterModuleData;
+    case "maintenance":
+      return { brandLabel: "COOLINK TATTOO STUDIO", statusLabel: "TRYB BUDOWY", headingLine1: "ZAPRASZAM", headingLine2: "WKRÓTCE", message: "Dopracowuję przestrzeń. Wróć za chwilę — będzie warto.", mark: "P" } satisfies MaintenanceModuleData;
     case "hero":
       return {
         eyebrow: "SZTUKA JEST WIECZNA.",
@@ -459,6 +522,8 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         stampLeftText: "20",
         stampCenterText: "GT",
         stampRightText: "21",
+        instagramUrl: "https://instagram.com/coolink.tattoo.studio",
+        facebookUrl: "https://facebook.com/coolink.tattoo.studio",
       } satisfies HeroModuleData;
     case "about":
       return {
@@ -559,7 +624,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         freeLabel: "WOLNY",
         consultationLabel: "KONSULTACJA",
         unavailableLabel: "NIEDOSTĘPNY",
-        unmarkedLabel: "BRAK OZNACZENIA",
+        unmarkedLabel: "",
         unavailableMessage: "Ten dzień nie został udostępniony jako wolny termin.",
         partiallyBookedMessage: "Ten wolny termin został już częściowo wykorzystany. Wybierz inny dzień albo napisz do studia.",
         addToProjectLabel: "DODAJ DO ISTNIEJĄCEGO PROJEKTU (OPCJONALNIE)",

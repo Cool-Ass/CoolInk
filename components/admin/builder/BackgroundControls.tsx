@@ -10,7 +10,7 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
   const set = (patch: Partial<ModuleStyle>) => onChange({ ...style, ...patch });
 
   return <div className="flex flex-col">
-    <PanelSection title="Typografia" defaultOpen>
+    <PanelSection title="Typografia">
       <SelectField label="KRÓJ PISMA" value={style.fontFamily ?? "inherit"} onChange={(fontFamily) => set({ fontFamily })} options={[{ value: "inherit", label: "Domyślny widgetu" }, { value: "display", label: "Nagłówkowy CoolInk" }, { value: "body", label: "Tekstowy CoolInk" }]} />
       <div className="grid grid-cols-2 gap-2">
         <NumberField label="WIELKOŚĆ (PX)" value={style.fontSize ?? 0} min={0} max={240} onChange={(fontSize) => set({ fontSize: fontSize || undefined })} />

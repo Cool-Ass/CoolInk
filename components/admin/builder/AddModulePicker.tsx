@@ -17,6 +17,8 @@ import {
   Megaphone,
   Minus,
   PanelTop,
+  PanelBottom,
+  Construction,
   PlaySquare,
   Quote,
   Rows3,
@@ -37,6 +39,9 @@ import {
 } from "@/lib/modules";
 
 const ICONS: Record<ModuleType, LucideIcon> = {
+  siteHeader: PanelTop,
+  siteFooter: PanelBottom,
+  maintenance: Construction,
   hero: PanelTop,
   about: UserRound,
   stats: Sparkles,
@@ -106,7 +111,7 @@ export default function AddModulePicker({
       <div className="space-y-5 px-3 pb-5">
         {(["widgets", "templates"] as const).map((category) => {
           const types = MODULE_TYPE_ORDER.filter(
-            (type) => MODULE_CATEGORIES[type] === category && matches(type),
+            (type) => !["siteHeader", "siteFooter", "maintenance"].includes(type) && MODULE_CATEGORIES[type] === category && matches(type),
           );
           if (!types.length) return null;
           return (
@@ -139,7 +144,7 @@ export default function AddModulePicker({
             </section>
           );
         })}
-        {!MODULE_TYPE_ORDER.some(matches) && (
+        {!MODULE_TYPE_ORDER.filter((type) => !["siteHeader", "siteFooter", "maintenance"].includes(type)).some(matches) && (
           <p className="border border-dashed border-white/15 p-4 text-center text-[11px] text-white/45">
             Nie znaleziono takiego widgetu.
           </p>

@@ -7,6 +7,7 @@ import { activityMessage } from "@/lib/projectWorkflow";
 import { recordWorkflowEvent } from "@/lib/workflowEvents";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { lockBookingCalendar } from "@/lib/bookingRules";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 interface Params { params: Promise<{ id: string }>; }
 
@@ -33,5 +34,6 @@ export async function POST(request: Request, { params }: Params) {
   });
   if (!appointment) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
   await recordWorkflowEvent({ projectId: id, type: "APPOINTMENT_PROPOSED", notification: { title: "Nowa propozycja terminu", body: "Sprawdź proponowaną wizytę i potwierdź, czy termin Ci pasuje.", appointmentId: appointment.id } });
+  await syncAppointmentToGoogle(appointment.id).catch(() => undefined);
   return NextResponse.json({ appointment }, { status: 201 });
 }

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import ModuleRenderer from "@/components/ModuleRenderer";
-import MaintenanceScreen from "@/components/MaintenanceScreen";
 import { getSiteContent } from "@/lib/content";
 import { getPublicNavLinks } from "@/lib/nav";
 import { getPublishedPortfolioWorks } from "@/lib/portfolio";
@@ -14,6 +11,7 @@ import { getMaintenanceMode } from "@/lib/maintenance";
 import { getCurrentAdmin } from "@/lib/auth";
 import { ensureEditableHomepage } from "@/lib/homepage";
 import { siteThemeStyle } from "@/lib/siteTheme";
+import { getPublishedSystemModules } from "@/lib/systemPages";
 
 // Content is admin-editable, so this page must always read the current
 // database state rather than being frozen at build time.
@@ -35,7 +33,9 @@ export default async function Home() {
   const admin = maintenanceEnabled ? await getCurrentAdmin() : null;
   if (maintenanceEnabled && !admin) {
     const content = await getSiteContent();
-    return <MaintenanceScreen content={content.maintenance} theme={content.theme} />;
+    const navLinks = await getPublicNavLinks(content.navigation);
+    const maintenanceModules = await getPublishedSystemModules("maintenance", content, navLinks);
+    return <ModuleRenderer modules={maintenanceModules} globals={{ theme: content.theme }} />;
   }
 
   const [homepage, content, works, calendar] = await Promise.all([
@@ -45,6 +45,7 @@ export default async function Home() {
     getPublicCalendarData(),
   ]);
   const navLinks = await getPublicNavLinks(content.navigation);
+  const [headerModules, footerModules] = await Promise.all([getPublishedSystemModules("header", content, navLinks), getPublishedSystemModules("footer", content, navLinks)]);
 
   const modules: Module[] =
     homepage && homepage.status === "published" && homepage.publishedModules
@@ -64,7 +65,7 @@ export default async function Home() {
           </Link>
         </aside>
       )}
-      <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
+      <ModuleRenderer modules={headerModules} globals={{ theme: content.theme }} />
       <ModuleRenderer
         modules={modules}
         portfolioWorks={works}
@@ -73,9 +74,10 @@ export default async function Home() {
           facebookUrl: content.brand.facebookUrl,
           contact: content.contact,
           calendar,
+          theme: content.theme,
         }}
       />
-      <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} privacyLabel={content.footer.privacyLabel} privacyHref={content.footer.privacyHref} />
+      <ModuleRenderer modules={footerModules} globals={{ theme: content.theme }} />
     </main>
   );
 }

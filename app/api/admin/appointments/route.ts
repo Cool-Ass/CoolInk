@@ -5,6 +5,7 @@ import { activityMessage } from "@/lib/projectWorkflow";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { getCurrentAdmin } from "@/lib/auth";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 class BookingConflictError extends Error {}
 
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
       await tx.clientNotification.create({ data: { clientId: project.clientId, projectId: project.id, appointmentId: appointment.id, type: "APPOINTMENT_CONFIRMED", title: "Wizyta potwierdzona", body: `Termin: ${formatCoolinkDateTime(startsAt)}.`, href: "/app/portal/visits" } });
       return appointment;
     });
+    await syncAppointmentToGoogle(result.id).catch(() => undefined);
     return NextResponse.json({ appointment: result }, { status: 201 });
   } catch (error) {
     if (error instanceof BookingConflictError) return NextResponse.json({ error: "Ten termin jest niedostępny. Wybierz inny zakres." }, { status: 409 });

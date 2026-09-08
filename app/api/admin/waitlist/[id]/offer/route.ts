@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { waitlistDateMatches } from "@/lib/waitlist";
 import { sendPushToClient } from "@/lib/webPush";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -42,5 +43,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!appointment) return NextResponse.json({ error: "Ten termin nie jest już dostępny albo nie został oznaczony jako wolny." }, { status: 409 });
   await sendPushToClient(entry.clientId, { title: "Zwolnił się termin w CoolInk", body: `${formatCoolinkDateTime(startsAt)} · odpowiedz w ciągu 24 godzin.`, url: "/app/portal/projects", tag: `waitlist-offer-${id}` }).catch(() => undefined);
   await writeAdminAudit({ adminUserId: auth.admin.id, action: "waitlist.offer", targetType: "WaitlistEntry", targetId: id, summary: `Wysłano ofertę terminu ${formatCoolinkDateTime(startsAt)}.`, metadata: { appointmentId: appointment.id } });
+  await syncAppointmentToGoogle(appointment.id).catch(() => undefined);
   return NextResponse.json({ appointment, matchesPreferences: waitlistDateMatches(entry, startsAt, endsAt) }, { status: 201 });
 }

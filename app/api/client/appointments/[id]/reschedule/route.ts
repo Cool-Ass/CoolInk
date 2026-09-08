@@ -8,6 +8,7 @@ import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin, rateLimit, setRateLimitHeaders, tooManyRequests } from "@/lib/requestSecurity";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -47,5 +48,6 @@ export async function POST(request: Request, { params }: Params) {
   });
   if (!updated) return NextResponse.json({ error: "Termin właśnie się zmienił lub został zajęty. Wybierz inny." }, { status: 409 });
   await sendPushToAdmins({ title: "Klient chce przełożyć wizytę", body: `${client.firstName} ${client.lastName}: ${formatCoolinkDateTime(startsAt)}`, url: "/admin", tag: `client-reschedule-${id}` }).catch(() => undefined);
+  await syncAppointmentToGoogle(id).catch(() => undefined);
   return setRateLimitHeaders(NextResponse.json({ appointment: updated }), limit);
 }

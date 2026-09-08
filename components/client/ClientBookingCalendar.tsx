@@ -38,7 +38,7 @@ const DEFAULT_COPY: BookingCalendarCopy = {
   freeLabel: "WOLNY",
   consultationLabel: "KONSULTACJA",
   unavailableLabel: "NIEDOSTĘPNY",
-  unmarkedLabel: "BRAK OZNACZENIA",
+  unmarkedLabel: "",
   unavailableMessage: "Ten dzień nie został udostępniony jako wolny termin.",
   partiallyBookedMessage: "Ten wolny termin został już częściowo wykorzystany. Wybierz inny dzień albo napisz do studia.",
   addToProjectLabel: "DODAJ DO ISTNIEJĄCEGO PROJEKTU (OPCJONALNIE)",
@@ -164,17 +164,17 @@ export default function ClientBookingCalendar({
 
   return (
     <>
-      <div className={`mt-5 grid min-w-0 gap-4 sm:mt-6 sm:gap-5 ${compact ? "grid-cols-1" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
-        <section className="min-w-0 overflow-hidden border border-ink-white/15 bg-ink-charcoal/30 p-2 min-[400px]:p-3 sm:p-5">
-          <p className="text-xs tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
+      <div className={`mt-4 grid min-w-0 gap-3 ${compact ? "grid-cols-1" : "xl:grid-cols-[1.35fr_.65fr]"}`}>
+        <section className="min-w-0 overflow-hidden border border-ink-white/10 bg-ink-charcoal/30 p-2 min-[400px]:p-3 sm:p-4">
+          <p className="text-[10px] tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="flex h-11 w-11 shrink-0 items-center justify-center border border-ink-white/20 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button>
-            <h2 className="min-w-0 text-center font-display text-lg min-[400px]:text-xl sm:text-3xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
-            <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="flex h-11 w-11 shrink-0 items-center justify-center border border-ink-white/20 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button>
+            <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button>
+            <h2 className="min-w-0 text-center font-display text-lg min-[400px]:text-xl sm:text-2xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
+            <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button>
           </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-ink-grey sm:text-xs">{copy.legend}</p>
-          <div className="mt-5 grid grid-cols-7 border-l border-t border-ink-white/10">
-            {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-xs text-ink-grey">{day}</div>)}
+          <p className="mt-2 text-[10px] leading-relaxed text-ink-grey">{copy.legend}</p>
+          <div className="mt-3 grid grid-cols-7 border-l border-t border-ink-white/10">
+            {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-1.5 text-center text-[10px] text-ink-grey">{day}</div>)}
             {dates.map((date) => {
               const available = isAvailable(date);
               const unavailable = blocked(date) || (!available && date.getDay() === 0);
@@ -184,21 +184,21 @@ export default function ClientBookingCalendar({
               const contextualColor = consultation?.color ?? (!available && !blocked(date) ? (dayEvent?.color ?? dayPromotion?.color) : undefined);
               const selectedDay = sameDay(date, selected);
               const muted = date.getMonth() !== cursor.getMonth();
-              const statusLabel = consultation ? copy.consultationLabel : available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : copy.unmarkedLabel);
+              const statusLabel = consultation ? copy.consultationLabel : available ? copy.freeLabel : dayEvent?.label || dayPromotion?.badge || (unavailable ? copy.unavailableLabel : "");
               return (
-                <button key={date.toISOString()} type="button" aria-label={`${date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}: ${statusLabel}`} onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`${compact ? "min-h-12 p-1" : "min-h-14 p-1 min-[400px]:min-h-16 sm:min-h-20 sm:p-2"} min-w-0 overflow-hidden border-b border-r text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
-                  <strong className="block text-base sm:text-lg">{date.getDate()}</strong>
-                  <span aria-hidden className={`mt-1 hidden truncate text-[8px] leading-tight min-[400px]:block sm:mt-2 sm:text-[11px] ${consultation ? "text-blue-200" : available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
+                <button key={date.toISOString()} type="button" aria-label={`${date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}${statusLabel ? `: ${statusLabel}` : ""}`} onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} style={contextualColor ? { backgroundColor: `${contextualColor}26` } : undefined} className={`${compact ? "min-h-11 p-1" : "min-h-12 p-1 min-[400px]:min-h-14 sm:min-h-16 sm:p-1.5"} min-w-0 overflow-hidden border-b border-r text-left transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:border-ink-gold/60"} ${contextualColor ? "" : available ? "bg-emerald-500/15" : unavailable ? "bg-red-500/10" : "bg-ink-white/[0.035]"} ${muted ? "opacity-35" : ""}`}>
+                  <strong className="block text-sm sm:text-base">{date.getDate()}</strong>
+                  {statusLabel && <span aria-hidden className={`mt-1 hidden truncate text-[8px] leading-tight min-[400px]:block sm:mt-2 sm:text-[11px] ${consultation ? "text-blue-200" : available ? "text-emerald-300" : unavailable ? "text-red-200" : "text-ink-grey"}`}>
                     {statusLabel}
-                  </span>
+                  </span>}
                 </button>
               );
             })}
           </div>
         </section>
 
-        <aside className="min-w-0 border border-ink-white/15 bg-ink-charcoal/30 p-4 sm:p-5">
-          <p className="text-xs tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>
+        <aside className="min-w-0 border border-ink-white/10 bg-ink-charcoal/30 p-3 sm:p-4">
+          <p className="text-[10px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>
           {calendarEvent && <div className="mt-4 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || copy.eventFallbackLabel}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>}
           {promotion && <div className="mt-4 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || copy.promotionFallbackLabel}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>}
           {projects.length > 0 && !rescheduleAppointmentId && isAvailable(selected) && ranges.length > 0 && !slotsFor(selected).some(isConsultationSlot) && (

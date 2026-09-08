@@ -4,6 +4,7 @@ import { slugify, RESERVED_SLUGS } from "@/lib/slugify";
 import { parseModules, serializeModules } from "@/lib/pageModules";
 import { MODULE_TYPE_ORDER, type Module } from "@/lib/modules";
 import { requireAdminApi } from "@/lib/adminApi";
+import { isSystemPageSlug } from "@/lib/systemPages";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -50,9 +51,14 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const existing = await prisma.page.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Nie znaleziono strony." }, { status: 404 });
+  const isSystemPage = isSystemPageSlug(existing.slug);
+
+  if (isSystemPage && body.unpublish === true) {
+    return NextResponse.json({ error: "Element globalny musi pozostać opublikowany." }, { status: 400 });
+  }
 
   let slug = existing.slug;
-  if (typeof body.slug === "string" && body.slug.trim() && !existing.isHomepage) {
+  if (typeof body.slug === "string" && body.slug.trim() && !existing.isHomepage && !isSystemPage) {
     slug = slugify(body.slug);
     if (!slug) {
       return NextResponse.json({ error: "Nieprawidłowy adres URL." }, { status: 400 });
@@ -88,12 +94,12 @@ export async function PATCH(request: Request, { params }: Params) {
   const page = await prisma.page.update({
     where: { id },
     data: {
-      title: typeof body.title === "string" ? body.title : existing.title,
+      title: !isSystemPage && typeof body.title === "string" ? body.title : existing.title,
       slug,
-      excerpt: body.excerpt ?? existing.excerpt,
-      coverImage: body.coverImage ?? existing.coverImage,
-      showInNav: typeof body.showInNav === "boolean" ? body.showInNav : existing.showInNav,
-      navOrder: body.navOrder !== undefined ? Number(body.navOrder) : existing.navOrder,
+      excerpt: isSystemPage ? existing.excerpt : body.excerpt ?? existing.excerpt,
+      coverImage: isSystemPage ? existing.coverImage : body.coverImage ?? existing.coverImage,
+      showInNav: isSystemPage ? false : typeof body.showInNav === "boolean" ? body.showInNav : existing.showInNav,
+      navOrder: isSystemPage ? existing.navOrder : body.navOrder !== undefined ? Number(body.navOrder) : existing.navOrder,
       modules: serializeModules(nextModules),
       publishedModules: publishedModules ? serializeModules(publishedModules) : null,
       status,
@@ -108,9 +114,9 @@ export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
   const existing = await prisma.page.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Nie znaleziono strony." }, { status: 404 });
-  if (existing.isHomepage) {
+  if (existing.isHomepage || isSystemPageSlug(existing.slug)) {
     return NextResponse.json(
-      { error: "Nie można usunąć strony głównej." },
+      { error: existing.isHomepage ? "Nie można usunąć strony głównej." : "Nie można usunąć elementu globalnego." },
       { status: 400 }
     );
   }

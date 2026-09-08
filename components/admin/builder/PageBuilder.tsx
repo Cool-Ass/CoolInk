@@ -14,6 +14,7 @@ import { createModule, isColumnWidgetType, withDefaults, type ColumnWidget, type
 import { PALETTE_WIDGET_MIME } from "@/lib/builderDnd";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { siteThemeStyle } from "@/lib/siteTheme";
+import { isSystemPageSlug } from "@/lib/systemPages";
 
 export interface BuilderPage {
   id: string;
@@ -63,6 +64,7 @@ export default function PageBuilder({
   const [publishing, setPublishing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const isSystemPage = isSystemPageSlug(page.slug);
 
   const lastSavedRef = useRef(JSON.stringify(initialPage.modules ?? []));
 
@@ -143,6 +145,7 @@ export default function PageBuilder({
   }
 
   function deleteModule(id: string) {
+    if (isSystemPage && modules.length === 1) { showToast("Chronionego elementu systemowego nie można usunąć.", "error"); return; }
     if (!window.confirm("Usunąć ten moduł? Tej operacji nie można cofnąć po zapisaniu.")) return;
     setModules((prev) => prev.filter((m) => m.id !== id));
     if (selectedId === id) { setSelectedId(null); setSelectedWidgetId(null); }
@@ -259,6 +262,7 @@ export default function PageBuilder({
         onUnpublish={handleUnpublish}
         onOpenSettings={() => setSettingsOpen(true)}
         isHomepage={page.isHomepage}
+        isSystemPage={isSystemPage}
         slug={page.slug}
       />
 
@@ -275,6 +279,7 @@ export default function PageBuilder({
               onStyleChange={(style) => selectedWidget ? updateSelectedWidget({ style }) : updateModuleStyle(activeEditorModule.id, style)}
               onClose={() => { setSelectedId(null); setSelectedWidgetId(null); }}
               portfolioItems={portfolioItems}
+              globalContact={globals.contact}
             />
           ) : <AddModulePicker onAdd={addModule} />}
         </aside>
@@ -301,9 +306,9 @@ export default function PageBuilder({
               selectedId={selectedId}
               onSelect={(id) => { setSelectedId(id); setSelectedWidgetId(null); }}
               onMove={moveModule}
-              onDuplicate={duplicateModule}
+              onDuplicate={isSystemPage ? undefined : duplicateModule}
               onDelete={deleteModule}
-              onToggleHidden={toggleHidden}
+              onToggleHidden={isSystemPage ? undefined : toggleHidden}
               onReorder={reorderModules}
               selectedWidgetId={selectedWidgetId}
               onSelectWidget={(moduleId, widgetId) => { setSelectedId(moduleId); setSelectedWidgetId(widgetId); }}
@@ -323,7 +328,7 @@ export default function PageBuilder({
         </div>
       </div>
 
-      {settingsOpen && (
+      {settingsOpen && !isSystemPage && (
         <PageSettingsModal
           initial={{
             title: page.title,

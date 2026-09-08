@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState, type ChangeEvent } from "react";
+import { ChevronDown, X } from "lucide-react";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { useToast } from "@/components/admin/ToastProvider";
 import { imageSource } from "@/lib/imageSource";
@@ -27,6 +28,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
   const [media, setMedia] = useState(initialMedia);
   const [query, setQuery] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -85,8 +87,8 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
   });
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-center gap-3 border border-ink-white/15 bg-ink-charcoal/40 p-5">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-3 border border-ink-white/15 bg-ink-charcoal/40 p-3 sm:p-4">
         <input
           ref={inputRef}
           type="file"
@@ -113,15 +115,30 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
           {media.length === 0 ? "Brak przesłanych plików." : "Brak wyników dla tego wyszukiwania."}
         </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filtered.map((item) => {
             const source = imageSource(item.url);
-            return <div key={item.id} className="border border-ink-white/10 bg-ink-charcoal/30">
-              <div className="relative aspect-square w-full bg-ink-black">
-                {source ? <Image src={source} alt={item.alt ?? ""} fill className="object-cover" sizes="240px" /> : <span className="flex h-full items-center justify-center text-xs text-ink-grey">Brak podglądu</span>}
+            const expanded = expandedId === item.id;
+            return <article key={item.id} className={`overflow-hidden border bg-ink-charcoal/30 transition-colors ${expanded ? "border-ink-gold/55" : "border-ink-white/10 hover:border-ink-white/25"}`}>
+              <div className="relative aspect-[4/3] w-full bg-ink-black">
+                <button type="button" onClick={() => setExpandedId(expanded ? null : item.id)} aria-expanded={expanded} className="absolute inset-0 z-10 w-full">
+                  <span className="sr-only">{expanded ? "Zwiń informacje" : "Pokaż informacje"} o pliku {item.filename}</span>
+                </button>
+                {source ? <Image src={source} alt={item.alt ?? ""} fill className="object-cover" sizes="(max-width: 639px) 50vw, (max-width: 1279px) 33vw, 20vw" /> : <span className="flex h-full items-center justify-center text-xs text-ink-grey">Brak podglądu</span>}
+                <ConfirmButton
+                  onConfirm={() => handleDelete(item.id)}
+                  label={<X className="h-4 w-4" />}
+                  confirmText={item.usedIn.length ? `Plik jest używany w: ${item.usedIn.join(", ")}. Usunięcie zostanie zablokowane do czasu usunięcia tych użyć.` : "Usunąć ten plik na stałe?"}
+                  pendingLabel="USUWANIE…"
+                  className="absolute right-1.5 top-1.5 z-20 flex h-8 w-8 items-center justify-center border border-red-400/45 bg-ink-black/85 text-red-300 shadow-lg transition-colors hover:border-red-400 hover:bg-red-500/15"
+                />
+                <span className={`pointer-events-none absolute bottom-1.5 right-1.5 z-20 flex h-7 w-7 items-center justify-center bg-ink-black/75 text-ink-white transition-transform ${expanded ? "rotate-180" : ""}`}><ChevronDown className="h-4 w-4" /></span>
               </div>
-              <div className="flex flex-col gap-2 p-3">
-                <p className="truncate text-[11px] text-ink-grey">{item.filename}</p>
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
+                <p className="min-w-0 truncate text-[11px] text-ink-grey">{item.filename}</p>
+                <span className="shrink-0 text-[9px] text-ink-gold">{item.usedIn.length ? "UŻYWANY" : "WOLNY"}</span>
+              </div>
+              {expanded && <div className="flex flex-col gap-2 border-t border-ink-white/10 p-3">
                 <p className="text-[11px] text-ink-grey/70">
                   {item.width && item.height ? `${item.width}×${item.height} · ` : ""}
                   {formatSize(item.size)}
@@ -140,19 +157,9 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
                   onBlur={(e) => handleAltSave(item.id, e.target.value)}
                   className="border border-ink-white/20 bg-transparent px-2 py-1.5 text-[12px] text-ink-white outline-none focus:border-ink-gold"
                 />
-                {item.usedIn.length > 0 ? (
-                  <p className="text-[10.5px] text-ink-grey/70">Usuń najpierw wszystkie użycia pliku.</p>
-                ) : (
-                  <ConfirmButton
-                    onConfirm={() => handleDelete(item.id)}
-                    label="USUŃ"
-                    confirmText="Usunąć ten plik na stałe?"
-                    pendingLabel="USUWANIE…"
-                    className="self-start text-[11px] tracking-[0.05em] text-red-400/80 transition-colors hover:text-red-400"
-                  />
-                )}
-              </div>
-            </div>;
+                {item.usedIn.length > 0 && <p className="text-[10.5px] text-ink-grey/70">Aby usunąć plik, najpierw usuń wszystkie jego użycia.</p>}
+              </div>}
+            </article>;
           })}
         </div>
       )}

@@ -1,8 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import RichText from "@/components/RichText";
 import ModuleRenderer from "@/components/ModuleRenderer";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +12,7 @@ import { parseModules } from "@/lib/pageModules";
 import { imageSource } from "@/lib/imageSource";
 import { getPublicCalendarData } from "@/lib/publicCalendar";
 import { siteThemeStyle } from "@/lib/siteTheme";
+import { getPublishedSystemModules, isSystemPageSlug } from "@/lib/systemPages";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +21,7 @@ interface Props {
 }
 
 async function getPage(slug: string) {
+  if (isSystemPageSlug(slug)) return null;
   const page = await prisma.page.findUnique({ where: { slug } });
   if (!page || page.isHomepage || page.status !== "published") return null;
   return page;
@@ -49,14 +49,18 @@ export default async function CmsPage({ params }: Props) {
     getPublicCalendarData(),
   ]);
   const navLinks = await getPublicNavLinks(content.navigation);
+  const [headerModules, footerModules] = await Promise.all([
+    getPublishedSystemModules("header", content, navLinks),
+    getPublishedSystemModules("footer", content, navLinks),
+  ]);
 
   const modules = parseModules(page.publishedModules);
   const coverImage = imageSource(page.coverImage);
-  const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl, contact: content.contact, calendar };
+  const globals = { instagramUrl: content.brand.instagramUrl, facebookUrl: content.brand.facebookUrl, contact: content.contact, calendar, theme: content.theme };
 
   return (
     <main style={siteThemeStyle(content.theme)} className="public-site relative min-h-screen bg-ink-black">
-      <Header navLinks={navLinks} bookLabel={content.header.bookingLabel} bookHref={content.header.bookingHref} clientAreaLabel={content.header.clientAreaLabel} clientAreaHref={content.header.clientAreaHref} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} />
+      <ModuleRenderer modules={headerModules} globals={globals} />
 
       {modules.length > 0 ? (
         <div className="pt-24">
@@ -102,7 +106,7 @@ export default async function CmsPage({ params }: Props) {
         </article>
       )}
 
-      <Footer navLinks={navLinks} text={content.footer.text} logoUrl={content.brand.logoUrl} logoAlt={content.brand.logoAlt} brandName={content.brand.name} privacyLabel={content.footer.privacyLabel} privacyHref={content.footer.privacyHref} />
+      <ModuleRenderer modules={footerModules} globals={globals} />
     </main>
   );
 }

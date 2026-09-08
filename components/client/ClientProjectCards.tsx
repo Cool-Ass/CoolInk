@@ -83,7 +83,7 @@ export default function ClientProjectCards({
       <p className="text-[11px] tracking-[.18em] text-ink-gold">
         PROJEKTY / ZGŁOSZENIA
       </p>
-      <h2 className="mt-2 font-display text-3xl">Twoje projekty.</h2>
+      <h2 className="mt-1 font-display text-3xl">Twoje projekty</h2>
       {visibleProjects.length === 0 ? (
         <div className="mt-5">
           <EmptyState
@@ -92,7 +92,7 @@ export default function ClientProjectCards({
           />
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleProjects.map((project) => {
             const previewSource = imageSource(project.images[0]?.url);
             return <button
@@ -105,18 +105,18 @@ export default function ClientProjectCards({
                 <img
                   src={previewSource}
                   alt="Inspiracja projektu"
-                  className="aspect-[2/1] w-full object-cover"
+                  className="aspect-[16/7] w-full object-cover"
                 />
               )}
-              <div className="p-5">
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>{project.kind === "consultation" && <span className="mb-2 inline-block border border-blue-400/40 px-2 py-1 text-xs text-blue-200">KONSULTACJA</span>}<h3 className="font-display text-2xl">{project.title}</h3></div>
+                  <div>{project.kind === "consultation" && <span className="mb-1 inline-block border border-blue-400/40 px-2 py-1 text-[10px] text-blue-200">KONSULTACJA</span>}<h3 className="font-display text-xl">{project.title}</h3></div>
                   <StatusBadge status={project.status} />
                 </div>
-                <p className="mt-3 line-clamp-2 text-sm text-ink-grey">
+                <p className="mt-2 line-clamp-2 text-xs text-ink-grey">
                   {project.next}
                 </p>
-                <p className="mt-4 text-xs text-ink-gold">
+                <p className="mt-3 text-[10px] text-ink-gold">
                   {project.appointments.length}{" "}
                   {project.kind === "consultation" ? "termin konsultacji" : project.appointments.length === 1 ? "sesja" : "sesje"}
                 </p>
@@ -133,7 +133,7 @@ export default function ClientProjectCards({
           size="lg"
           onClose={() => setSelected(null)}
         >
-          <div className="space-y-6">
+          <div className="space-y-4">
             <section>
               <p className="text-[10px] tracking-widest text-ink-gold">
                 PODSUMOWANIE WIZYTY

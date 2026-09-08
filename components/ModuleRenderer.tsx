@@ -1,7 +1,11 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, GripVertical, MoreHorizontal, Trash2 } from "lucide-react";
 import Hero from "@/components/Hero";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import MaintenanceScreen from "@/components/MaintenanceScreen";
 import About from "@/components/About";
 import StatsBar from "@/components/StatsBar";
 import CTABar from "@/components/CTABar";
@@ -138,9 +142,23 @@ export interface ModuleRendererProps {
 
 function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "onSelectWidget" | "onDeleteWidget" | "onColumnsChange">) {
   switch (mod.type) {
+    case "siteHeader": {
+      const data = withDefaults("siteHeader", mod.data);
+      const navLinks = data.navItems.filter((item) => item.label.trim() && safeHref(item.href, "")).map((item, index) => ({ id: item.id || `header-${index}`, label: item.label, href: safeHref(item.href, "") }));
+      return <div className={editable ? "relative min-h-20" : ""}><Header navLinks={navLinks} bookLabel={data.bookLabel} bookHref={safeHref(data.bookHref)} clientAreaLabel={data.clientAreaLabel} clientAreaHref={safeHref(data.clientAreaHref)} logoUrl={data.logoUrl} logoAlt={data.logoAlt} brandName={data.brandName} preview={editable} /></div>;
+    }
+    case "siteFooter": {
+      const data = withDefaults("siteFooter", mod.data);
+      const navLinks = data.navItems.filter((item) => item.label.trim() && safeHref(item.href, "")).map((item, index) => ({ id: item.id || `footer-${index}`, label: item.label, href: safeHref(item.href, "") }));
+      return <Footer navLinks={navLinks} text={data.text} logoUrl={data.logoUrl} logoAlt={data.logoAlt} brandName={data.brandName} privacyLabel={data.privacyLabel} privacyHref={safeHref(data.privacyHref)} />;
+    }
+    case "maintenance":
+      return <MaintenanceScreen content={withDefaults("maintenance", mod.data)} theme={globals?.theme} preview={editable} />;
     case "hero": {
       const data = withDefaults("hero", mod.data);
-      return <Hero content={{ ...data, primaryBtnHref: safeHref(data.primaryBtnHref), secondaryBtnHref: safeHref(data.secondaryBtnHref) }} socials={globals as { instagramUrl: string; facebookUrl: string }} />;
+      const instagramUrl = typeof mod.data.instagramUrl === "string" ? data.instagramUrl : globals?.instagramUrl ?? data.instagramUrl;
+      const facebookUrl = typeof mod.data.facebookUrl === "string" ? data.facebookUrl : globals?.facebookUrl ?? data.facebookUrl;
+      return <Hero content={{ ...data, primaryBtnHref: safeHref(data.primaryBtnHref), secondaryBtnHref: safeHref(data.secondaryBtnHref) }} socials={{ instagramUrl: safeHref(instagramUrl, ""), facebookUrl: safeHref(facebookUrl, "") }} />;
     }
     case "about":
       return <About content={withDefaults("about", mod.data)} />;
@@ -226,7 +244,7 @@ export default function ModuleRenderer({
         const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
 
         if (!editable) {
-          return <div key={mod.id} id={mod.style?.anchorId} className={`relative overflow-hidden ${styleClass}`} style={visualStyle}>{overlay}<div className="relative">{content}</div></div>;
+          return <div key={mod.id} id={mod.style?.anchorId} className={`relative ${mod.type === "siteHeader" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} style={visualStyle}>{overlay}<div className="relative">{content}</div></div>;
         }
 
         const isSelected = selectedId === mod.id;
@@ -260,64 +278,17 @@ export default function ModuleRenderer({
                 : "outline-transparent hover:outline-ink-gold/40"
             } ${mod.hidden ? "opacity-40" : ""}`}
           >
-            {/* Floating module toolbar */}
-            <div
-              className={`pointer-events-none absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-2 bg-ink-black/90 px-3 py-2 text-[11px] tracking-[0.06em] text-ink-white opacity-0 backdrop-blur-sm transition-opacity ${
-                isSelected ? "opacity-100" : "group-hover/mod:opacity-100"
-              }`}
-            >
-              <span className="pointer-events-none flex items-center gap-2 truncate">
-                <span aria-hidden className="cursor-grab text-ink-gold">⠿</span>
-                <span>{MODULE_LABELS[mod.type]}</span>
-                <span className="hidden text-[10px] normal-case tracking-normal text-ink-grey sm:inline">Przeciągnij, aby zmienić kolejność</span>
-                {mod.hidden && <span className="text-ink-grey">(ukryty)</span>}
-              </span>
-              <span className="pointer-events-auto flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  title="Przesuń w górę"
-                  onClick={(e) => { e.stopPropagation(); onMove?.(mod.id, "up"); }}
-                  disabled={i === 0}
-                  aria-label="Przesuń sekcję w górę"
-                  className="px-1 transition-colors hover:text-ink-gold disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  title="Przesuń w dół"
-                  onClick={(e) => { e.stopPropagation(); onMove?.(mod.id, "down"); }}
-                  disabled={i === visible.length - 1}
-                  aria-label="Przesuń sekcję w dół"
-                  className="px-1 transition-colors hover:text-ink-gold disabled:opacity-30"
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  title="Duplikuj"
-                  onClick={(e) => { e.stopPropagation(); onDuplicate?.(mod.id); }}
-                  className="border border-ink-white/20 px-2 py-1 transition-colors hover:border-ink-gold hover:text-ink-gold"
-                >
-                  Duplikuj
-                </button>
-                <button
-                  type="button"
-                  title={mod.hidden ? "Pokaż" : "Ukryj"}
-                  onClick={(e) => { e.stopPropagation(); onToggleHidden?.(mod.id); }}
-                  className="border border-ink-white/20 px-2 py-1 transition-colors hover:border-ink-gold hover:text-ink-gold"
-                >
-                  {mod.hidden ? "Pokaż" : "Ukryj"}
-                </button>
-                <button
-                  type="button"
-                  title="Usuń"
-                  onClick={(e) => { e.stopPropagation(); onDelete?.(mod.id); }}
-                  className="px-1 text-red-400/80 transition-colors hover:text-red-400"
-                >
-                  Usuń
-                </button>
-              </span>
+            {/* Compact toolbar stays out of the section until its corner button is used. */}
+            <div className="group/tools pointer-events-auto absolute right-2 top-2 z-40 flex items-center shadow-xl" onClick={(event) => event.stopPropagation()}>
+              <div className="hidden items-center border border-ink-white/15 bg-ink-black/95 p-1 text-ink-grey backdrop-blur group-hover/tools:flex group-focus-within/tools:flex">
+                <span className="flex max-w-32 items-center gap-1.5 truncate border-r border-ink-white/10 px-2 text-[9px] text-ink-white"><GripVertical className="h-3.5 w-3.5 text-ink-gold" />{MODULE_LABELS[mod.type]}</span>
+                <button type="button" title="Przesuń w górę" onClick={() => onMove?.(mod.id, "up")} disabled={i === 0} aria-label="Przesuń sekcję w górę" className="flex h-7 w-7 items-center justify-center hover:text-ink-gold disabled:opacity-25"><ArrowUp className="h-3.5 w-3.5" /></button>
+                <button type="button" title="Przesuń w dół" onClick={() => onMove?.(mod.id, "down")} disabled={i === visible.length - 1} aria-label="Przesuń sekcję w dół" className="flex h-7 w-7 items-center justify-center hover:text-ink-gold disabled:opacity-25"><ArrowDown className="h-3.5 w-3.5" /></button>
+                {onDuplicate && <button type="button" title="Duplikuj" onClick={() => onDuplicate(mod.id)} aria-label="Duplikuj sekcję" className="flex h-7 w-7 items-center justify-center hover:text-ink-gold"><Copy className="h-3.5 w-3.5" /></button>}
+                {onToggleHidden && <button type="button" title={mod.hidden ? "Pokaż" : "Ukryj"} onClick={() => onToggleHidden(mod.id)} aria-label={mod.hidden ? "Pokaż sekcję" : "Ukryj sekcję"} className="flex h-7 w-7 items-center justify-center hover:text-ink-gold">{mod.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</button>}
+                {onDelete && <button type="button" title="Usuń" onClick={() => onDelete(mod.id)} aria-label="Usuń sekcję" className="flex h-7 w-7 items-center justify-center text-red-300 hover:bg-red-500/10 hover:text-red-200"><Trash2 className="h-3.5 w-3.5" /></button>}
+              </div>
+              <button type="button" title="Narzędzia sekcji" aria-label={`Narzędzia sekcji: ${MODULE_LABELS[mod.type]}`} className={`flex h-8 w-8 items-center justify-center border bg-ink-black/90 backdrop-blur transition-colors ${isSelected ? "border-ink-gold text-ink-gold" : "border-ink-white/20 text-ink-grey opacity-65 group-hover/mod:opacity-100"}`}><MoreHorizontal className="h-4 w-4" /></button>
             </div>
 
             {/* FAQ is deliberately interactive in the builder preview, so its

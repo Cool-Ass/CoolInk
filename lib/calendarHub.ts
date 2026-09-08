@@ -1,4 +1,4 @@
-export type CalendarItemKind = "appointment" | "freeTerm" | "consultation" | "workingHours" | "dayOff" | "promotion" | "event";
+export type CalendarItemKind = "appointment" | "freeTerm" | "consultation" | "workingHours" | "occupied" | "dayOff" | "promotion" | "event";
 
 export const CONSULTATION_SLOT_TITLE = "KONSULTACJA";
 
@@ -66,15 +66,16 @@ export type AvailabilityBlock = { startsAt: Date; endsAt: Date };
 export type ExplicitAvailableSlot = { startsAt: Date; endsAt: Date; isPublic?: boolean };
 export type TimeRange = { startsAt: Date; endsAt: Date };
 
-export type CalendarDayStatus = "default" | "available" | "unavailable";
+export type CalendarDayStatus = "default" | "available" | "occupied" | "unavailable";
 
 /**
  * Visual day status used by both calendar surfaces. A Sunday is unavailable
  * by default, but an explicit available slot is an intentional admin override.
  */
-export function calendarDayStatus(date: Date, slots: ExplicitAvailableSlot[], blocks: AvailabilityBlock[]): CalendarDayStatus {
+export function calendarDayStatus(date: Date, slots: ExplicitAvailableSlot[], blocks: AvailabilityBlock[], appointments: AvailabilityAppointment[] = []): CalendarDayStatus {
   const day = { startsAt: startOfLocalDay(date), endsAt: new Date(startOfLocalDay(date).getTime() + 24 * 60 * 60 * 1000) };
   if (blocks.some((block) => overlaps(day, block))) return "unavailable";
+  if (appointments.some((appointment) => isOperationalCalendarAppointment(appointment.status ?? "confirmed") && overlaps(day, appointment))) return "occupied";
   if (slots.some((slot) => overlaps(day, slot))) return "available";
   return date.getDay() === 0 ? "unavailable" : "default";
 }

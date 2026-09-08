@@ -107,6 +107,14 @@ describe("Calendar Hub selection", () => {
     expect(calendarDayStatus(date, [], [{ startsAt: new Date(2026, 7, 26), endsAt: new Date(2026, 7, 27) }])).toBe("unavailable");
   });
 
+  it("marks a day with an active appointment as occupied even when an old free slot still exists", () => {
+    const date = new Date(2026, 8, 17);
+    const slots = [{ startsAt: new Date(2026, 8, 17, 10), endsAt: new Date(2026, 8, 17, 18), isPublic: true }];
+    const appointments = [{ startsAt: new Date(2026, 8, 17, 10), endsAt: new Date(2026, 8, 17, 12), status: "confirmed" }];
+    expect(calendarDayStatus(date, slots, [], appointments)).toBe("occupied");
+    expect(calendarDayStatus(date, slots, [], [{ ...appointments[0], status: "cancelled" }])).toBe("available");
+  });
+
   it("keeps bulk operations atomic when a member fails", async () => {
     const persisted: string[] = [];
     await expect(runAtomicBulk(async (work) => { const snapshot = [...persisted]; try { return await work(); } catch (error) { persisted.splice(0, persisted.length, ...snapshot); throw error; } }, [async () => { persisted.push("one"); return "one"; }, async () => { persisted.push("two"); return "two"; }, async () => { throw new Error("invalid third record"); }])).rejects.toThrow("invalid third record");
