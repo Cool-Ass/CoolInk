@@ -94,6 +94,18 @@ formularza ponownie ustawiała fokus na przycisku zamknięcia. Popup stabilnie u
 fokus w edytowanym polu, obsługuje klawisze Tab, Shift+Tab i Escape oraz otwiera się na
 telefonie jako przewijalny panel o wysokości bezpiecznej dla mobilnej klawiatury.
 
+Panel administratora został następnie zagęszczony bez zmiany jego charakteru: wspólna
+powierzchnia robocza ma węższy, przyklejony sidebar, przyklejony pasek narzędzi, mniejsze
+odstępy oraz spójniejsze karty i komunikaty. Widoki „Dziś”, kalendarza, klientów,
+statystyk i ustawień pokazują więcej danych bez zbędnego przewijania. Portfolio używa
+siatki 2–5 kolumn, krótszych miniaturek i ikon operacji, dzięki czemu na ekranie
+desktopowym widać co najmniej kilka rzędów zamiast pojedynczych dużych kart.
+
+Synchronizacja Google Calendar obsługuje teraz oficjalny kod 410 dla usuniętego
+zasobu. Usunięte zdalnie wydarzenie wizyty jest automatycznie odtwarzane, ponowne
+usuwanie nieistniejącego wpisu nie przerywa synchronizacji, a zmiana kalendarza
+głównego nie zapisuje już niezgodnej pary identyfikatorów kalendarza i wydarzenia.
+
 Zdjęcia przesyłane przez CMS są automatycznie obracane według EXIF, skalowane maksymalnie do 2400 px i konwertowane do WebP. Next.js generuje AVIF/WebP tam, gdzie korzysta z komponentu optymalizacji obrazu. Animacje respektują `prefers-reduced-motion`. W pełnym redesignie warto utrzymać zasadę: ruch tylko tam, gdzie pomaga hierarchii; bez obowiązkowego „odkrywania” treści przewijaniem.
 
 ## 6. Bezpieczeństwo
@@ -139,8 +151,8 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Kontrola | Wynik |
 |---|---:|
 | TypeScript | PASS |
-| Testy automatyczne | 57/57 PASS |
-| ESLint | 0 błędów, 13 ostrzeżeń nieblokujących |
+| Testy automatyczne | 58/58 PASS |
+| ESLint | 0 błędów, 7 ostrzeżeń nieblokujących |
 | Build produkcyjny Next.js | PASS |
 | `npm audit --omit=dev` | 0 podatności |
 | Sekrety w plikach śledzonych przez Git | nie wykryto |

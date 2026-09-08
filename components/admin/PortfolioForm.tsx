@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
@@ -149,9 +150,9 @@ export default function PortfolioForm({
           {saving ? "ZAPISYWANIE…" : isEdit ? "ZAPISZ ZMIANY" : "DODAJ DO PORTFOLIO"}
         </button>
         {!onSaved && (
-          <a href="/admin/portfolio" className="text-[13px] text-ink-grey transition-colors hover:text-ink-white">
+          <Link href="/admin/portfolio" className="text-[13px] text-ink-grey transition-colors hover:text-ink-white">
             Anuluj
-          </a>
+          </Link>
         )}
       </div>
     </form>

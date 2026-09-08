@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowDown, ArrowUp, Eye, EyeOff, Trash2 } from "lucide-react";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { useToast } from "@/components/admin/ToastProvider";
 
@@ -58,38 +59,44 @@ export default function PortfolioRowActions({
   }
 
   return (
-    <div className="flex items-center gap-3 text-[12px]">
+    <div className="flex items-center justify-between gap-2 text-[11px]">
       <div className="flex items-center gap-1">
         <button
           onClick={() => move("up")}
           disabled={isFirst}
           aria-label="Przesuń w górę"
-          className="flex h-7 w-7 items-center justify-center border border-ink-white/20 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
+          title="Przesuń wcześniej"
+          className="flex h-8 w-8 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
         >
-          ↑
+          <ArrowUp className="h-3.5 w-3.5" />
         </button>
         <button
           onClick={() => move("down")}
           disabled={isLast}
           aria-label="Przesuń w dół"
-          className="flex h-7 w-7 items-center justify-center border border-ink-white/20 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
+          title="Przesuń później"
+          className="flex h-8 w-8 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
         >
-          ↓
+          <ArrowDown className="h-3.5 w-3.5" />
         </button>
       </div>
-      <button
-        onClick={togglePublish}
-        className="tracking-[0.05em] text-ink-grey transition-colors hover:text-ink-gold"
-      >
-        {published ? "COFNIJ PUBLIKACJĘ" : "OPUBLIKUJ"}
-      </button>
-      <ConfirmButton
-        onConfirm={handleDelete}
-        label="USUŃ"
-        confirmText="Usunąć ten element portfolio na stałe?"
-        pendingLabel="USUWANIE…"
-        className="tracking-[0.05em] text-red-400/80 transition-colors hover:text-red-400"
-      />
+      <div className="flex items-center gap-1">
+        <button
+          onClick={togglePublish}
+          aria-label={published ? "Cofnij publikację" : "Opublikuj"}
+          title={published ? "Cofnij publikację" : "Opublikuj"}
+          className="flex h-8 w-8 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold"
+        >
+          {published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </button>
+        <ConfirmButton
+          onConfirm={handleDelete}
+          label={<><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Usuń</span></>}
+          confirmText="Usunąć ten element portfolio na stałe?"
+          pendingLabel="USUWANIE…"
+          className="flex h-8 w-8 items-center justify-center border border-red-400/20 text-red-400/75 transition-colors hover:border-red-400/60 hover:text-red-300"
+        />
+      </div>
     </div>
   );
 }

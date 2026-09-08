@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useToast } from "@/components/admin/ToastProvider";
@@ -92,9 +93,9 @@ export default function NewPageForm() {
         >
           {saving ? "TWORZENIE…" : "UTWÓRZ I EDYTUJ MODUŁY"}
         </button>
-        <a href="/admin/pages" className="text-[13px] text-ink-grey transition-colors hover:text-ink-white">
+        <Link href="/admin/pages" className="text-[13px] text-ink-grey transition-colors hover:text-ink-white">
           Anuluj
-        </a>
+        </Link>
       </div>
     </form>
   );

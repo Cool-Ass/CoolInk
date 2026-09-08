@@ -123,12 +123,12 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     { label: "AKTYWNA LISTA REZERWOWA", value: String(waitlist.filter((entry) => ["active", "offered"].includes(entry.status)).length), hint: `${waitlist.length} wpisów w okresie` },
   ];
 
-  return <div className="space-y-8">
+  return <div className="space-y-6">
     <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="text-[11px] tracking-[.18em] text-ink-gold">ANALITYKA STUDIA</p><h1 className="mt-2 font-display text-4xl">Statystyki operacyjne</h1><p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-grey">Zgłoszenia, obsługa klientów, wizyty, obłożenie i źródła pozyskania. Finanse i płatności pozostają poza tym etapem.</p></div><nav aria-label="Zakres statystyk" className="flex flex-wrap gap-2">{PERIODS.map(([value, label]) => <Link key={value} href={`/admin/statistics?period=${value}`} className={`border px-3 py-2 text-xs ${period === value ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-white/40 hover:text-ink-white"}`}>{label}</Link>)}</nav></header>
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
 
-    <section className="grid gap-5 xl:grid-cols-2">
+    <section className="grid gap-4 xl:grid-cols-2">
       <Chart title="Statusy wizyt" rows={statusRows} empty="Brak wizyt w wybranym okresie." />
       <Chart title="Najczęściej wybierane style" rows={styleRows} empty="Uzupełniaj style projektów, aby zobaczyć ranking." />
       <Chart title="Ruch według dnia tygodnia" rows={weekdayRows} empty="Brak danych o wizytach." />
@@ -140,7 +140,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
 }
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return <article className="border border-ink-white/15 bg-ink-charcoal/35 p-5"><p className="text-[10px] tracking-[.13em] text-ink-grey">{label}</p><p className="mt-3 font-display text-3xl text-ink-gold">{value}</p><p className="mt-2 text-xs text-ink-grey">{hint}</p></article>;
+  return <article className="border border-ink-white/15 bg-ink-charcoal/35 p-4"><p className="text-[9px] tracking-[.13em] text-ink-grey">{label}</p><p className="mt-2 font-display text-3xl text-ink-gold">{value}</p><p className="mt-1 text-[11px] text-ink-grey">{hint}</p></article>;
 }
 
 function Chart({ title, rows, empty }: { title: string; rows: [string, number][]; empty: string }) {

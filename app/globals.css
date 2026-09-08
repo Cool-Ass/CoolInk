@@ -24,6 +24,26 @@ body {
   overflow-x: hidden;
 }
 
+.admin-shell {
+  color-scheme: dark;
+  background-image:
+    radial-gradient(circle at 82% -8%, color-mix(in srgb, var(--color-ink-gold) 6%, transparent), transparent 28rem),
+    linear-gradient(135deg, #090807, var(--color-ink-black) 42%, #0d0b09);
+}
+
+.admin-workspace :where(input, textarea, select) {
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-workspace :where(input, textarea, select):focus {
+  border-color: color-mix(in srgb, var(--color-ink-gold) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink-gold) 9%, transparent);
+}
+
+.admin-workspace :where(table) {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Page builder output: mobile columns stack; custom typography is opt-in per widget. */
 .builder-columns-grid {
   grid-template-columns: 1fr;

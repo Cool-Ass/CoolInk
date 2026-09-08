@@ -1,13 +1,14 @@
 import { randomBytes } from "crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { decryptGoogleRefreshToken, encryptGoogleRefreshToken } from "../lib/googleCalendarCrypto";
-import { eventRange, googleCalendarRedirectUri } from "../lib/googleCalendar";
+import { eventRange, GoogleCalendarApiError, googleCalendarRedirectUri, googleCalendarRequest, isGoogleCalendarResourceGone } from "../lib/googleCalendar";
 import { GOOGLE_CALENDAR_STATE_COOKIE, googleCalendarStateCookieValue, isValidGoogleCalendarOAuthState } from "../lib/googleCalendarOAuthState";
 import { appointmentFingerprint, decideGoogleSync, googleEventPayload } from "../lib/googleCalendarSync";
 
 const previousKey = process.env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY;
 const previousRedirect = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
 afterEach(() => {
+  vi.unstubAllGlobals();
   if (previousKey === undefined) delete process.env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY; else process.env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY = previousKey;
   if (previousRedirect === undefined) delete process.env.GOOGLE_CALENDAR_REDIRECT_URI; else process.env.GOOGLE_CALENDAR_REDIRECT_URI = previousRedirect;
 });
@@ -57,5 +58,12 @@ describe("Google Calendar mapping and conflict safety", () => {
   it("uses an explicit redirect URI override only when configured", () => {
     process.env.GOOGLE_CALENDAR_REDIRECT_URI = "http://localhost:3000/api/admin/google-calendar/callback";
     expect(googleCalendarRedirectUri("https://www.coolinktattoo.pl")).toBe("http://localhost:3000/api/admin/google-calendar/callback");
+  });
+  it("preserves Google error status and recognizes a deleted remote event", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { message: "Resource has been deleted", errors: [{ reason: "deleted" }] } }), { status: 410, headers: { "Content-Type": "application/json" } })));
+    const request = googleCalendarRequest("access-token", "/calendars/primary/events/deleted", { method: "PATCH" });
+    await expect(request).rejects.toMatchObject({ name: "GoogleCalendarApiError", status: 410, reason: "deleted" });
+    await request.catch((error) => expect(isGoogleCalendarResourceGone(error)).toBe(true));
+    expect(isGoogleCalendarResourceGone(new GoogleCalendarApiError("Forbidden", 403))).toBe(false);
   });
 });
