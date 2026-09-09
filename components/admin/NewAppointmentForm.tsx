@@ -6,6 +6,7 @@ import { CalendarPlus } from "lucide-react";
 import { useToast } from "@/components/admin/ToastProvider";
 import AppModal from "@/components/ui/AppModal";
 import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalendarPicker";
+import { formatCoolinkDateTime, localDateTimeToIso } from "@/lib/dateTime";
 
 const durations = [30, 60, 90, 120, 180, 240, 300, 360, 480, 600, 720];
 const emptyValues = { projectId: "", startsAt: "", endsAt: "", notes: "", duration: 60 };
@@ -35,7 +36,11 @@ export default function NewAppointmentForm({ projects, label = "+ ZAPLANUJ WIZYT
     event.preventDefault();
     setSaving(true);
     try {
-      const response = await fetch("/api/admin/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
+      const response = await fetch("/api/admin/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, startsAt: localDateTimeToIso(values.startsAt), endsAt: localDateTimeToIso(values.endsAt) }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       showToast("Wizyta została zaplanowana.");
@@ -55,7 +60,7 @@ export default function NewAppointmentForm({ projects, label = "+ ZAPLANUJ WIZYT
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">PROJEKT<select required value={values.projectId} onChange={(event) => setValues({ ...values, projectId: event.target.value })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"><option value="">Wybierz projekt</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.client.firstName} {project.client.lastName} — {project.title}</option>)}</select></label>
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">CZAS WIZYTY<select value={values.duration} onChange={(event) => setValues({ ...values, duration: Number(event.target.value), startsAt: "", endsAt: "" })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold">{durations.map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}</option>)}</select></label>
         <div><p className="mb-2 text-[11px] tracking-[0.1em] text-ink-grey">WOLNY TERMIN</p><div className="border border-ink-white/15 bg-ink-black/20 p-3"><AdminProposalCalendarPicker value={values.startsAt} durationMinutes={values.duration} onChange={selectStart} /></div></div>
-        {values.startsAt && <p className="border border-emerald-400/30 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-200">Wybrano: {new Date(values.startsAt).toLocaleString("pl-PL", { dateStyle: "full", timeStyle: "short" })} · {values.duration} min</p>}
+        {values.startsAt && <p className="border border-emerald-400/30 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-200">Wybrano: {formatCoolinkDateTime(localDateTimeToIso(values.startsAt), { dateStyle: "full", timeStyle: "short" })} · {values.duration} min</p>}
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">NOTATKA (OPCJONALNIE)<textarea value={values.notes} onChange={(event) => setValues({ ...values, notes: event.target.value })} rows={3} className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
         <div className="flex gap-3"><button disabled={saving || !values.startsAt || !values.projectId} className="border border-ink-gold px-4 py-2.5 text-xs text-ink-gold disabled:opacity-40">{saving ? "ZAPISYWANIE…" : "ZAPLANUJ"}</button><button type="button" onClick={() => setOpen(false)} className="text-xs text-ink-grey hover:text-ink-white">Anuluj</button></div>
       </form>

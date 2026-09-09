@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cloneBuilderModule, defaultHomepageModules, withDefaults } from "../lib/modules";
+import { addGoogleReviewsIfMissing } from "../lib/homepage";
 
 describe("homepage builder content", () => {
   it("builds the public page entirely from sections, columns and individual widgets", () => {
@@ -8,8 +9,18 @@ describe("homepage builder content", () => {
     const widgets = modules.flatMap((module) => withDefaults("columns", module.data).columns.flat());
     expect(widgets.some((widget) => widget.type === "portfolio")).toBe(true);
     expect(widgets.some((widget) => widget.type === "booking")).toBe(true);
+    expect(widgets.some((widget) => widget.type === "googleReviews")).toBe(true);
     expect(widgets.some((widget) => widget.type === "heading")).toBe(true);
     expect(widgets.some((widget) => widget.type === "image")).toBe(true);
+  });
+
+  it("adds Google reviews to an existing composition without replacing edits", () => {
+    const modules = defaultHomepageModules().filter((module) => withDefaults("columns", module.data).columns.flat().every((widget) => widget.type !== "googleReviews"));
+    const firstId = modules[0].id;
+    const upgraded = addGoogleReviewsIfMissing(modules);
+    expect(upgraded[0].id).toBe(firstId);
+    expect(upgraded.flatMap((module) => withDefaults("columns", module.data).columns.flat()).filter((widget) => widget.type === "googleReviews")).toHaveLength(1);
+    expect(addGoogleReviewsIfMissing(upgraded)).toBe(upgraded);
   });
 
   it("duplicates a section deeply and regenerates nested widget identifiers", () => {

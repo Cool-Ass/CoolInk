@@ -13,6 +13,7 @@ import Portfolio from "@/components/Portfolio";
 import BookingSection from "@/components/BookingSection";
 import type { PortfolioWork } from "@/lib/portfolio";
 import type { PublicCalendarData } from "@/lib/publicCalendar";
+import GoogleReviews from "@/components/GoogleReviews";
 
 interface BuilderWidgetProps {
   module: Module;
@@ -189,6 +190,8 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const quoteStyle = d.variant === "centered" ? "mx-auto max-w-4xl px-4 text-center sm:px-6" : d.variant === "card" ? "mx-4 border border-ink-white/15 bg-ink-charcoal px-5 shadow-xl shadow-black/30 sm:mx-6 sm:px-7 md:mx-12 md:px-10" : "mx-4 border-l-2 border-ink-gold bg-ink-charcoal/50 px-4 sm:mx-6 sm:px-6 md:mx-12";
       return <blockquote className={`my-10 py-8 ${quoteStyle}`}><p className={`${d.variant === "centered" ? "text-3xl md:text-5xl" : "text-2xl"} font-display leading-relaxed text-ink-white`}>„{d.quote}”</p><footer className="mt-5 text-sm text-ink-gold">{d.author}{d.role && <span className="text-ink-grey"> · {d.role}</span>}</footer></blockquote>;
     }
+    case "googleReviews":
+      return <GoogleReviews content={withDefaults("googleReviews", module.data)} showEmpty={showEmpty} />;
     case "iconList": {
       const d = withDefaults("iconList", module.data);
       const icons = { check: "✓", dot: "•", arrow: "→" };

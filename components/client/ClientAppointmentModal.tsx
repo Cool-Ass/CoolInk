@@ -8,6 +8,7 @@ import AppointmentResponse from "@/components/client/AppointmentResponse";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import AppButton from "@/components/ui/AppButton";
 import { useRouter } from "next/navigation";
+import { formatCoolinkDate, formatCoolinkTime } from "@/lib/dateTime";
 
 type Appointment = {
   id: string;
@@ -68,10 +69,9 @@ export default function ClientAppointmentModal({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="border border-ink-white/10 p-4">
             <p className="text-[10px] tracking-widest text-ink-gold">TERMIN</p>
-            <p className="mt-2 text-sm">{start.toLocaleDateString("pl-PL", { dateStyle: "long" })}</p>
+            <p className="mt-2 text-sm">{formatCoolinkDate(start)}</p>
             <p className="mt-1 text-sm text-ink-grey">
-              {start.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}–
-              {end.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} ·{" "}
+              {formatCoolinkTime(start)}–{formatCoolinkTime(end)} ·{" "}
               {Math.round((end.getTime() - start.getTime()) / 60000)} min
             </p>
           </div>

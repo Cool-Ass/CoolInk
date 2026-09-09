@@ -103,7 +103,7 @@ export async function POST(
   await prisma.tattooProject.update({ where: { id: project.id }, data: { nextAction: "Sprawdź nową inspirację klienta", nextActionDueAt: new Date() } });
   await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")
-    return NextResponse.json({ imageId: image.id }, { status: 201 });
+    return NextResponse.json({ imageId: image.id, image: { id: image.id, caption: image.caption, url: `/api/client/images/${image.id}` } }, { status: 201 });
   const message = await prisma.projectMessage.create({
     data: {
       projectId: project.id,

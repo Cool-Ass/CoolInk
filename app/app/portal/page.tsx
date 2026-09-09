@@ -4,6 +4,7 @@ import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { CLIENT_STATUS } from "@/lib/projectWorkflow";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
     </section>
 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {nextVisit && <Link href="/app/portal/projects" className="border border-blue-400/30 bg-blue-400/5 p-4 hover:border-blue-300"><p className="text-[10px] tracking-widest text-blue-200">NAJBLIŻSZY TERMIN</p><p className="mt-2 font-display text-xl">{nextVisit.startsAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}</p><p className="mt-1 text-xs text-ink-grey">{nextVisit.project.title}</p></Link>}
+      {nextVisit && <Link href="/app/portal/projects" className="border border-blue-400/30 bg-blue-400/5 p-4 hover:border-blue-300"><p className="text-[10px] tracking-widest text-blue-200">NAJBLIŻSZY TERMIN</p><p className="mt-2 font-display text-xl">{formatCoolinkDateTime(nextVisit.startsAt)}</p><p className="mt-1 text-xs text-ink-grey">{nextVisit.project.title}</p></Link>}
       <Link href="/app/portal/projects" className="border border-ink-white/15 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><p className="text-[10px] tracking-widest text-ink-gold">PROJEKTY I KONSULTACJE</p><p className="mt-2 font-display text-2xl">{projects.length}</p><p className="mt-1 text-xs text-ink-grey">Historia, terminy, zdjęcia i status.</p></Link>
       <Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="border border-emerald-500/35 bg-emerald-500/5 p-4 hover:border-emerald-400"><p className="text-[10px] tracking-widest text-emerald-300">KALENDARZ</p><p className="mt-2 font-display text-2xl">Wolne terminy</p><p className="mt-1 text-xs text-ink-grey">Wizyta lub konsultacja.</p></Link>
       <Link href="/app/portal/messages" className="border border-ink-white/15 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><p className="text-[10px] tracking-widest text-ink-gold">WIADOMOŚCI</p><p className="mt-2 font-display text-xl">Napisz do studia</p><p className="mt-1 text-xs text-ink-grey">Rozmowy przypisane do projektów.</p></Link>

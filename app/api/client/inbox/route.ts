@@ -20,17 +20,29 @@ export async function PATCH(request: Request) {
   const parsed = await input(request);
   if ("error" in parsed) return parsed.error;
   const now = new Date();
-  const result = parsed.kind === "messages"
-    ? await prisma.projectMessage.updateMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "admin", readAt: null, project: { clientId: parsed.client.id } }, data: { readAt: now } })
-    : await prisma.clientNotification.updateMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), clientId: parsed.client.id, readAt: null }, data: { readAt: now } });
+  if (parsed.kind === "messages") {
+    const directId = parsed.id.startsWith("direct:") ? parsed.id.slice(7) : null;
+    const [projectResult, directResult] = await Promise.all([
+      directId ? Promise.resolve({ count: 0 }) : prisma.projectMessage.updateMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "admin", readAt: null, project: { clientId: parsed.client.id } }, data: { readAt: now } }),
+      parsed.id === "all" || directId ? prisma.directMessage.updateMany({ where: { ...(parsed.id === "all" ? {} : { id: directId! }), clientId: parsed.client.id, author: "admin", readAt: null }, data: { readAt: now } }) : Promise.resolve({ count: 0 }),
+    ]);
+    return NextResponse.json({ ok: true, updated: projectResult.count + directResult.count });
+  }
+  const result = await prisma.clientNotification.updateMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), clientId: parsed.client.id, readAt: null }, data: { readAt: now } });
   return NextResponse.json({ ok: true, updated: result.count });
 }
 
 export async function DELETE(request: Request) {
   const parsed = await input(request);
   if ("error" in parsed) return parsed.error;
-  const result = parsed.kind === "messages"
-    ? await prisma.projectMessage.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "admin", project: { clientId: parsed.client.id } } })
-    : await prisma.clientNotification.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), clientId: parsed.client.id } });
+  if (parsed.kind === "messages") {
+    const directId = parsed.id.startsWith("direct:") ? parsed.id.slice(7) : null;
+    const [projectResult, directResult] = await Promise.all([
+      directId ? Promise.resolve({ count: 0 }) : prisma.projectMessage.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "admin", project: { clientId: parsed.client.id } } }),
+      parsed.id === "all" || directId ? prisma.directMessage.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: directId! }), clientId: parsed.client.id, author: "admin" } }) : Promise.resolve({ count: 0 }),
+    ]);
+    return NextResponse.json({ ok: true, deleted: projectResult.count + directResult.count });
+  }
+  const result = await prisma.clientNotification.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), clientId: parsed.client.id } });
   return NextResponse.json({ ok: true, deleted: result.count });
 }

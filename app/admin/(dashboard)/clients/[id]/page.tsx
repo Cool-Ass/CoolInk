@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [client, admin, messageTemplates] = await Promise.all([
-    prisma.client.findUnique({ where: { id }, include: { projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
+    prisma.client.findUnique({ where: { id }, include: { directMessages: { orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
     getCurrentAdmin(),
     getMessageTemplates(),
   ]);
@@ -38,5 +38,5 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     messages: project.messages.map((item) => ({ id: item.id, author: item.author, body: item.body, createdAt: item.createdAt.toISOString(), readAt: item.readAt?.toISOString() ?? null, attachment: item.attachment ? { ...item.attachment, url: `/api/admin/images/${item.attachment.id}` } : null })),
   }));
 
-  return <div className="flex flex-col gap-3"><Link href="/admin/clients" className="text-xs text-ink-grey hover:text-ink-gold">← KLIENCI</Link><ClientWorkspace client={{ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, notes: client.notes }} projects={projects} messageTemplates={messageTemplates} canManageFinance={Boolean(admin && hasAdminPermission(admin.role, "finance.manage"))} canDeleteProject={Boolean(admin && hasAdminPermission(admin.role, "projects.delete"))} /></div>;
+  return <div className="flex flex-col gap-3"><Link href="/admin/clients" className="text-xs text-ink-grey hover:text-ink-gold">← KLIENCI</Link><ClientWorkspace client={{ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, notes: client.notes }} projects={projects} directMessages={client.directMessages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: null }))} messageTemplates={messageTemplates} canManageFinance={Boolean(admin && hasAdminPermission(admin.role, "finance.manage"))} canDeleteProject={Boolean(admin && hasAdminPermission(admin.role, "projects.delete"))} /></div>;
 }

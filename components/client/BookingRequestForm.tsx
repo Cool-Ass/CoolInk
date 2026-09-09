@@ -6,6 +6,7 @@ import AppButton from "@/components/ui/AppButton";
 import AppModal from "@/components/ui/AppModal";
 import InspirationUpload from "@/components/client/InspirationUpload";
 import { LEAD_SOURCES } from "@/lib/leadSource";
+import { formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
 
 const styles = ["Realizm", "Black & Grey", "Fine Line", "Lettering", "Neo Traditional", "Inny"];
 const placements = ["Ramię", "Przedramię", "Bark", "Klatka piersiowa", "Plecy", "Żebra", "Udo", "Łydka", "Dłoń", "Szyja", "Inne"];
@@ -36,8 +37,7 @@ export default function BookingRequestForm({
   const [inspirations, setInspirations] = useState<File[]>([]);
   const inspirationInput = useRef<HTMLInputElement>(null);
   const [data, setData] = useState({ title: "", description: "", placement: "", size: "", styles: [] as string[], notes: "", consultationMode: "studio", leadSource: "" });
-  const format = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long", timeStyle: "short" });
-  const range = `${format.format(new Date(startsAt))}–${new Date(endsAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+  const range = `${formatCoolinkDateTime(startsAt, { dateStyle: "long", timeStyle: "short" })}–${formatCoolinkTime(endsAt)}`;
   const toggle = (style: string) => setData((value) => ({ ...value, styles: value.styles.includes(style) ? value.styles.filter((item) => item !== style) : [...value.styles, style] }));
 
   function selectInspirations(event: ChangeEvent<HTMLInputElement>) {

@@ -163,6 +163,7 @@ model Client {
   projects          TattooProject[]
   acceptances       DocumentAcceptance[]
   notifications     ClientNotification[]
+  directMessages    DirectMessage[]
   pushSubscriptions PushSubscription[]
   waitlistEntries   WaitlistEntry[]
   deletionRequest   AccountDeletionRequest?
@@ -586,4 +587,20 @@ model ProjectMessage {
 
   @@index([projectId, createdAt])
   @@index([projectId, author, readAt])
+}
+
+/// General studio-client conversation. It is deliberately separate from a
+/// tattoo project: the studio may start it at any time, while a client may
+/// reply only after the studio has opened the conversation.
+model DirectMessage {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  author    String // client | admin
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([clientId, author, readAt])
 }

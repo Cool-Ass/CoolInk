@@ -6,6 +6,7 @@ import AppModal from "@/components/ui/AppModal";
 import EmptyState from "@/components/ui/EmptyState";
 import { imageSource } from "@/lib/imageSource";
 import type { MessageTemplate } from "@/lib/messageTemplates";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 type Message = {
   id: string;
@@ -27,12 +28,22 @@ export default function ProjectChat({
   role,
   autoFocus = false,
   templates = [],
+  apiPath,
+  title = "Czat",
+  subtitle = "PRYWATNA ROZMOWA",
+  emptyDescription = "Zapytaj o projekt albo dodaj inspirację, a studio odpowie w tym miejscu.",
+  allowAttachments = true,
 }: {
-  projectId: string;
+  projectId?: string;
   initial: Message[];
   role: "client" | "admin";
   autoFocus?: boolean;
   templates?: MessageTemplate[];
+  apiPath?: string;
+  title?: string;
+  subtitle?: string;
+  emptyDescription?: string;
+  allowAttachments?: boolean;
 }) {
   const [messages, setMessages] = useState(initial);
   const [text, setText] = useState("");
@@ -43,10 +54,9 @@ export default function ProjectChat({
   const [attachmentReady, setAttachmentReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<HTMLDivElement>(null);
-  const api =
-    role === "admin"
-      ? `/api/admin/projects/${projectId}/messages`
-      : `/api/client/projects/${projectId}/messages`;
+  const api = apiPath ?? (role === "admin"
+    ? `/api/admin/projects/${projectId}/messages`
+    : `/api/client/projects/${projectId}/messages`);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { if (autoFocus) composerRef.current?.focus(); }, [autoFocus]);
   useEffect(() => { streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" }); }, [messages.length]);
@@ -93,7 +103,7 @@ export default function ProjectChat({
   }
   async function upload() {
     const file = inputRef.current?.files?.[0];
-    if (!file || sending || role !== "client") return;
+    if (!file || sending || role !== "client" || !projectId || !allowAttachments) return;
     setSending(true);
     setError("");
     try {
@@ -130,8 +140,8 @@ export default function ProjectChat({
     >
       <div className="flex items-center justify-between gap-3 border-b border-ink-white/10 px-3 py-2.5 sm:px-4">
         <div>
-          <p className="font-display text-lg">Czat</p>
-          <p className="text-[9px] tracking-[.12em] text-ink-grey">PRYWATNA ROZMOWA</p>
+          <p className="font-display text-lg">{title}</p>
+          <p className="text-[9px] tracking-[.12em] text-ink-grey">{subtitle}</p>
         </div>
         <span className="flex items-center gap-1.5 text-[10px] text-emerald-300">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{role === "client" ? "STUDIO" : "KLIENT"}
@@ -145,7 +155,7 @@ export default function ProjectChat({
         {messages.length === 0 ? (
           <EmptyState
             title="Zacznij rozmowę"
-            description="Zapytaj o projekt albo dodaj inspirację, a studio odpowie w tym miejscu."
+            description={emptyDescription}
             icon="✦"
           />
         ) : (
@@ -184,10 +194,7 @@ export default function ProjectChat({
                 </div>
               )}
               <p className={`mt-1.5 text-right text-[9px] ${message.author === role ? "text-ink-black/55" : "text-ink-grey"}`}>
-                {new Date(message.createdAt).toLocaleString("pl-PL", {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                })}
+                {formatCoolinkDateTime(new Date(message.createdAt), { dateStyle: "short", timeStyle: "short" })}
               </p>
             </article>;
           })
@@ -223,7 +230,7 @@ export default function ProjectChat({
         {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
         <div className="mt-2 flex items-center gap-2">
           <button type="button" onClick={() => setShowEmoji((value) => !value)} aria-label="Emoji" aria-expanded={showEmoji} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Smile className="h-4 w-4" /></button>
-          {role === "client" && (
+          {role === "client" && allowAttachments && projectId && (
             <>
               <input
                 ref={inputRef}

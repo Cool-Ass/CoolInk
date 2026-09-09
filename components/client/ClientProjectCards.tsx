@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
 import EmptyState from "@/components/ui/EmptyState";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -11,6 +11,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import AppButton from "@/components/ui/AppButton";
 import ActionIcon from "@/components/ui/ActionIcon";
 import { imageSource } from "@/lib/imageSource";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 type Appointment = {
   id: string;
@@ -58,6 +59,9 @@ export default function ClientProjectCards({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [visibleProjects, setVisibleProjects] = useState(projects);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const inspirationInput = useRef<HTMLInputElement>(null);
   function markAppointmentCancelled(appointmentId: string, projectStatus: string) {
     const update = (project: Project) => ({
       ...project,
@@ -98,6 +102,27 @@ export default function ClientProjectCards({
       setDeleteError(error instanceof Error ? error.message : "Nie udało się usunąć projektu.");
     } finally {
       setDeleting(false);
+    }
+  }
+  async function uploadInspiration(file?: File) {
+    if (!selected || !file || uploading) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("caption", file.name.replace(/\.[^.]+$/, "").slice(0, 120));
+      const response = await fetch(`/api/client/projects/${selected.id}/images`, { method: "POST", body: form });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.image) throw new Error(result.error || "Nie udało się dodać inspiracji.");
+      const update = (project: Project) => project.id === selected.id ? { ...project, images: [...project.images, result.image] } : project;
+      setVisibleProjects((items) => items.map(update));
+      setSelected((project) => project ? update(project) : null);
+      if (inspirationInput.current) inspirationInput.current.value = "";
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Nie udało się dodać inspiracji.");
+    } finally {
+      setUploading(false);
     }
   }
   return (
@@ -183,7 +208,7 @@ export default function ClientProjectCards({
                       className="flex w-full flex-wrap items-center justify-between gap-3 border border-ink-white/10 p-3 text-left text-sm transition-colors hover:border-ink-gold"
                     >
                       <span>
-                        {new Date(item.startsAt).toLocaleString("pl-PL")}
+                        {formatCoolinkDateTime(item.startsAt)}
                       </span>
                       <StatusBadge status={item.status} />
                     </button>
@@ -196,12 +221,11 @@ export default function ClientProjectCards({
               )}
             </section>
             <section>
-              <p className="text-[10px] tracking-widest text-ink-gold">
-                INSPIRACJE
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] tracking-widest text-ink-gold">INSPIRACJE</p><p className="mt-1 text-[11px] text-ink-grey">JPG, PNG lub WEBP · maks. 10 MB</p></div><><input ref={inspirationInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { void uploadInspiration(event.target.files?.[0]); }} /><AppButton type="button" variant="secondary" disabled={uploading} onClick={() => inspirationInput.current?.click()}>{uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{uploading ? " DODAWANIE…" : " DODAJ INSPIRACJĘ"}</AppButton></></div>
               <div className="mt-3">
                 <InspirationPreview images={selected.images} />
               </div>
+              {uploadError && <p role="alert" className="mt-2 text-xs text-red-300">{uploadError}</p>}
             </section>
             {selected.status !== "cancelled" && <div className="border-t border-ink-white/10 pt-5"><AppButton type="button" variant="destructive" onClick={() => setCancelProject(selected)}>ANULUJ PROJEKT</AppButton></div>}
           </div>

@@ -206,7 +206,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     }
     case "spacer":
       return <Spacer data={withDefaults("spacer", mod.data)} />;
-    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "iconList": case "callout": case "customCode": {
+    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "googleReviews": case "iconList": case "callout": case "customCode": {
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);

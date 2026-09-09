@@ -46,6 +46,10 @@ export const DEFAULT_CONTENT = {
     email: "kontakt@coolinktattoo.pl",
     hours: "Wt–Sob: 11:00 – 18:00",
   },
+  googleReviews: {
+    placeId: "",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=CoolInk+Tattoo+Studio",
+  },
   footer: {
     text: "CoolInk Tattoo Studio. Wszelkie prawa zastrzeżone.",
     privacyLabel: "POLITYKA PRYWATNOŚCI",

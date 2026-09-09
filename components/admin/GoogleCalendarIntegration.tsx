@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, CheckCircle2, RefreshCw, Settings2, Unplug } from "lucide-react";
 import AppButton from "@/components/ui/AppButton";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 type Selection = { calendarId: string; summary: string | null; role: string; enabled: boolean };
 type Calendar = { id: string; summary: string; primary: boolean; accessRole: string };
@@ -179,7 +180,7 @@ export default function GoogleCalendarIntegration() {
               </div>
               <div className="border border-ink-white/10 bg-ink-black/25 px-3 py-2.5">
                 <dt className="text-[9px] tracking-[.12em] text-ink-grey">OSTATNIA SYNCHRONIZACJA</dt>
-                <dd className="mt-1 text-xs text-ink-white">{connection.lastSyncedAt ? new Date(connection.lastSyncedAt).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "medium" }) : "Jeszcze nie wykonano"}</dd>
+                <dd className="mt-1 text-xs text-ink-white">{connection.lastSyncedAt ? formatCoolinkDateTime(connection.lastSyncedAt, { dateStyle: "short", timeStyle: "medium" }) : "Jeszcze nie wykonano"}</dd>
               </div>
             </dl>
 

@@ -27,6 +27,7 @@ export type ModuleType =
   | "video"
   | "map"
   | "quote"
+  | "googleReviews"
   | "iconList"
   | "callout"
   | "customCode";
@@ -293,6 +294,7 @@ export type ColumnWidgetType =
   | "video"
   | "map"
   | "quote"
+  | "googleReviews"
   | "iconList"
   | "callout"
   | "customCode";
@@ -311,6 +313,7 @@ export interface FaqModuleData { title: string; items: { question: string; answe
 export interface VideoModuleData { url: string; title: string; caption: string; }
 export interface MapModuleData { embedUrl: string; title: string; address: string; height: "sm" | "md" | "lg"; }
 export interface QuoteModuleData { quote: string; author: string; role: string; variant: "editorial" | "card" | "centered"; }
+export interface GoogleReviewsModuleData { eyebrow: string; heading: string; body: string; buttonLabel: string; limit: number; layout: "cards" | "list"; }
 export interface IconListModuleData { title: string; items: string[]; style: "check" | "dot" | "arrow"; layout: "list" | "cards" | "steps"; columns: "one" | "two" | "three"; }
 export interface CalloutModuleData { eyebrow: string; title: string; body: string; buttonLabel: string; href: string; style: "charcoal" | "gold" | "outline"; }
 export interface CustomCodeModuleData { title: string; html: string; css: string; height: number; backgroundColor: string; }
@@ -361,6 +364,8 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? MapModuleData
   : T extends "quote"
   ? QuoteModuleData
+  : T extends "googleReviews"
+  ? GoogleReviewsModuleData
   : T extends "iconList"
   ? IconListModuleData
   : T extends "callout"
@@ -412,6 +417,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   video: "Wideo",
   map: "Mapa",
   quote: "Cytat / opinia",
+  googleReviews: "Opinie Google",
   iconList: "Lista korzyści",
   callout: "Wyróżniony komunikat",
   customCode: "Własny HTML + CSS",
@@ -445,13 +451,14 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   video: "Film z YouTube lub Vimeo osadzony na stronie.",
   map: "Osadzona mapa Google Maps.",
   quote: "Opinia klienta, cytat lub wyróżniona rekomendacja.",
+  googleReviews: "Aktualna ocena i najtrafniejsze opinie z profilu Google Maps.",
   iconList: "Lista zalet, informacji lub kolejnych kroków.",
   callout: "Wyróżniona treść z opcjonalnym przyciskiem.",
   customCode: "Zaawansowany, izolowany blok z własnym kodem HTML i CSS.",
 };
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
-  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
+  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", googleReviews: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
   siteHeader: "templates", siteFooter: "templates", maintenance: "templates", hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
@@ -468,6 +475,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "iconList",
   "faq",
   "quote",
+  "googleReviews",
   "video",
   "map",
   "divider",
@@ -489,7 +497,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
 
 export const COLUMN_WIDGET_TYPES: ColumnWidgetType[] = [
   "heading", "text", "image", "button", "navigation", "portfolio", "booking", "gallery", "callout", "iconList",
-  "faq", "quote", "video", "map", "divider", "spacer", "customCode",
+  "faq", "quote", "googleReviews", "video", "map", "divider", "spacer", "customCode",
 ];
 
 export function isColumnWidgetType(type: string): type is ColumnWidgetType {
@@ -726,6 +734,8 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
       return { embedUrl: "", title: "Jak do nas trafić", address: "", height: "md" } satisfies MapModuleData;
     case "quote":
       return { quote: "Tutaj wpisz opinię klienta lub ważny cytat.", author: "Imię i nazwisko", role: "Klient", variant: "editorial" } satisfies QuoteModuleData;
+    case "googleReviews":
+      return { eyebrow: "OPINIE GOOGLE", heading: "Klienci o CoolInk", body: "Aktualne opinie pobierane bezpośrednio z profilu studia w Google Maps.", buttonLabel: "ZOBACZ WSZYSTKIE OPINIE", limit: 3, layout: "cards" } satisfies GoogleReviewsModuleData;
     case "iconList":
       return { title: "Dlaczego warto", items: ["Pierwsza korzyść", "Druga korzyść", "Trzecia korzyść"], style: "check", layout: "list", columns: "one" } satisfies IconListModuleData;
     case "callout":
@@ -814,6 +824,8 @@ export function defaultHomepageModules(): Module[] {
     ], { background: "charcoal", padding: "lg", gap: 28, widths: [40, 60], style: { contentWidth: "wide" } }),
 
     homepageSection([[homepageWidget("booking", { ...booking, eyebrow: "REZERWACJE ONLINE", heading: "Wybierz termin, który naprawdę jest wolny.", body: "Kalendarz jest połączony z systemem studia. Po zalogowaniu dokończysz zgłoszenie bez ponownego wybierania daty." })]], { padding: "sm", style: { anchorId: "kalendarz" } }),
+
+    homepageSection([[homepageWidget("googleReviews", defaultModuleData("googleReviews"))]], { padding: "sm", style: { anchorId: "opinie-google" } }),
 
     homepageSection([
       [homepageWidget("heading", { text: "ZIELONA GÓRA", level: "h3", alignment: "left" }, { color: "#c99a4a", fontSize: 26 }), homepageWidget("text", { text: "al. Konstytucji 3 Maja 10\n65-001 Zielona Góra", alignment: "left" }, { fontSize: 14 })],

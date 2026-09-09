@@ -123,6 +123,15 @@ export default async function ContentPage() {
         />
 
         <SettingsSection
+          title="Opinie Google"
+          initialValues={flat("googleReviews")}
+          fields={[
+            { key: "googleReviews.placeId", label: "Place ID profilu studia w Google Maps" },
+            { key: "googleReviews.mapsUrl", label: "Publiczny link do opinii w Google Maps" },
+          ]}
+        />
+
+        <SettingsSection
           title="Stopka"
           initialValues={flat("footer")}
           fields={[
