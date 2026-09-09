@@ -42,6 +42,10 @@ Dodano samodzielne anulowanie pojedynczej przyszłej wizyty. Klient może anulow
 
 Panel porządkuje pracę studia wokół kalendarza, klientów, projektów, wiadomości i elementów wymagających uwagi. Ekran „Dzisiaj” łączy nadchodzące wizyty, nowe zgłoszenia, zaległe działania, nieprzeczytane wiadomości i alerty magazynu. Wspólna skrzynka grupuje rozmowy niezależnie od projektu, a odpowiedź tworzy jednocześnie wiadomość w koncie klienta i powiadomienie push. Dostępne są także statystyki operacyjne z filtrem 30/90/365 dni lub całego okresu, magazyn z historią ruchów i alertami, dokumenty, przypomnienia oraz integracja z Kalendarzem Google. Panel administratora można zainstalować jak aplikację; powiadomienia push obejmują m.in. nowe zgłoszenie terminu, anulowanie wizyty lub projektu, odpowiedź klienta, wiadomość i dodanie inspiracji.
 
+Administrator może rozpocząć rozmowę ogólną z dowolnym klientem bez zakładania projektu. Po pierwszej wiadomości administratora klient może normalnie odpowiadać z własnej skrzynki. Klient nie może sam rozpocząć rozmowy ogólnej bez kontekstu — pierwsze zgłoszenie nadal prowadzi przez projekt, co ogranicza nieuporządkowane wiadomości. Konto klienta pozwala również dodawać inspiracje bezpośrednio do istniejącego projektu; plik od razu pojawia się w projekcie i generuje powiadomienie dla studia.
+
+Formularz magazynu ma teraz trwałe etykiety rozróżniające stan początkowy, stan minimalny i koszt jednostkowy. Dzięki temu znaczenie pól nie zależy od znikającego po rozpoczęciu pisania placeholdera.
+
 Źródło pozyskania jest zapisywane na poziomie każdego zgłoszenia (Instagram, Facebook, Google/Mapy, polecenie, stały klient, wydarzenie lub inne) i może zostać skorygowane przez administratora. Dzięki temu panel pokazuje nie tylko liczbę wejść z kanału, ale również jego konwersję na potwierdzony etap obsługi.
 
 ## 3. Wiarygodność i nisza odbiorców
@@ -61,6 +65,8 @@ Najważniejsza zmiana komunikacyjna: bio i regularne publikacje powinny prowadzi
 ## 4. Możliwości redesignu
 
 Każda strona CMS, łącznie ze stroną główną, korzysta z tego samego edytora typu mini WordPress/Elementor. Lewy, kompaktowy panel zawiera wyszukiwarkę i kafelki widgetów przeciąganych metodą drag-and-drop. Strona składa się z sekcji dzielonych na 1–4 kolumny, a widgety można przenosić pomiędzy kolumnami i ustawiać w wybranej kolejności. Dostępne są gotowe sekcje marki oraz neutralne widgety — nagłówek, tekst, obraz, przycisk, galeria, separator, FAQ, cytat, lista korzyści, komunikat, wideo, mapa i własny HTML + CSS.
+
+Dodano także moduł opinii Google. Pobiera on aktualną ocenę i opinie po stronie serwera z Google Places API, pokazuje gwiazdki, autora i wymagane odnośniki do źródła, a w razie braku konfiguracji pozostaje niewidoczny dla odwiedzających. Istniejące, samodzielnie przebudowane strony są uzupełniane o widget bez nadpisywania ich pozostałej struktury.
 
 Każdy moduł ma wspólne sterowanie:
 
@@ -105,6 +111,13 @@ Synchronizacja Google Calendar obsługuje teraz oficjalny kod 410 dla usunięteg
 zasobu. Usunięte zdalnie wydarzenie wizyty jest automatycznie odtwarzane, ponowne
 usuwanie nieistniejącego wpisu nie przerywa synchronizacji, a zmiana kalendarza
 głównego nie zapisuje już niezgodnej pary identyfikatorów kalendarza i wydarzenia.
+
+Wszystkie daty i godziny w panelu administratora, koncie klienta, kalendarzu i
+powiadomieniach przechodzą przez jeden moduł strefy `Europe/Warsaw`. Formularze
+`datetime-local` są zamieniane na jednoznaczny czas UTC po stronie aplikacji. W ramach
+wdrożenia selektywnie sprawdzono trzy starsze wizyty; jedna, utworzona przez dawną
+wersję formularza administratora, spełniała kryteria przesunięcia o dwie godziny i
+została naprawiona wraz z ponowną synchronizacją do Kalendarza Google.
 
 Zdjęcia przesyłane przez CMS są automatycznie obracane według EXIF, skalowane maksymalnie do 2400 px i konwertowane do WebP. Next.js generuje AVIF/WebP tam, gdzie korzysta z komponentu optymalizacji obrazu. Animacje respektują `prefers-reduced-motion`. W pełnym redesignie warto utrzymać zasadę: ruch tylko tam, gdzie pomaga hierarchii; bez obowiązkowego „odkrywania” treści przewijaniem.
 
@@ -151,8 +164,8 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Kontrola | Wynik |
 |---|---:|
 | TypeScript | PASS |
-| Testy automatyczne | 58/58 PASS |
-| ESLint | 0 błędów, 7 ostrzeżeń nieblokujących |
+| Testy automatyczne | 65/65 PASS |
+| ESLint | 0 błędów, 9 ostrzeżeń nieblokujących |
 | Build produkcyjny Next.js | PASS |
 | `npm audit --omit=dev` | 0 podatności |
 | Sekrety w plikach śledzonych przez Git | nie wykryto |
@@ -160,7 +173,7 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Anulowanie wizyty bez sesji klienta | HTTP 401 |
 | Mutujące żądanie z obcej domeny | HTTP 403 |
 
-Testy obejmują m.in. workflow, rzeczywistą dostępność po zajęciu terminu, konsultacje, listę rezerwową, przypomnienia, tryb budowy, linki CMS, ustawienia strony głównej, źródła zgłoszeń, integrację kalendarza, reguły anulowania i bezpiecznego CSS.
+Testy obejmują m.in. workflow, rzeczywistą dostępność po zajęciu terminu, konsultacje, listę rezerwową, przypomnienia, tryb budowy, linki CMS, ustawienia strony głównej, źródła zgłoszeń, integrację kalendarza, reguły anulowania, bezpieczny CSS oraz konwersję czasu letniego i zimowego w strefie `Europe/Warsaw`.
 
 Kod został zapisany w głównej gałęzi repozytorium GitHub i poprawnie wdrożony do produkcyjnego
 projektu Vercel `cool-ink`. Domena
@@ -171,7 +184,7 @@ i `X-Frame-Options: DENY`. Tryb budowy nadal jest włączony i oznaczony `noinde
 
 1. Przesłać reprezentatywny zestaw realizacji: świeże, zagojone, covery, małe tatuaże i wolne wzory.
 2. Zbudować nową stronę główną jako draft i przetestować ją na telefonie przed publikacją.
-3. Dodać prawdziwe opinie z Google/Facebooka wraz z imieniem i źródłem.
+3. Włączyć Places API w Google Cloud, dodać klucz `GOOGLE_PLACES_API_KEY` w Vercel i uzupełnić Google Place ID w treściach globalnych; widget zacznie wtedy pokazywać aktualne opinie wraz z autorami i źródłem.
 4. Ujednolicić CTA w Instagramie, Facebooku i materiałach promocyjnych do jednego adresu rezerwacji.
 5. Po publikacji mierzyć: wejście z social mediów → otwarcie kalendarza → rozpoczęcie zgłoszenia → wysłane zgłoszenie → potwierdzona wizyta.
 
