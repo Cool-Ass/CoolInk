@@ -137,7 +137,9 @@ Wdrożone i zweryfikowane mechanizmy:
 - walidacja typu i rozmiaru zdjęcia oraz rasteryzacja do WebP;
 - sekrety wyłącznie w zmiennych środowiskowych; w plikach śledzonych przez Git nie ma `.env` ani kluczy.
 
-Aktualny `npm audit --omit=dev` nie wykrywa podatności w zależnościach produkcyjnych.
+Biblioteka przetwarzania zdjęć `sharp` została podniesiona do wersji 0.35.4 usuwającej
+podatności zależności `libheif`. Aktualny `npm audit --omit=dev` nie wykrywa podatności
+w zależnościach produkcyjnych.
 
 ## 7. Magazyn zdjęć
 
