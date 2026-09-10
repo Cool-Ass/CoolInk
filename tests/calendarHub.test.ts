@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calendarAvailabilityEntries, calendarDayStatus, effectiveWorkingHours, isConsultationSlot, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
+import { calendarAvailabilityEntries, calendarDayStatus, effectiveWorkingHours, isConsultationSlot, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, resolveCalendarDayAppearance, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
 import { isValidIconName } from "../lib/icons";
 
 describe("Calendar Hub selection", () => {
@@ -119,6 +119,12 @@ describe("Calendar Hub selection", () => {
       { consultation: true, title: "KONSULTACJA", from: [10, 0], to: [10, 30] },
       { consultation: false, title: "WOLNY TERMIN", from: [16, 0], to: [18, 0] },
     ]);
+  });
+
+  it("gives visible availability priority over occupied and unavailable day colors", () => {
+    expect(resolveCalendarDayAppearance({ hasAvailability: true, hasUnavailable: true })).toEqual({ tone: "available" });
+    expect(resolveCalendarDayAppearance({ hasAvailability: false, hasUnavailable: true })).toEqual({ tone: "unavailable" });
+    expect(resolveCalendarDayAppearance({ hasAvailability: false, hasUnavailable: false, customColor: "#C99A4A" })).toEqual({ tone: "custom", color: "#C99A4A" });
   });
 
   it("marks a day with an active appointment as occupied even when an old free slot still exists", () => {

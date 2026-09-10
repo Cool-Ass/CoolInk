@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { calendarAvailabilityEntries, isConsultationSlot, localDateKey, resolveAvailableRanges } from "@/lib/calendarHub";
+import CalendarMonthGrid, { calendarEntryClassName } from "@/components/calendar/CalendarMonthGrid";
+import { CALENDAR_AVAILABLE_COLOR, CALENDAR_UNAVAILABLE_COLOR, calendarAvailabilityEntries, isConsultationSlot, localDateKey, resolveAvailableRanges, resolveCalendarDayAppearance } from "@/lib/calendarHub";
 import { formatCoolinkTime } from "@/lib/dateTime";
 import BookingRequestForm from "@/components/client/BookingRequestForm";
+import AppModal from "@/components/ui/AppModal";
 
 type Project = { id: string; title: string };
 type Busy = { startsAt: string; endsAt: string };
@@ -35,7 +37,7 @@ export interface BookingCalendarCopy {
 
 const DEFAULT_COPY: BookingCalendarCopy = {
   calendarLabel: "KALENDARZ DOSTĘPNOŚCI",
-  legend: "Tło dnia pozostaje neutralne. Zielone wpisy oznaczają wolny termin, niebieskie — konsultację, pomarańczowe — zajęty termin, czerwone — niedostępność.",
+  legend: "Zielone oznaczenia to wolne terminy i konsultacje. Czerwone — terminy zajęte lub niedostępne.",
   freeLabel: "WOLNY",
   consultationLabel: "KONSULTACJA",
   unavailableLabel: "NIEDOSTĘPNY",
@@ -52,10 +54,7 @@ const DEFAULT_COPY: BookingCalendarCopy = {
 };
 
 const LEGACY_LEGEND = "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Niebieski — konsultację. Czerwony — niedostępny.";
-
-const DAYS = ["PN", "WT", "ŚR", "CZ", "PT", "SB", "ND"];
-const MONTHS = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
-const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const PREVIOUS_LEGEND = "Tło dnia pozostaje neutralne. Zielone wpisy oznaczają wolny termin, niebieskie — konsultację, pomarańczowe — zajęty termin, czerwone — niedostępność.";
 const dayStart = (date: Date) => { const copy = new Date(date); copy.setHours(0, 0, 0, 0); return copy; };
 const dayEnd = (date: Date) => { const end = dayStart(date); end.setDate(end.getDate() + 1); return end; };
 const overlapsDay = (item: { startsAt: string; endsAt: string }, date: Date) => new Date(item.startsAt) < dayEnd(date) && new Date(item.endsAt) > dayStart(date);
@@ -113,6 +112,7 @@ export default function ClientBookingCalendar({
   const [cursor, setCursor] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
   const [projectId, setProjectId] = useState("");
   const [bookingRange, setBookingRange] = useState<{ startsAt: string; endsAt: string; projectId?: string; serviceType: "tattoo" | "consultation"; rescheduleAppointmentId?: string } | null>(null);
+  const [dayDetailsOpen, setDayDetailsOpen] = useState(false);
   const [restoredOpened, setRestoredOpened] = useState(false);
   const firstVisibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastVisibleMonth = new Date(today.getFullYear(), today.getMonth() + Math.min(12, Math.max(1, visibleMonths)) - 1, 1);
@@ -183,95 +183,100 @@ export default function ClientBookingCalendar({
       router.push(`/app?returnTo=${encodeURIComponent(`/app/portal?booking=${encodeURIComponent(startsAt.toISOString())}&service=${serviceType}`)}`);
       return;
     }
+    setDayDetailsOpen(false);
     setBookingRange({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), projectId: serviceType === "tattoo" ? projectId || undefined : undefined, serviceType, rescheduleAppointmentId });
   }
 
-  return (
-    <>
-      <div className={`mt-4 grid min-w-0 gap-3 ${compact ? "grid-cols-1" : "xl:grid-cols-[1.35fr_.65fr]"}`}>
-        <section className="min-w-0 overflow-hidden border border-ink-white/10 bg-ink-charcoal/30 p-2 min-[400px]:p-3 sm:p-4">
-          <p className="text-[10px] tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button>
-            <h2 className="min-w-0 text-center font-display text-lg min-[400px]:text-xl sm:text-2xl">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
-            <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button>
-          </div>
-          <p className="mt-2 text-[10px] leading-relaxed text-ink-grey">{copy.legend === LEGACY_LEGEND ? DEFAULT_COPY.legend : copy.legend}</p>
-          <div className="-mx-2 mt-3 overflow-x-auto px-2 pb-1 min-[400px]:-mx-3 min-[400px]:px-3 sm:-mx-4 sm:px-4">
-            <div className={`grid grid-cols-7 border-l border-t border-ink-white/10 ${compact ? "min-w-[600px]" : "min-w-[680px]"}`}>
-              {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-1.5 text-center text-[10px] text-ink-grey">{day}</div>)}
-              {dates.map((date) => {
-              const dayRanges = rangesFor(date);
-              const dayAvailability = calendarAvailabilityEntries(dayRanges, normalizedSlots);
-              const dayBlocks = blocks.filter((item) => overlapsDay(item, date));
-              const dayBusy = busy.filter((item) => overlapsDay(item, date));
-              const dayEvents = events.filter((item) => overlapsDay(item, date));
-              const dayPromotions = promotions.filter((item) => overlapsDay(item, date));
-              const implicitSunday = date.getDay() === 0 && dayBlocks.length === 0 && dayRanges.length === 0;
-              const dayEntries = [
-                ...dayBlocks.map((item) => ({ key: `block-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: copy.unavailableLabel, color: "#F87171" })),
-                ...dayAvailability.map((entry) => ({ key: `slot-${entry.startsAt.toISOString()}-${entry.endsAt.toISOString()}`, startsAt: entry.startsAt, endsAt: entry.endsAt, label: entry.consultation ? copy.consultationLabel : entry.title?.trim() || copy.freeLabel, color: entry.color ?? (entry.consultation ? "#60A5FA" : "#10B981") })),
-                ...dayBusy.map((item) => ({ key: `busy-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: "ZAJĘTY", color: "#F59E0B" })),
-                ...dayPromotions.map((item) => ({ key: `promotion-${item.id}`, startsAt: item.startsAt, endsAt: item.endsAt, label: item.badge || item.title || copy.promotionFallbackLabel, color: item.color })),
-                ...dayEvents.map((item) => ({ key: `event-${item.id}`, startsAt: item.startsAt, endsAt: item.endsAt, label: item.label || item.title || copy.eventFallbackLabel, color: item.color })),
-                ...(implicitSunday ? [{ key: `sunday-${date.toISOString()}`, startsAt: dayStart(date), endsAt: dayEnd(date), label: copy.unavailableLabel, color: "#F87171" }] : []),
-              ].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-              const selectedDay = sameDay(date, selected);
-              const muted = date.getMonth() !== cursor.getMonth();
-              const accessibleEntries = dayEntries.map((item) => `${formatRangeTime(item, date)} ${item.label}`.trim()).join(", ");
-              return (
-                <button key={date.toISOString()} type="button" aria-label={`${date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}${accessibleEntries ? `: ${accessibleEntries}` : ""}`} onClick={() => { setSelected(dayStart(date)); if (muted) setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }} className={`${compact ? "min-h-24 p-1" : "min-h-28 p-1.5"} min-w-0 overflow-hidden border-b border-r bg-ink-white/[0.035] text-left align-top transition-colors ${selectedDay ? "ring-1 ring-inset ring-ink-gold" : "hover:bg-ink-white/[0.065]"} ${muted ? "opacity-35" : ""}`}>
-                  <strong className="block text-sm sm:text-base">{date.getDate()}</strong>
-                  <span aria-hidden className="mt-1.5 block space-y-1">
-                    {dayEntries.map((item) => {
-                      const time = formatRangeTime(item, date);
-                      return <span key={item.key} title={`${time} ${item.label}`.trim()} className="block min-w-0 border-l-2 px-1 py-0.5 text-[8px] leading-tight" style={{ borderLeftColor: item.color, backgroundColor: `${item.color}1f`, color: item.color }}>
-                        {time && <span className="block font-semibold tabular-nums">{time}</span>}
-                        <span className="block truncate">{item.label}</span>
-                      </span>;
-                    })}
-                  </span>
-                </button>
-              );
-              })}
-            </div>
-          </div>
-        </section>
+  function dayFor(date: Date) {
+    const dayRanges = rangesFor(date);
+    const dayAvailability = calendarAvailabilityEntries(dayRanges, normalizedSlots);
+    const dayBlocks = blocks.filter((item) => overlapsDay(item, date));
+    const dayBusy = busy.filter((item) => overlapsDay(item, date));
+    const dayEvents = events.filter((item) => overlapsDay(item, date));
+    const dayPromotions = promotions.filter((item) => overlapsDay(item, date));
+    const implicitSunday = date.getDay() === 0 && dayBlocks.length === 0 && dayRanges.length === 0;
+    const customColor = dayEvents[0]?.color ?? dayPromotions[0]?.color;
+    const appearance = resolveCalendarDayAppearance({ hasAvailability: dayAvailability.length > 0, hasUnavailable: Boolean(dayBlocks.length || dayBusy.length || implicitSunday), customColor });
+    const entries = [
+      ...dayAvailability.map((entry) => ({ key: `slot-${entry.startsAt.toISOString()}-${entry.endsAt.toISOString()}`, startsAt: entry.startsAt, endsAt: entry.endsAt, label: entry.consultation ? copy.consultationLabel : copy.freeLabel, color: CALENDAR_AVAILABLE_COLOR, kind: "available" as const })),
+      ...dayBlocks.map((item) => ({ key: `block-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: copy.unavailableLabel, color: CALENDAR_UNAVAILABLE_COLOR, kind: "unavailable" as const })),
+      ...dayBusy.map((item) => ({ key: `busy-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: "ZAJĘTY", color: CALENDAR_UNAVAILABLE_COLOR, kind: "unavailable" as const })),
+      ...dayPromotions.map((item) => ({ key: `promotion-${item.id}`, startsAt: item.startsAt, endsAt: item.endsAt, label: item.badge || item.title || copy.promotionFallbackLabel, color: item.color, kind: "custom" as const })),
+      ...dayEvents.map((item) => ({ key: `event-${item.id}`, startsAt: item.startsAt, endsAt: item.endsAt, label: item.label || item.title || copy.eventFallbackLabel, color: item.color, kind: "custom" as const })),
+      ...(implicitSunday ? [{ key: `sunday-${date.toISOString()}`, startsAt: dayStart(date), endsAt: dayEnd(date), label: copy.unavailableLabel, color: CALENDAR_UNAVAILABLE_COLOR, kind: "unavailable" as const }] : []),
+    ].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+    return { appearance, entries };
+  }
 
-        <aside className="min-w-0 border border-ink-white/10 bg-ink-charcoal/30 p-3 sm:p-4">
-          <p className="text-[10px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>
-          {selectedEvents.map((calendarEvent) => <div key={calendarEvent.id} className="mt-4 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || copy.eventFallbackLabel}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>)}
-          {selectedPromotions.map((promotion) => <div key={promotion.id} className="mt-4 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || copy.promotionFallbackLabel}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>)}
-          {projects.length > 0 && !rescheduleAppointmentId && isAvailable(selected) && ranges.length > 0 && hasTattooRange && (
-            <label className="mt-5 block text-xs tracking-[0.1em] text-ink-grey">
-              {copy.addToProjectLabel}
-              <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full border border-ink-white/15 bg-ink-black px-3 py-2.5 text-sm text-ink-white">
-                <option value="">{copy.newVisitLabel}</option>
-                {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
-              </select>
-            </label>
-          )}
-          <div className="mt-5 space-y-3">
-            {!isAvailable(selected) ? (
-              <p className="text-sm text-ink-grey">{copy.unavailableMessage}</p>
-            ) : ranges.length === 0 ? (
-              <p className="text-sm text-ink-grey">{copy.partiallyBookedMessage}</p>
-            ) : ranges.map((range) => {
-              const sourceSlot = slotForRange(range);
-              const consultation = isConsultationSlot(sourceSlot ?? {});
-              const color = sourceSlot?.color ?? (consultation ? "#60A5FA" : "#10B981");
-              return <div key={range.startsAt.toISOString()} className="border p-3" style={{ borderColor: `${color}55`, backgroundColor: `${color}0d` }}>
-                <p className="text-xs" style={{ color }}>{consultation ? copy.consultationLabel : copy.freeLabel}</p>
-                <p className="mt-1 font-display text-xl min-[400px]:text-2xl">{formatCoolinkTime(range.startsAt)}–{formatCoolinkTime(range.endsAt)}</p>
-                {sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
-                <button type="button" disabled={Boolean(rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo"))} onClick={() => propose(range)} className="mt-3 min-h-11 w-full border px-3 py-2.5 text-xs hover:bg-ink-white/5 disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto" style={{ borderColor: `${color}99`, color }}>{rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo") ? "INNY RODZAJ TERMINU" : rescheduleAppointmentId ? "WYBIERZ NOWY TERMIN" : consultation ? copy.consultationButtonLabel : projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
-              </div>;
-            })}
-          </div>
-        </aside>
-      </div>
+  function selectClientDay(date: Date) {
+    setSelected(dayStart(date));
+    if (date.getMonth() !== cursor.getMonth()) setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
+    setDayDetailsOpen(mode === "client" && rangesFor(date).length > 0);
+  }
 
-      {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projectId={bookingRange.projectId} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
-    </>
-  );
+  const selectedKeys = new Set([localDateKey(selected)]);
+  const publicLegend = copy.legend === LEGACY_LEGEND || copy.legend === PREVIOUS_LEGEND ? DEFAULT_COPY.legend : copy.legend;
+
+  const bookingDetails = <>
+    {selectedEvents.map((calendarEvent) => <div key={calendarEvent.id} className="mb-3 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || copy.eventFallbackLabel}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>)}
+    {selectedPromotions.map((promotion) => <div key={promotion.id} className="mb-3 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || copy.promotionFallbackLabel}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>)}
+    {projects.length > 0 && !rescheduleAppointmentId && isAvailable(selected) && ranges.length > 0 && hasTattooRange && (
+      <label className="block text-xs tracking-[0.1em] text-ink-grey">
+        {copy.addToProjectLabel}
+        <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full border border-ink-white/15 bg-ink-black px-3 py-2.5 text-sm text-ink-white">
+          <option value="">{copy.newVisitLabel}</option>
+          {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+        </select>
+      </label>
+    )}
+    <div className="mt-4 space-y-3">
+      {!isAvailable(selected) ? (
+        <p className="text-sm text-ink-grey">{copy.unavailableMessage}</p>
+      ) : ranges.length === 0 ? (
+        <p className="text-sm text-ink-grey">{copy.partiallyBookedMessage}</p>
+      ) : ranges.map((range) => {
+        const sourceSlot = slotForRange(range);
+        const consultation = isConsultationSlot(sourceSlot ?? {});
+        return <div key={range.startsAt.toISOString()} className="border border-emerald-400/40 bg-emerald-500/5 p-3">
+          <p className="text-xs text-emerald-300">{consultation ? copy.consultationLabel : copy.freeLabel}</p>
+          <p className="mt-1 font-display text-xl min-[400px]:text-2xl">{formatCoolinkTime(range.startsAt)}–{formatCoolinkTime(range.endsAt)}</p>
+          {sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
+          <button type="button" disabled={Boolean(rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo"))} onClick={() => propose(range)} className="mt-3 min-h-11 w-full border border-emerald-400/70 px-3 py-2.5 text-xs text-emerald-300 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto">{rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo") ? "INNY RODZAJ TERMINU" : rescheduleAppointmentId ? "WYBIERZ NOWY TERMIN" : consultation ? copy.consultationButtonLabel : projectId ? copy.proposeButtonLabel : copy.bookingButtonLabel}</button>
+        </div>;
+      })}
+    </div>
+  </>;
+
+  return <>
+    <div className={`mt-4 grid min-w-0 gap-3 ${mode === "public" && !compact ? "xl:grid-cols-[1.35fr_.65fr]" : "grid-cols-1"}`}>
+      <section className="min-w-0 overflow-hidden border border-ink-white/10 bg-ink-charcoal/30 p-2.5 sm:p-4">
+        {mode === "public" && <><p className="mb-2 text-[10px] tracking-[0.16em] text-ink-gold">{copy.calendarLabel}</p><p className="mb-3 text-[10px] leading-relaxed text-ink-grey">{publicLegend}</p></>}
+        <CalendarMonthGrid
+          cursor={cursor}
+          dates={dates}
+          selectedKeys={selectedKeys}
+          onPrevious={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))}
+          onNext={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))}
+          previousDisabled={previousDisabled}
+          nextDisabled={nextDisabled}
+          appearanceFor={(date) => dayFor(date).appearance}
+          onDayClick={(date) => selectClientDay(date)}
+          ariaLabelFor={(date) => {
+            const entries = dayFor(date).entries.map((item) => `${formatRangeTime(item, date)} ${item.label}`.trim()).join(", ");
+            return `${date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}${entries ? `: ${entries}` : ""}`;
+          }}
+          renderDayContent={(date) => dayFor(date).entries.map((item) => {
+            const itemTime = formatRangeTime(item, date);
+            return <span key={item.key} title={`${itemTime} ${item.label}`.trim()} className={calendarEntryClassName(item.kind)} style={item.kind === "custom" ? { backgroundColor: item.color } : undefined}>{item.label}{itemTime ? ` · ${itemTime}` : ""}</span>;
+          })}
+          wholeDayButton
+          compact={compact}
+        />
+      </section>
+      {mode === "public" && <aside className="min-w-0 border border-ink-white/10 bg-ink-charcoal/30 p-3 sm:p-4"><p className="mb-4 text-[10px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>{bookingDetails}</aside>}
+    </div>
+
+    {mode === "client" && dayDetailsOpen && ranges.length > 0 && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle="Wybierz dostępny termin." size="sm" onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
+    {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projectId={bookingRange.projectId} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+  </>;
 }

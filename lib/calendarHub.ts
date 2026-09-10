@@ -67,6 +67,10 @@ export type ExplicitAvailableSlot = { startsAt: Date; endsAt: Date; isPublic?: b
 export type TimeRange = { startsAt: Date; endsAt: Date };
 export type CalendarAvailabilitySlot = ExplicitAvailableSlot & { title?: string | null; color?: string | null };
 export type CalendarAvailabilityEntry = TimeRange & { title: string | null; color: string | null; consultation: boolean };
+export const CALENDAR_AVAILABLE_COLOR = "#10B981";
+export const CALENDAR_UNAVAILABLE_COLOR = "#EF4444";
+export type CalendarDayVisualTone = "default" | "available" | "unavailable" | "custom";
+export type CalendarDayVisualAppearance = { tone: CalendarDayVisualTone; color?: string };
 
 /**
  * Preserve every independently bookable range and its source metadata. A day
@@ -78,6 +82,14 @@ export function calendarAvailabilityEntries(ranges: TimeRange[], slots: Calendar
     const source = slots.find((slot) => slot.isPublic !== false && slot.startsAt <= range.startsAt && slot.endsAt >= range.endsAt);
     return { ...range, title: source?.title ?? null, color: source?.color ?? null, consultation: isConsultationSlot(source ?? {}) };
   });
+}
+
+/** Availability always wins the day color, even when another appointment is busy. */
+export function resolveCalendarDayAppearance({ hasAvailability, hasUnavailable, customColor }: { hasAvailability: boolean; hasUnavailable: boolean; customColor?: string }): CalendarDayVisualAppearance {
+  if (hasAvailability) return { tone: "available" };
+  if (hasUnavailable) return { tone: "unavailable" };
+  if (customColor) return { tone: "custom", color: customColor };
+  return { tone: "default" };
 }
 
 export type CalendarDayStatus = "default" | "available" | "occupied" | "unavailable";
