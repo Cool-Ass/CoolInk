@@ -80,7 +80,7 @@ body {
   }
 }
 
-.builder-custom-typography :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote) {
+.builder-custom-typography :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote):not(.builder-editor-chrome, .builder-editor-chrome *) {
   color: var(--builder-text-color, inherit) !important;
   font-family: var(--builder-font-family, inherit) !important;
   font-size: var(--builder-font-size, inherit) !important;
@@ -89,6 +89,130 @@ body {
   letter-spacing: var(--builder-letter-spacing, inherit) !important;
   text-align: var(--builder-text-align, inherit) !important;
   text-transform: var(--builder-text-transform, none) !important;
+}
+
+/* Builder controls live inside styled widgets, but must never inherit the
+   typography being edited. This keeps delete/duplicate icons stable. */
+.builder-editor-chrome,
+.builder-editor-chrome :where(button, span) {
+  font-family: var(--font-jost), sans-serif !important;
+  font-size: 9px !important;
+  font-style: normal !important;
+  font-weight: 500 !important;
+  letter-spacing: .02em !important;
+  line-height: 1 !important;
+  text-align: left !important;
+  text-decoration: none !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  -webkit-text-stroke: 0 transparent !important;
+}
+
+.builder-custom-font-size :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote):not(.builder-editor-chrome, .builder-editor-chrome *) {
+  font-size: var(--builder-font-size-mobile, var(--builder-font-size, inherit)) !important;
+}
+
+.builder-custom-icons .builder-content-icon,
+.builder-decorative-icon {
+  box-sizing: content-box;
+  color: var(--builder-icon-color, currentColor);
+  height: var(--builder-icon-size-mobile, 24px);
+  width: var(--builder-icon-size-mobile, 24px);
+  padding: var(--builder-icon-padding, 0);
+  border-radius: var(--builder-icon-radius, 0);
+  background: var(--builder-icon-bg, transparent);
+  opacity: var(--builder-icon-opacity, 1);
+  transform: translate3d(var(--builder-icon-x, 0), var(--builder-icon-y, 0), 0) rotate(var(--builder-icon-rotate, 0deg));
+  z-index: var(--builder-icon-z, 5);
+}
+
+.builder-decorative-icon { z-index: var(--builder-icon-z, 5); }
+.builder-icon-top-left .builder-decorative-icon { left: 1rem; top: 1rem; }
+.builder-icon-top-center .builder-decorative-icon { left: 50%; top: 1rem; transform: translate3d(calc(-50% + var(--builder-icon-x, 0px)), var(--builder-icon-y, 0px), 0) rotate(var(--builder-icon-rotate, 0deg)); }
+.builder-icon-top-right .builder-decorative-icon { right: 1rem; top: 1rem; }
+.builder-icon-center-left .builder-decorative-icon { left: 1rem; top: 50%; transform: translate3d(var(--builder-icon-x, 0px), calc(-50% + var(--builder-icon-y, 0px)), 0) rotate(var(--builder-icon-rotate, 0deg)); }
+.builder-icon-center .builder-decorative-icon { left: 50%; top: 50%; transform: translate3d(calc(-50% + var(--builder-icon-x, 0px)), calc(-50% + var(--builder-icon-y, 0px)), 0) rotate(var(--builder-icon-rotate, 0deg)); }
+.builder-icon-center-right .builder-decorative-icon { right: 1rem; top: 50%; transform: translate3d(var(--builder-icon-x, 0px), calc(-50% + var(--builder-icon-y, 0px)), 0) rotate(var(--builder-icon-rotate, 0deg)); }
+.builder-icon-bottom-left .builder-decorative-icon { bottom: 1rem; left: 1rem; }
+.builder-icon-bottom-center .builder-decorative-icon { bottom: 1rem; left: 50%; transform: translate3d(calc(-50% + var(--builder-icon-x, 0px)), var(--builder-icon-y, 0px), 0) rotate(var(--builder-icon-rotate, 0deg)); }
+.builder-icon-bottom-right .builder-decorative-icon { bottom: 1rem; right: 1rem; }
+
+.builder-pattern-layer { opacity: var(--builder-pattern-opacity, .18); }
+.builder-pattern-dots { background-image: radial-gradient(circle, var(--builder-pattern-color) 1px, transparent 1.5px); background-size: var(--builder-pattern-size) var(--builder-pattern-size); }
+.builder-pattern-grid { background-image: linear-gradient(var(--builder-pattern-color) 1px, transparent 1px), linear-gradient(90deg, var(--builder-pattern-color) 1px, transparent 1px); background-size: var(--builder-pattern-size) var(--builder-pattern-size); }
+.builder-pattern-diagonal { background-image: repeating-linear-gradient(135deg, transparent 0 12px, var(--builder-pattern-color) 12px 13px); background-size: var(--builder-pattern-size) var(--builder-pattern-size); }
+.builder-pattern-crosses { background-image: linear-gradient(var(--builder-pattern-color) 1px, transparent 1px), linear-gradient(90deg, var(--builder-pattern-color) 1px, transparent 1px); background-position: center; background-size: var(--builder-pattern-size) calc(var(--builder-pattern-size) * .3), calc(var(--builder-pattern-size) * .3) var(--builder-pattern-size); }
+.builder-pattern-noise { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.75'/%3E%3C/svg%3E"); background-size: var(--builder-pattern-size) var(--builder-pattern-size); mix-blend-mode: soft-light; }
+.builder-glow-layer { background: radial-gradient(circle var(--builder-glow-size) at var(--builder-glow-x) var(--builder-glow-y), color-mix(in srgb, var(--builder-glow-color) calc(var(--builder-glow-opacity) * 100%), transparent), transparent 70%); }
+
+.builder-mask-slant-left { clip-path: polygon(0 5%, 100% 0, 100% 100%, 0 95%); }
+.builder-mask-slant-right { clip-path: polygon(0 0, 100% 5%, 100% 95%, 0 100%); }
+.builder-mask-diamond { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.builder-mask-hexagon { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.builder-mask-circle { clip-path: circle(50% at 50% 50%); }
+.builder-mask-ellipse { clip-path: ellipse(50% 43% at 50% 50%); }
+.builder-mask-ticket { clip-path: polygon(0 0, 100% 0, 100% 38%, 97% 40%, 95% 45%, 95% 55%, 97% 60%, 100% 62%, 100% 100%, 0 100%, 0 62%, 3% 60%, 5% 55%, 5% 45%, 3% 40%, 0 38%); }
+.builder-mask-arch { clip-path: ellipse(72% 100% at 50% 100%); }
+
+.builder-shape-divider { height: var(--builder-divider-height, 48px); background: var(--builder-divider-color, #c99a4a); width: 100%; }
+.builder-shape-divider-top { transform: translateY(-1px); }
+.builder-shape-divider-bottom { transform: translateY(1px) rotate(180deg); }
+.builder-shape-slant { clip-path: polygon(0 0, 100% 0, 100% 10%, 0 100%); }
+.builder-shape-wave { clip-path: polygon(0 0, 100% 0, 100% 42%, 90% 65%, 80% 42%, 70% 70%, 60% 45%, 50% 72%, 40% 45%, 30% 70%, 20% 42%, 10% 65%, 0 42%); }
+.builder-shape-zigzag { clip-path: polygon(0 0, 100% 0, 100% 35%, 95% 100%, 90% 35%, 85% 100%, 80% 35%, 75% 100%, 70% 35%, 65% 100%, 60% 35%, 55% 100%, 50% 35%, 45% 100%, 40% 35%, 35% 100%, 30% 35%, 25% 100%, 20% 35%, 15% 100%, 10% 35%, 5% 100%, 0 35%); }
+.builder-shape-curve { border-radius: 0 0 50% 50% / 0 0 100% 100%; }
+
+.builder-hover-effect { transition: transform var(--builder-transition-duration, 350ms) var(--builder-transition-easing, ease), filter var(--builder-transition-duration, 350ms) var(--builder-transition-easing, ease), opacity var(--builder-transition-duration, 350ms) var(--builder-transition-easing, ease); }
+.builder-hover-effect:hover { filter: var(--builder-hover-filter); opacity: var(--builder-hover-opacity, 1); transform: var(--builder-hover-transform); }
+
+.builder-animate { animation-duration: var(--builder-animation-duration, 700ms); animation-delay: var(--builder-animation-delay, 0ms); animation-fill-mode: both; animation-iteration-count: var(--builder-animation-iteration, 1); animation-timing-function: var(--builder-animation-easing, ease); }
+.builder-animate-fade { animation-name: builder-fade; }
+.builder-animate-fade-up { animation-name: builder-fade-up; }
+.builder-animate-fade-down { animation-name: builder-fade-down; }
+.builder-animate-fade-left { animation-name: builder-fade-left; }
+.builder-animate-fade-right { animation-name: builder-fade-right; }
+.builder-animate-zoom { animation-name: builder-zoom; }
+.builder-animate-flip { animation-name: builder-flip; }
+.builder-animate-rotate { animation-name: builder-rotate-in; }
+.builder-animate-blur-in { animation-name: builder-blur-in; }
+.builder-animate-bounce { animation-name: builder-bounce; }
+.builder-animate-float { animation-name: builder-float; }
+.builder-animate-pulse { animation-name: builder-pulse; }
+@keyframes builder-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes builder-fade-up { from { opacity: 0; transform: translateY(42px) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-fade-down { from { opacity: 0; transform: translateY(-42px) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-fade-left { from { opacity: 0; transform: translateX(55px) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-fade-right { from { opacity: 0; transform: translateX(-55px) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-zoom { from { opacity: 0; transform: scale(.78) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-flip { from { opacity: 0; transform: perspective(800px) rotateY(70deg) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-rotate-in { from { opacity: 0; transform: rotate(-8deg) scale(.9) var(--builder-base-transform, none); } to { opacity: 1; transform: var(--builder-base-transform, none); } }
+@keyframes builder-blur-in { from { opacity: 0; filter: blur(18px) var(--builder-base-filter); } to { opacity: 1; filter: var(--builder-base-filter); } }
+@keyframes builder-bounce { 0%, 100% { transform: translateY(0) var(--builder-base-transform, none); } 45% { transform: translateY(-16px) var(--builder-base-transform, none); } 70% { transform: translateY(-5px) var(--builder-base-transform, none); } }
+@keyframes builder-float { 0%, 100% { transform: translateY(0) var(--builder-base-transform, none); } 50% { transform: translateY(-12px) var(--builder-base-transform, none); } }
+@keyframes builder-pulse { 0%, 100% { transform: scale(1) var(--builder-base-transform, none); opacity: 1; } 50% { transform: scale(1.035) var(--builder-base-transform, none); opacity: .86; } }
+
+@supports (animation-timeline: view()) {
+  .builder-parallax:not(.builder-animate) { animation-name: builder-parallax-bg; animation-duration: 1ms; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+  .builder-parallax-slow { --builder-parallax-distance: 30px; }
+  .builder-parallax-medium { --builder-parallax-distance: 70px; }
+  .builder-parallax-fast { --builder-parallax-distance: 130px; }
+  @keyframes builder-parallax-bg { from { background-position: center calc(50% + var(--builder-parallax-distance)); } to { background-position: center calc(50% - var(--builder-parallax-distance)); } }
+}
+
+@media (min-width: 640px) {
+  .builder-custom-font-size :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote):not(.builder-editor-chrome, .builder-editor-chrome *) { font-size: var(--builder-font-size-tablet, var(--builder-font-size, inherit)) !important; }
+  .builder-custom-icons .builder-content-icon,
+  .builder-decorative-icon { height: var(--builder-icon-size-tablet, 24px); width: var(--builder-icon-size-tablet, 24px); }
+}
+
+@media (min-width: 1024px) {
+  .builder-custom-font-size :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote):not(.builder-editor-chrome, .builder-editor-chrome *) { font-size: var(--builder-font-size-desktop, var(--builder-font-size, inherit)) !important; }
+  .builder-custom-icons .builder-content-icon,
+  .builder-decorative-icon { height: var(--builder-icon-size-desktop, 24px); width: var(--builder-icon-size-desktop, 24px); }
+}
+
+@media (max-width: 767px) {
+  .builder-fixed-background { background-attachment: scroll !important; }
 }
 
 :where(input, textarea, select) {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Redo2, Undo2 } from "lucide-react";
 
 export type DeviceMode = "desktop" | "tablet" | "mobile";
 
@@ -16,6 +17,10 @@ interface BuilderTopBarProps {
   onPublish: () => void;
   onUnpublish: () => void;
   onOpenSettings: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   isHomepage: boolean;
   isSystemPage?: boolean;
   slug: string;
@@ -39,6 +44,10 @@ export default function BuilderTopBar({
   onPublish,
   onUnpublish,
   onOpenSettings,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   isHomepage,
   isSystemPage = false,
   slug,
@@ -80,6 +89,10 @@ export default function BuilderTopBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center border border-ink-white/15" role="group" aria-label="Historia zmian">
+          <button type="button" onClick={onUndo} disabled={!canUndo} title="Cofnij (Ctrl+Z)" aria-label="Cofnij zmianę" className="flex h-9 w-9 items-center justify-center text-ink-grey transition hover:text-ink-gold disabled:opacity-25"><Undo2 className="h-4 w-4" /></button>
+          <button type="button" onClick={onRedo} disabled={!canRedo} title="Ponów (Ctrl+Shift+Z)" aria-label="Ponów zmianę" className="flex h-9 w-9 items-center justify-center border-l border-ink-white/15 text-ink-grey transition hover:text-ink-gold disabled:opacity-25"><Redo2 className="h-4 w-4" /></button>
+        </div>
         <div className="flex items-center gap-1 border border-ink-white/15 p-1" role="group" aria-label="Podgląd na urządzeniach">
           {(
             [

@@ -80,6 +80,24 @@ Każdy moduł ma wspólne sterowanie:
 
 Ustawienia widgetu są podzielone na kompaktowe zakładki „Treść/Układ”, „Styl” i „Zaawansowane”. Obejmują między innymi krój i rozmiar pisma, wagę, interlinię, odstępy liter, wyrównanie, transformację tekstu, kolory, tło, obrys, cień, marginesy, dopełnienie, responsywność i własny CSS.
 
+Aktualizacja z 10 września 2026 rozszerzyła builder do wspólnego systemu stylów dla
+sekcji, każdej kolumny i każdego widgetu. Dostępne są teraz między innymi gradienty
+liniowe i radialne, nakładki z trybami mieszania, darmowe wzory i ziarno, poświaty,
+maski, górne i dolne separatory kształtowe, filtry obrazu, backdrop blur, dokładne
+obramowania i cienie, transformacje, pozycjonowanie, flex/grid, kontrola przepełnienia,
+efekty najechania, animacje wejścia i pętle, parallax, osobne rozmiary tekstu i ikon
+dla telefonu/tabletu/komputera oraz ponad 70 darmowych ikon. Pasek narzędzi buildera
+jest odizolowany od typografii edytowanej treści, więc zmiana nagłówka nie zmienia już
+rozmiaru ikony usuwania lub duplikowania.
+
+Dodano też funkcje przyspieszające pracę: wybieranie i stylowanie pojedynczej kolumny,
+kopiowanie/wklejanie/reset stylu, 50-krokową historię cofania i ponawiania wraz ze
+skrótami klawiaturowymi, kreatywną paletę kolorów oraz rozszerzone ustawienia właściwe
+dla zdjęć, przycisków, galerii, FAQ, separatorów i wideo. Galeria może otwierać zdjęcia
+w pełnoekranowym podglądzie, obrazy mają punkt kadrowania i efekty hover, a wideo ma
+proporcje, pętlę, autostart, wyciszenie i sterowanie. Wszystkie efekty ruchowe nadal
+respektują systemową preferencję ograniczenia ruchu.
+
 FAQ ma wariant liniowy, kartowy i dzielony. Lista korzyści działa jako lista, karty albo numerowane kroki w 1–3 kolumnach. Cytaty mają wariant redakcyjny, kartowy i centralny. Własny moduł HTML + CSS jest wyświetlany w odizolowanej ramce bez JavaScriptu, formularzy, dostępu do strony nadrzędnej i połączeń API. Pozwala to tworzyć niestandardowe sekcje bez narażania sesji administratora lub klienta.
 
 Globalna paleta sześciu kolorów jest edytowalna w „Treściach globalnych” i obejmuje stronę główną, wszystkie podstrony, politykę prywatności oraz ekran trybu budowy. Builder zachowuje wersję roboczą oddzielnie od opublikowanej, więc pełny redesign można przygotowywać bez wpływu na klientów.
@@ -166,8 +184,8 @@ Cloudflare pokazuje cenę bazową 0 USD/miesiąc, 10 GB storage, 1 mln operacji 
 | Kontrola | Wynik |
 |---|---:|
 | TypeScript | PASS |
-| Testy automatyczne | 65/65 PASS |
-| ESLint | 0 błędów, 9 ostrzeżeń nieblokujących |
+| Testy automatyczne | 68/68 PASS |
+| ESLint | 0 błędów, 11 ostrzeżeń nieblokujących |
 | Build produkcyjny Next.js | PASS |
 | `npm audit --omit=dev` | 0 podatności |
 | Sekrety w plikach śledzonych przez Git | nie wykryto |

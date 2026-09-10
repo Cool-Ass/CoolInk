@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, GripVertical, MoreHorizontal, Trash2 } from "lucide-react";
 import Hero from "@/components/Hero";
 import Header from "@/components/Header";
@@ -19,6 +18,7 @@ import TextSection from "@/components/modules/TextSection";
 import ImageText from "@/components/modules/ImageText";
 import Spacer from "@/components/modules/Spacer";
 import BuilderWidgets from "@/components/modules/BuilderWidgets";
+import BuilderStyleLayers from "@/components/builder/BuilderStyleLayers";
 import {
   MODULE_LABELS,
   withDefaults,
@@ -29,46 +29,8 @@ import {
   type PortfolioModuleData,
 } from "@/lib/modules";
 import { safeHref, safeMapEmbedUrl } from "@/lib/safeHref";
-import { parseSafeCssDeclarations } from "@/lib/moduleStyle";
+import { buildVisualStyle, builderEffectClasses } from "@/lib/moduleStyle";
 import type { SiteContent } from "@/lib/content";
-
-function moduleVisualStyle(mod: Module): CSSProperties | undefined {
-  const style = mod.style;
-  if (!style) return undefined;
-  const box = (name: "margin" | "padding", value?: ModuleStyle["marginBox"]) => value ? {
-    [`${name}Top`]: value.top,
-    [`${name}Right`]: value.right,
-    [`${name}Bottom`]: value.bottom,
-    [`${name}Left`]: value.left,
-  } : {};
-  return {
-    backgroundColor: style.backgroundColor || undefined,
-    backgroundImage: style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : undefined,
-    backgroundSize: style.backgroundSize || "cover",
-    backgroundPosition: "center",
-    borderColor: style.borderColor || undefined,
-    borderWidth: style.borderWidth ? `${Math.min(12, Math.max(0, style.borderWidth))}px` : undefined,
-    borderStyle: style.borderWidth ? "solid" : undefined,
-    minHeight: style.minHeight ? `${Math.min(1600, Math.max(0, style.minHeight))}px` : undefined,
-    opacity: typeof style.opacity === "number" ? Math.min(1, Math.max(0.1, style.opacity / 100)) : undefined,
-    zIndex: style.zIndex,
-    ...(style.fontSize ? { "--builder-font-size": `${style.fontSize}px` } : {}),
-    ...(style.lineHeight ? { "--builder-line-height": String(style.lineHeight) } : {}),
-    ...(typeof style.letterSpacing === "number" && style.letterSpacing !== 0 ? { "--builder-letter-spacing": `${style.letterSpacing}px` } : {}),
-    ...(style.fontWeight ? { "--builder-font-weight": style.fontWeight } : {}),
-    ...(style.fontFamily && style.fontFamily !== "inherit" ? { "--builder-font-family": style.fontFamily === "display" ? "var(--font-anton)" : "var(--font-jost)" } : {}),
-    ...(style.textAlign ? { "--builder-text-align": style.textAlign } : {}),
-    ...(style.textTransform ? { "--builder-text-transform": style.textTransform } : {}),
-    ...(style.color ? { "--builder-text-color": style.color } : {}),
-    ...box("margin", style.marginBox),
-    ...box("padding", style.paddingBox),
-    ...parseSafeCssDeclarations(style.customCss),
-  } as CSSProperties;
-}
-
-function hasTypography(style?: ModuleStyle) {
-  return Boolean(style?.fontSize || style?.lineHeight || style?.letterSpacing || style?.fontWeight || (style?.fontFamily && style.fontFamily !== "inherit") || style?.textAlign || style?.textTransform || style?.color);
-}
 
 function radiusClass(radius?: ModuleStyle["radius"]) {
   return radius === "lg" ? "rounded-2xl" : radius === "md" ? "rounded-xl" : radius === "sm" ? "rounded-md" : "";
@@ -135,14 +97,16 @@ export interface ModuleRendererProps {
   onToggleHidden?: (id: string) => void;
   onReorder?: (fromId: string, toId: string) => void;
   selectedWidgetId?: string | null;
+  selectedColumnIndex?: number | null;
   onSelectWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
+  onSelectColumn?: (moduleId: string, columnIndex: number) => void;
   onDeleteWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
   onDuplicateWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
   onDuplicateColumn?: (moduleId: string, columnIndex: number) => void;
   onColumnsChange?: (moduleId: string, columns: ColumnWidget[][]) => void;
 }
 
-function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "onSelectWidget" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onColumnsChange">) {
+function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "selectedColumnIndex" | "onSelectWidget" | "onSelectColumn" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onColumnsChange">) {
   switch (mod.type) {
     case "siteHeader": {
       const data = withDefaults("siteHeader", mod.data);
@@ -210,7 +174,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
-      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex) => nested?.onDuplicateColumn?.(mod.id, columnIndex)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex) => nested?.onSelectColumn?.(mod.id, columnIndex)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex) => nested?.onDuplicateColumn?.(mod.id, columnIndex)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
     }
     default:
       return null;
@@ -230,7 +194,9 @@ export default function ModuleRenderer({
   onToggleHidden,
   onReorder,
   selectedWidgetId,
+  selectedColumnIndex,
   onSelectWidget,
+  onSelectColumn,
   onDeleteWidget,
   onDuplicateWidget,
   onDuplicateColumn,
@@ -241,14 +207,13 @@ export default function ModuleRenderer({
   return (
     <>
       {visible.map((mod, i) => {
-        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, onSelectWidget, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onColumnsChange });
+        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, selectedColumnIndex, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onColumnsChange });
 
-        const visualStyle = moduleVisualStyle(mod);
-        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} ${hasTypography(mod.style) ? "builder-custom-typography" : ""} ${mod.style?.fontSize ? "builder-custom-font-size" : ""} ${mod.style?.cssClass ?? ""}`;
-        const overlay = mod.style?.overlayColor && (mod.style.overlayOpacity ?? 0) > 0 ? <span aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundColor: mod.style.overlayColor, opacity: (mod.style.overlayOpacity ?? 0) / 100 }} /> : null;
+        const visualStyle = buildVisualStyle(mod.style);
+        const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} builder-styled-icons ${builderEffectClasses(mod.style)} ${mod.style?.cssClass ?? ""}`;
 
         if (!editable) {
-          return <div key={mod.id} id={mod.style?.anchorId} className={`relative ${mod.type === "siteHeader" || mod.style?.anchorId === "site-header" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} style={visualStyle}>{overlay}<div className="relative">{content}</div></div>;
+          return <div key={mod.id} id={mod.style?.anchorId} className={`relative isolate ${mod.type === "siteHeader" || mod.style?.anchorId === "site-header" || mod.style?.overflowX === "visible" || mod.style?.overflowY === "visible" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} style={visualStyle}><BuilderStyleLayers style={mod.style} /><div className="relative z-[3]">{content}</div></div>;
         }
 
         const isSelected = selectedId === mod.id;
@@ -276,14 +241,14 @@ export default function ModuleRenderer({
             }}
             id={mod.style?.anchorId}
             style={visualStyle}
-            className={`group/mod relative cursor-pointer overflow-hidden outline outline-2 outline-offset-[-2px] transition-all ${styleClass} ${
+            className={`group/mod relative isolate cursor-pointer overflow-hidden outline outline-2 outline-offset-[-2px] transition-all ${styleClass} ${
               isSelected
                 ? "outline-ink-gold"
                 : "outline-transparent hover:outline-ink-gold/40"
             } ${mod.hidden ? "opacity-40" : ""}`}
           >
             {/* Compact toolbar stays out of the section until its corner button is used. */}
-            <div className="group/tools pointer-events-auto absolute right-2 top-2 z-40 flex items-center shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <div className="builder-editor-chrome group/tools pointer-events-auto absolute right-2 top-2 z-40 flex items-center shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="hidden items-center border border-ink-white/15 bg-ink-black/95 p-1 text-ink-grey backdrop-blur group-hover/tools:flex group-focus-within/tools:flex">
                 <span className="flex max-w-32 items-center gap-1.5 truncate border-r border-ink-white/10 px-2 text-[9px] text-ink-white"><GripVertical className="h-3.5 w-3.5 text-ink-gold" />{MODULE_LABELS[mod.type]}</span>
                 <button type="button" title="Przesuń w górę" onClick={() => onMove?.(mod.id, "up")} disabled={i === 0} aria-label="Przesuń sekcję w górę" className="flex h-7 w-7 items-center justify-center hover:text-ink-gold disabled:opacity-25"><ArrowUp className="h-3.5 w-3.5" /></button>
@@ -295,9 +260,9 @@ export default function ModuleRenderer({
               <button type="button" title="Narzędzia sekcji" aria-label={`Narzędzia sekcji: ${MODULE_LABELS[mod.type]}`} className={`flex h-8 w-8 items-center justify-center border bg-ink-black/90 backdrop-blur transition-colors ${isSelected ? "border-ink-gold text-ink-gold" : "border-ink-white/20 text-ink-grey opacity-65 group-hover/mod:opacity-100"}`}><MoreHorizontal className="h-4 w-4" /></button>
             </div>
 
-            {/* FAQ is deliberately interactive in the builder preview, so its
-                accessibility buttons remain usable while the whole module is selected. */}
-            {overlay}<div className={`relative ${editable && mod.type !== "faq" ? "pointer-events-none" : ""}`}>{content}</div>
+            {/* FAQ and column widgets stay interactive in the preview. Other
+                legacy modules select as one section and do not capture clicks. */}
+            <BuilderStyleLayers style={mod.style} /><div className={`relative z-[3] ${editable && mod.type !== "faq" && mod.type !== "columns" ? "pointer-events-none" : ""}`}>{content}</div>
           </div>
         );
       })}

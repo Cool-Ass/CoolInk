@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cloneBuilderModule, defaultHomepageModules, withDefaults } from "../lib/modules";
+import { cloneBuilderModule, defaultHomepageModules, defaultModuleData, withDefaults } from "../lib/modules";
 import { addGoogleReviewsIfMissing } from "../lib/homepage";
 
 describe("homepage builder content", () => {
@@ -51,5 +51,12 @@ describe("homepage builder content", () => {
     const partiallySavedContact = withDefaults("contact", { booking: { freeLabel: "DOSTĘPNY" } });
     expect(partiallySavedContact.booking.freeLabel).toBe("DOSTĘPNY");
     expect(partiallySavedContact.booking.consultationLabel).toBe("KONSULTACJA");
+  });
+
+  it("provides useful creative defaults for media widgets", () => {
+    expect(defaultModuleData("gallery")).toMatchObject({ lightbox: true, hoverEffect: "zoom", aspect: "square" });
+    expect(defaultModuleData("video")).toMatchObject({ controls: true, muted: true, autoplay: false });
+    expect(defaultModuleData("faq")).toMatchObject({ allowMultiple: false, iconStyle: "plus" });
+    expect(defaultModuleData("button")).toMatchObject({ size: "md", radius: "none", target: "same" });
   });
 });

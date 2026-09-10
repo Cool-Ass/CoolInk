@@ -44,9 +44,36 @@ export interface ModuleStyle {
   backgroundColor?: string;
   backgroundImage?: string;
   backgroundSize?: "cover" | "contain" | "auto";
+  backgroundPosition?: "center" | "top" | "bottom" | "left" | "right";
+  backgroundRepeat?: "no-repeat" | "repeat" | "repeat-x" | "repeat-y";
+  backgroundAttachment?: "scroll" | "fixed";
+  backgroundBlendMode?: BlendMode;
+  gradientEnabled?: boolean;
+  gradientType?: "linear" | "radial";
+  gradientAngle?: number;
+  gradientColor1?: string;
+  gradientColor2?: string;
+  gradientStop1?: number;
+  gradientStop2?: number;
   overlayColor?: string;
   overlayOpacity?: number;
+  overlayBlendMode?: BlendMode;
+  pattern?: "none" | "noise" | "dots" | "grid" | "diagonal" | "crosses";
+  patternColor?: string;
+  patternOpacity?: number;
+  patternSize?: number;
+  glowColor?: string;
+  glowX?: number;
+  glowY?: number;
+  glowSize?: number;
+  glowOpacity?: number;
+  maskShape?: "none" | "slant-left" | "slant-right" | "diamond" | "hexagon" | "circle" | "ellipse" | "ticket" | "arch";
+  shapeDividerTop?: "none" | "slant" | "wave" | "zigzag" | "curve";
+  shapeDividerBottom?: "none" | "slant" | "wave" | "zigzag" | "curve";
+  shapeDividerColor?: string;
+  shapeDividerHeight?: number;
   radius?: "none" | "sm" | "md" | "lg";
+  borderRadius?: number;
   padding?: "none" | "sm" | "md" | "lg" | "xl";
   margin?: "none" | "sm" | "md" | "lg" | "xl";
   contentWidth?: "full" | "wide" | "normal" | "narrow";
@@ -54,7 +81,14 @@ export interface ModuleStyle {
   shadow?: "none" | "sm" | "md" | "lg";
   borderColor?: string;
   borderWidth?: number;
+  borderStyle?: "solid" | "dashed" | "dotted" | "double";
   minHeight?: number;
+  height?: number;
+  maxHeight?: number;
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  aspectRatio?: string;
   opacity?: number;
   customCss?: string;
   cssClass?: string;
@@ -63,14 +97,94 @@ export interface ModuleStyle {
   color?: string;
   fontFamily?: "inherit" | "display" | "body";
   fontSize?: number;
+  responsiveFontSize?: ResponsiveNumber;
   fontWeight?: "300" | "400" | "500" | "600" | "700";
+  fontStyle?: "normal" | "italic";
   lineHeight?: number;
   letterSpacing?: number;
+  wordSpacing?: number;
   textAlign?: "left" | "center" | "right" | "justify";
   textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
+  textDecoration?: "none" | "underline" | "line-through" | "overline";
+  textStrokeWidth?: number;
+  textStrokeColor?: string;
+  textShadowColor?: string;
+  textShadowX?: number;
+  textShadowY?: number;
+  textShadowBlur?: number;
   marginBox?: SpacingBox;
   paddingBox?: SpacingBox;
   zIndex?: number;
+  position?: "static" | "relative" | "absolute" | "sticky";
+  insetTop?: number;
+  insetRight?: number;
+  insetBottom?: number;
+  insetLeft?: number;
+  overflowX?: "visible" | "hidden" | "clip" | "auto";
+  overflowY?: "visible" | "hidden" | "clip" | "auto";
+  display?: "block" | "flex" | "grid";
+  flexDirection?: "row" | "column" | "row-reverse" | "column-reverse";
+  flexWrap?: "nowrap" | "wrap";
+  justifyContent?: "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly";
+  alignItems?: "start" | "center" | "end" | "stretch";
+  gap?: number;
+  gridColumns?: number;
+  translateX?: number;
+  translateY?: number;
+  scale?: number;
+  rotate?: number;
+  skewX?: number;
+  skewY?: number;
+  transformOrigin?: "center" | "top" | "bottom" | "left" | "right" | "top left" | "top right" | "bottom left" | "bottom right";
+  blur?: number;
+  brightness?: number;
+  contrast?: number;
+  saturate?: number;
+  grayscale?: number;
+  hueRotate?: number;
+  backdropBlur?: number;
+  mixBlendMode?: BlendMode;
+  boxShadowColor?: string;
+  boxShadowX?: number;
+  boxShadowY?: number;
+  boxShadowBlur?: number;
+  boxShadowSpread?: number;
+  animation?: "none" | "fade" | "fade-up" | "fade-down" | "fade-left" | "fade-right" | "zoom" | "flip" | "rotate" | "blur-in" | "bounce" | "float" | "pulse";
+  animationDuration?: number;
+  animationDelay?: number;
+  animationEasing?: "ease" | "ease-in" | "ease-out" | "ease-in-out" | "linear" | "spring";
+  animationIteration?: "once" | "infinite";
+  parallax?: "none" | "slow" | "medium" | "fast";
+  hoverTranslateX?: number;
+  hoverTranslateY?: number;
+  hoverScale?: number;
+  hoverRotate?: number;
+  hoverOpacity?: number;
+  hoverBlur?: number;
+  hoverBrightness?: number;
+  transitionDuration?: number;
+  transitionEasing?: "ease" | "ease-in" | "ease-out" | "ease-in-out" | "linear" | "spring";
+  cursor?: "auto" | "default" | "pointer" | "crosshair" | "grab" | "zoom-in" | "none";
+  decorativeIcon?: string;
+  iconPlacement?: "top-left" | "top-center" | "top-right" | "center-left" | "center" | "center-right" | "bottom-left" | "bottom-center" | "bottom-right";
+  iconSize?: ResponsiveNumber;
+  iconColor?: string;
+  iconBackgroundColor?: string;
+  iconPadding?: number;
+  iconRadius?: number;
+  iconRotation?: number;
+  iconOffsetX?: number;
+  iconOffsetY?: number;
+  iconOpacity?: number;
+  iconZIndex?: number;
+}
+
+export type BlendMode = "normal" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity";
+
+export interface ResponsiveNumber {
+  desktop?: number;
+  tablet?: number;
+  mobile?: number;
 }
 
 export interface SiteHeaderModuleData {
@@ -274,11 +388,11 @@ export interface SpacerModuleData {
 /** Neutral, reusable builder widgets. They do not carry any Coolink homepage copy. */
 export interface HeadingModuleData { text: string; level: "h1" | "h2" | "h3"; alignment: "left" | "center"; icon?: string; }
 export interface TextModuleData { text: string; alignment: "left" | "center"; }
-export interface ImageModuleData { image: string; alt: string; caption: string; aspect?: "square" | "portrait" | "landscape" | "wide"; fit?: "cover" | "contain"; maxWidth?: number; alignment?: "left" | "center" | "right"; }
-export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center" | "right"; style: "primary" | "outline"; icon?: string; iconPosition?: "left" | "right"; width?: "auto" | "full"; }
+export interface ImageModuleData { image: string; alt: string; caption: string; aspect?: "square" | "portrait" | "landscape" | "wide"; fit?: "cover" | "contain"; objectPosition?: "center" | "top" | "bottom" | "left" | "right"; hoverEffect?: "none" | "zoom" | "lift" | "grayscale" | "reveal"; link?: string; linkTarget?: "same" | "new"; maxWidth?: number; alignment?: "left" | "center" | "right"; }
+export interface ButtonModuleData { label: string; href: string; alignment: "left" | "center" | "right"; style: "primary" | "outline"; size?: "sm" | "md" | "lg"; radius?: "none" | "sm" | "pill"; target?: "same" | "new"; icon?: string; iconPosition?: "left" | "right"; width?: "auto" | "full"; }
 export interface NavigationModuleData { items: { id: string; label: string; href: string }[]; alignment: "left" | "center" | "right"; mobileLabel: string; style: "plain" | "pills"; }
-export interface DividerModuleData { style: "line" | "gold" | "space"; icon?: string; }
-export interface GalleryModuleData { image1: string; image2: string; image3: string; images?: string[]; layout?: "grid" | "masonry"; columns?: { desktop: number; tablet: number; mobile: number }; gap?: "sm" | "md" | "lg"; radius?: "none" | "sm" | "md" | "lg"; lightbox?: boolean; }
+export interface DividerModuleData { style: "line" | "gold" | "space"; icon?: string; width?: number; thickness?: number; alignment?: "left" | "center" | "right"; }
+export interface GalleryModuleData { image1: string; image2: string; image3: string; images?: string[]; layout?: "grid" | "masonry"; columns?: { desktop: number; tablet: number; mobile: number }; gap?: "none" | "sm" | "md" | "lg"; radius?: "none" | "sm" | "md" | "lg" | "pill"; aspect?: "auto" | "square" | "portrait" | "landscape"; hoverEffect?: "none" | "zoom" | "lift" | "grayscale" | "reveal"; lightbox?: boolean; }
 export type ColumnWidgetType =
   | "heading"
   | "text"
@@ -307,10 +421,11 @@ export interface ColumnsModuleData {
   gap?: number;
   verticalAlign?: "start" | "center" | "end" | "stretch";
   columnWidths?: number[];
+  columnStyles?: ModuleStyle[];
   mobileLayout?: "stack" | "row";
 }
-export interface FaqModuleData { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first"; }
-export interface VideoModuleData { url: string; title: string; caption: string; }
+export interface FaqModuleData { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first"; allowMultiple?: boolean; iconStyle?: "plus" | "chevron" | "arrow"; }
+export interface VideoModuleData { url: string; title: string; caption: string; aspect?: "video" | "cinema" | "square" | "portrait"; autoplay?: boolean; muted?: boolean; loop?: boolean; controls?: boolean; }
 export interface MapModuleData { embedUrl: string; title: string; address: string; height: "sm" | "md" | "lg"; }
 export interface QuoteModuleData { quote: string; author: string; role: string; variant: "editorial" | "card" | "centered"; }
 export interface GoogleReviewsModuleData { eyebrow: string; heading: string; body: string; buttonLabel: string; limit: number; layout: "cards" | "list"; }
@@ -706,15 +821,15 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "text":
       return { text: "Wpisz tutaj swoją treść.", alignment: "left" } satisfies TextModuleData;
     case "image":
-      return { image: "", alt: "", caption: "", aspect: "landscape", fit: "cover", maxWidth: 0, alignment: "left" } satisfies ImageModuleData;
+      return { image: "", alt: "", caption: "", aspect: "landscape", fit: "cover", objectPosition: "center", hoverEffect: "none", link: "", linkTarget: "same", maxWidth: 0, alignment: "left" } satisfies ImageModuleData;
     case "button":
-      return { label: "Dowiedz się więcej", href: "#", alignment: "left", style: "primary", icon: "", iconPosition: "left", width: "auto" } satisfies ButtonModuleData;
+      return { label: "Dowiedz się więcej", href: "#", alignment: "left", style: "primary", size: "md", radius: "none", target: "same", icon: "", iconPosition: "left", width: "auto" } satisfies ButtonModuleData;
     case "navigation":
       return { items: [{ id: "start", label: "START", href: "/#home" }, { id: "portfolio", label: "PORTFOLIO", href: "/#portfolio" }, { id: "booking", label: "REZERWACJA", href: "/#kalendarz" }], alignment: "center", mobileLabel: "MENU", style: "plain" } satisfies NavigationModuleData;
     case "divider":
-      return { style: "line", icon: "" } satisfies DividerModuleData;
+      return { style: "line", icon: "", width: 100, thickness: 1, alignment: "center" } satisfies DividerModuleData;
     case "gallery":
-      return { image1: "", image2: "", image3: "", images: [], layout: "grid", columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: "md", radius: "none", lightbox: true } satisfies GalleryModuleData;
+      return { image1: "", image2: "", image3: "", images: [], layout: "grid", columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: "md", radius: "none", aspect: "square", hoverEffect: "zoom", lightbox: true } satisfies GalleryModuleData;
     case "columns":
       return {
         layout: "one",
@@ -723,13 +838,14 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         gap: 24,
         verticalAlign: "start",
         columnWidths: [100],
+        columnStyles: [{}],
         mobileLayout: "stack",
         columns: [[]],
       } satisfies ColumnsModuleData;
     case "faq":
-      return { title: "Najczęściej zadawane pytania", items: [{ question: "Pytanie", answer: "Wpisz odpowiedź na to pytanie." }], variant: "lines", initiallyOpen: "none" } satisfies FaqModuleData;
+      return { title: "Najczęściej zadawane pytania", items: [{ question: "Pytanie", answer: "Wpisz odpowiedź na to pytanie." }], variant: "lines", initiallyOpen: "none", allowMultiple: false, iconStyle: "plus" } satisfies FaqModuleData;
     case "video":
-      return { url: "", title: "Wideo", caption: "" } satisfies VideoModuleData;
+      return { url: "", title: "Wideo", caption: "", aspect: "video", autoplay: false, muted: true, loop: false, controls: true } satisfies VideoModuleData;
     case "map":
       return { embedUrl: "", title: "Jak do nas trafić", address: "", height: "md" } satisfies MapModuleData;
     case "quote":

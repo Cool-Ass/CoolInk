@@ -23,6 +23,14 @@ export function NumberField({ label, value, onChange, min, max, step = 1 }: { la
   return <label className={labelClass}>{label}<input type="number" value={value} min={min} max={max} step={step} onChange={(event) => onChange(Number(event.target.value) || 0)} className={inputClass} /></label>;
 }
 
+export function RangeField({ label, value, onChange, min, max, step = 1, suffix = "" }: { label: string; value: number; onChange: (value: number) => void; min: number; max: number; step?: number; suffix?: string }) {
+  return <label className={labelClass}><span className="flex items-center justify-between"><span>{label}</span><span className="text-white/75">{value}{suffix}</span></span><input type="range" value={value} min={min} max={max} step={step} onChange={(event) => onChange(Number(event.target.value))} className="h-2 w-full cursor-pointer accent-[#c99a4a]" /></label>;
+}
+
+export function ToggleField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return <label className="flex cursor-pointer items-start justify-between gap-3 border border-ink-white/10 bg-[#17191c] px-3 py-2.5"><span><span className="block text-[10px] tracking-[0.06em] text-ink-white">{label}</span>{description && <span className="mt-0.5 block text-[9px] leading-relaxed text-ink-grey">{description}</span>}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c99a4a]" /></label>;
+}
+
 export function FieldGroup({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   return <details open={defaultOpen || undefined} className="group border-t border-ink-white/10"><summary className="flex cursor-pointer list-none items-center justify-between py-3 text-[11px] font-semibold tracking-[0.04em] text-ink-white marker:hidden">{title}<ChevronDown className="h-3.5 w-3.5 text-ink-grey transition-transform group-open:rotate-180" /></summary><div className="flex flex-col gap-3 pb-4">{children}</div></details>;
 }
