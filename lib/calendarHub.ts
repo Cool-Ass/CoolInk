@@ -65,6 +65,20 @@ export type AvailabilityAppointment = { startsAt: Date; endsAt: Date; status?: s
 export type AvailabilityBlock = { startsAt: Date; endsAt: Date };
 export type ExplicitAvailableSlot = { startsAt: Date; endsAt: Date; isPublic?: boolean };
 export type TimeRange = { startsAt: Date; endsAt: Date };
+export type CalendarAvailabilitySlot = ExplicitAvailableSlot & { title?: string | null; color?: string | null };
+export type CalendarAvailabilityEntry = TimeRange & { title: string | null; color: string | null; consultation: boolean };
+
+/**
+ * Preserve every independently bookable range and its source metadata. A day
+ * may contain both consultations and tattoo sessions; neither is allowed to
+ * become the single visual status of the whole day.
+ */
+export function calendarAvailabilityEntries(ranges: TimeRange[], slots: CalendarAvailabilitySlot[]): CalendarAvailabilityEntry[] {
+  return ranges.map((range) => {
+    const source = slots.find((slot) => slot.isPublic !== false && slot.startsAt <= range.startsAt && slot.endsAt >= range.endsAt);
+    return { ...range, title: source?.title ?? null, color: source?.color ?? null, consultation: isConsultationSlot(source ?? {}) };
+  });
+}
 
 export type CalendarDayStatus = "default" | "available" | "occupied" | "unavailable";
 

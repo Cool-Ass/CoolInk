@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calendarDayStatus, effectiveWorkingHours, isConsultationSlot, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
+import { calendarAvailabilityEntries, calendarDayStatus, effectiveWorkingHours, isConsultationSlot, isHexColor, isOperationalCalendarAppointment, localDateKey, mergeSelectedDates, resolveAvailableRanges, runAtomicBulk, selectedDateRange } from "../lib/calendarHub";
 import { isValidIconName } from "../lib/icons";
 
 describe("Calendar Hub selection", () => {
@@ -105,6 +105,20 @@ describe("Calendar Hub selection", () => {
   it("lets an explicit unavailable state override a weekday", () => {
     const date = new Date(2026, 7, 26);
     expect(calendarDayStatus(date, [], [{ startsAt: new Date(2026, 7, 26), endsAt: new Date(2026, 7, 27) }])).toBe("unavailable");
+  });
+
+  it("keeps consultation and tattoo availability as separate entries on the same day", () => {
+    const date = new Date(2026, 8, 15);
+    const slots = [
+      { startsAt: new Date(2026, 8, 15, 10), endsAt: new Date(2026, 8, 15, 10, 30), isPublic: true, title: "KONSULTACJA", color: "#60A5FA" },
+      { startsAt: new Date(2026, 8, 15, 16), endsAt: new Date(2026, 8, 15, 18), isPublic: true, title: "WOLNY TERMIN", color: "#10B981" },
+    ];
+    const ranges = resolveAvailableRanges({ date, recurring: [], overrides: [], slots, blocks: [], appointments: [], publicOnly: true });
+    const entries = calendarAvailabilityEntries(ranges, slots);
+    expect(entries.map((entry) => ({ consultation: entry.consultation, title: entry.title, from: [entry.startsAt.getHours(), entry.startsAt.getMinutes()], to: [entry.endsAt.getHours(), entry.endsAt.getMinutes()] }))).toEqual([
+      { consultation: true, title: "KONSULTACJA", from: [10, 0], to: [10, 30] },
+      { consultation: false, title: "WOLNY TERMIN", from: [16, 0], to: [18, 0] },
+    ]);
   });
 
   it("marks a day with an active appointment as occupied even when an old free slot still exists", () => {

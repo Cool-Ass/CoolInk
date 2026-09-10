@@ -779,7 +779,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
         heading: "Sprawdź wolne terminy.",
         body: "Wybierz zielony termin. Po zalogowaniu wrócimy dokładnie do wybranej daty, aby dokończyć prośbę o wizytę.",
         calendarLabel: "KALENDARZ DOSTĘPNOŚCI",
-        legend: "Szary oznacza brak udostępnionego terminu. Zielony — wolny termin. Niebieski — konsultację. Czerwony — niedostępny.",
+        legend: "Tło dnia pozostaje neutralne. Zielone wpisy oznaczają wolny termin, niebieskie — konsultację, pomarańczowe — zajęty termin, czerwone — niedostępność.",
         freeLabel: "WOLNY",
         consultationLabel: "KONSULTACJA",
         unavailableLabel: "NIEDOSTĘPNY",
