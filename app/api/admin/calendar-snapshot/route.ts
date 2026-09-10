@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeCalendarBlockRange } from "@/lib/dateTime";
 
 export async function GET() {
   if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
@@ -14,7 +15,7 @@ export async function GET() {
   ]);
   return NextResponse.json({
     appointments: appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, notes: item.notes, price: item.price, clientId: item.project.client.id, clientName: `${item.project.client.firstName} ${item.project.client.lastName}`, projectTitle: item.project.title, label: `${item.project.client.firstName} ${item.project.client.lastName} · ${item.project.title}` })),
-    blocks: blocks.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), reason: item.reason })),
+    blocks: blocks.map((item) => { const range = normalizeCalendarBlockRange(item); return { id: item.id, startsAt: range.startsAt.toISOString(), endsAt: range.endsAt.toISOString(), reason: item.reason }; }),
     slots: slots.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
     googleBusy: googleEvents.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
     bufferMinutes: Math.min(240, Math.max(0, Number(bufferSetting?.value ?? 0) || 0)),

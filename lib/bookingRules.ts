@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { normalizeCalendarBlockRange } from "@/lib/dateTime";
 
 const DEFAULT_BUFFER_MINUTES = 30;
 
@@ -30,10 +31,11 @@ export async function bookingConflict(startsAt: Date, endsAt: Date, excludeAppoi
   const bufferMinutes = includeBuffer ? await getBookingBufferMinutes(db) : 0;
   const bufferedStart = new Date(startsAt.getTime() - bufferMinutes * 60_000);
   const bufferedEnd = new Date(endsAt.getTime() + bufferMinutes * 60_000);
-  const [appointment, block, externalBusy] = await Promise.all([
+  const [appointment, blockCandidates, externalBusy] = await Promise.all([
     db.appointment.findFirst({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: new Date() } } } }, startsAt: { lt: bufferedEnd }, endsAt: { gt: bufferedStart } } }),
-    db.availabilityBlock.findFirst({ where: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }),
+    db.availabilityBlock.findMany({ where: { startsAt: { lt: new Date(endsAt.getTime() + 3 * 60 * 60 * 1000) }, endsAt: { gt: new Date(startsAt.getTime() - 3 * 60 * 60 * 1000) } } }),
     db.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", calendarEvent: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } }, select: { id: true } }),
   ]);
+  const block = blockCandidates.find((item) => { const range = normalizeCalendarBlockRange(item); return range.startsAt < endsAt && range.endsAt > startsAt; });
   return { appointment, block: block || externalBusy, bufferMinutes };
 }

@@ -7,6 +7,7 @@ import { bookingConflict } from "@/lib/bookingRules";
 import { sanitizeRichText } from "@/lib/richText";
 import { isValidIconName } from "@/lib/icons";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { coolinkDayRange } from "@/lib/dateTime";
 
 type CalendarKind = "occupied" | "dayOff" | "freeTerm" | "consultation" | "promotion" | "event" | "workingHours" | "clearStatus";
 const text = (value: unknown) => String(value ?? "").trim();
@@ -31,7 +32,7 @@ function parse(raw: unknown) {
 }
 function selectedDates(body: Record<string, unknown> | null) {
   const dates = Array.isArray(body?.dates) ? body.dates.map(toDate).filter((date) => !Number.isNaN(date.getTime())) : [];
-  return [...new Map(dates.map((date) => { date.setHours(0, 0, 0, 0); return [date.toISOString(), date] as const; })).values()];
+  return [...new Map(dates.map((date) => { const start = coolinkDayRange(date).start; return [start.toISOString(), start] as const; })).values()];
 }
 function safeUrl(value: unknown) {
   const candidate = text(value); if (!candidate) return null;
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   if (kind === "dayOff" || kind === "occupied") {
     if (!validRange(startsAt, endsAt)) return NextResponse.json({ error: "Podaj poprawny zakres dnia wolnego." }, { status: 400 });
     const reason = blockReason(kind, body?.reason);
-    if (dates.length > 1) { await prisma.$transaction(async (tx) => Promise.all(dates.map((date) => { const end = new Date(date); end.setDate(end.getDate() + 1); return tx.availabilityBlock.create({ data: { startsAt: date, endsAt: end, reason } }); }))); return NextResponse.json({ ok: true }, { status: 201 }); }
+    if (dates.length > 1) { await prisma.$transaction(async (tx) => Promise.all(dates.map((date) => { const range = coolinkDayRange(date); return tx.availabilityBlock.create({ data: { startsAt: range.start, endsAt: range.end, reason } }); }))); return NextResponse.json({ ok: true }, { status: 201 }); }
     return NextResponse.json({ item: await prisma.availabilityBlock.create({ data: { startsAt, endsAt, reason } }) }, { status: 201 });
   }
   if (!validRange(startsAt, endsAt)) return NextResponse.json({ error: "Podaj poprawny zakres dat i godzin." }, { status: 400 });
@@ -109,8 +110,7 @@ export async function DELETE(request: Request) {
     const dates = searchParams.getAll("date").map(toDate).filter((date) => !Number.isNaN(date.getTime()));
     if (!dates.length) return NextResponse.json({ error: "Wybierz co najmniej jeden dzień." }, { status: 400 });
     await prisma.$transaction(async (tx) => Promise.all(dates.map((value) => {
-      const start = new Date(value); start.setHours(0, 0, 0, 0);
-      const end = new Date(start); end.setDate(end.getDate() + 1);
+      const { start, end } = coolinkDayRange(value);
       return Promise.all([
         tx.availableSlot.deleteMany({ where: { startsAt: { gte: start, lt: end } } }),
         tx.availabilityBlock.deleteMany({ where: { startsAt: { gte: start, lt: end } } }),

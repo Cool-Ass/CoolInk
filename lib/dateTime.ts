@@ -70,3 +70,20 @@ export function coolinkDayRange(value: Date | string | number = new Date()) {
     end: coolinkLocalToInstant(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth() + 1, tomorrow.getUTCDate()),
   };
 }
+
+/**
+ * Older bulk day-off records were saved at UTC midnight by the server. In the
+ * Warsaw calendar that turns a full day into 02:00–02:00 in summer and makes
+ * it spill into the following date. Re-anchor only midnight-like 23–25 hour
+ * blocks; ordinary timed blocks remain untouched.
+ */
+export function normalizeCalendarBlockRange(range: { startsAt: Date | string | number; endsAt: Date | string | number }) {
+  const startsAt = asDate(range.startsAt);
+  const endsAt = asDate(range.endsAt);
+  const durationHours = (endsAt.getTime() - startsAt.getTime()) / 3_600_000;
+  const utcMidnight = startsAt.getUTCHours() === 0 && startsAt.getUTCMinutes() === 0 && endsAt.getUTCHours() === 0 && endsAt.getUTCMinutes() === 0;
+  const studioMidnight = toCoolinkDateTimeInput(startsAt).endsWith("T00:00") && toCoolinkDateTimeInput(endsAt).endsWith("T00:00");
+  if (!Number.isFinite(durationHours) || durationHours < 23 || durationHours > 25 || (!utcMidnight && !studioMidnight)) return { startsAt, endsAt };
+  const normalized = coolinkDayRange(startsAt);
+  return { startsAt: normalized.start, endsAt: normalized.end };
+}
