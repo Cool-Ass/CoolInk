@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-import { CONSULTATION_SLOT_TITLE, isHexColor } from "@/lib/calendarHub";
+import { CALENDAR_AVAILABLE_COLOR, CONSULTATION_SLOT_TITLE, isHexColor } from "@/lib/calendarHub";
 import { bookingConflict } from "@/lib/bookingRules";
 import { sanitizeRichText } from "@/lib/richText";
 import { isValidIconName } from "@/lib/icons";
@@ -38,7 +38,7 @@ function safeUrl(value: unknown) {
   try { const url = new URL(candidate, "https://coolink.local"); return url.protocol === "https:" || (url.origin === "https://coolink.local" && candidate.startsWith("/")) ? candidate : null; } catch { return null; }
 }
 function content(kind: CalendarKind, body: Record<string, unknown> | null, startsAt: Date, endsAt: Date) {
-  if (kind === "freeTerm" || kind === "consultation") return { startsAt, endsAt, title: kind === "consultation" ? CONSULTATION_SLOT_TITLE : text(body?.title) || null, description: sanitizeRichText(text(body?.description)) || null, color: safeColor(body?.color, kind === "consultation" ? "#60A5FA" : "#10B981"), icon: safeIcon(body?.icon), isPublic: Boolean(body?.isPublic) };
+  if (kind === "freeTerm" || kind === "consultation") return { startsAt, endsAt, title: kind === "consultation" ? CONSULTATION_SLOT_TITLE : text(body?.title) || null, description: sanitizeRichText(text(body?.description)) || null, color: safeColor(body?.color, CALENDAR_AVAILABLE_COLOR), icon: safeIcon(body?.icon), isPublic: Boolean(body?.isPublic) };
   if (kind === "promotion") return { title: text(body?.title), description: sanitizeRichText(text(body?.description)) || null, badge: text(body?.badge) || null, startsAt, endsAt, color: safeColor(body?.color, "#C99A4A"), icon: safeIcon(body?.icon), promoCode: text(body?.promoCode) || null, ctaLabel: text(body?.ctaLabel) || null, ctaUrl: safeUrl(body?.ctaUrl), isPublic: Boolean(body?.isPublic), active: body?.active !== false };
   if (kind === "event") return { title: text(body?.title), description: sanitizeRichText(text(body?.description)) || null, startsAt, endsAt, allDay: Boolean(body?.allDay), color: safeColor(body?.color, "#6B7280"), icon: safeIcon(body?.icon), label: text(body?.label) || null, isPublic: Boolean(body?.isPublic) };
   return null;

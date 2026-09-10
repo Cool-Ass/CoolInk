@@ -41,7 +41,7 @@ export async function POST(request: Request) {
           if (!firstName || !lastName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("INVALID_CLIENT");
           clientId = (await tx.client.create({ data: { firstName, lastName, email, phone: String(body?.newClient?.phone ?? "").trim().slice(0, 40) || null } })).id;
         }
-        project = await tx.tattooProject.create({ data: { clientId, title: String(body?.projectTitle ?? "").trim().slice(0, 160) || "Wizyta umówiona ręcznie", description: "Wizyta dodana z kalendarza admina.", status: "confirmed" } });
+        project = await tx.tattooProject.create({ data: { clientId, title: String(body?.projectTitle ?? "").trim().slice(0, 160) || "Wizyta umówiona ręcznie", description: String(body?.projectDescription ?? "").trim().slice(0, 5_000) || "Wizyta dodana z kalendarza admina.", status: "confirmed", nextAction: "Przygotuj projekt lub szczegóły najbliższej sesji" } });
       }
 
       const appointment = await tx.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "confirmed", notes: String(body?.notes ?? "").trim().slice(0, 5_000) || null, price } });
