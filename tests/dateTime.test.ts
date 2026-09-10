@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coolinkDayRange, formatCoolinkTime, localDateTimeToIso, normalizeCalendarBlockRange, toCoolinkDateTimeInput } from "@/lib/dateTime";
+import { coolinkDayRange, formatCoolinkTime, isCoolinkCalendarDayRange, localDateTimeToIso, normalizeCalendarBlockRange, toCoolinkDateTimeInput } from "@/lib/dateTime";
 
 describe("CoolInk studio time", () => {
   it("stores summer appointments as an unambiguous Warsaw instant", () => {
@@ -26,9 +26,11 @@ describe("CoolInk studio time", () => {
     const legacy = normalizeCalendarBlockRange({ startsAt: "2026-09-18T00:00:00.000Z", endsAt: "2026-09-19T00:00:00.000Z" });
     expect(legacy.startsAt.toISOString()).toBe("2026-09-17T22:00:00.000Z");
     expect(legacy.endsAt.toISOString()).toBe("2026-09-18T22:00:00.000Z");
+    expect(isCoolinkCalendarDayRange(legacy)).toBe(true);
 
     const timed = normalizeCalendarBlockRange({ startsAt: "2026-09-18T08:00:00.000Z", endsAt: "2026-09-19T08:00:00.000Z" });
     expect(timed.startsAt.toISOString()).toBe("2026-09-18T08:00:00.000Z");
     expect(timed.endsAt.toISOString()).toBe("2026-09-19T08:00:00.000Z");
+    expect(isCoolinkCalendarDayRange(timed)).toBe(false);
   });
 });

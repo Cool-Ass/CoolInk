@@ -6,7 +6,7 @@ import CalendarItemEditor, { type CalendarEditorItem, type CalendarEditorKind } 
 import CalendarMonthGrid, { calendarEntryClassName } from "@/components/calendar/CalendarMonthGrid";
 import AppModal from "@/components/ui/AppModal";
 import { CALENDAR_AVAILABLE_COLOR, CALENDAR_UNAVAILABLE_COLOR, CONSULTATION_SLOT_TITLE, calendarAvailabilityEntries, localDateKey, resolveAvailableRanges, resolveCalendarDayAppearance } from "@/lib/calendarHub";
-import { formatCoolinkTime } from "@/lib/dateTime";
+import { formatCoolinkTime, isCoolinkCalendarDayRange } from "@/lib/dateTime";
 
 type Range = { startsAt: string; endsAt: string };
 type AppointmentRange = Range & { id: string; label?: string; status?: string; notes?: string | null; price?: number | null; clientId?: string; clientName?: string; projectTitle?: string };
@@ -23,7 +23,7 @@ const overlapsDay = (range: Range, date: Date) => new Date(range.startsAt) < day
 const formatRangeTime = (range: { startsAt: string | Date; endsAt: string | Date }, date: Date) => {
   const startsAt = new Date(range.startsAt);
   const endsAt = new Date(range.endsAt);
-  if (startsAt <= dayStart(date) && endsAt >= dayEnd(date)) return "";
+  if (isCoolinkCalendarDayRange({ startsAt, endsAt }) || (startsAt <= dayStart(date) && endsAt >= dayEnd(date))) return "";
   return `${formatCoolinkTime(startsAt)}–${formatCoolinkTime(endsAt)}`;
 };
 

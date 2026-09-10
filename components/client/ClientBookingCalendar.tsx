@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CalendarMonthGrid, { calendarEntryClassName } from "@/components/calendar/CalendarMonthGrid";
 import { CALENDAR_AVAILABLE_COLOR, CALENDAR_UNAVAILABLE_COLOR, calendarAvailabilityEntries, isConsultationSlot, localDateKey, resolveAvailableRanges, resolveCalendarDayAppearance } from "@/lib/calendarHub";
-import { formatCoolinkTime } from "@/lib/dateTime";
+import { formatCoolinkTime, isCoolinkCalendarDayRange } from "@/lib/dateTime";
 import BookingRequestForm from "@/components/client/BookingRequestForm";
 import AppModal from "@/components/ui/AppModal";
 
@@ -61,7 +61,7 @@ const overlapsDay = (item: { startsAt: string; endsAt: string }, date: Date) => 
 const formatRangeTime = (item: { startsAt: string | Date; endsAt: string | Date }, date: Date) => {
   const startsAt = new Date(item.startsAt);
   const endsAt = new Date(item.endsAt);
-  if (startsAt <= dayStart(date) && endsAt >= dayEnd(date)) return "";
+  if (isCoolinkCalendarDayRange({ startsAt, endsAt }) || (startsAt <= dayStart(date) && endsAt >= dayEnd(date))) return "";
   return `${formatCoolinkTime(startsAt)}–${formatCoolinkTime(endsAt)}`;
 };
 
