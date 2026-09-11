@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
 import { useRouter } from "next/navigation";
 import ModuleRenderer, { type ModuleRendererGlobals } from "@/components/ModuleRenderer";
 import BuilderTopBar, { type DeviceMode } from "@/components/admin/builder/BuilderTopBar";
+import BuilderNavigator from "@/components/admin/builder/BuilderNavigator";
+import PageVersionsPanel from "@/components/admin/builder/PageVersionsPanel";
 import AddModulePicker from "@/components/admin/builder/AddModulePicker";
 import ModuleSettingsSidebar from "@/components/admin/builder/ModuleSettingsSidebar";
 import PageSettingsModal, {
@@ -12,6 +14,7 @@ import PageSettingsModal, {
 import { useToast } from "@/components/admin/ToastProvider";
 import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, withDefaults, type ColumnsModuleData, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import { PALETTE_WIDGET_MIME } from "@/lib/builderDnd";
+import { moveBuilderWidget, type BuilderColumnTarget } from "@/lib/builderTree";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { siteThemeStyle } from "@/lib/siteTheme";
 import { isSystemPageSlug } from "@/lib/systemPages";
@@ -126,17 +129,56 @@ export default function PageBuilder({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [lastSavedSignature, setLastSavedSignature] = useState(() => JSON.stringify(initialPage.modules ?? []));
+  const [navigatorOpen, setNavigatorOpen] = useState(true);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [autosaveError, setAutosaveError] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const isSystemPage = isSystemPageSlug(page.slug);
+  const dirty = JSON.stringify(modules) !== lastSavedSignature;
 
+  const initialModulesRef = useRef(initialPage.modules ?? []);
+  const modulesRef = useRef(modules);
   const lastSavedRef = useRef(JSON.stringify(initialPage.modules ?? []));
+  const patchQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const recoveryCheckedRef = useRef(false);
+  const skipDraftSyncRef = useRef(false);
+  const localDraftKey = `coolink-builder-draft:${initialPage.id}`;
+
+  const saveLocalDraft = useCallback((current: Module[], base: string) => {
+    try {
+      window.localStorage.setItem(localDraftKey, JSON.stringify({ base, modules: current, savedAt: Date.now() }));
+    } catch {
+      // Server autosave remains the primary protection when browser storage is unavailable.
+    }
+  }, [localDraftKey]);
+
+  const markSnapshotSaved = useCallback((snapshot: Module[]) => {
+    const serialized = JSON.stringify(snapshot);
+    lastSavedRef.current = serialized;
+    const current = modulesRef.current;
+    const currentSerialized = JSON.stringify(current);
+    const hasNewerChanges = currentSerialized !== serialized;
+    setLastSavedSignature(serialized);
+    setLastSavedAt(new Date());
+    setAutosaveError(false);
+    try {
+      if (hasNewerChanges) saveLocalDraft(current, serialized);
+      else window.localStorage.removeItem(localDraftKey);
+    } catch {
+      // Saving to the server already succeeded.
+    }
+  }, [localDraftKey, saveLocalDraft]);
 
   function setModules(update: Module[] | ((current: Module[]) => Module[])) {
-    const next = typeof update === "function" ? update(modules) : update;
-    if (next === modules || JSON.stringify(next) === JSON.stringify(modules)) return;
-    setUndoHistory((current) => [...current.slice(-49), modules]);
+    const currentModules = modulesRef.current;
+    const next = typeof update === "function" ? update(currentModules) : update;
+    if (next === currentModules || JSON.stringify(next) === JSON.stringify(currentModules)) return;
+    setUndoHistory((current) => [...current.slice(-49), currentModules]);
     setRedoHistory([]);
+    modulesRef.current = next;
     setModulesState(next);
+    setAutosaveError(false);
   }
 
   const handleUndo = useCallback(() => {
@@ -144,7 +186,9 @@ export default function PageBuilder({
     if (!previous) return;
     setUndoHistory((current) => current.slice(0, -1));
     setRedoHistory((current) => [...current.slice(-49), modules]);
+    modulesRef.current = previous;
     setModulesState(previous);
+    setAutosaveError(false);
   }, [modules, undoHistory]);
 
   const handleRedo = useCallback(() => {
@@ -152,12 +196,63 @@ export default function PageBuilder({
     if (!next) return;
     setRedoHistory((current) => current.slice(0, -1));
     setUndoHistory((current) => [...current.slice(-49), modules]);
+    modulesRef.current = next;
     setModulesState(next);
+    setAutosaveError(false);
   }, [modules, redoHistory]);
 
   useEffect(() => {
-    setDirty(JSON.stringify(modules) !== lastSavedRef.current);
-  }, [modules]);
+    if (recoveryCheckedRef.current) return;
+    recoveryCheckedRef.current = true;
+    let recovered: Module[] | null = null;
+    try {
+      const raw = window.localStorage.getItem(localDraftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as { base?: unknown; modules?: unknown };
+      if (
+        draft.base !== lastSavedRef.current ||
+        !Array.isArray(draft.modules) ||
+        JSON.stringify(draft.modules).length > 250_000
+      ) {
+        window.localStorage.removeItem(localDraftKey);
+        return;
+      }
+      recovered = draft.modules as Module[];
+      if (JSON.stringify(recovered) === lastSavedRef.current) {
+        window.localStorage.removeItem(localDraftKey);
+        return;
+      }
+    } catch {
+      window.localStorage.removeItem(localDraftKey);
+      return;
+    }
+
+    skipDraftSyncRef.current = true;
+    const frame = window.requestAnimationFrame(() => {
+      modulesRef.current = recovered as Module[];
+      setModulesState(recovered as Module[]);
+      setUndoHistory([initialModulesRef.current]);
+      setAutosaveError(false);
+      showToast("Odzyskano niezapisane zmiany z tej przeglądarki.");
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [localDraftKey, showToast]);
+
+  useEffect(() => {
+    modulesRef.current = modules;
+    if (skipDraftSyncRef.current) {
+      skipDraftSyncRef.current = false;
+      return;
+    }
+    const serialized = JSON.stringify(modules);
+    const hasChanges = serialized !== lastSavedRef.current;
+    try {
+      if (hasChanges) saveLocalDraft(modules, lastSavedRef.current);
+      else window.localStorage.removeItem(localDraftKey);
+    } catch {
+      // Local recovery is optional; the server autosave still runs.
+    }
+  }, [localDraftKey, modules, saveLocalDraft]);
 
   useEffect(() => {
     function beforeUnload(e: BeforeUnloadEvent) {
@@ -371,24 +466,49 @@ export default function PageBuilder({
     setSelectedColumnOwnerId(null);
   }
 
-  async function patchPage(body: object) {
-    const res = await fetch(`/api/admin/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Coś poszło nie tak.");
-    return data.page;
-  }
+  const patchPage = useCallback((body: object): Promise<BuilderPage> => {
+    const request = patchQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const res = await fetch(`/api/admin/pages/${page.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Coś poszło nie tak.");
+        return data.page as BuilderPage;
+      });
+    patchQueueRef.current = request.then(() => undefined, () => undefined);
+    return request;
+  }, [page.id]);
+
+  useEffect(() => {
+    if (!dirty || saving || publishing || autosaveError) return;
+    const timer = window.setTimeout(async () => {
+      const snapshot = modulesRef.current;
+      setSaving(true);
+      try {
+        const updated = await patchPage({ modules: snapshot });
+        setPage((current) => ({ ...current, status: updated.status }));
+        markSnapshotSaved(snapshot);
+      } catch {
+        setAutosaveError(true);
+      } finally {
+        setSaving(false);
+      }
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [autosaveError, dirty, markSnapshotSaved, patchPage, publishing, saving]);
 
   async function handleSaveDraft() {
+    const snapshot = modulesRef.current;
     setSaving(true);
+    setAutosaveError(false);
     try {
-      const updated = await patchPage({ modules });
+      const updated = await patchPage({ modules: snapshot });
       setPage((p) => ({ ...p, status: updated.status }));
-      lastSavedRef.current = JSON.stringify(modules);
-      setDirty(false);
+      markSnapshotSaved(snapshot);
       showToast("Wersja robocza zapisana.");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Nie udało się zapisać.", "error");
@@ -398,12 +518,12 @@ export default function PageBuilder({
   }
 
   async function handlePublish() {
+    const snapshot = modulesRef.current;
     setPublishing(true);
     try {
-      const updated = await patchPage({ modules, publish: true });
+      const updated = await patchPage({ modules: snapshot, publish: true });
       setPage((p) => ({ ...p, status: updated.status }));
-      lastSavedRef.current = JSON.stringify(modules);
-      setDirty(false);
+      markSnapshotSaved(snapshot);
       showToast("Strona opublikowana.");
       router.refresh();
     } catch (err) {
@@ -440,6 +560,68 @@ export default function PageBuilder({
     }
   }
 
+  function scrollToCanvas(selector: string) {
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(selector)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  function selectSectionFromNavigator(moduleId: string) {
+    setSelectedId(moduleId);
+    setSelectedWidgetId(null);
+    setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
+    scrollToCanvas(`[data-builder-module-id="${CSS.escape(moduleId)}"]`);
+  }
+
+  function selectWidgetFromNavigator(moduleId: string, widgetId: string) {
+    setSelectedId(moduleId);
+    setSelectedWidgetId(widgetId);
+    setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
+    scrollToCanvas(`[data-builder-widget-id="${CSS.escape(widgetId)}"]`);
+  }
+
+  function selectColumnFromNavigator(moduleId: string, columnIndex: number, ownerId: string) {
+    setSelectedId(moduleId);
+    setSelectedWidgetId(null);
+    setSelectedColumnIndex(columnIndex);
+    setSelectedColumnOwnerId(ownerId);
+    scrollToCanvas(`[data-builder-column-owner="${CSS.escape(ownerId)}"][data-builder-column-index="${columnIndex}"]`);
+  }
+
+  function moveWidgetFromNavigator(widgetId: string, target: BuilderColumnTarget) {
+    const next = moveBuilderWidget(modulesRef.current, widgetId, target);
+    if (next === modulesRef.current) {
+      showToast("Nie można przenieść widgetu w to miejsce.", "error");
+      return;
+    }
+    setModules(next);
+    setSelectedId(target.moduleId);
+    setSelectedWidgetId(widgetId);
+    setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
+  }
+
+  function restorePublishedRevision(restored: Module[], version: number) {
+    const previous = modulesRef.current;
+    modulesRef.current = restored;
+    setUndoHistory((current) => [...current.slice(-49), previous]);
+    setRedoHistory([]);
+    setModulesState(restored);
+    const restoredSignature = JSON.stringify(restored);
+    lastSavedRef.current = restoredSignature;
+    setLastSavedSignature(restoredSignature);
+    setLastSavedAt(new Date());
+    setAutosaveError(false);
+    setSelectedId(null);
+    setSelectedWidgetId(null);
+    setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
+    try { window.localStorage.removeItem(localDraftKey); } catch { /* optional recovery cache */ }
+    showToast(`Wersja ${version} została przywrócona jako szkic.`);
+  }
+
   return (
     <div className="flex h-screen flex-col bg-ink-black text-ink-white">
       <BuilderTopBar
@@ -448,6 +630,8 @@ export default function PageBuilder({
         dirty={dirty}
         saving={saving}
         publishing={publishing}
+        autosaveError={autosaveError}
+        lastSavedLabel={lastSavedAt?.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) ?? null}
         device={device}
         onDeviceChange={setDevice}
         onSaveDraft={handleSaveDraft}
@@ -458,10 +642,38 @@ export default function PageBuilder({
         canRedo={redoHistory.length > 0}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        navigatorOpen={navigatorOpen}
+        onToggleNavigator={() => { setNavigatorOpen((open) => !open); setVersionsOpen(false); }}
+        versionsOpen={versionsOpen}
+        onToggleVersions={() => { setVersionsOpen((open) => !open); setNavigatorOpen(false); }}
         isHomepage={page.isHomepage}
         isSystemPage={isSystemPage}
         slug={page.slug}
       />
+
+      {navigatorOpen && (
+        <BuilderNavigator
+          modules={modules}
+          selectedId={selectedId}
+          selectedWidgetId={selectedWidgetId}
+          selectedColumnIndex={selectedColumnIndex}
+          selectedColumnOwnerId={selectedColumnOwnerId}
+          onSelectSection={selectSectionFromNavigator}
+          onSelectWidget={selectWidgetFromNavigator}
+          onSelectColumn={selectColumnFromNavigator}
+          onReorderSections={reorderModules}
+          onMoveWidget={moveWidgetFromNavigator}
+          onClose={() => setNavigatorOpen(false)}
+        />
+      )}
+      {versionsOpen && (
+        <PageVersionsPanel
+          pageId={page.id}
+          restoreBlocked={dirty || saving || publishing}
+          onRestore={restorePublishedRevision}
+          onClose={() => setVersionsOpen(false)}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <aside

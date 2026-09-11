@@ -232,6 +232,7 @@ export default function ModuleRenderer({
         return (
           <div
             key={mod.id}
+            data-builder-module-id={mod.id}
             draggable={Boolean(onReorder)}
             onDragStart={(e) => {
               if (e.target !== e.currentTarget) return;

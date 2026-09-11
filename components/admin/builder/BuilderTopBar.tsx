@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Redo2, Undo2 } from "lucide-react";
+import { History, ListTree, Redo2, Undo2 } from "lucide-react";
 
 export type DeviceMode = "desktop" | "tablet" | "mobile";
 
@@ -11,6 +11,8 @@ interface BuilderTopBarProps {
   dirty: boolean;
   saving: boolean;
   publishing: boolean;
+  autosaveError: boolean;
+  lastSavedLabel: string | null;
   device: DeviceMode;
   onDeviceChange: (d: DeviceMode) => void;
   onSaveDraft: () => void;
@@ -21,6 +23,10 @@ interface BuilderTopBarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  navigatorOpen: boolean;
+  onToggleNavigator: () => void;
+  versionsOpen: boolean;
+  onToggleVersions: () => void;
   isHomepage: boolean;
   isSystemPage?: boolean;
   slug: string;
@@ -38,6 +44,8 @@ export default function BuilderTopBar({
   dirty,
   saving,
   publishing,
+  autosaveError,
+  lastSavedLabel,
   device,
   onDeviceChange,
   onSaveDraft,
@@ -48,6 +56,10 @@ export default function BuilderTopBar({
   canRedo,
   onUndo,
   onRedo,
+  navigatorOpen,
+  onToggleNavigator,
+  versionsOpen,
+  onToggleVersions,
   isHomepage,
   isSystemPage = false,
   slug,
@@ -76,19 +88,47 @@ export default function BuilderTopBar({
         >
           {STATUS_LABELS[status] ?? status}
         </span>
-        {dirty && (
+        {saving && (
           <span className="shrink-0 border border-ink-gold/40 bg-ink-gold/10 px-2 py-0.5 text-[11px] tracking-[0.05em] text-ink-gold">
-            ● Zmiany czekają na zapis
+            Zapisuję szkic…
           </span>
         )}
-        {!dirty && !saving && (
+        {!saving && autosaveError && (
+          <span className="shrink-0 border border-red-400/50 bg-red-500/10 px-2 py-0.5 text-[11px] tracking-[0.05em] text-red-300">
+            Autozapis nieudany
+          </span>
+        )}
+        {!saving && !autosaveError && dirty && (
+          <span className="shrink-0 border border-ink-gold/40 bg-ink-gold/10 px-2 py-0.5 text-[11px] tracking-[0.05em] text-ink-gold">
+            Zmiany zostaną zapisane automatycznie
+          </span>
+        )}
+        {!dirty && !saving && !autosaveError && (
           <span className="shrink-0 text-[11px] tracking-[0.05em] text-ink-grey/80">
-            ✓ Wszystkie zmiany zapisane
+            ✓ Szkic zapisany{lastSavedLabel ? ` · ${lastSavedLabel}` : ""}
           </span>
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggleNavigator}
+          aria-pressed={navigatorOpen}
+          className={`flex h-9 items-center gap-2 border px-3 text-[11px] tracking-[0.08em] transition-colors ${navigatorOpen ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold"}`}
+        >
+          <ListTree className="h-4 w-4" />
+          NAWIGATOR
+        </button>
+        <button
+          type="button"
+          onClick={onToggleVersions}
+          aria-pressed={versionsOpen}
+          className={`flex h-9 items-center gap-2 border px-3 text-[11px] tracking-[0.08em] transition-colors ${versionsOpen ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold"}`}
+        >
+          <History className="h-4 w-4" />
+          WERSJE
+        </button>
         <div className="flex items-center border border-ink-white/15" role="group" aria-label="Historia zmian">
           <button type="button" onClick={onUndo} disabled={!canUndo} title="Cofnij (Ctrl+Z)" aria-label="Cofnij zmianę" className="flex h-9 w-9 items-center justify-center text-ink-grey transition hover:text-ink-gold disabled:opacity-25"><Undo2 className="h-4 w-4" /></button>
           <button type="button" onClick={onRedo} disabled={!canRedo} title="Ponów (Ctrl+Shift+Z)" aria-label="Ponów zmianę" className="flex h-9 w-9 items-center justify-center border-l border-ink-white/15 text-ink-grey transition hover:text-ink-gold disabled:opacity-25"><Redo2 className="h-4 w-4" /></button>
@@ -128,7 +168,7 @@ export default function BuilderTopBar({
         <button
           type="button"
           onClick={onSaveDraft}
-          disabled={saving}
+          disabled={saving || !dirty}
           className="border border-ink-white/20 px-4 py-2 text-[12px] tracking-[0.08em] text-ink-white transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-50"
         >
           {saving ? "ZAPISYWANIE…" : dirty ? "ZAPISZ ZMIANY" : "ZAPISANO"}
@@ -147,7 +187,7 @@ export default function BuilderTopBar({
         <button
           type="button"
           onClick={onPublish}
-          disabled={publishing}
+          disabled={publishing || saving}
           className="border border-ink-gold bg-ink-gold px-5 py-2 text-[12px] font-medium tracking-[0.08em] text-ink-black transition-colors hover:bg-ink-gold-bright disabled:opacity-50"
         >
           {publishing ? "PUBLIKOWANIE…" : "OPUBLIKUJ"}

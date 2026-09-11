@@ -2,6 +2,8 @@
 
 Stan analizy: 11 września 2026. Dokument dotyczy obecnej aplikacji Next.js 16, Prisma/PostgreSQL, prywatnych mediów, Web Push oraz wdrożenia na Vercel.
 
+**Decyzja wykonawcza z 12 września 2026:** integracje AI oraz automatyczne publikowanie bloga i social mediów pozostają w backlogu przyszłości. Bieżący rozwój obejmuje builder, rezerwacje, obsługę klienta, dostępność, wydajność i bezpieczeństwo.
+
 ## Decyzja w skrócie
 
 Najlepsza wersja bez stałego kosztu AI nie polega na oddaniu aplikacji modelowi. Powinna mieć trzy warstwy:
@@ -140,16 +142,22 @@ Rekomendacja: zachować jeden dzienny cron do przypomnień i publikacji, a opera
 
 Po obecnym dodaniu sekcji wewnętrznych, do 8 kolumn, usuwania kolumn i uchwytów zmiany rozmiaru następne priorytety to:
 
-1. drzewo nawigatora pokazujące pełną hierarchię i pozwalające przeciągać między kontenerami;
-2. historia zmian, autosave, cofanie/ponawianie oraz wersje publikacji;
-3. niezależne wartości desktop/tablet/mobile i podgląd realnych breakpointów;
-4. reusable blocks, style classes i design tokens zamiast kopiowania ustawień;
-5. siatka, prowadnice, snap, proporcje, blokada osi i pola liczbowe obok uchwytów;
-6. timeline animacji: trigger, opóźnienie, easing, powtarzanie, stagger i kolejność;
-7. maski CSS/SVG, blend modes, filtry, gradient mesh, pattern, spotlight, noise i reveal;
-8. parallax z limitem ruchu, lazy loading i automatycznym wyłączeniem przy `prefers-reduced-motion`;
-9. warunkowa widoczność, sticky, overlay, modal/drawer, anchor i scroll progress;
-10. automatyczne ostrzeżenia o kontraście, zbyt ciężkich mediach, CLS i niedostępnym fokusie.
+Stan realizacji 12 września 2026:
+
+- dodano pełny nawigator hierarchii: sekcje → kolumny → sekcje wewnętrzne → kolumny → widgety;
+- dodano przeciąganie sekcji oraz widgetów między dowolnymi głównymi i zagnieżdżonymi kolumnami;
+- dodano autozapis szkicu z lokalnym odzyskiwaniem zmian po przerwaniu pracy;
+- cofanie/ponawianie obejmuje do 50 kroków;
+- każda publikacja tworzy trwałą, numerowaną wersję; przywrócenie wersji zastępuje wyłącznie szkic i nie zmienia strony publicznej bez ponownej publikacji.
+
+1. niezależne wartości desktop/tablet/mobile i podgląd realnych breakpointów;
+2. reusable blocks, style classes i design tokens zamiast kopiowania ustawień;
+3. siatka, prowadnice, snap, proporcje, blokada osi i pola liczbowe obok uchwytów;
+4. timeline animacji: trigger, opóźnienie, easing, powtarzanie, stagger i kolejność;
+5. maski CSS/SVG, blend modes, filtry, gradient mesh, pattern, spotlight, noise i reveal;
+6. parallax z limitem ruchu, lazy loading i automatycznym wyłączeniem przy `prefers-reduced-motion`;
+7. warunkowa widoczność, sticky, overlay, modal/drawer, anchor i scroll progress;
+8. automatyczne ostrzeżenia o kontraście, zbyt ciężkich mediach, CLS i niedostępnym fokusie.
 
 Efekty nie powinny psuć szybkości, czytelności ani dostępności. Builder powinien mieć budżet wydajności: maksymalny rozmiar obrazu, liczbę aktywnych animacji i ostrzeżenie przed autoplay na mobile.
 

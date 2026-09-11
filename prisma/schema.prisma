@@ -84,6 +84,25 @@ model Page {
   navOrder         Int      @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  revisions        PageRevision[]
+}
+
+/// Immutable snapshots created only when an administrator publishes a page.
+/// Restoring a revision updates the working draft and never changes the live page automatically.
+model PageRevision {
+  id         String   @id @default(cuid())
+  pageId     String
+  page       Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  version    Int
+  title      String
+  slug       String
+  excerpt    String?
+  coverImage String?
+  modules    String
+  createdAt  DateTime @default(now())
+
+  @@unique([pageId, version])
+  @@index([pageId, createdAt])
 }
 
 /// Portfolio / gallery items shown on the public Portfolio section

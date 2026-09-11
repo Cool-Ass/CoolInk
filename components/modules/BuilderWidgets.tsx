@@ -144,6 +144,8 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
             const columnSelected = selectedColumnOwnerId === module.id && selectedColumnIndex === columnIndex && !selectedWidgetId;
             return <div
               key={columnIndex}
+              data-builder-column-owner={module.id}
+              data-builder-column-index={columnIndex}
               onClick={(event) => { if (editable) { event.stopPropagation(); onSelectColumn?.(columnIndex, module.id); } }}
               onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }}
               onDrop={(event) => handleDrop(event, columnIndex, widgets.length)}
@@ -161,6 +163,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
                   const selected = selectedWidgetId === widget.id;
                   return <div
                     key={widget.id}
+                    data-builder-widget-id={widget.id}
                     draggable={editable}
                     onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData(COLUMN_WIDGET_MIME, JSON.stringify({ moduleId: module.id, widgetId: widget.id, columnIndex })); event.dataTransfer.effectAllowed = "move"; }}
                     onDragOver={(event) => { if (editable) event.preventDefault(); }}

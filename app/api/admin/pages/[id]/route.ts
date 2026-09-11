@@ -5,6 +5,7 @@ import { parseModules, serializeModules } from "@/lib/pageModules";
 import { MODULE_TYPE_ORDER, type Module } from "@/lib/modules";
 import { requireAdminApi } from "@/lib/adminApi";
 import { isSystemPageSlug } from "@/lib/systemPages";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -41,6 +42,7 @@ export async function GET(_request: Request, { params }: Params) {
  *  - any of title/slug/excerpt/coverImage/showInNav/navOrder -> page settings
  */
 export async function PATCH(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -91,25 +93,57 @@ export async function PATCH(request: Request, { params }: Params) {
     status = existing.status === "draft" ? "draft" : "unpublished";
   }
 
-  const page = await prisma.page.update({
-    where: { id },
-    data: {
-      title: !isSystemPage && typeof body.title === "string" ? body.title : existing.title,
-      slug,
-      excerpt: isSystemPage ? existing.excerpt : body.excerpt ?? existing.excerpt,
-      coverImage: isSystemPage ? existing.coverImage : body.coverImage ?? existing.coverImage,
-      showInNav: isSystemPage ? false : typeof body.showInNav === "boolean" ? body.showInNav : existing.showInNav,
-      navOrder: isSystemPage ? existing.navOrder : body.navOrder !== undefined ? Number(body.navOrder) : existing.navOrder,
-      modules: serializeModules(nextModules),
-      publishedModules: publishedModules ? serializeModules(publishedModules) : null,
-      status,
-    },
-  });
+  const updateData = {
+    title: !isSystemPage && typeof body.title === "string" ? body.title : existing.title,
+    slug,
+    excerpt: isSystemPage ? existing.excerpt : body.excerpt ?? existing.excerpt,
+    coverImage: isSystemPage ? existing.coverImage : body.coverImage ?? existing.coverImage,
+    showInNav: isSystemPage ? false : typeof body.showInNav === "boolean" ? body.showInNav : existing.showInNav,
+    navOrder: isSystemPage ? existing.navOrder : body.navOrder !== undefined ? Number(body.navOrder) : existing.navOrder,
+    modules: serializeModules(nextModules),
+    publishedModules: publishedModules ? serializeModules(publishedModules) : null,
+    status,
+  };
+
+  const page = body.publish === true
+    ? await prisma.$transaction(async (tx) => {
+        const updated = await tx.page.update({ where: { id }, data: updateData });
+        const latest = await tx.pageRevision.findFirst({
+          where: { pageId: id },
+          orderBy: { version: "desc" },
+          select: { version: true },
+        });
+        const version = (latest?.version ?? 0) + 1;
+        await tx.pageRevision.create({
+          data: {
+            pageId: id,
+            version,
+            title: updated.title,
+            slug: updated.slug,
+            excerpt: updated.excerpt,
+            coverImage: updated.coverImage,
+            modules: updateData.modules,
+          },
+        });
+        await tx.adminAuditLog.create({
+          data: {
+            adminUserId: access.admin.id,
+            action: "page.publish",
+            targetType: "Page",
+            targetId: id,
+            summary: `Opublikowano stronę „${updated.title}” jako wersję ${version}.`.slice(0, 500),
+            metadata: JSON.stringify({ version, slug: updated.slug }),
+          },
+        });
+        return updated;
+      })
+    : await prisma.page.update({ where: { id }, data: updateData });
 
   return NextResponse.json({ page });
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const existing = await prisma.page.findUnique({ where: { id } });

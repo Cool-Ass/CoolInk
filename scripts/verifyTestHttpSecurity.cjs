@@ -10,7 +10,7 @@ const tables = [
   "AdminUser", "Appointment", "AvailabilityBlock", "Client", "ClientNotification",
   "AvailableSlot", "CalendarEvent",
   "GoogleCalendarConnection", "GoogleCalendarSelection", "GoogleCalendarEventSync",
-  "ContactMessage", "DocumentAcceptance", "Media", "NavItem", "Page", "PortfolioItem",
+  "ContactMessage", "DocumentAcceptance", "Media", "NavItem", "Page", "PageRevision", "PortfolioItem",
   "ProjectActivity", "ProjectImage", "ProjectMessage", "Promotion", "SiteSetting", "StudioDocument",
   "TattooProject", "WorkingHours", "WorkingHoursOverride",
 ];
