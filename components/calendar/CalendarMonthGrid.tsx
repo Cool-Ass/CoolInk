@@ -11,8 +11,8 @@ export type CalendarEntryTone = "available" | "unavailable" | "custom";
 
 const TONE_CLASS: Record<CalendarDayAppearance["tone"], string> = {
   default: "bg-ink-white/[0.035]",
-  available: "bg-emerald-500/15",
-  unavailable: "bg-red-500/15",
+  available: "bg-ink-white/[0.035]",
+  unavailable: "bg-ink-white/[0.035]",
   custom: "bg-ink-white/[0.035]",
 };
 
@@ -60,10 +60,7 @@ export default function CalendarMonthGrid({
     const appearance = appearanceFor(date);
     return `${compact ? "min-h-24 p-1" : "min-h-20 p-1 sm:min-h-28 sm:p-1.5"} min-w-0 overflow-hidden border-b border-r border-ink-white/10 text-left align-top transition-colors ${TONE_CLASS[appearance.tone]} ${selectedKeys?.has(localDateKey(date)) ? "ring-1 ring-inset ring-ink-gold" : "hover:brightness-125"} ${date.getMonth() !== cursor.getMonth() ? "opacity-35" : ""}`;
   };
-  const cellStyle = (date: Date) => {
-    const appearance = appearanceFor(date);
-    return appearance.tone === "custom" && appearance.color ? { backgroundColor: `${appearance.color}26` } : undefined;
-  };
+  const cellStyle = (_date: Date) => undefined;
   const dateLabel = (date: Date) => ariaLabelFor?.(date) ?? date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
 
   return <div className="min-w-0">

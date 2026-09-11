@@ -1,24 +1,28 @@
 "use client";
-import { useState, type FormEvent } from "react";
-import { Trash2 } from "lucide-react";
+import { useRef, useState, type FormEvent } from "react";
+import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/ToastProvider";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { ADMIN_STATUS_LABEL, DEPOSIT_STATUS } from "@/lib/projectWorkflow";
 import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalendarPicker";
 import { LEAD_SOURCES } from "@/lib/leadSource";
+import { imageSource } from "@/lib/imageSource";
 
 const OPTIONS = Object.entries(ADMIN_STATUS_LABEL);
 
 export default function ProjectManager({
   id,
   clientId,
+  initialTitle,
+  initialDescription,
   initialKind,
   consultationMode,
   initialStatus,
   initialLeadSource,
   initialNotes,
   estimatedPrice,
+  estimatedPriceMax,
   finalPrice,
   initialDepositStatus,
   depositAmount,
@@ -27,15 +31,19 @@ export default function ProjectManager({
   initialNextActionDueAt,
   canManageFinance,
   canDeleteProject,
+  initialImages,
 }: {
   id: string;
   clientId: string;
+  initialTitle: string;
+  initialDescription: string;
   initialKind: string;
   consultationMode: string | null;
   initialStatus: string;
   initialLeadSource: string | null;
   initialNotes: string | null;
   estimatedPrice: number | null;
+  estimatedPriceMax: number | null;
   finalPrice: number | null;
   initialDepositStatus: string;
   depositAmount: number | null;
@@ -44,14 +52,18 @@ export default function ProjectManager({
   initialNextActionDueAt: string | null;
   canManageFinance: boolean;
   canDeleteProject: boolean;
+  initialImages: { id: string; url: string; caption: string | null }[];
 }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [status, setStatus] = useState(initialStatus);
+  const [projectTitle, setProjectTitle] = useState(initialTitle);
+  const [projectDescription, setProjectDescription] = useState(initialDescription);
   const [leadSource, setLeadSource] = useState(initialLeadSource ?? "");
   const [kind, setKind] = useState(initialKind);
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [estimate, setEstimate] = useState(estimatedPrice?.toString() ?? "");
+  const [estimateMax, setEstimateMax] = useState(estimatedPriceMax?.toString() ?? "");
   const [final, setFinal] = useState(finalPrice?.toString() ?? "");
   const [depositStatus, setDepositStatus] = useState(initialDepositStatus);
   const [deposit, setDeposit] = useState(depositAmount?.toString() ?? "");
@@ -70,6 +82,10 @@ export default function ProjectManager({
   const [proposing, setProposing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [images, setImages] = useState(initialImages);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const imageInput = useRef<HTMLInputElement>(null);
   async function save() {
     setSaving(true);
     try {
@@ -77,12 +93,14 @@ export default function ProjectManager({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          title: projectTitle,
+          description: projectDescription,
           status,
           leadSource,
           internalNotes: notes,
           nextAction,
           nextActionDueAt,
-          ...(canManageFinance ? { estimatedPrice: estimate, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
+          ...(canManageFinance ? { estimatedPrice: estimate, estimatedPriceMax: estimateMax, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
         }),
       });
       const data = await res.json();
@@ -97,6 +115,26 @@ export default function ProjectManager({
     } finally {
       setSaving(false);
     }
+  }
+  async function uploadInspiration(file?: File) {
+    if (!file || uploading) return;
+    setUploading(true); setImageError("");
+    try {
+      const form = new FormData(); form.set("file", file); form.set("caption", file.name.replace(/\.[^.]+$/, "").slice(0, 120));
+      const response = await fetch(`/api/admin/projects/${id}/images`, { method: "POST", body: form });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.image) throw new Error(data.error || "Nie udało się dodać inspiracji.");
+      setImages((current) => [...current, data.image]);
+      showToast("Inspiracja została dodana.");
+    } catch (error) { setImageError(error instanceof Error ? error.message : "Nie udało się dodać inspiracji."); }
+    finally { setUploading(false); if (imageInput.current) imageInput.current.value = ""; }
+  }
+  async function removeInspiration(imageId: string) {
+    if (!window.confirm("Usunąć tę inspirację z projektu?")) return;
+    const response = await fetch(`/api/admin/projects/${id}/images?imageId=${encodeURIComponent(imageId)}`, { method: "DELETE" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) { setImageError(data.error || "Nie udało się usunąć inspiracji."); return; }
+    setImages((current) => current.filter((image) => image.id !== imageId));
   }
   async function convertConsultation() {
     setSaving(true);
@@ -168,12 +206,16 @@ export default function ProjectManager({
     }
   }
   return (
-    <section className="border border-ink-white/15 bg-ink-charcoal/40 p-5">
+    <section className="border border-ink-white/15 bg-ink-charcoal/40 p-4 sm:p-5">
       <p className="text-xs tracking-[0.14em] text-ink-gold">
         {kind === "consultation" ? "ZARZĄDZANIE KONSULTACJĄ" : "ZARZĄDZANIE PROJEKTEM"}
       </p>
       {kind === "consultation" && <div className="mt-4 border border-blue-400/35 bg-blue-400/5 p-4"><p className="text-sm text-blue-100">Konsultacja · {({ studio: "w studiu", phone: "telefonicznie", video: "rozmowa wideo" } as Record<string, string>)[consultationMode ?? ""] || "forma do ustalenia"}</p><p className="mt-2 text-sm leading-relaxed text-ink-grey">Po rozmowie możesz zamienić ją w projekt bez kopiowania wiadomości, zdjęć ani notatek.</p><button type="button" onClick={convertConsultation} disabled={saving} className="mt-3 border border-blue-300 px-4 py-2.5 text-xs text-blue-100 hover:bg-blue-400/10 disabled:opacity-50">PRZEKSZTAŁĆ W PROJEKT TATUAŻU</button></div>}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1.5 text-[10px] tracking-[0.1em] text-ink-grey">TYTUŁ PROJEKTU<input value={projectTitle} maxLength={160} onChange={(event) => setProjectTitle(event.target.value)} className="border border-ink-white/20 bg-transparent px-3 py-2 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
+        <label className="flex flex-col gap-1.5 text-[10px] tracking-[0.1em] text-ink-grey">OPIS PROJEKTU<textarea value={projectDescription} maxLength={5000} rows={2} onChange={(event) => setProjectDescription(event.target.value)} className="border border-ink-white/20 bg-transparent px-3 py-2 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           STATUS
           <select
@@ -200,7 +242,7 @@ export default function ProjectManager({
           </select>
         </label>
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
-          WYCENA (PLN)
+          WYCENA OD (PLN)
           <input
             disabled={!canManageFinance}
             inputMode="numeric"
@@ -208,6 +250,10 @@ export default function ProjectManager({
             onChange={(e) => setEstimate(e.target.value)}
             className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"
           />
+        </label>
+        <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
+          WYCENA DO (PLN)
+          <input disabled={!canManageFinance} inputMode="numeric" value={estimateMax} onChange={(e) => setEstimateMax(e.target.value)} className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" />
         </label>
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           CENA KOŃCOWA (PLN)
@@ -220,6 +266,12 @@ export default function ProjectManager({
           />
         </label>
       </div>
+      <section className="mt-4 border-t border-ink-white/10 pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] tracking-[0.12em] text-ink-gold">INSPIRACJE</p><p className="mt-1 text-[11px] text-ink-grey">Widoczne tylko dla klienta i studia · JPG, PNG lub WEBP do 10 MB</p></div><div><input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void uploadInspiration(event.target.files?.[0])} /><button type="button" disabled={uploading} onClick={() => imageInput.current?.click()} className="inline-flex min-h-9 items-center gap-2 border border-ink-gold/60 px-3 py-2 text-[10px] text-ink-gold disabled:opacity-50">{uploading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}{uploading ? "DODAWANIE…" : "DODAJ INSPIRACJĘ"}</button></div></div>
+        {images.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">{images.map((image) => { const source = imageSource(image.url); return source ? <div key={image.id} className="group relative aspect-square overflow-hidden border border-ink-white/15"><img src={source} alt={image.caption || "Inspiracja projektu"} className="h-full w-full object-cover" /><button type="button" onClick={() => void removeInspiration(image.id)} aria-label="Usuń inspirację" className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center border border-red-400/60 bg-ink-black/85 text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button></div> : null; })}</div>}
+        {images.length === 0 && <p className="mt-3 border border-dashed border-ink-white/15 px-3 py-4 text-center text-xs text-ink-grey">Brak inspiracji. Możesz dodać je tutaj lub poczekać na zdjęcia klienta.</p>}
+        {imageError && <p role="alert" className="mt-2 text-xs text-red-300">{imageError}</p>}
+      </section>
       <div className="mt-4 grid gap-4 border-t border-ink-white/10 pt-4 sm:grid-cols-[1fr_220px]">
         <label className="flex flex-col gap-2 text-xs tracking-[0.08em] text-ink-grey">NASTĘPNE DZIAŁANIE<input value={nextAction} onChange={(event) => setNextAction(event.target.value)} maxLength={500} placeholder="Np. oddzwonić i potwierdzić termin" className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
         <label className="flex flex-col gap-2 text-xs tracking-[0.08em] text-ink-grey">TERMIN DZIAŁANIA<input type="datetime-local" value={nextActionDueAt} onChange={(event) => setNextActionDueAt(event.target.value)} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>

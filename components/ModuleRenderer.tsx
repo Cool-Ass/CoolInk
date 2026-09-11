@@ -19,6 +19,7 @@ import ImageText from "@/components/modules/ImageText";
 import Spacer from "@/components/modules/Spacer";
 import BuilderWidgets from "@/components/modules/BuilderWidgets";
 import BuilderStyleLayers from "@/components/builder/BuilderStyleLayers";
+import BuilderResizeHandles from "@/components/admin/builder/BuilderResizeHandles";
 import {
   MODULE_LABELS,
   withDefaults,
@@ -98,15 +99,20 @@ export interface ModuleRendererProps {
   onReorder?: (fromId: string, toId: string) => void;
   selectedWidgetId?: string | null;
   selectedColumnIndex?: number | null;
+  selectedColumnOwnerId?: string | null;
   onSelectWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
-  onSelectColumn?: (moduleId: string, columnIndex: number) => void;
+  onSelectColumn?: (moduleId: string, columnIndex: number, ownerId: string) => void;
   onDeleteWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
   onDuplicateWidget?: (moduleId: string, widgetId: string, columnIndex: number) => void;
-  onDuplicateColumn?: (moduleId: string, columnIndex: number) => void;
+  onDuplicateColumn?: (moduleId: string, columnIndex: number, ownerId: string) => void;
+  onDeleteColumn?: (moduleId: string, columnIndex: number, ownerId: string) => void;
   onColumnsChange?: (moduleId: string, columns: ColumnWidget[][]) => void;
+  onResizeModule?: (moduleId: string, style: ModuleStyle) => void;
+  onResizeWidget?: (moduleId: string, widgetId: string, style: ModuleStyle) => void;
+  onResizeColumn?: (moduleId: string, columnIndex: number, ownerId: string, style: ModuleStyle) => void;
 }
 
-function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "selectedColumnIndex" | "onSelectWidget" | "onSelectColumn" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onColumnsChange">) {
+function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "selectedColumnIndex" | "selectedColumnOwnerId" | "onSelectWidget" | "onSelectColumn" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onDeleteColumn" | "onColumnsChange" | "onResizeWidget" | "onResizeColumn">) {
   switch (mod.type) {
     case "siteHeader": {
       const data = withDefaults("siteHeader", mod.data);
@@ -170,11 +176,11 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     }
     case "spacer":
       return <Spacer data={withDefaults("spacer", mod.data)} />;
-    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "faq": case "video": case "map": case "quote": case "googleReviews": case "iconList": case "callout": case "customCode": {
+    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "innerSection": case "faq": case "video": case "map": case "quote": case "googleReviews": case "iconList": case "callout": case "customCode": {
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
-      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex) => nested?.onSelectColumn?.(mod.id, columnIndex)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex) => nested?.onDuplicateColumn?.(mod.id, columnIndex)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} selectedColumnOwnerId={nested?.selectedColumnOwnerId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex, ownerId) => nested?.onSelectColumn?.(mod.id, columnIndex, ownerId)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex, ownerId) => nested?.onDuplicateColumn?.(mod.id, columnIndex, ownerId)} onDeleteColumn={(columnIndex, ownerId) => nested?.onDeleteColumn?.(mod.id, columnIndex, ownerId)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} onResizeWidget={(widgetId, style) => nested?.onResizeWidget?.(mod.id, widgetId, style)} onResizeColumn={(columnIndex, ownerId, style) => nested?.onResizeColumn?.(mod.id, columnIndex, ownerId, style)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
     }
     default:
       return null;
@@ -195,19 +201,24 @@ export default function ModuleRenderer({
   onReorder,
   selectedWidgetId,
   selectedColumnIndex,
+  selectedColumnOwnerId,
   onSelectWidget,
   onSelectColumn,
   onDeleteWidget,
   onDuplicateWidget,
   onDuplicateColumn,
+  onDeleteColumn,
   onColumnsChange,
+  onResizeModule,
+  onResizeWidget,
+  onResizeColumn,
 }: ModuleRendererProps) {
   const visible = modules.filter((m) => editable || !m.hidden);
 
   return (
     <>
       {visible.map((mod, i) => {
-        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, selectedColumnIndex, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onColumnsChange });
+        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn });
 
         const visualStyle = buildVisualStyle(mod.style);
         const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} builder-styled-icons ${builderEffectClasses(mod.style)} ${mod.style?.cssClass ?? ""}`;
@@ -248,6 +259,7 @@ export default function ModuleRenderer({
             } ${mod.hidden ? "opacity-40" : ""}`}
           >
             {/* Compact toolbar stays out of the section until its corner button is used. */}
+            {isSelected && onResizeModule && <BuilderResizeHandles style={mod.style} onResize={(style) => onResizeModule(mod.id, style)} label={MODULE_LABELS[mod.type]} />}
             <div className="builder-editor-chrome group/tools pointer-events-auto absolute right-2 top-2 z-40 flex items-center shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="hidden items-center border border-ink-white/15 bg-ink-black/95 p-1 text-ink-grey backdrop-blur group-hover/tools:flex group-focus-within/tools:flex">
                 <span className="flex max-w-32 items-center gap-1.5 truncate border-r border-ink-white/10 px-2 text-[9px] text-ink-white"><GripVertical className="h-3.5 w-3.5 text-ink-gold" />{MODULE_LABELS[mod.type]}</span>
@@ -262,7 +274,7 @@ export default function ModuleRenderer({
 
             {/* FAQ and column widgets stay interactive in the preview. Other
                 legacy modules select as one section and do not capture clicks. */}
-            <BuilderStyleLayers style={mod.style} /><div className={`relative z-[3] ${editable && mod.type !== "faq" && mod.type !== "columns" ? "pointer-events-none" : ""}`}>{content}</div>
+            <BuilderStyleLayers style={mod.style} /><div className={`relative z-[3] ${editable && mod.type !== "faq" && mod.type !== "columns" && mod.type !== "innerSection" ? "pointer-events-none" : ""}`}>{content}</div>
           </div>
         );
       })}

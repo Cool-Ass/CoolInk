@@ -106,3 +106,19 @@ export async function POST(
   await sendPushToClient(project.clientId, { title: "Nowa wiadomość od CoolInk", body: text.slice(0, 160), url: "/app/portal/messages", tag: `studio-message-${result.id}` }).catch(() => undefined);
   return NextResponse.json({ message: serialize(result) }, { status: 201 });
 }
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await getCurrentAdmin();
+  if (!admin) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { id } = await params;
+  const project = await prisma.tattooProject.findUnique({ where: { id }, select: { id: true } });
+  if (!project) return NextResponse.json({ error: "Projekt nie istnieje." }, { status: 404 });
+  const url = new URL(request.url);
+  const removeAll = url.searchParams.get("all") === "true";
+  const messageId = url.searchParams.get("messageId");
+  if (!removeAll && !messageId) return NextResponse.json({ error: "Wybierz wiadomość lub całą rozmowę." }, { status: 400 });
+  const result = await prisma.projectMessage.deleteMany({ where: removeAll ? { projectId: id } : { id: messageId!, projectId: id } });
+  if (!removeAll && result.count === 0) return NextResponse.json({ error: "Wiadomość nie istnieje." }, { status: 404 });
+  return NextResponse.json({ ok: true, removed: result.count });
+}

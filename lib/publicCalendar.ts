@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeCalendarBlockRange } from "@/lib/dateTime";
+import { normalizeEventImageUrls } from "@/lib/calendarEventMedia";
 
 /** Calendar data safe to expose to visitors: never client or appointment details. */
 export async function getPublicCalendarData(includeLoggedInPromotions = false) {
@@ -11,7 +12,7 @@ export async function getPublicCalendarData(includeLoggedInPromotions = false) {
     prisma.workingHoursOverride.findMany({ where: { date: { gte: now } }, select: { date: true, enabled: true, startsAt: true, endsAt: true } }),
     prisma.availableSlot.findMany({ where: { isPublic: true, endsAt: { gte: now } }, select: { startsAt: true, endsAt: true, title: true, description: true, color: true, isPublic: true } }),
     prisma.promotion.findMany({ where: { active: true, ...(includeLoggedInPromotions ? {} : { isPublic: true }), endsAt: { gte: now } }, select: { id: true, title: true, description: true, badge: true, color: true, startsAt: true, endsAt: true } }),
-    prisma.calendarEvent.findMany({ where: { isPublic: true, endsAt: { gte: now } }, select: { id: true, title: true, label: true, description: true, startsAt: true, endsAt: true, color: true } }),
+    prisma.calendarEvent.findMany({ where: { isPublic: true, endsAt: { gte: now } }, select: { id: true, title: true, label: true, description: true, startsAt: true, endsAt: true, color: true, imageUrls: true } }),
     prisma.siteSetting.findMany({ where: { key: { in: ["booking_buffer_minutes", "calendar_visible_months"] } }, select: { key: true, value: true } }),
   ]);
   const setting = new Map(settings.map((item) => [item.key, item.value]));
@@ -22,7 +23,7 @@ export async function getPublicCalendarData(includeLoggedInPromotions = false) {
     overrides: overrides.map((item) => ({ ...item, date: item.date.toISOString() })),
     availableSlots: availableSlots.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
     promotions: promotions.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
-    events: events.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
+    events: events.map((item) => ({ ...item, imageUrls: normalizeEventImageUrls(item.imageUrls), startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
     bufferMinutes: Number(setting.get("booking_buffer_minutes")) || 30,
     visibleMonths: Math.min(12, Math.max(1, Number(setting.get("calendar_visible_months")) || 3)),
   };

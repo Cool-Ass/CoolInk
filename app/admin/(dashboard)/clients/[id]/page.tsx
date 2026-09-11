@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [client, admin, messageTemplates] = await Promise.all([
-    prisma.client.findUnique({ where: { id }, include: { directMessages: { orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
+    prisma.client.findUnique({ where: { id }, include: { directMessages: { orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, images: { orderBy: { createdAt: "asc" } }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
     getCurrentAdmin(),
     getMessageTemplates(),
   ]);
@@ -29,12 +29,14 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     nextAction: project.nextAction,
     nextActionDueAt: project.nextActionDueAt?.toISOString() ?? null,
     estimatedPrice: project.estimatedPrice,
+    estimatedPriceMax: project.estimatedPriceMax,
     finalPrice: project.finalPrice,
     depositStatus: project.depositStatus,
     depositAmount: project.depositAmount,
     depositPaymentMethod: project.depositPaymentMethod,
     appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, notes: item.notes, price: item.price })),
     activities: project.activities.map((item) => ({ id: item.id, message: item.message, createdAt: item.createdAt.toISOString() })),
+    images: project.images.map((image) => ({ id: image.id, caption: image.caption, url: `/api/admin/images/${image.id}` })),
     messages: project.messages.map((item) => ({ id: item.id, author: item.author, body: item.body, createdAt: item.createdAt.toISOString(), readAt: item.readAt?.toISOString() ?? null, attachment: item.attachment ? { ...item.attachment, url: `/api/admin/images/${item.attachment.id}` } : null })),
   }));
 

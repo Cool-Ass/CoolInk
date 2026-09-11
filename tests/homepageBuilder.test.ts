@@ -35,6 +35,33 @@ describe("homepage builder content", () => {
     expect(originalWidgets[0].data.text).not.toBe("Zmiana tylko w kopii");
   });
 
+  it("duplicates inner sections recursively and supports eight-column layouts", () => {
+    const original = {
+      id: "section",
+      type: "columns" as const,
+      hidden: false,
+      data: {
+        ...defaultModuleData("columns"),
+        layout: "eight",
+        columns: [[{
+          id: "inner",
+          type: "innerSection" as const,
+          data: {
+            ...defaultModuleData("innerSection"),
+            columns: [[{ id: "nested-heading", type: "heading" as const, data: defaultModuleData("heading") }]],
+          },
+        }], [], [], [], [], [], [], []],
+      },
+    };
+    const clone = cloneBuilderModule(original);
+    const originalInner = withDefaults("columns", original.data).columns[0][0];
+    const clonedInner = withDefaults("columns", clone.data).columns[0][0];
+    expect(withDefaults("columns", clone.data).layout).toBe("eight");
+    expect(clonedInner.id).not.toBe(originalInner.id);
+    expect(withDefaults("innerSection", clonedInner.data).columns[0][0].id)
+      .not.toBe(withDefaults("innerSection", originalInner.data).columns[0][0].id);
+  });
+
   it("backfills newly editable fields without overwriting saved copy", () => {
     const hero = withDefaults("hero", { heading1: "Mój własny nagłówek" });
     expect(hero.heading1).toBe("Mój własny nagłówek");

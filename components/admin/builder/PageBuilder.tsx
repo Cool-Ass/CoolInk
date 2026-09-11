@@ -10,11 +10,70 @@ import PageSettingsModal, {
   type PageSettingsValues,
 } from "@/components/admin/builder/PageSettingsModal";
 import { useToast } from "@/components/admin/ToastProvider";
-import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, withDefaults, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
+import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, withDefaults, type ColumnsModuleData, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import { PALETTE_WIDGET_MIME } from "@/lib/builderDnd";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { siteThemeStyle } from "@/lib/siteTheme";
 import { isSystemPageSlug } from "@/lib/systemPages";
+
+const COLUMN_LAYOUTS = ["one", "two", "three", "four", "five", "six", "seven", "eight"] as const;
+
+function findWidget(columns: ColumnWidget[][], widgetId: string): ColumnWidget | null {
+  for (const column of columns) for (const widget of column) {
+    if (widget.id === widgetId) return widget;
+    if (widget.type === "innerSection") {
+      const match = findWidget(withDefaults("innerSection", widget.data).columns, widgetId);
+      if (match) return match;
+    }
+  }
+  return null;
+}
+
+function updateWidgetTree(columns: ColumnWidget[][], widgetId: string, update: (widget: ColumnWidget) => ColumnWidget): ColumnWidget[][] {
+  return columns.map((column) => column.map((widget) => {
+    if (widget.id === widgetId) return update(widget);
+    if (widget.type !== "innerSection") return widget;
+    const data = withDefaults("innerSection", widget.data);
+    return { ...widget, data: { ...data, columns: updateWidgetTree(data.columns, widgetId, update) } };
+  }));
+}
+
+function removeWidgetTree(columns: ColumnWidget[][], widgetId: string): ColumnWidget[][] {
+  return columns.map((column) => column.filter((widget) => widget.id !== widgetId).map((widget) => {
+    if (widget.type !== "innerSection") return widget;
+    const data = withDefaults("innerSection", widget.data);
+    return { ...widget, data: { ...data, columns: removeWidgetTree(data.columns, widgetId) } };
+  }));
+}
+
+function duplicateWidgetTree(columns: ColumnWidget[][], widgetId: string): { columns: ColumnWidget[][]; clone: ColumnWidget | null } {
+  let clone: ColumnWidget | null = null;
+  const next = columns.map((column) => {
+    const result: ColumnWidget[] = [];
+    for (const widget of column) {
+      result.push(widget);
+      if (widget.id === widgetId) { clone = cloneColumnWidget(widget); result.push(clone); continue; }
+      if (widget.type === "innerSection") {
+        const data = withDefaults("innerSection", widget.data);
+        const nested = duplicateWidgetTree(data.columns, widgetId);
+        if (nested.clone) { clone = nested.clone; result[result.length - 1] = { ...widget, data: { ...data, columns: nested.columns } }; }
+      }
+    }
+    return result;
+  });
+  return { columns: next, clone };
+}
+
+function getContainerData(root: ColumnsModuleData, rootId: string, ownerId: string | null): ColumnsModuleData | null {
+  if (!ownerId || ownerId === rootId) return root;
+  const owner = findWidget(root.columns, ownerId);
+  return owner?.type === "innerSection" ? withDefaults("innerSection", owner.data) : null;
+}
+
+function updateContainerData(root: ColumnsModuleData, rootId: string, ownerId: string, update: (data: ColumnsModuleData) => ColumnsModuleData): ColumnsModuleData {
+  if (ownerId === rootId) return update(root);
+  return { ...root, columns: updateWidgetTree(root.columns, ownerId, (widget) => widget.type === "innerSection" ? { ...widget, data: update(withDefaults("innerSection", widget.data)) } : widget) };
+}
 
 export interface BuilderPage {
   id: string;
@@ -62,6 +121,7 @@ export default function PageBuilder({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
+  const [selectedColumnOwnerId, setSelectedColumnOwnerId] = useState<string | null>(null);
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -125,10 +185,10 @@ export default function PageBuilder({
 
   const selectedModule = modules.find((m) => m.id === selectedId) ?? null;
   const selectedWidget = selectedModule?.type === "columns" && selectedWidgetId
-    ? withDefaults("columns", selectedModule.data).columns.flat().find((widget) => widget.id === selectedWidgetId) ?? null
+    ? findWidget(withDefaults("columns", selectedModule.data).columns, selectedWidgetId)
     : null;
   const selectedColumnData = selectedModule?.type === "columns" && selectedColumnIndex !== null
-    ? withDefaults("columns", selectedModule.data)
+    ? getContainerData(withDefaults("columns", selectedModule.data), selectedModule.id, selectedColumnOwnerId)
     : null;
   const selectedColumnStyle = selectedColumnData && selectedColumnIndex !== null ? selectedColumnData.columnStyles?.[selectedColumnIndex] ?? {} : null;
   const activeEditorModule = selectedWidget
@@ -152,22 +212,36 @@ export default function PageBuilder({
   function updateSelectedWidget(patch: Partial<Pick<ColumnWidget, "data" | "style">>) {
     if (!selectedModule || selectedModule.type !== "columns" || !selectedWidgetId) return;
     const data = withDefaults("columns", selectedModule.data);
-    updateColumns(selectedModule.id, data.columns.map((column) => column.map((widget) => widget.id === selectedWidgetId ? { ...widget, ...patch } : widget)));
+    updateColumns(selectedModule.id, updateWidgetTree(data.columns, selectedWidgetId, (widget) => ({ ...widget, ...patch })));
   }
 
   function updateSelectedColumnStyle(style: ModuleStyle) {
     if (!selectedModule || selectedModule.type !== "columns" || selectedColumnIndex === null) return;
-    const data = withDefaults("columns", selectedModule.data);
-    const columnStyles = Array.from({ length: data.columns.length }, (_, index) => index === selectedColumnIndex ? style : data.columnStyles?.[index] ?? {});
-    setModules((current) => current.map((module) => module.id === selectedModule.id ? { ...module, data: { ...data, columnStyles } } : module));
+    const root = withDefaults("columns", selectedModule.data); const ownerId = selectedColumnOwnerId ?? selectedModule.id;
+    const data = updateContainerData(root, selectedModule.id, ownerId, (container) => ({ ...container, columnStyles: Array.from({ length: container.columns.length }, (_, index) => index === selectedColumnIndex ? style : container.columnStyles?.[index] ?? {}) }));
+    setModules((current) => current.map((module) => module.id === selectedModule.id ? { ...module, data } : module));
   }
 
   function updateSelectedColumnWidth(width: number) {
     if (!selectedModule || selectedModule.type !== "columns" || selectedColumnIndex === null) return;
-    const data = withDefaults("columns", selectedModule.data);
-    const fallback = 100 / Math.max(1, data.columns.length);
-    const columnWidths = Array.from({ length: data.columns.length }, (_, index) => index === selectedColumnIndex ? Math.min(100, Math.max(5, width)) : data.columnWidths?.[index] ?? fallback);
-    setModules((current) => current.map((module) => module.id === selectedModule.id ? { ...module, data: { ...data, columnWidths } } : module));
+    const root = withDefaults("columns", selectedModule.data); const ownerId = selectedColumnOwnerId ?? selectedModule.id;
+    const data = updateContainerData(root, selectedModule.id, ownerId, (container) => { const fallback = 100 / Math.max(1, container.columns.length); return { ...container, columnWidths: Array.from({ length: container.columns.length }, (_, index) => index === selectedColumnIndex ? Math.min(100, Math.max(5, width)) : container.columnWidths?.[index] ?? fallback) }; });
+    setModules((current) => current.map((module) => module.id === selectedModule.id ? { ...module, data } : module));
+  }
+
+  function resizeWidget(moduleId: string, widgetId: string, style: ModuleStyle) {
+    const target = modules.find((module) => module.id === moduleId);
+    if (!target || target.type !== "columns") return;
+    const data = withDefaults("columns", target.data);
+    updateColumns(moduleId, updateWidgetTree(data.columns, widgetId, (widget) => ({ ...widget, style })));
+  }
+
+  function resizeColumn(moduleId: string, columnIndex: number, ownerId: string, style: ModuleStyle) {
+    const target = modules.find((module) => module.id === moduleId);
+    if (!target || target.type !== "columns") return;
+    const root = withDefaults("columns", target.data);
+    const data = updateContainerData(root, moduleId, ownerId, (container) => ({ ...container, columnStyles: Array.from({ length: container.columns.length }, (_, index) => index === columnIndex ? style : container.columnStyles?.[index] ?? {}) }));
+    setModules((current) => current.map((module) => module.id === moduleId ? { ...module, data } : module));
   }
 
   function moveModule(id: string, direction: "up" | "down") {
@@ -208,7 +282,7 @@ export default function PageBuilder({
     if (isSystemPage && modules.length === 1) { showToast("Chronionego elementu systemowego nie można usunąć.", "error"); return; }
     if (!window.confirm("Usunąć ten moduł? Tej operacji nie można cofnąć po zapisaniu.")) return;
     setModules((prev) => prev.filter((m) => m.id !== id));
-    if (selectedId === id) { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); }
+    if (selectedId === id) { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }
   }
 
   function toggleHidden(id: string) {
@@ -227,45 +301,62 @@ export default function PageBuilder({
     setSelectedId(newModule.id);
     setSelectedWidgetId(widgetId);
     setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
   }
 
   function duplicateWidget(moduleId: string, widgetId: string, columnIndex: number) {
     const target = modules.find((module) => module.id === moduleId);
     if (!target || target.type !== "columns") return;
     const data = withDefaults("columns", target.data);
-    const next = data.columns.map((column) => [...column]);
-    const widgetIndex = next[columnIndex]?.findIndex((widget) => widget.id === widgetId) ?? -1;
-    if (widgetIndex < 0) return;
-    const clone = cloneColumnWidget(next[columnIndex][widgetIndex]);
-    next[columnIndex].splice(widgetIndex + 1, 0, clone);
-    updateColumns(moduleId, next);
+    const result = duplicateWidgetTree(data.columns, widgetId);
+    if (!result.clone) return;
+    updateColumns(moduleId, result.columns);
     setSelectedId(moduleId);
-    setSelectedWidgetId(clone.id);
+    setSelectedWidgetId(result.clone.id);
     setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
   }
 
-  function duplicateColumn(moduleId: string, columnIndex: number) {
+  function duplicateColumn(moduleId: string, columnIndex: number, ownerId: string) {
     const target = modules.find((module) => module.id === moduleId);
     if (!target || target.type !== "columns") return;
-    const data = withDefaults("columns", target.data);
-    if (data.columns.length >= 4) {
-      showToast("Sekcja może mieć maksymalnie 4 kolumny.", "error");
+    const root = withDefaults("columns", target.data);
+    const container = getContainerData(root, moduleId, ownerId);
+    if (!container) return;
+    if (container.columns.length >= 8) {
+      showToast("Sekcja może mieć maksymalnie 8 kolumn.", "error");
       return;
     }
-    const columns = data.columns.map((column) => [...column]);
+    const columns = container.columns.map((column) => [...column]);
     const clone = (columns[columnIndex] ?? []).map(cloneColumnWidget);
     columns.splice(columnIndex + 1, 0, clone);
-    const columnStyles = Array.from({ length: data.columns.length }, (_, index) => ({ ...(data.columnStyles?.[index] ?? {}) }));
-    columnStyles.splice(columnIndex + 1, 0, { ...(data.columnStyles?.[columnIndex] ?? {}) });
-    const layout = (["one", "two", "three", "four"] as const)[columns.length - 1];
+    const columnStyles = Array.from({ length: container.columns.length }, (_, index) => ({ ...(container.columnStyles?.[index] ?? {}) }));
+    columnStyles.splice(columnIndex + 1, 0, { ...(container.columnStyles?.[columnIndex] ?? {}) });
+    const layout = COLUMN_LAYOUTS[columns.length - 1];
     const evenWidth = Math.round((100 / columns.length) * 100) / 100;
     setModules((current) => current.map((module) => module.id === moduleId ? {
       ...module,
-      data: { ...data, layout, columns, columnWidths: Array(columns.length).fill(evenWidth), columnStyles },
+      data: updateContainerData(root, moduleId, ownerId, (data) => ({ ...data, layout, columns, columnWidths: Array(columns.length).fill(evenWidth), columnStyles })),
     } : module));
     setSelectedId(moduleId);
     setSelectedWidgetId(null);
     setSelectedColumnIndex(columnIndex + 1);
+    setSelectedColumnOwnerId(ownerId);
+  }
+
+  function deleteColumn(moduleId: string, columnIndex: number, ownerId: string) {
+    const target = modules.find((module) => module.id === moduleId);
+    if (!target || target.type !== "columns") return;
+    const root = withDefaults("columns", target.data); const container = getContainerData(root, moduleId, ownerId);
+    if (!container || container.columns.length <= 1) { showToast("Sekcja musi zawierać co najmniej jedną kolumnę.", "error"); return; }
+    const widgets = container.columns[columnIndex] ?? [];
+    if (widgets.length && !window.confirm(`Usunąć kolumnę wraz z ${widgets.length} ${widgets.length === 1 ? "widgetem" : "widgetami"}?`)) return;
+    const columns = container.columns.filter((_, index) => index !== columnIndex);
+    const columnStyles = container.columnStyles?.filter((_, index) => index !== columnIndex) ?? [];
+    const layout = COLUMN_LAYOUTS[columns.length - 1]; const evenWidth = Math.round((100 / columns.length) * 100) / 100;
+    const data = updateContainerData(root, moduleId, ownerId, (current) => ({ ...current, layout, columns, columnStyles, columnWidths: Array(columns.length).fill(evenWidth) }));
+    setModules((current) => current.map((module) => module.id === moduleId ? { ...module, data } : module));
+    setSelectedWidgetId(null); setSelectedColumnIndex(Math.min(columnIndex, columns.length - 1)); setSelectedColumnOwnerId(ownerId);
   }
 
   function dropOnCanvas(event: DragEvent<HTMLDivElement>) {
@@ -277,6 +368,7 @@ export default function PageBuilder({
     setSelectedId(newModule.id);
     setSelectedWidgetId(widgetId);
     setSelectedColumnIndex(null);
+    setSelectedColumnOwnerId(null);
   }
 
   async function patchPage(body: object) {
@@ -386,7 +478,7 @@ export default function PageBuilder({
               onColumnWidthChange={updateSelectedColumnWidth}
               onChange={(data) => selectedWidget ? updateSelectedWidget({ data }) : selectedColumnIndex !== null ? undefined : updateModule(activeEditorModule.id, data)}
               onStyleChange={(style) => selectedWidget ? updateSelectedWidget({ style }) : selectedColumnIndex !== null ? updateSelectedColumnStyle(style) : updateModuleStyle(activeEditorModule.id, style)}
-              onClose={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); }}
+              onClose={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
               portfolioItems={portfolioItems}
               globalContact={globals.contact}
             />
@@ -396,7 +488,7 @@ export default function PageBuilder({
         <div
           data-lenis-prevent
           className="flex-1 overflow-y-auto bg-[#101113] px-4 py-6 md:px-7"
-          onClick={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); }}
+          onClick={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
           onDragOver={(event) => { if (event.dataTransfer.types.includes(PALETTE_WIDGET_MIME)) event.preventDefault(); }}
           onDrop={dropOnCanvas}
         >
@@ -413,7 +505,7 @@ export default function PageBuilder({
               globals={globals}
               editable
               selectedId={selectedId}
-              onSelect={(id) => { setSelectedId(id); setSelectedWidgetId(null); setSelectedColumnIndex(null); }}
+              onSelect={(id) => { setSelectedId(id); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
               onMove={moveModule}
               onDuplicate={duplicateModule}
               onDelete={deleteModule}
@@ -421,18 +513,23 @@ export default function PageBuilder({
               onReorder={reorderModules}
               selectedWidgetId={selectedWidgetId}
               selectedColumnIndex={selectedColumnIndex}
-              onSelectWidget={(moduleId, widgetId) => { setSelectedId(moduleId); setSelectedWidgetId(widgetId); setSelectedColumnIndex(null); }}
-              onSelectColumn={(moduleId, columnIndex) => { setSelectedId(moduleId); setSelectedWidgetId(null); setSelectedColumnIndex(columnIndex); }}
+              selectedColumnOwnerId={selectedColumnOwnerId}
+              onSelectWidget={(moduleId, widgetId) => { setSelectedId(moduleId); setSelectedWidgetId(widgetId); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
+              onSelectColumn={(moduleId, columnIndex, ownerId) => { setSelectedId(moduleId); setSelectedWidgetId(null); setSelectedColumnIndex(columnIndex); setSelectedColumnOwnerId(ownerId); }}
               onDeleteWidget={(moduleId, widgetId) => {
                 const target = modules.find((module) => module.id === moduleId);
                 if (!target || target.type !== "columns") return;
                 const data = withDefaults("columns", target.data);
-                updateColumns(moduleId, data.columns.map((column) => column.filter((widget) => widget.id !== widgetId)));
+                updateColumns(moduleId, removeWidgetTree(data.columns, widgetId));
                 if (selectedWidgetId === widgetId) setSelectedWidgetId(null);
               }}
               onDuplicateWidget={duplicateWidget}
               onDuplicateColumn={duplicateColumn}
+              onDeleteColumn={deleteColumn}
               onColumnsChange={updateColumns}
+              onResizeModule={updateModuleStyle}
+              onResizeWidget={resizeWidget}
+              onResizeColumn={resizeColumn}
             />
             <div className="m-3 flex min-h-16 items-center justify-center border border-dashed border-ink-gold/25 bg-ink-gold/[0.025] text-[10px] tracking-[.08em] text-ink-grey">
               UPUŚĆ TUTAJ, ABY DODAĆ NA KOŃCU STRONY

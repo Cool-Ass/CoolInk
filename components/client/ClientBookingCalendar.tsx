@@ -7,6 +7,8 @@ import { CALENDAR_AVAILABLE_COLOR, CALENDAR_UNAVAILABLE_COLOR, calendarAvailabil
 import { formatCoolinkTime, isCoolinkCalendarDayRange } from "@/lib/dateTime";
 import BookingRequestForm from "@/components/client/BookingRequestForm";
 import AppModal from "@/components/ui/AppModal";
+import { sanitizeRichText } from "@/lib/richText";
+import { imageSource } from "@/lib/imageSource";
 
 type Project = { id: string; title: string };
 type Busy = { startsAt: string; endsAt: string };
@@ -15,7 +17,7 @@ type Hours = { weekday: number; enabled: boolean; startsAt: string; endsAt: stri
 type Override = { date: string; enabled: boolean; startsAt: string; endsAt: string };
 type AvailableSlot = { startsAt: string; endsAt: string; title?: string | null; description?: string | null; color?: string; isPublic: boolean };
 type Promotion = { id: string; title: string; description: string | null; badge: string | null; startsAt: string; endsAt: string; color: string };
-type CalendarEvent = { id: string; title: string; label: string | null; description: string | null; startsAt: string; endsAt: string; color: string };
+type CalendarEvent = { id: string; title: string; label: string | null; description: string | null; startsAt: string; endsAt: string; color: string; imageUrls: string[] };
 
 export interface BookingCalendarCopy {
   calendarLabel: string;
@@ -209,17 +211,17 @@ export default function ClientBookingCalendar({
   function selectClientDay(date: Date) {
     setSelected(dayStart(date));
     if (date.getMonth() !== cursor.getMonth()) setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
-    setDayDetailsOpen(mode === "client" && rangesFor(date).length > 0);
+    setDayDetailsOpen(mode === "client" && (rangesFor(date).length > 0 || events.some((item) => overlapsDay(item, date)) || promotions.some((item) => overlapsDay(item, date))));
   }
 
   const selectedKeys = new Set([localDateKey(selected)]);
   const publicLegend = copy.legend === LEGACY_LEGEND || copy.legend === PREVIOUS_LEGEND ? DEFAULT_COPY.legend : copy.legend;
 
   const bookingDetails = <>
-    {selectedEvents.map((calendarEvent) => <div key={calendarEvent.id} className="mb-3 border p-3" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{calendarEvent.label || copy.eventFallbackLabel}</p><p className="mt-1 text-sm">{calendarEvent.title}</p>{calendarEvent.description && <p className="mt-1 text-xs text-ink-grey">{calendarEvent.description}</p>}</div>)}
+    {selectedEvents.map((calendarEvent) => <article key={calendarEvent.id} className="mb-3 overflow-hidden border" style={{ borderColor: calendarEvent.color, backgroundColor: `${calendarEvent.color}1a` }}>{calendarEvent.imageUrls?.length > 0 && <div className={`grid gap-px bg-ink-black ${calendarEvent.imageUrls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>{calendarEvent.imageUrls.map((url, index) => { const source = imageSource(url); return source ? <img key={url} src={source} alt={`${calendarEvent.title} — zdjęcie ${index + 1}`} className={`w-full object-cover ${index === 0 && calendarEvent.imageUrls.length > 2 ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`} /> : null; })}</div>}<div className="p-3"><p className="text-[10px] tracking-[0.12em]" style={{ color: calendarEvent.color }}>{calendarEvent.label || copy.eventFallbackLabel}</p><h3 className="mt-1 font-display text-xl text-ink-white">{calendarEvent.title}</h3>{calendarEvent.description && <div className="document-rich-text mt-2 text-sm leading-relaxed text-ink-grey" dangerouslySetInnerHTML={{ __html: sanitizeRichText(calendarEvent.description) }} />}</div></article>)}
     {selectedPromotions.map((promotion) => <div key={promotion.id} className="mb-3 border p-3" style={{ borderColor: promotion.color, backgroundColor: `${promotion.color}1a` }}><p className="text-[10px] tracking-[0.12em]">{promotion.badge || copy.promotionFallbackLabel}</p><p className="mt-1 text-sm">{promotion.title}</p>{promotion.description && <p className="mt-1 text-xs text-ink-grey">{promotion.description}</p>}</div>)}
     <div className="mt-4 space-y-3">
-      {!isAvailable(selected) ? (
+      {!isAvailable(selected) && selectedEvents.length === 0 && selectedPromotions.length === 0 ? (
         <p className="text-sm text-ink-grey">{copy.unavailableMessage}</p>
       ) : ranges.length === 0 ? (
         <p className="text-sm text-ink-grey">{copy.partiallyBookedMessage}</p>
@@ -251,11 +253,11 @@ export default function ClientBookingCalendar({
           appearanceFor={(date) => dayFor(date).appearance}
           onDayClick={(date) => selectClientDay(date)}
           ariaLabelFor={(date) => {
-            const entries = dayFor(date).entries.map((item) => `${formatRangeTime(item, date)} ${item.label}`.trim()).join(", ");
+            const entries = dayFor(date).entries.map((item) => `${item.kind === "unavailable" ? "" : formatRangeTime(item, date)} ${item.label}`.trim()).join(", ");
             return `${date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}${entries ? `: ${entries}` : ""}`;
           }}
           renderDayContent={(date) => dayFor(date).entries.map((item) => {
-            const itemTime = formatRangeTime(item, date);
+            const itemTime = item.kind === "unavailable" ? "" : formatRangeTime(item, date);
             return <span key={item.key} title={`${itemTime} ${item.label}`.trim()} className={calendarEntryClassName(item.kind)} style={item.kind === "custom" ? { backgroundColor: item.color } : undefined}>{item.label}{itemTime ? ` · ${itemTime}` : ""}</span>;
           })}
           wholeDayButton
@@ -265,7 +267,7 @@ export default function ClientBookingCalendar({
       {mode === "public" && <aside className="min-w-0 border border-ink-white/10 bg-ink-charcoal/30 p-3 sm:p-4"><p className="mb-4 text-[10px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>{bookingDetails}</aside>}
     </div>
 
-    {mode === "client" && dayDetailsOpen && ranges.length > 0 && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle="Wybierz dostępny termin." size="sm" onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
+    {mode === "client" && dayDetailsOpen && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle={ranges.length > 0 ? "Wybierz dostępny termin lub zobacz szczegóły wydarzenia." : "Szczegóły wydarzenia."} size={selectedEvents.some((item) => item.imageUrls?.length) ? "lg" : "sm"} onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
     {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
   </>;
 }

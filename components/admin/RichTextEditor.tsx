@@ -49,7 +49,7 @@ export default function RichTextEditor({ value, onChange, label = "TREŚĆ" }: {
       <ToolbarButton label="Wyczyść" title="Usuń formatowanie zaznaczenia" onClick={() => run("removeFormat")} />
     </div>
     <p className="px-3 pt-3 text-[10px] tracking-[0.12em] text-ink-grey">{label} · zaznacz fragment tekstu, aby go sformatować</p>
-    <div ref={editorRef} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label={label} onInput={() => onChange(editorRef.current?.innerHTML ?? "")} className="min-h-56 px-4 pb-4 pt-3 text-sm leading-relaxed text-ink-white outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink-grey" data-placeholder="Wpisz treść dokumentu…" />
+    <div ref={editorRef} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label={label} onInput={() => onChange(editorRef.current?.innerHTML ?? "")} className="document-rich-text min-h-44 px-4 pb-4 pt-3 text-sm leading-relaxed text-ink-grey outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink-grey" data-placeholder="Wpisz treść dokumentu…" />
   </div>;
 }
 

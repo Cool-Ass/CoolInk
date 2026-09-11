@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedImage, MediaUploadError } from "@/lib/media";
 import { requireAdminApi } from "@/lib/adminApi";
+import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 
 export async function GET() {
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
@@ -11,6 +12,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const limit = await rateLimit(request, "admin-media-upload", 30, 60 * 60_000, access.admin.id);
+  if (!limit.allowed) return tooManyRequests(limit);
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
 

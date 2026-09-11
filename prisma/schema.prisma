@@ -225,6 +225,7 @@ model TattooProject {
   colorPreference      String?
   leadSource           String?
   estimatedPrice       Int?
+  estimatedPriceMax    Int?
   finalPrice           Int?
   status               String            @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
   preferredDateNote    String?
@@ -491,6 +492,7 @@ model CalendarEvent {
   icon               String?
   label              String?
   isPublic           Boolean                  @default(false)
+  imageUrls          String                   @default("[]")
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
   googleCalendarSync GoogleCalendarEventSync?

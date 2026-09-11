@@ -10,7 +10,7 @@ type Block = { id: string; startsAt: string; endsAt: string; reason: string | nu
 type Override = { id: string; date: string; enabled: boolean; startsAt: string; endsAt: string; breakStart?: string | null; breakEnd?: string | null };
 type Slot = { id: string; startsAt: string; endsAt: string; title: string | null; description: string | null; color: string; icon: string | null; isPublic: boolean };
 type Promotion = { id: string; title: string; description: string | null; badge: string | null; startsAt: string; endsAt: string; color: string; icon: string | null; isPublic: boolean; active: boolean };
-type Event = { id: string; title: string; description: string | null; startsAt: string; endsAt: string; color: string; icon: string | null; label: string | null; isPublic: boolean; allDay: boolean };
+type Event = { id: string; title: string; description: string | null; startsAt: string; endsAt: string; color: string; icon: string | null; label: string | null; isPublic: boolean; allDay: boolean; imageUrls?: string[] };
 type Filter = "appointments" | "freeTerms" | "promotions" | "daysOff" | "events" | "hours";
 
 const DAYS = ["PN", "WT", "ŚR", "CZ", "PT", "SB", "ND"];

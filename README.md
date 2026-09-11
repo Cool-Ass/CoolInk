@@ -60,7 +60,7 @@ Każda strona (w tym strona główna) to uporządkowana lista **modułów** prze
 | **Obraz + tekst** | Zdjęcie obok tekstu (lewo/prawo), opcjonalny przycisk |
 | **Odstęp** | Pusty odstęp między sekcjami (mały/średni/duży) |
 | **Nagłówek, tekst, obraz, przycisk, separator** | Podstawowe elementy do budowania własnego układu |
-| **Galeria i kolumny** | Elastyczny układ zdjęć oraz dwóch lub trzech kolumn |
+| **Galeria, kolumny i sekcja wewnętrzna** | Elastyczna galeria i hierarchia sekcja → do 8 kolumn → sekcja wewnętrzna → kolumny → widgety |
 | **FAQ / akordeon** | Pytania w wariancie liniowym, kartowym albo dzielonym |
 | **Lista korzyści** | Lista, siatka kart albo numerowane kroki; 1–3 kolumny |
 | **Cytat / opinia** | Wariant redakcyjny, karta lub duży układ wyśrodkowany |
@@ -107,6 +107,9 @@ szerokością, odstępami, powierzchnią, cieniem, obramowaniem, minimalną wyso
 przezroczystością i widocznością na telefonie/tablecie/komputerze. Zakładka „Zaawansowane”
 obsługuje kotwicę, klasy oraz bezpieczne deklaracje CSS. Zmiany aktualizują podgląd natychmiast;
 zapis do bazy następuje dopiero po kliknięciu „Zapisz wersję roboczą" lub „Opublikuj".
+Sekcje, kolumny i widgety można również skalować uchwytami na każdej krawędzi i w narożnikach;
+kolumny można duplikować lub usuwać, a ustawienia typografii treści nie wpływają na elementy
+sterujące edytora.
 
 ## 3. Korzystanie z panelu
 
@@ -149,9 +152,14 @@ przychody, najczęstsze style, wartość materiałów i alerty niskiego stanu. K
 magazynowa trafia do historii ruchów.
 
 **Aplikacja klienta**: konto pod `/app` jest instalowalną PWA. Klient może odzyskać hasło,
-śledzić proces, zainstalować aplikację na ekranie telefonu, włączyć przypomnienia push oraz
-samodzielnie anulować własny przyszły termin. Anulowanie natychmiast zwalnia kalendarz,
-aktualizuje status projektu i zapisuje informację widoczną dla studia.
+śledzić proces, edytować tytuł i opis projektu, dodawać inspiracje, korzystać z czatów
+projektowych, instalować aplikację, włączyć powiadomienia push oraz anulować własny przyszły
+termin. Kalendarz pokazuje pełną dostępność bez ujawniania godzin zajętych; publiczne
+wydarzenie otwiera opis i galerię. Anulowanie natychmiast zwalnia kalendarz, aktualizuje status
+projektu i zapisuje informację widoczną dla studia.
+
+Strategia dalszej automatyzacji, asystenta AI, publikacji blog/social i zabezpieczeń znajduje
+się w [`docs/ROADMAP_AI_AUTOMATYZACJA_I_ROZWOJ.md`](docs/ROADMAP_AI_AUTOMATYZACJA_I_ROZWOJ.md).
 
 **Odbieraj zapytania z formularza**: wiadomości z publicznego formularza kontaktowego są
 zapisywane w bazie i dostępne w panelu: **Wiadomości**. W tym etapie nie są automatycznie

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Smile } from "lucide-react";
+import { Paperclip, Send, Smile, Trash2 } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
 import EmptyState from "@/components/ui/EmptyState";
 import { imageSource } from "@/lib/imageSource";
@@ -52,6 +52,7 @@ export default function ProjectChat({
   const [preview, setPreview] = useState<Message["attachment"]>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [attachmentReady, setAttachmentReady] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const api = apiPath ?? (role === "admin"
@@ -75,6 +76,28 @@ export default function ProjectChat({
   }, [api]);
 
   const add = (message: Message) => setMessages((items) => [...items, message]);
+  async function removeMessage(messageId: string) {
+    if (role !== "admin" || deleting || !window.confirm("Usunąć tę wiadomość na stałe?")) return;
+    setDeleting(messageId); setError("");
+    try {
+      const response = await fetch(`${api}?messageId=${encodeURIComponent(messageId)}`, { method: "DELETE" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Nie udało się usunąć wiadomości.");
+      setMessages((items) => items.filter((message) => message.id !== messageId));
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Nie udało się usunąć wiadomości."); }
+    finally { setDeleting(null); }
+  }
+  async function removeConversation() {
+    if (role !== "admin" || deleting || !messages.length || !window.confirm("Usunąć całą historię tej rozmowy na stałe?")) return;
+    setDeleting("all"); setError("");
+    try {
+      const response = await fetch(`${api}?all=true`, { method: "DELETE" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Nie udało się usunąć rozmowy.");
+      setMessages([]);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Nie udało się usunąć rozmowy."); }
+    finally { setDeleting(null); }
+  }
   async function send() {
     const body = text.trim();
     if (!body || sending) return;
@@ -143,9 +166,9 @@ export default function ProjectChat({
           <p className="font-display text-lg">{title}</p>
           <p className="text-[9px] tracking-[.12em] text-ink-grey">{subtitle}</p>
         </div>
-        <span className="flex items-center gap-1.5 text-[10px] text-emerald-300">
+        <div className="flex items-center gap-2"><span className="flex items-center gap-1.5 text-[10px] text-emerald-300">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{role === "client" ? "STUDIO" : "KLIENT"}
-        </span>
+        </span>{role === "admin" && messages.length > 0 && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeConversation()} title="Usuń całą rozmowę" aria-label="Usuń całą rozmowę" className="flex h-8 w-8 items-center justify-center border border-red-400/40 text-red-300 hover:bg-red-400/10 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>}</div>
       </div>
       <div
         ref={streamRef}
@@ -163,8 +186,9 @@ export default function ProjectChat({
             const attachmentSource = imageSource(message.attachment?.url);
             return <article
               key={message.id}
-              className={`w-fit max-w-[88%] rounded-[16px] px-3 py-2.5 text-sm shadow-[0_8px_24px_rgba(0,0,0,.16)] sm:max-w-[72%] ${message.author === role ? "ml-auto rounded-br-[4px] bg-ink-gold text-ink-black" : "rounded-bl-[4px] bg-ink-white/[.09] text-ink-white"}`}
+              className={`group relative w-fit max-w-[88%] rounded-[16px] px-3 py-2.5 text-sm shadow-[0_8px_24px_rgba(0,0,0,.16)] sm:max-w-[72%] ${message.author === role ? "ml-auto rounded-br-[4px] bg-ink-gold text-ink-black" : "rounded-bl-[4px] bg-ink-white/[.09] text-ink-white"}`}
             >
+              {role === "admin" && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeMessage(message.id)} aria-label="Usuń wiadomość" title="Usuń wiadomość" className={`absolute -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-red-400/50 bg-ink-black text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 ${message.author === role ? "-left-8" : "-right-8"}`}><Trash2 className="h-3 w-3" /></button>}
               <p className={`text-[9px] font-semibold tracking-wider ${message.author === role ? "text-ink-black/65" : "text-ink-gold"}`}>
                 {message.author === role ? "TY" : message.author === "admin" ? "STUDIO" : "KLIENT"}
               </p>

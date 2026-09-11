@@ -24,6 +24,7 @@ export default async function ProjectsPage() {
     status: project.status,
     next: CLIENT_STATUS[project.status as keyof typeof CLIENT_STATUS]?.next ?? "Studio wróci z kolejnym krokiem.",
     estimatedPrice: project.estimatedPrice,
+    estimatedPriceMax: project.estimatedPriceMax,
     finalPrice: project.finalPrice,
     depositStatus: project.depositStatus,
     depositAmount: project.depositAmount,

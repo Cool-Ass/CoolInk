@@ -8,10 +8,8 @@ import {
 } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { preparePrivateImage, PrivateImageUploadError } from "@/lib/privateImageUpload";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
-
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function POST(
   request: Request,
@@ -38,29 +36,17 @@ export async function POST(
     );
   const form = await request.formData();
   const file = form.get("file");
-  if (
-    !(file instanceof File) ||
-    !ALLOWED_TYPES.has(file.type) ||
-    file.size > MAX_BYTES
-  ) {
-    return NextResponse.json(
-      { error: "Dodaj JPG, PNG albo WEBP o rozmiarze do 10 MB." },
-      { status: 400 },
-    );
-  }
-  const extension =
-    file.type === "image/png"
-      ? "png"
-      : file.type === "image/webp"
-        ? "webp"
-        : "jpg";
-  const objectPath = `${client.supabaseUserId}/${randomUUID()}.${extension}`;
+  if (!(file instanceof File)) return NextResponse.json({ error: "Nie przesłano pliku." }, { status: 400 });
+  let prepared: Awaited<ReturnType<typeof preparePrivateImage>>;
+  try { prepared = await preparePrivateImage(file); }
+  catch (error) { return NextResponse.json({ error: error instanceof PrivateImageUploadError ? error.message : "Nie udało się odczytać obrazu." }, { status: 422 }); }
+  const objectPath = `${client.supabaseUserId}/${randomUUID()}.${prepared.extension}`;
   let storedLocation = objectPath;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const upload = await putBlob(`project-inspirations/${objectPath}`, file, {
+    const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, {
       access: "private",
       addRandomSuffix: false,
-      contentType: file.type,
+      contentType: prepared.contentType,
     }).catch(() => null);
     if (!upload)
       return NextResponse.json(
@@ -77,10 +63,10 @@ export async function POST(
         headers: {
           apikey: key,
           Authorization: `Bearer ${token}`,
-          "Content-Type": file.type,
+          "Content-Type": prepared.contentType,
           "x-upsert": "false",
         },
-        body: file,
+        body: prepared.buffer,
         cache: "no-store",
       },
     );
@@ -97,11 +83,13 @@ export async function POST(
   const chatMessage = String(form.get("chatMessage") ?? "")
     .trim()
     .slice(0, 2_000);
-  const image = await prisma.projectImage.create({
-    data: { projectId: project.id, url: storedLocation, caption },
+  const image = await prisma.$transaction(async (tx) => {
+    const created = await tx.projectImage.create({ data: { projectId: project.id, url: storedLocation, caption } });
+    await tx.tattooProject.update({ where: { id: project.id }, data: { nextAction: "Sprawdź nową inspirację klienta", nextActionDueAt: new Date() } });
+    await tx.projectActivity.create({ data: { projectId: project.id, type: "inspiration_added_by_client", message: "Klient dodał nową inspirację do projektu.", visibility: "admin" } });
+    return created;
   });
-  await prisma.tattooProject.update({ where: { id: project.id }, data: { nextAction: "Sprawdź nową inspirację klienta", nextActionDueAt: new Date() } });
-  await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-image-${image.id}` }).catch(() => undefined);
+  await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=projects`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")
     return NextResponse.json({ imageId: image.id, image: { id: image.id, caption: image.caption, url: `/api/client/images/${image.id}` } }, { status: 201 });
   const message = await prisma.projectMessage.create({

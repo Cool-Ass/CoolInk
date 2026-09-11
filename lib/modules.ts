@@ -23,6 +23,7 @@ export type ModuleType =
   | "divider"
   | "gallery"
   | "columns"
+  | "innerSection"
   | "faq"
   | "video"
   | "map"
@@ -404,6 +405,7 @@ export type ColumnWidgetType =
   | "divider"
   | "spacer"
   | "gallery"
+  | "innerSection"
   | "faq"
   | "video"
   | "map"
@@ -413,8 +415,8 @@ export type ColumnWidgetType =
   | "callout"
   | "customCode";
 export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; style?: ModuleStyle; }
-export interface ColumnsModuleData {
-  layout: "one" | "two" | "three" | "four";
+export interface ColumnsModuleData extends Record<string, unknown> {
+  layout: "one" | "two" | "three" | "four" | "five" | "six" | "seven" | "eight";
   columns: ColumnWidget[][];
   background: "transparent" | "charcoal" | "gold";
   padding: "sm" | "md" | "lg";
@@ -470,6 +472,8 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   : T extends "gallery"
   ? GalleryModuleData
   : T extends "columns"
+  ? ColumnsModuleData
+  : T extends "innerSection"
   ? ColumnsModuleData
   : T extends "faq"
   ? FaqModuleData
@@ -528,6 +532,7 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   divider: "Separator",
   gallery: "Galeria zdjęć",
   columns: "Sekcja / kolumny",
+  innerSection: "Sekcja wewnętrzna",
   faq: "FAQ / akordeon",
   video: "Wideo",
   map: "Mapa",
@@ -561,7 +566,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   navigation: "Edytowalne menu strony z automatycznym wariantem mobilnym.",
   divider: "Delikatna linia albo oddech między elementami.",
   gallery: "Prosta galeria trzech własnych zdjęć.",
-  columns: "Sekcja dzielona na 1–4 kolumny z widgetami przeciąganymi do środka.",
+  columns: "Sekcja dzielona na 1–8 kolumn z widgetami przeciąganymi do środka.",
+  innerSection: "Zagnieżdżona sekcja z własnymi kolumnami i widgetami: sekcja → kolumna → sekcja wewnętrzna.",
   faq: "Rozwijane pytania i odpowiedzi.",
   video: "Film z YouTube lub Vimeo osadzony na stronie.",
   map: "Osadzona mapa Google Maps.",
@@ -573,7 +579,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
 };
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
-  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", googleReviews: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
+  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", innerSection: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", googleReviews: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
   siteHeader: "templates", siteFooter: "templates", maintenance: "templates", hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
@@ -585,6 +591,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "navigation",
   "gallery",
   "columns",
+  "innerSection",
   "callout",
   "customCode",
   "iconList",
@@ -612,7 +619,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
 
 export const COLUMN_WIDGET_TYPES: ColumnWidgetType[] = [
   "heading", "text", "image", "button", "navigation", "portfolio", "booking", "gallery", "callout", "iconList",
-  "faq", "quote", "googleReviews", "video", "map", "divider", "spacer", "customCode",
+  "faq", "quote", "googleReviews", "video", "map", "divider", "spacer", "customCode", "innerSection",
 ];
 
 export function isColumnWidgetType(type: string): type is ColumnWidgetType {
@@ -628,10 +635,15 @@ function cloneValue<T>(value: T): T {
 }
 
 export function cloneColumnWidget(widget: ColumnWidget): ColumnWidget {
-  return {
+  const clone = {
     ...cloneValue(widget),
     id: generateModuleId("w"),
   };
+  if (clone.type === "innerSection") {
+    const data = withDefaults("innerSection", clone.data);
+    clone.data = { ...data, columns: data.columns.map((column) => column.map(cloneColumnWidget)) };
+  }
+  return clone;
 }
 
 /** Deep builder clone: nested widget IDs must never be shared by two sections. */
@@ -831,6 +843,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
     case "gallery":
       return { image1: "", image2: "", image3: "", images: [], layout: "grid", columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: "md", radius: "none", aspect: "square", hoverEffect: "zoom", lightbox: true } satisfies GalleryModuleData;
     case "columns":
+    case "innerSection":
       return {
         layout: "one",
         background: "transparent",

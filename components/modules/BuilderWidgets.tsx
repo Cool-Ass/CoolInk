@@ -15,6 +15,7 @@ import BookingSection from "@/components/BookingSection";
 import type { PortfolioWork } from "@/lib/portfolio";
 import type { PublicCalendarData } from "@/lib/publicCalendar";
 import GoogleReviews from "@/components/GoogleReviews";
+import BuilderResizeHandles from "@/components/admin/builder/BuilderResizeHandles";
 
 interface BuilderWidgetProps {
   module: Module;
@@ -22,17 +23,21 @@ interface BuilderWidgetProps {
   editable?: boolean;
   selectedWidgetId?: string | null;
   selectedColumnIndex?: number | null;
+  selectedColumnOwnerId?: string | null;
   onSelectWidget?: (widgetId: string, columnIndex: number) => void;
-  onSelectColumn?: (columnIndex: number) => void;
+  onSelectColumn?: (columnIndex: number, ownerId: string) => void;
   onDeleteWidget?: (widgetId: string, columnIndex: number) => void;
   onDuplicateWidget?: (widgetId: string, columnIndex: number) => void;
-  onDuplicateColumn?: (columnIndex: number) => void;
+  onDuplicateColumn?: (columnIndex: number, ownerId: string) => void;
+  onDeleteColumn?: (columnIndex: number, ownerId: string) => void;
   onColumnsChange?: (columns: ColumnWidget[][]) => void;
+  onResizeWidget?: (widgetId: string, style: NonNullable<ColumnWidget["style"]>) => void;
+  onResizeColumn?: (columnIndex: number, ownerId: string, style: NonNullable<ColumnWidget["style"]>) => void;
   portfolioWorks?: PortfolioWork[];
   calendar?: PublicCalendarData;
 }
 
-export default function BuilderWidgets({ module, showEmpty = false, editable = false, selectedWidgetId, selectedColumnIndex, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onColumnsChange, portfolioWorks = [], calendar }: BuilderWidgetProps) {
+export default function BuilderWidgets({ module, showEmpty = false, editable = false, selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn, portfolioWorks = [], calendar }: BuilderWidgetProps) {
   const widgetIdBase = useId().replace(/:/g, "");
   const widgetIdCounter = useRef(0);
   switch (module.type) {
@@ -93,9 +98,11 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       } as CSSProperties & Record<"--builder-gallery-columns-mobile" | "--builder-gallery-columns-tablet" | "--builder-gallery-columns-desktop", string>;
       return <GalleryWidget data={d} images={renderImages} layoutStyle={layoutStyle} editing={showEmpty} />;
     }
-    case "columns": {
-      const d = withDefaults("columns", module.data);
-      const columnCount = d.layout === "four" ? 4 : d.layout === "three" ? 3 : d.layout === "two" ? 2 : 1;
+    case "columns":
+    case "innerSection": {
+      const d = withDefaults(module.type, module.data);
+      const countByLayout = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8 } as const;
+      const columnCount = countByLayout[d.layout] ?? 1;
       const columns = Array.from({ length: columnCount }, (_, index) => d.columns[index] ?? []);
       const backgroundTone = d.background === "charcoal" ? "bg-ink-charcoal" : d.background === "gold" ? "bg-ink-gold text-ink-black" : "bg-transparent";
       const background = `${backgroundTone} ${d.mobileLayout === "row" ? "builder-columns-row-mobile" : ""}`;
@@ -130,23 +137,24 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
         moveWidget(readColumnDragPayload(event.dataTransfer.getData(COLUMN_WIDGET_MIME)), columnIndex, beforeIndex);
       }
 
-      return <section className={`${background} px-4 md:px-8 ${padding}`}>
+      return <section className={`${background} ${module.type === "innerSection" ? "px-2 md:px-3" : "px-4 md:px-8"} ${padding}`}>
         <div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>
           {columns.map((widgets, columnIndex) => {
             const columnStyle = d.columnStyles?.[columnIndex] ?? {};
-            const columnSelected = selectedColumnIndex === columnIndex && !selectedWidgetId;
+            const columnSelected = selectedColumnOwnerId === module.id && selectedColumnIndex === columnIndex && !selectedWidgetId;
             return <div
               key={columnIndex}
-              onClick={(event) => { if (editable) { event.stopPropagation(); onSelectColumn?.(columnIndex); } }}
+              onClick={(event) => { if (editable) { event.stopPropagation(); onSelectColumn?.(columnIndex, module.id); } }}
               onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }}
               onDrop={(event) => handleDrop(event, columnIndex, widgets.length)}
               style={buildVisualStyle(columnStyle)}
               className={`builder-styled-icons ${builderEffectClasses(columnStyle)} ${columnStyle.cssClass ?? ""} relative isolate min-w-0 ${editable ? `min-h-28 border border-dashed bg-ink-black/15 p-2 ${columnSelected ? "border-ink-gold outline outline-1 outline-ink-gold" : "border-ink-gold/30"}` : ""}`}
             >
               <BuilderStyleLayers style={columnStyle} />
+              {columnSelected && onResizeColumn && <BuilderResizeHandles style={columnStyle} onResize={(style) => onResizeColumn(columnIndex, module.id, style)} label={`kolumnę ${columnIndex + 1}`} />}
               <div className="builder-editor-chrome relative z-20 mb-2 flex items-center justify-between text-ink-gold/70" hidden={!editable}>
-                <button type="button" title={`Edytuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onSelectColumn?.(columnIndex); }} className="pointer-events-auto flex items-center gap-1.5 px-1 py-1 hover:text-ink-gold-bright"><Settings2 className="h-3 w-3" />KOLUMNA {columnIndex + 1}</button>
-                <span className="flex items-center gap-2"><span>UPUŚĆ WIDGET</span>{onDuplicateColumn && <button type="button" title="Duplikuj kolumnę" aria-label={`Duplikuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onDuplicateColumn(columnIndex); }} className="pointer-events-auto flex h-6 w-6 items-center justify-center border border-ink-gold/30 text-ink-gold transition hover:bg-ink-gold/10"><Copy className="h-3 w-3" /></button>}</span>
+                <button type="button" title={`Edytuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onSelectColumn?.(columnIndex, module.id); }} className="pointer-events-auto flex items-center gap-1.5 px-1 py-1 hover:text-ink-gold-bright"><Settings2 className="h-3 w-3" />KOLUMNA {columnIndex + 1}</button>
+                <span className="flex items-center gap-1"><span>UPUŚĆ WIDGET</span>{onDuplicateColumn && <button type="button" title="Duplikuj kolumnę" aria-label={`Duplikuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onDuplicateColumn(columnIndex, module.id); }} className="pointer-events-auto flex h-6 w-6 items-center justify-center border border-ink-gold/30 text-ink-gold transition hover:bg-ink-gold/10"><Copy className="h-3 w-3" /></button>}{onDeleteColumn && columns.length > 1 && <button type="button" title="Usuń kolumnę" aria-label={`Usuń kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onDeleteColumn(columnIndex, module.id); }} className="pointer-events-auto flex h-6 w-6 items-center justify-center border border-red-400/40 text-red-300 transition hover:bg-red-400/10"><Trash2 className="h-3 w-3" /></button>}</span>
               </div>
               <div className="relative z-[3]">
                 {widgets.length ? widgets.map((widget, widgetIndex) => {
@@ -162,8 +170,9 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
                     className={`group/widget builder-styled-icons ${builderEffectClasses(widget.style)} relative isolate min-w-0 ${editable ? `cursor-pointer outline outline-2 outline-offset-[-2px] ${selected ? "outline-ink-gold" : "outline-transparent hover:outline-ink-gold/55"}` : ""} ${widget.style?.cssClass ?? ""}`}
                   >
                     <BuilderStyleLayers style={widget.style} />
+                    {selected && onResizeWidget && <BuilderResizeHandles style={widget.style} onResize={(style) => onResizeWidget(widget.id, style)} label={MODULE_LABELS[widget.type]} />}
                     {editable && <div className={`builder-editor-chrome pointer-events-auto absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab whitespace-nowrap px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span>{onDuplicateWidget && <button type="button" title="Duplikuj widget" aria-label={`Duplikuj: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDuplicateWidget(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Copy className="h-3 w-3" /></button>}<button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Trash2 className="h-3 w-3" /></button></div>}
-                    <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} portfolioWorks={portfolioWorks} calendar={calendar} /></div>
+                    <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} editable={editable && widget.type === "innerSection"} selectedWidgetId={selectedWidgetId} selectedColumnIndex={selectedColumnIndex} selectedColumnOwnerId={selectedColumnOwnerId} onSelectWidget={onSelectWidget} onSelectColumn={onSelectColumn} onDeleteWidget={onDeleteWidget} onDuplicateWidget={onDuplicateWidget} onDuplicateColumn={onDuplicateColumn} onDeleteColumn={onDeleteColumn} onResizeWidget={onResizeWidget} onResizeColumn={onResizeColumn} onColumnsChange={widget.type === "innerSection" ? (nestedColumns) => { const next = columns.map((items) => items.map((current) => current.id === widget.id ? { ...current, data: { ...withDefaults("innerSection", current.data), columns: nestedColumns } } : current)); update(next); } : undefined} portfolioWorks={portfolioWorks} calendar={calendar} /></div>
                   </div>;
                 }) : editable ? <div className="flex min-h-24 items-center justify-center p-4 text-center text-[10px] leading-relaxed text-ink-grey">Przeciągnij widget z lewego panelu tutaj</div> : null}
               </div>

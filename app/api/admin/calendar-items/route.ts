@@ -8,6 +8,7 @@ import { sanitizeRichText } from "@/lib/richText";
 import { isValidIconName } from "@/lib/icons";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { coolinkDayRange } from "@/lib/dateTime";
+import { serializeEventImageUrls } from "@/lib/calendarEventMedia";
 
 type CalendarKind = "occupied" | "dayOff" | "freeTerm" | "consultation" | "promotion" | "event" | "workingHours" | "clearStatus";
 const text = (value: unknown) => String(value ?? "").trim();
@@ -41,7 +42,7 @@ function safeUrl(value: unknown) {
 function content(kind: CalendarKind, body: Record<string, unknown> | null, startsAt: Date, endsAt: Date) {
   if (kind === "freeTerm" || kind === "consultation") return { startsAt, endsAt, title: kind === "consultation" ? CONSULTATION_SLOT_TITLE : text(body?.title) || null, description: sanitizeRichText(text(body?.description)) || null, color: safeColor(body?.color, CALENDAR_AVAILABLE_COLOR), icon: safeIcon(body?.icon), isPublic: Boolean(body?.isPublic) };
   if (kind === "promotion") return { title: text(body?.title), description: sanitizeRichText(text(body?.description)) || null, badge: text(body?.badge) || null, startsAt, endsAt, color: safeColor(body?.color, "#C99A4A"), icon: safeIcon(body?.icon), promoCode: text(body?.promoCode) || null, ctaLabel: text(body?.ctaLabel) || null, ctaUrl: safeUrl(body?.ctaUrl), isPublic: Boolean(body?.isPublic), active: body?.active !== false };
-  if (kind === "event") return { title: text(body?.title), description: sanitizeRichText(text(body?.description)) || null, startsAt, endsAt, allDay: Boolean(body?.allDay), color: safeColor(body?.color, "#6B7280"), icon: safeIcon(body?.icon), label: text(body?.label) || null, isPublic: Boolean(body?.isPublic) };
+  if (kind === "event") return { title: text(body?.title), description: sanitizeRichText(text(body?.description)) || null, startsAt, endsAt, allDay: Boolean(body?.allDay), color: safeColor(body?.color, "#6B7280"), icon: safeIcon(body?.icon), label: text(body?.label) || null, isPublic: Boolean(body?.isPublic), imageUrls: serializeEventImageUrls(body?.imageUrls) };
   return null;
 }
 async function availableForSlot(startsAt: Date, endsAt: Date) {

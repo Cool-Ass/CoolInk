@@ -126,9 +126,9 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   return <div className="studio-page">
     <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="studio-eyebrow">ANALITYKA STUDIA</p><h1 className="studio-page-title">Statystyki operacyjne</h1><p className="studio-page-description">Zgłoszenia, obsługa klientów, wizyty, obłożenie i źródła pozyskania. Finanse i płatności pozostają poza tym etapem.</p></div><nav aria-label="Zakres statystyk" className="flex flex-wrap gap-2">{PERIODS.map(([value, label]) => <Link key={value} href={`/admin/statistics?period=${value}`} className={`border px-3 py-2 text-xs ${period === value ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-white/40 hover:text-ink-white"}`}>{label}</Link>)}</nav></header>
 
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
+    <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
 
-    <section className="grid gap-4 xl:grid-cols-2">
+    <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
       <Chart title="Statusy wizyt" rows={statusRows} empty="Brak wizyt w wybranym okresie." />
       <Chart title="Najczęściej wybierane style" rows={styleRows} empty="Uzupełniaj style projektów, aby zobaczyć ranking." />
       <Chart title="Ruch według dnia tygodnia" rows={weekdayRows} empty="Brak danych o wizytach." />
@@ -140,17 +140,17 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
 }
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return <article className="border border-ink-white/15 bg-ink-charcoal/35 p-4"><p className="text-[9px] tracking-[.13em] text-ink-grey">{label}</p><p className="mt-2 font-display text-3xl text-ink-gold">{value}</p><p className="mt-1 text-[11px] text-ink-grey">{hint}</p></article>;
+  return <article className="min-w-0 border border-ink-white/15 bg-ink-charcoal/35 p-3"><p className="truncate text-[8px] tracking-[.11em] text-ink-grey" title={label}>{label}</p><p className="mt-1 font-display text-2xl text-ink-gold">{value}</p><p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-ink-grey">{hint}</p></article>;
 }
 
 function Chart({ title, rows, empty }: { title: string; rows: [string, number][]; empty: string }) {
   const max = Math.max(1, ...rows.map(([, value]) => value));
-  return <section className="border border-ink-white/15 bg-ink-charcoal/35 p-5"><h2 className="font-display text-2xl">{title}</h2>{rows.length ? <div className="mt-5 space-y-4">{rows.map(([label, value]) => <div key={label}><div className="mb-1 flex justify-between text-xs"><span className="text-ink-grey">{label}</span><span>{value}</span></div><div className="h-2 bg-ink-white/10"><div className="h-full bg-ink-gold" style={{ width: `${Math.max(4, value / max * 100)}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-ink-grey">{empty}</p>}</section>;
+  return <section className="min-w-0 border border-ink-white/15 bg-ink-charcoal/35 p-4"><h2 className="font-display text-xl">{title}</h2>{rows.length ? <div className="mt-4 space-y-3">{rows.map(([label, value]) => <div key={label}><div className="mb-1 flex justify-between text-[11px]"><span className="truncate text-ink-grey">{label}</span><span>{value}</span></div><div className="h-1.5 bg-ink-white/10"><div className="h-full bg-ink-gold" style={{ width: `${Math.max(4, value / max * 100)}%` }} /></div></div>)}</div> : <p className="mt-4 text-sm text-ink-grey">{empty}</p>}</section>;
 }
 
 function SourceChart({ rows }: { rows: { source: string; label: string; all: number; converted: number }[] }) {
   const max = Math.max(1, ...rows.map((row) => row.all));
-  return <section className="border border-ink-white/15 bg-ink-charcoal/35 p-5"><h2 className="font-display text-2xl">Skąd trafiają klienci</h2>{rows.length ? <div className="mt-5 space-y-4">{rows.map((row) => <div key={row.source}><div className="mb-1 flex justify-between gap-4 text-xs"><span className="text-ink-grey">{row.label}</span><span>{row.all} · konwersja {percentage(row.converted, row.all)}%</span></div><div className="h-2 bg-ink-white/10"><div className="h-full bg-emerald-400" style={{ width: `${Math.max(4, row.all / max * 100)}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-ink-grey">Nowe zgłoszenia zaczną zasilać ten ranking po wskazaniu źródła.</p>}</section>;
+  return <section className="min-w-0 border border-ink-white/15 bg-ink-charcoal/35 p-4"><h2 className="font-display text-xl">Skąd trafiają klienci</h2>{rows.length ? <div className="mt-4 space-y-3">{rows.map((row) => <div key={row.source}><div className="mb-1 flex justify-between gap-3 text-[11px]"><span className="truncate text-ink-grey">{row.label}</span><span className="shrink-0">{row.all} · {percentage(row.converted, row.all)}%</span></div><div className="h-1.5 bg-ink-white/10"><div className="h-full bg-emerald-400" style={{ width: `${Math.max(4, row.all / max * 100)}%` }} /></div></div>)}</div> : <p className="mt-4 text-sm text-ink-grey">Nowe zgłoszenia zaczną zasilać ten ranking po wskazaniu źródła.</p>}</section>;
 }
 
 function countRows(values: string[]): [string, number][] {

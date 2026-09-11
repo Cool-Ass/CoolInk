@@ -13,7 +13,7 @@ type Block = { id: string; startsAt: string; endsAt: string; reason: string | nu
 type Override = { id: string; date: string; enabled: boolean; startsAt: string; endsAt: string; breakStart?: string | null; breakEnd?: string | null };
 type Slot = { id: string; startsAt: string; endsAt: string; title: string | null; description: string | null; color: string; icon: string | null; isPublic: boolean };
 type Promotion = { id: string; title: string; description: string | null; badge: string | null; startsAt: string; endsAt: string; color: string; icon: string | null; isPublic: boolean; active: boolean };
-type Event = { id: string; title: string; description: string | null; startsAt: string; endsAt: string; color: string; icon: string | null; label: string | null; isPublic: boolean; allDay: boolean; google?: boolean; syncStatus?: string | null };
+type Event = { id: string; title: string; description: string | null; startsAt: string; endsAt: string; color: string; icon: string | null; label: string | null; isPublic: boolean; allDay: boolean; imageUrls: string[]; google?: boolean; syncStatus?: string | null };
 
 const endOfDay = (value: Date) => { const end = startOfLocalDay(value); end.setDate(end.getDate() + 1); return end; };
 const inDay = (item: { startsAt: string; endsAt: string }, date: Date) => new Date(item.startsAt) < endOfDay(date) && new Date(item.endsAt) > startOfLocalDay(date);
@@ -79,7 +79,7 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
     const isConsultation = kind === "consultation";
     startsAt.setHours(isConsultation ? 9 : isFreeTerm ? defaultStartHour : 0, isConsultation ? 0 : isFreeTerm ? defaultStartMinute : 0, 0, 0);
     endsAt.setHours(isConsultation ? 9 : isFreeTerm ? defaultEndHour : 23, isConsultation ? 30 : isFreeTerm ? defaultEndMinute : 59, 0, 0);
-    setEditor({ kind, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), dates: itemDates, ...(kind === "dayOff" ? { reason: "Niedostępny" } : {}), ...(kind === "occupied" ? { reason: "ZAJĘTY" } : {}), ...(isFreeTerm ? { color: CALENDAR_AVAILABLE_COLOR, isPublic: true } : {}), ...(isConsultation ? { title: CONSULTATION_SLOT_TITLE, color: CALENDAR_AVAILABLE_COLOR, isPublic: true } : {}), ...(kind === "promotion" ? { title: "", badge: "PROMO", color: "#C99A4A", active: true, isPublic: true } : {}), ...(kind === "event" ? { title: "", color: "#6B7280", isPublic: false } : {}) });
+    setEditor({ kind, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), dates: itemDates, ...(kind === "dayOff" ? { reason: "Niedostępny" } : {}), ...(kind === "occupied" ? { reason: "ZAJĘTY" } : {}), ...(isFreeTerm ? { color: CALENDAR_AVAILABLE_COLOR, isPublic: true } : {}), ...(isConsultation ? { title: CONSULTATION_SLOT_TITLE, color: CALENDAR_AVAILABLE_COLOR, isPublic: true } : {}), ...(kind === "promotion" ? { title: "", badge: "PROMO", color: "#C99A4A", active: true, isPublic: true } : {}), ...(kind === "event" ? { title: "", color: "#6B7280", isPublic: false, imageUrls: [] } : {}) });
   };
   const selectDay = (date: Date, event: MouseEvent<HTMLButtonElement>) => {
     const additive = selectMode || event.ctrlKey || event.metaKey;

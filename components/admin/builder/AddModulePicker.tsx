@@ -63,6 +63,7 @@ const ICONS: Record<ModuleType, LucideIcon> = {
   divider: Minus,
   gallery: GalleryHorizontal,
   columns: Columns3,
+  innerSection: Rows3,
   faq: Rows3,
   video: PlaySquare,
   map: MapPinned,

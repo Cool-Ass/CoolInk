@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const financialFields = ["estimatedPrice", "finalPrice", "depositStatus", "depositAmount", "depositPaymentMethod"];
+  const financialFields = ["estimatedPrice", "estimatedPriceMax", "finalPrice", "depositStatus", "depositAmount", "depositPaymentMethod"];
   if (financialFields.some((field) => Object.prototype.hasOwnProperty.call(body ?? {}, field)) && !hasAdminPermission(access.admin.role, "finance.manage")) return NextResponse.json({ error: "Twoja rola nie ma uprawnień do danych finansowych." }, { status: 403 });
   const project = await prisma.tattooProject.findUnique({ where: { id } });
   if (!project)
@@ -32,6 +32,21 @@ export async function PATCH(request: Request, { params }: Params) {
       { status: 404 },
     );
   const status = isProjectStatus(body?.status) ? body.status : project.status;
+  const title = typeof body?.title === "string" ? body.title.trim().slice(0, 160) : project.title;
+  const description = typeof body?.description === "string" ? body.description.trim().slice(0, 5_000) : project.description;
+  if (!title || !description) return NextResponse.json({ error: "Tytuł i opis projektu nie mogą być puste." }, { status: 400 });
+  const money = (key: "estimatedPrice" | "estimatedPriceMax" | "finalPrice" | "depositAmount", current: number | null) => {
+    if (!Object.prototype.hasOwnProperty.call(body ?? {}, key)) return current;
+    if (body?.[key] === "" || body?.[key] === null) return null;
+    const value = Number(body?.[key]);
+    return Number.isInteger(value) && value >= 0 && value <= 10_000_000 ? value : Number.NaN;
+  };
+  const estimatedPrice = money("estimatedPrice", project.estimatedPrice);
+  const estimatedPriceMax = money("estimatedPriceMax", project.estimatedPriceMax);
+  const finalPrice = money("finalPrice", project.finalPrice);
+  const depositAmount = money("depositAmount", project.depositAmount);
+  if ([estimatedPrice, estimatedPriceMax, finalPrice, depositAmount].some((value) => typeof value === "number" && Number.isNaN(value))) return NextResponse.json({ error: "Kwoty muszą być pełnymi, nieujemnymi wartościami." }, { status: 400 });
+  if (estimatedPrice !== null && estimatedPriceMax !== null && estimatedPrice > estimatedPriceMax) return NextResponse.json({ error: "Dolna granica wyceny nie może być wyższa od górnej." }, { status: 400 });
   const depositStatus =
     typeof body?.depositStatus === "string" &&
     (DEPOSIT_STATUS as readonly string[]).includes(body.depositStatus)
@@ -47,6 +62,8 @@ export async function PATCH(request: Request, { params }: Params) {
     const next = await tx.tattooProject.update({
       where: { id },
       data: {
+        title,
+        description,
         status,
         kind,
         consultationMode: converting ? null : project.consultationMode,
@@ -57,19 +74,11 @@ export async function PATCH(request: Request, { params }: Params) {
           typeof body?.internalNotes === "string"
             ? body.internalNotes.slice(0, 5000)
             : project.internalNotes,
-        estimatedPrice:
-          body?.estimatedPrice === "" || body?.estimatedPrice === undefined
-            ? project.estimatedPrice
-            : Number(body.estimatedPrice) || null,
-        finalPrice:
-          body?.finalPrice === "" || body?.finalPrice === undefined
-            ? project.finalPrice
-            : Number(body.finalPrice) || null,
+        estimatedPrice,
+        estimatedPriceMax,
+        finalPrice,
         depositStatus,
-        depositAmount:
-          body?.depositAmount === "" || body?.depositAmount === undefined
-            ? project.depositAmount
-            : Number(body.depositAmount) || null,
+        depositAmount,
         depositPaymentMethod:
           typeof body?.depositPaymentMethod === "string"
             ? body.depositPaymentMethod.slice(0, 80) || null
@@ -99,7 +108,8 @@ export async function PATCH(request: Request, { params }: Params) {
         },
       });
     if (converting) await tx.projectActivity.create({ data: { projectId: id, type: "consultation_converted", message: "Konsultacja została przekształcona w projekt tatuażu. Zdjęcia, rozmowa i historia zostały zachowane.", visibility: "admin" } });
-    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: converting ? "consultation.convert" : "project.update", targetType: "TattooProject", targetId: id, summary: converting ? `Przekształcono konsultację „${project.title}” w projekt.` : `Zaktualizowano projekt „${project.title}”.`, metadata: JSON.stringify({ previousStatus: project.status, status, nextAction, leadSource }) } });
+    if (title !== project.title || description !== project.description) await tx.projectActivity.create({ data: { projectId: id, type: "project_details_updated", message: "Studio zaktualizowało tytuł lub opis projektu.", visibility: "client" } });
+    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: converting ? "consultation.convert" : "project.update", targetType: "TattooProject", targetId: id, summary: converting ? `Przekształcono konsultację „${project.title}” w projekt.` : `Zaktualizowano projekt „${project.title}”.`, metadata: JSON.stringify({ previousStatus: project.status, status, nextAction, leadSource, titleChanged: title !== project.title, descriptionChanged: description !== project.description }) } });
     return next;
   });
   return NextResponse.json({ project: updated });

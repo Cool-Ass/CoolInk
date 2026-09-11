@@ -31,7 +31,7 @@ export default function ModuleSettingsSidebar({ module, scope = "section", edito
   const [tab, setTab] = useState<"content" | "style" | "advanced">("content");
   const [styleAction, setStyleAction] = useState("");
   const tabs = [
-    { id: "content" as const, label: module.type === "columns" || scope === "column" ? "UKŁAD" : "TREŚĆ", icon: FileText },
+    { id: "content" as const, label: module.type === "columns" || module.type === "innerSection" || scope === "column" ? "UKŁAD" : "TREŚĆ", icon: FileText },
     { id: "style" as const, label: "STYL", icon: Palette },
     { id: "advanced" as const, label: "ZAAWANS.", icon: Settings2 },
   ];
@@ -435,9 +435,10 @@ function renderFields(
       const d = withDefaults("gallery", module.data);
       return <GalleryEditor value={d} onChange={onChange} />;
     }
-    case "columns": {
-      const d = withDefaults("columns", module.data);
-      const counts = { one: 1, two: 2, three: 3, four: 4 } as const;
+    case "columns":
+    case "innerSection": {
+      const d = withDefaults(module.type, module.data);
+      const counts = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8 } as const;
       return <>
         <p className="border-l-2 border-ink-gold/70 bg-ink-gold/5 px-3 py-2 text-[10px] leading-relaxed text-ink-grey">Przeciągaj widgety z biblioteki bezpośrednio do kolumn na podglądzie. Kliknij widget w kolumnie, aby edytować jego treść i styl.</p>
         <SelectField label="Liczba kolumn" value={d.layout} onChange={(v) => {
@@ -445,7 +446,7 @@ function renderFields(
           const next = Array.from({ length: nextCount }, (_, i) => d.columns[i] ?? []);
           const evenWidth = Math.round((100 / nextCount) * 100) / 100;
           onChange({ ...d, layout: v, columns: next, columnWidths: Array(nextCount).fill(evenWidth), columnStyles: Array.from({ length: nextCount }, (_, index) => d.columnStyles?.[index] ?? {}) });
-        }} options={[{ value: "one", label: "1 kolumna" }, { value: "two", label: "2 kolumny" }, { value: "three", label: "3 kolumny" }, { value: "four", label: "4 kolumny" }]} />
+        }} options={[{ value: "one", label: "1 kolumna" }, { value: "two", label: "2 kolumny" }, { value: "three", label: "3 kolumny" }, { value: "four", label: "4 kolumny" }, { value: "five", label: "5 kolumn" }, { value: "six", label: "6 kolumn" }, { value: "seven", label: "7 kolumn" }, { value: "eight", label: "8 kolumn" }]} />
         <NumberField label="ODSTĘP MIĘDZY KOLUMNAMI (PX)" value={d.gap ?? 24} min={0} max={160} onChange={(gap) => onChange({ ...d, gap })} />
         <SelectField label="WYRÓWNANIE PIONOWE" value={d.verticalAlign ?? "start"} onChange={(verticalAlign) => onChange({ ...d, verticalAlign })} options={[{ value: "start", label: "Do góry" }, { value: "center", label: "Do środka" }, { value: "end", label: "Do dołu" }, { value: "stretch", label: "Rozciągnij" }]} />
         <SelectField label="UKŁAD NA TELEFONIE" value={d.mobileLayout ?? "stack"} onChange={(mobileLayout) => onChange({ ...d, mobileLayout })} options={[{ value: "stack", label: "Kolumny jedna pod drugą" }, { value: "row", label: "Zachowaj kolumny w wierszu" }]} />
