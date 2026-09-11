@@ -39,10 +39,22 @@ export const metadata: Metadata = {
     locale: "pl_PL",
     url: "/",
     siteName: "CoolInk Tattoo Studio",
-    images: [{ url: "/images/portrait.jpg", width: 1200, height: 1200, alt: "CoolInk Tattoo Studio" }],
+    images: [
+      {
+        url: "/images/logo-white.jpg",
+        width: 1710,
+        height: 755,
+        alt: "Logo CoolInk Tattoo Studio",
+      },
+    ],
     type: "website",
   },
-  twitter: { card: "summary_large_image", title: "CoolInk Tattoo Studio", description: "Tatuaże i rezerwacje online w Zielonej Górze.", images: ["/images/portrait.jpg"] },
+  twitter: {
+    card: "summary_large_image",
+    title: "CoolInk Tattoo Studio",
+    description: "Tatuaże i rezerwacje online w Zielonej Górze.",
+    images: [{ url: "/images/logo-white.jpg", alt: "Logo CoolInk Tattoo Studio" }],
+  },
 };
 
 export default function RootLayout({
