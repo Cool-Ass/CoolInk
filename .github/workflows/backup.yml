@@ -40,7 +40,7 @@ jobs:
           tar -czf backup.tar.gz production.dump expected-counts.txt media-backup
           openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.tar.gz -out coolink-backup.enc -pass env:BACKUP_ENCRYPTION_PASSWORD
           sha256sum coolink-backup.enc > SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coolink-encrypted-backup-${{ github.run_id }}
           path: |
