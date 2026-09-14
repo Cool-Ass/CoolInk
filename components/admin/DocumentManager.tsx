@@ -64,7 +64,7 @@ export default function DocumentManager({ documents }: { documents: ManagedDocum
       const response = await fetch(`/api/admin/documents/${removing.id}`, { method: "DELETE" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Nie udało się usunąć dokumentu.");
-      showToast("Dokument usunięty.");
+      showToast(body.archived ? "Dokument z akceptacjami został bezpiecznie zarchiwizowany." : "Dokument usunięty.");
       setRemoving(null);
       router.refresh();
     } catch (error) {
@@ -101,6 +101,6 @@ export default function DocumentManager({ documents }: { documents: ManagedDocum
       </form>
     </AppModal>}
 
-    {removing && <ConfirmModal pending={busy} pendingLabel="Usuwanie…" onCancel={() => setRemoving(null)} onConfirm={remove} message={`Usunąć dokument „${removing.title}”? Usunięte zostaną również zapisane akceptacje (${removing.acceptanceCount}). Tej operacji nie można cofnąć.`} />}
+    {removing && <ConfirmModal pending={busy} pendingLabel="Zapisywanie…" onCancel={() => setRemoving(null)} onConfirm={remove} message={removing.acceptanceCount ? `Archiwizować dokument „${removing.title}”? ${removing.acceptanceCount} zapisanych akceptacji i ich wersje zostaną zachowane.` : `Usunąć dokument „${removing.title}”? Tej operacji nie można cofnąć.`} />}
   </>;
 }

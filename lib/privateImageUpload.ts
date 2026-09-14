@@ -1,8 +1,14 @@
 import sharp from "sharp";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_DIMENSION = 2400;
+const MAX_INPUT_PIXELS = 40_000_000;
+
+function maxUploadBytes() {
+  const configured = Number(process.env.MAX_UPLOAD_MB ?? "8");
+  const megabytes = Number.isFinite(configured) ? Math.min(Math.max(configured, 1), 20) : 8;
+  return { bytes: megabytes * 1024 * 1024, megabytes };
+}
 
 export class PrivateImageUploadError extends Error {}
 
@@ -12,13 +18,14 @@ export class PrivateImageUploadError extends Error {}
  * and bounds the dimensions before it reaches private object storage.
  */
 export async function preparePrivateImage(file: File) {
-  if (!ALLOWED_TYPES.has(file.type) || file.size <= 0 || file.size > MAX_BYTES) {
-    throw new PrivateImageUploadError("Dodaj prawidłowy JPG, PNG albo WEBP o rozmiarze do 10 MB.");
+  const limit = maxUploadBytes();
+  if (!ALLOWED_TYPES.has(file.type) || file.size <= 0 || file.size > limit.bytes) {
+    throw new PrivateImageUploadError(`Dodaj prawidłowy JPG, PNG albo WEBP o rozmiarze do ${limit.megabytes} MB.`);
   }
 
   try {
     const input = Buffer.from(await file.arrayBuffer());
-    const output = await sharp(input, { failOn: "warning" })
+    const output = await sharp(input, { failOn: "warning", limitInputPixels: MAX_INPUT_PIXELS })
       .rotate()
       .resize({
         width: MAX_DIMENSION,

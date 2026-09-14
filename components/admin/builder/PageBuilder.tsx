@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import ModuleRenderer, { type ModuleRendererGlobals } from "@/components/ModuleRenderer";
 import BuilderTopBar, { type DeviceMode } from "@/components/admin/builder/BuilderTopBar";
@@ -12,12 +12,13 @@ import PageSettingsModal, {
   type PageSettingsValues,
 } from "@/components/admin/builder/PageSettingsModal";
 import { useToast } from "@/components/admin/ToastProvider";
-import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, withDefaults, type ColumnsModuleData, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
+import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, MODULE_LABELS, withDefaults, type ColumnsModuleData, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import { PALETTE_WIDGET_MIME } from "@/lib/builderDnd";
 import { moveBuilderWidget, type BuilderColumnTarget } from "@/lib/builderTree";
 import type { PortfolioWork } from "@/lib/portfolio";
 import { siteThemeStyle } from "@/lib/siteTheme";
 import { isSystemPageSlug } from "@/lib/systemPages";
+import { auditBuilderPage } from "@/lib/builderAudit";
 
 const COLUMN_LAYOUTS = ["one", "two", "three", "four", "five", "six", "seven", "eight"] as const;
 
@@ -92,10 +93,13 @@ export interface BuilderPage {
 }
 
 const DEVICE_WIDTHS: Record<DeviceMode, string> = {
-  desktop: "100%",
+  desktop: "1440px",
   tablet: "768px",
   mobile: "390px",
 };
+
+interface ReusableBlock { id: string; name: string; module: Module }
+const REUSABLE_BLOCKS_KEY = "coolink-builder-reusable-blocks-v1";
 
 function createBuilderEntry(type: ModuleType) {
   if (!isColumnWidgetType(type)) return { module: createModule(type), widgetId: null as string | null };
@@ -134,8 +138,14 @@ export default function PageBuilder({
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [autosaveError, setAutosaveError] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showGuides, setShowGuides] = useState(false);
+  const [snapSize, setSnapSize] = useState(8);
+  const [reusableBlocks, setReusableBlocks] = useState<ReusableBlock[]>([]);
+  const [selectedReusableBlock, setSelectedReusableBlock] = useState("");
   const isSystemPage = isSystemPageSlug(page.slug);
   const dirty = JSON.stringify(modules) !== lastSavedSignature;
+  const auditIssues = useMemo(() => auditBuilderPage(modules), [modules]);
 
   const initialModulesRef = useRef(initialPage.modules ?? []);
   const modulesRef = useRef(modules);
@@ -144,6 +154,15 @@ export default function PageBuilder({
   const recoveryCheckedRef = useRef(false);
   const skipDraftSyncRef = useRef(false);
   const localDraftKey = `coolink-builder-draft:${initialPage.id}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(REUSABLE_BLOCKS_KEY) ?? "[]");
+      if (Array.isArray(parsed)) queueMicrotask(() => { if (!cancelled) setReusableBlocks(parsed.slice(0, 50)); });
+    } catch { /* optional browser library */ }
+    return () => { cancelled = true; };
+  }, []);
 
   const saveLocalDraft = useCallback((current: Module[], base: string) => {
     try {
@@ -397,6 +416,41 @@ export default function PageBuilder({
     setSelectedWidgetId(widgetId);
     setSelectedColumnIndex(null);
     setSelectedColumnOwnerId(null);
+  }
+
+  function persistReusableBlocks(next: ReusableBlock[]) {
+    const bounded = next.slice(-50);
+    setReusableBlocks(bounded);
+    try { window.localStorage.setItem(REUSABLE_BLOCKS_KEY, JSON.stringify(bounded)); } catch { showToast("Nie udało się zapisać biblioteki w tej przeglądarce.", "error"); }
+  }
+
+  function saveReusableBlock() {
+    if (!selectedModule) { showToast("Najpierw wybierz sekcję.", "error"); return; }
+    const name = window.prompt("Nazwa bloku wielorazowego", MODULE_LABELS[selectedModule.type]);
+    if (!name?.trim()) return;
+    const block = { id: crypto.randomUUID(), name: name.trim().slice(0, 80), module: structuredClone(selectedModule) };
+    persistReusableBlocks([...reusableBlocks, block]);
+    setSelectedReusableBlock(block.id);
+    showToast("Blok dodano do biblioteki.");
+  }
+
+  function insertReusableBlock() {
+    const saved = reusableBlocks.find((block) => block.id === selectedReusableBlock);
+    if (!saved) return;
+    const clone = cloneBuilderModule(saved.module);
+    setModules((current) => {
+      const index = current.findIndex((module) => module.id === selectedId);
+      const next = [...current];
+      next.splice(index < 0 ? next.length : index + 1, 0, clone);
+      return next;
+    });
+    setSelectedId(clone.id); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null);
+  }
+
+  function deleteReusableBlock() {
+    if (!selectedReusableBlock) return;
+    persistReusableBlocks(reusableBlocks.filter((block) => block.id !== selectedReusableBlock));
+    setSelectedReusableBlock("");
   }
 
   function duplicateWidget(moduleId: string, widgetId: string, columnIndex: number) {
@@ -699,20 +753,35 @@ export default function PageBuilder({
 
         <div
           data-lenis-prevent
-          className="flex-1 overflow-y-auto bg-[#101113] px-4 py-6 md:px-7"
+          className="min-w-0 flex-1 overflow-auto bg-[#101113] px-4 py-6 md:px-7"
           onClick={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
           onDragOver={(event) => { if (event.dataTransfer.types.includes(PALETTE_WIDGET_MIME)) event.preventDefault(); }}
           onDrop={dropOnCanvas}
         >
           <div
-            className="builder-canvas relative mx-auto border border-ink-white/10 bg-ink-black transition-[width] duration-300"
-            style={{ width: DEVICE_WIDTHS[device], maxWidth: "100%", ...(globals.theme ? siteThemeStyle(globals.theme) : {}) }}
+            data-builder-device={device}
+            data-builder-snap={snapSize}
+            className={`builder-canvas relative mx-auto shrink-0 border border-ink-white/10 bg-ink-black transition-[width] duration-300 ${showGrid ? "builder-canvas-grid" : ""}`}
+            style={{ width: DEVICE_WIDTHS[device], "--builder-grid-size": `${snapSize}px`, ...(globals.theme ? siteThemeStyle(globals.theme) : {}) } as CSSProperties}
           >
             <div className="border-b border-ink-white/10 bg-ink-charcoal/60 px-4 py-2 text-center text-[10px] leading-relaxed text-ink-grey">
               Przeciągnij element z lewego panelu. Widget możesz upuścić bezpośrednio w kolumnie sekcji.
             </div>
+            <div className="builder-editor-chrome relative z-[60] flex flex-wrap items-center gap-1.5 border-b border-white/10 bg-[#17181a]/95 p-2" onClick={(event) => event.stopPropagation()}>
+              <button type="button" aria-pressed={showGrid} onClick={() => setShowGrid((value) => !value)} className={`min-h-8 border px-2 ${showGrid ? "border-ink-gold text-ink-gold" : "border-white/15 text-white/55"}`}>SIATKA</button>
+              <button type="button" aria-pressed={showGuides} onClick={() => setShowGuides((value) => !value)} className={`min-h-8 border px-2 ${showGuides ? "border-ink-gold text-ink-gold" : "border-white/15 text-white/55"}`}>PROWADNICE</button>
+              <label className="flex min-h-8 items-center gap-1 border border-white/15 px-2 text-white/55">SNAP <input aria-label="Rozmiar siatki przyciągania" type="number" min={1} max={100} value={snapSize} onChange={(event) => setSnapSize(Math.min(100, Math.max(1, Number(event.target.value) || 1)))} className="w-12 bg-transparent text-right text-white outline-none" /> PX</label>
+              <span className="mx-1 h-5 w-px bg-white/10" />
+              <button type="button" onClick={saveReusableBlock} disabled={!selectedModule} className="min-h-8 border border-white/15 px-2 text-white/55 disabled:opacity-30">ZAPISZ BLOK</button>
+              <select aria-label="Biblioteka bloków" value={selectedReusableBlock} onChange={(event) => setSelectedReusableBlock(event.target.value)} className="min-h-8 max-w-44 border border-white/15 bg-[#17181a] px-2 text-white/70"><option value="">BIBLIOTEKA BLOKÓW</option>{reusableBlocks.map((block) => <option key={block.id} value={block.id}>{block.name}</option>)}</select>
+              <button type="button" onClick={insertReusableBlock} disabled={!selectedReusableBlock} className="min-h-8 border border-ink-gold/50 px-2 text-ink-gold disabled:opacity-30">WSTAW</button>
+              <button type="button" onClick={deleteReusableBlock} disabled={!selectedReusableBlock} aria-label="Usuń blok z biblioteki" className="min-h-8 border border-red-400/30 px-2 text-red-300 disabled:opacity-30">USUŃ</button>
+              <details className="ml-auto min-w-40 text-[9px] text-white/60"><summary className={`cursor-pointer border px-2 py-2 ${auditIssues.some((issue) => issue.severity === "error") ? "border-red-400/60 text-red-300" : auditIssues.length ? "border-amber-400/60 text-amber-300" : "border-emerald-400/40 text-emerald-300"}`}>AUDYT: {auditIssues.length || "OK"}</summary>{auditIssues.length > 0 && <div className="absolute right-2 top-full z-[80] mt-1 max-h-64 w-[min(28rem,90%)] overflow-y-auto border border-white/15 bg-black/95 p-2 shadow-2xl">{auditIssues.map((issue) => <p key={issue.id} className={`border-b border-white/10 px-1 py-2 leading-relaxed ${issue.severity === "error" ? "text-red-300" : "text-amber-200"}`}>{issue.message}</p>)}</div>}</details>
+            </div>
+            {showGuides && <div aria-hidden className="pointer-events-none absolute inset-0 z-[35]"><span className="absolute inset-y-0 left-1/2 border-l border-dashed border-cyan-300/55" /><span className="absolute inset-y-0 left-1/3 border-l border-dashed border-cyan-300/25" /><span className="absolute inset-y-0 left-2/3 border-l border-dashed border-cyan-300/25" /><span className="absolute inset-x-0 top-1/2 border-t border-dashed border-cyan-300/40" /></div>}
             <ModuleRenderer
               modules={modules}
+              editorDevice={device}
               portfolioWorks={portfolioItems}
               globals={globals}
               editable

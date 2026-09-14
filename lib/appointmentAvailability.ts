@@ -1,15 +1,15 @@
-import { bookingConflict, validAppointmentRange } from "@/lib/bookingRules";
+import { bookingConflict, bookingConflictMessage, validAppointmentRange, type BookingContext } from "@/lib/bookingRules";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
 export type AppointmentAvailability = { ok: true } | { ok: false; error: string; status: 400 | 409 };
 
 /** The single booking gate used by client booking and the admin proposal flow. */
-export async function verifyExplicitAppointmentAvailability(startsAt: Date, endsAt: Date, excludeAppointmentId?: string, db: typeof prisma | Prisma.TransactionClient = prisma): Promise<AppointmentAvailability> {
+export async function verifyExplicitAppointmentAvailability(startsAt: Date, endsAt: Date, excludeAppointmentId?: string, db: typeof prisma | Prisma.TransactionClient = prisma, context: BookingContext = {}): Promise<AppointmentAvailability> {
   if (!validAppointmentRange(startsAt, endsAt)) return { ok: false, status: 400, error: "Wybierz termin co 30 minut, o długości od 30 minut do 12 godzin." };
   const available = await db.availableSlot.findFirst({ where: { isPublic: true, startsAt: { lte: startsAt }, endsAt: { gte: endsAt } }, select: { id: true } });
   if (!available) return { ok: false, status: 409, error: "Ten zakres nie mieści się w jawnie ustawionym wolnym terminie." };
-  const conflict = await bookingConflict(startsAt, endsAt, excludeAppointmentId, true, db);
-  if (conflict.appointment || conflict.block) return { ok: false, status: 409, error: `Ten termin nie jest dostępny. Uwzględniam też ${conflict.bufferMinutes}-minutowy bufor między wizytami.` };
+  const conflict = await bookingConflict(startsAt, endsAt, excludeAppointmentId, true, db, context);
+  if (conflict.appointment || conflict.block) return { ok: false, status: 409, error: `${bookingConflictMessage(conflict)} Uwzględniony bufor: ${conflict.bufferMinutes} min.` };
   return { ok: true };
 }

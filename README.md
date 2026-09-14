@@ -167,11 +167,9 @@ wysyłane e-mailem — integrację z pocztą lub CRM można dodać osobno.
 
 ## 4. Wdrożenie produkcyjne
 
-1. **Baza danych**: zmień `provider` w `prisma/schema.prisma` na `"postgresql"` i ustaw
-   `DATABASE_URL` na zarządzaną instancję Postgres (Supabase, Neon, Railway, RDS…) — sama
-   struktura bazy się nie zmienia. Utwórz migrację lokalnie przez `npx prisma migrate dev`,
-   a na hostingu uruchom `npm run db:deploy`; następnie jednorazowo `npm run db:seed`, aby
-   utworzyć konto administratora.
+1. **Baza danych**: schema jest już skonfigurowana dla PostgreSQL. Ustaw `DATABASE_URL` i
+   `DIRECT_URL`, a podczas wdrożenia uruchom `npm run db:deploy`. `npm run db:seed` uruchom
+   tylko przy pierwszym uruchomieniu, aby utworzyć konto administratora i dane startowe.
 2. **Przesyłane pliki**: `/public/uploads` działa lokalnie, ale większość hostingów (np.
    Vercel) ma efemeryczny/tylko-do-odczytu system plików w produkcji. Produkcja używa
    publicznego Vercel Blob podłączonego do projektu przez `BLOB_READ_WRITE_TOKEN`.
@@ -179,12 +177,23 @@ wysyłane e-mailem — integrację z pocztą lub CRM można dodać osobno.
    ustaw `S3_ENDPOINT`, `S3_REGION=auto`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
    `S3_BUCKET` i `S3_PUBLIC_URL`; R2 ma pierwszeństwo nad Blob. Kluczy nigdy nie zapisuj w
    repozytorium.
-3. **Zmienne środowiskowe**: ustaw `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`,
-   `ADMIN_PASSWORD`, `MAX_UPLOAD_MB` oraz zmienne `S3_*` w panelu zmiennych/sekretów swojego hostingu (nigdy nie
-   commituj `.env`).
-4. **Build/start**: standardowo dla Next.js — `npm run build`, potem `npm run start` (lub
+3. **Zmienne środowiskowe**: oprócz danych bazy ustaw co najmniej `SESSION_SECRET`,
+   `MFA_ENCRYPTION_KEY`, `PRIVATE_MEDIA_SIGNING_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `CRON_SECRET`, `MAX_UPLOAD_MB` i trwały magazyn (`BLOB_READ_WRITE_TOKEN` lub `S3_*`).
+   Token Google szyfruje `GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS` — pierwszy klucz jest
+   aktywny, kolejne służą do bezpiecznej rotacji. Kluczy nigdy nie zapisuj w repozytorium.
+4. **Kopie i testy bezpieczeństwa**: w GitHub Actions ustaw `DATABASE_DIRECT_URL`,
+   `BACKUP_ENCRYPTION_PASSWORD`, dane używanego magazynu (`BLOB_READ_WRITE_TOKEN`,
+   `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` lub `S3_*`) oraz sekrety odizolowanego projektu
+   testowego `DRY_RUN_SUPABASE_URL`, `DRY_RUN_SUPABASE_PUBLISHABLE_KEY` i
+   `DRY_RUN_DIRECT_URL`. Workflow wykonuje testy ról/IDOR, cotygodniowy szyfrowany backup
+   danych aplikacji z publicznego schematu PostgreSQL i wszystkich skonfigurowanych magazynów
+   mediów oraz kwartalną próbę odtworzenia z porównaniem liczby rekordów i sum plików.
+5. **CSP**: rozpocznij z `CSP_MODE=report-only`; po usunięciu raportowanych naruszeń zmień na
+   `CSP_MODE=enforce`.
+6. **Build/start**: standardowo dla Next.js — `npm run build`, potem `npm run start` (lub
    wdrożenie na Vercel / dowolny hosting Node uruchamiający `next build`/`next start`).
-5. HTTPS jest wymagane w produkcji, aby flaga `secure` ciasteczka sesji (już warunkowa na
+7. HTTPS jest wymagane w produkcji, aby flaga `secure` ciasteczka sesji (już warunkowa na
    `NODE_ENV === "production"` w `lib/session.ts`) faktycznie się ustawiła.
 
 ## 5. Struktura strony (motyw publiczny)

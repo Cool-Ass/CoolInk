@@ -7,6 +7,7 @@ import {
   tooManyRequests,
 } from "@/lib/requestSecurity";
 import { sendPushToClient } from "@/lib/webPush";
+import { privateImageUrl } from "@/lib/privateMedia";
 
 const MAX_MESSAGE_LENGTH = 2_000;
 
@@ -17,7 +18,7 @@ function serialize(message: {
   createdAt: Date;
   readAt: Date | null;
   attachment: { id: string; caption: string | null } | null;
-}) {
+}, adminId: string) {
   return {
     id: message.id,
     author: message.author,
@@ -25,7 +26,7 @@ function serialize(message: {
     createdAt: message.createdAt.toISOString(),
     readAt: message.readAt?.toISOString() ?? null,
     attachment: message.attachment
-      ? { id: message.attachment.id, caption: message.attachment.caption, url: `/api/admin/images/${message.attachment.id}` }
+      ? { id: message.attachment.id, caption: message.attachment.caption, url: privateImageUrl(message.attachment.id, "admin", adminId) }
       : null,
   };
 }
@@ -34,7 +35,8 @@ export async function GET(
   _: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await getCurrentAdmin()))
+  const admin = await getCurrentAdmin();
+  if (!admin)
     return NextResponse.json(
       { error: "Brak dostępu administratora." },
       { status: 401 },
@@ -49,14 +51,41 @@ export async function GET(
       { error: "Projekt nie istnieje." },
       { status: 404 },
     );
-  await prisma.projectMessage.updateMany({ where: { projectId: id, author: "client", readAt: null }, data: { readAt: new Date() } });
   const messages = await prisma.projectMessage.findMany({
     where: { projectId: id },
     include: { attachment: { select: { id: true, caption: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
   });
-  return NextResponse.json({ messages: messages.map(serialize) });
+  return NextResponse.json({ messages: messages.map((message) => serialize(message, admin.id)) });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!(await getCurrentAdmin()))
+    return NextResponse.json(
+      { error: "Brak dostępu administratora." },
+      { status: 401 },
+    );
+  if (!isSameOrigin(request))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { id } = await params;
+  const project = await prisma.tattooProject.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+  if (!project)
+    return NextResponse.json(
+      { error: "Projekt nie istnieje." },
+      { status: 404 },
+    );
+  const result = await prisma.projectMessage.updateMany({
+    where: { projectId: id, author: "client", readAt: null },
+    data: { readAt: new Date() },
+  });
+  return NextResponse.json({ ok: true, updated: result.count });
 }
 
 export async function POST(
@@ -104,7 +133,7 @@ export async function POST(
     return message;
   });
   await sendPushToClient(project.clientId, { title: "Nowa wiadomość od CoolInk", body: text.slice(0, 160), url: "/app/portal/messages", tag: `studio-message-${result.id}` }).catch(() => undefined);
-  return NextResponse.json({ message: serialize(result) }, { status: 201 });
+  return NextResponse.json({ message: serialize(result, admin.id) }, { status: 201 });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {

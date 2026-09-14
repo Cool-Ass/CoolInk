@@ -50,10 +50,12 @@ export interface ModuleStyle {
   backgroundAttachment?: "scroll" | "fixed";
   backgroundBlendMode?: BlendMode;
   gradientEnabled?: boolean;
-  gradientType?: "linear" | "radial";
+  gradientType?: "linear" | "radial" | "mesh";
   gradientAngle?: number;
   gradientColor1?: string;
   gradientColor2?: string;
+  gradientColor3?: string;
+  gradientColor4?: string;
   gradientStop1?: number;
   gradientStop2?: number;
   overlayColor?: string;
@@ -69,6 +71,8 @@ export interface ModuleStyle {
   glowSize?: number;
   glowOpacity?: number;
   maskShape?: "none" | "slant-left" | "slant-right" | "diamond" | "hexagon" | "circle" | "ellipse" | "ticket" | "arch";
+  /** Uploaded SVG/PNG mask. The server upload pipeline validates and re-encodes raster files. */
+  maskImage?: string;
   shapeDividerTop?: "none" | "slant" | "wave" | "zigzag" | "curve";
   shapeDividerBottom?: "none" | "slant" | "wave" | "zigzag" | "curve";
   shapeDividerColor?: string;
@@ -87,13 +91,21 @@ export interface ModuleStyle {
   height?: number;
   maxHeight?: number;
   width?: number;
+  responsiveWidth?: ResponsiveNumber;
+  responsiveHeight?: ResponsiveNumber;
   minWidth?: number;
   maxWidth?: number;
   aspectRatio?: string;
+  lockAspectRatio?: boolean;
+  resizeAxis?: "both" | "horizontal" | "vertical";
+  resizeSnap?: number;
   opacity?: number;
   customCss?: string;
   cssClass?: string;
   anchorId?: string;
+  /** Optional UTC publication window evaluated in the visitor's browser. */
+  visibleFrom?: string;
+  visibleUntil?: string;
   hiddenOn?: { desktop?: boolean; tablet?: boolean; mobile?: boolean };
   color?: string;
   fontFamily?: "inherit" | "display" | "body";
@@ -132,6 +144,8 @@ export interface ModuleStyle {
   gridColumns?: number;
   translateX?: number;
   translateY?: number;
+  responsiveTranslateX?: ResponsiveNumber;
+  responsiveTranslateY?: ResponsiveNumber;
   scale?: number;
   rotate?: number;
   skewX?: number;
@@ -155,7 +169,15 @@ export interface ModuleStyle {
   animationDelay?: number;
   animationEasing?: "ease" | "ease-in" | "ease-out" | "ease-in-out" | "linear" | "spring";
   animationIteration?: "once" | "infinite";
+  animationRepeat?: number;
+  animationTrigger?: "load" | "view" | "hover";
+  animationStagger?: number;
+  animationOrder?: number;
   parallax?: "none" | "slow" | "medium" | "fast";
+  interactionMode?: "normal" | "modal" | "drawer";
+  interactionLabel?: string;
+  scrollProgress?: boolean;
+  designToken?: "none" | "surface" | "accent" | "muted";
   hoverTranslateX?: number;
   hoverTranslateY?: number;
   hoverScale?: number;

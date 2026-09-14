@@ -2,16 +2,19 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
+import type { Metadata } from "sharp";
 import { deleteMedia, isExternalMediaUrl, uploadMedia } from "./storage";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
 const MAX_DIMENSION = 2400; // longest edge, px — keeps files reasonable
+const MAX_INPUT_PIXELS = 40_000_000;
 
 export class MediaUploadError extends Error {}
 
 function maxUploadBytes() {
-  const mb = Number(process.env.MAX_UPLOAD_MB || 8);
+  const configured = Number(process.env.MAX_UPLOAD_MB || 8);
+  const mb = Number.isFinite(configured) ? Math.min(Math.max(configured, 1), 20) : 8;
   return mb * 1024 * 1024;
 }
 
@@ -22,31 +25,28 @@ export async function saveUploadedImage(file: File) {
       `Nieobsługiwany typ pliku "${file.type}". Użyj JPEG, PNG, WebP lub SVG.`
     );
   }
-  if (file.size > maxUploadBytes()) {
+  if (file.size <= 0 || file.size > maxUploadBytes()) {
     throw new MediaUploadError(
       `Plik jest za duży. Maksymalny rozmiar to ${process.env.MAX_UPLOAD_MB || 8}MB.`
     );
   }
 
-  const inputBuffer = Buffer.from(await file.arrayBuffer());
-
-  const image = sharp(inputBuffer).rotate(); // auto-orient from EXIF
-  const meta = await image.metadata();
-
-  const needsResize =
-    (meta.width ?? 0) > MAX_DIMENSION || (meta.height ?? 0) > MAX_DIMENSION;
-
-  const pipeline = needsResize
-    ? image.resize({
-        width: MAX_DIMENSION,
-        height: MAX_DIMENSION,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-    : image;
-
-  const outputBuffer = await pipeline.webp({ quality: 82 }).toBuffer();
-  const outputMeta = await sharp(outputBuffer).metadata();
+  let outputBuffer: Buffer;
+  let outputMeta: Metadata;
+  try {
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
+    const image = sharp(inputBuffer, { failOn: "warning", limitInputPixels: MAX_INPUT_PIXELS }).rotate();
+    const meta = await image.metadata();
+    if (!meta.width || !meta.height) throw new Error("Missing image dimensions");
+    const needsResize = meta.width > MAX_DIMENSION || meta.height > MAX_DIMENSION;
+    const pipeline = needsResize
+      ? image.resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      : image;
+    outputBuffer = await pipeline.webp({ quality: 82, alphaQuality: 90 }).toBuffer();
+    outputMeta = await sharp(outputBuffer, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+  } catch {
+    throw new MediaUploadError("Plik nie zawiera bezpiecznego obrazu JPEG, PNG, WebP ani SVG.");
+  }
 
   const filename = `${crypto.randomUUID()}.webp`;
   const key = `uploads/${filename}`;

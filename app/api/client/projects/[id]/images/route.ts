@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToAdmins } from "@/lib/webPush";
 import { preparePrivateImage, PrivateImageUploadError } from "@/lib/privateImageUpload";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
+import { privateImageUrl } from "@/lib/privateMedia";
 
 export async function POST(
   request: Request,
@@ -91,7 +92,7 @@ export async function POST(
   });
   await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=projects`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")
-    return NextResponse.json({ imageId: image.id, image: { id: image.id, caption: image.caption, url: `/api/client/images/${image.id}` } }, { status: 201 });
+    return NextResponse.json({ imageId: image.id, image: { id: image.id, caption: image.caption, createdAt: image.createdAt.toISOString(), url: privateImageUrl(image.id, "client", client.id) } }, { status: 201 });
   const message = await prisma.projectMessage.create({
     data: {
       projectId: project.id,
@@ -113,7 +114,7 @@ export async function POST(
         attachment: {
           id: image.id,
           caption: message.attachment?.caption ?? null,
-          url: `/api/client/images/${image.id}`,
+          url: privateImageUrl(image.id, "client", client.id),
         },
       },
     },

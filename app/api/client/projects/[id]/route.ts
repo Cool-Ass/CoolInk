@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { del as deleteBlob } from "@vercel/blob";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { sendPushToAdmins } from "@/lib/webPush";
 import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
+import { deletePrivateProjectMedia } from "@/lib/privateMedia";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -45,10 +45,10 @@ export async function DELETE(request: Request, { params }: Params) {
     await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
   }
 
+  const media = await deletePrivateProjectMedia(project.images.map((image) => image.url));
+  if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć prywatnych plików projektu. Projekt nie został usunięty." }, { status: 502 });
   const deleted = await prisma.tattooProject.deleteMany({ where: { id, clientId: client.id } });
   if (!deleted.count) return NextResponse.json({ error: "Projekt został już usunięty." }, { status: 404 });
-  const blobUrls = project.images.map((image) => image.url).filter((url) => url.includes(".blob.vercel-storage.com"));
-  if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) await deleteBlob(blobUrls).catch(() => undefined);
   await sendPushToAdmins({
     title: "Klient usunął projekt",
     body: `${client.firstName} ${client.lastName} usunął projekt „${project.title}”.`,

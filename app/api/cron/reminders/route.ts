@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
-import { sendPushToClient } from "@/lib/webPush";
+import { sendPushToAdmins, sendPushToClient } from "@/lib/webPush";
+import { offerReleasedRange } from "@/lib/waitlistAutomation";
+import { applyOperationalDataRetention } from "@/lib/dataRetention";
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
   if (!expected || request.headers.get("authorization") !== `Bearer ${expected}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const now = new Date();
-  const expiredOffers = await prisma.waitlistEntry.findMany({ where: { status: "offered", offerExpiresAt: { lte: now } }, include: { offeredAppointment: { select: { id: true } }, project: { select: { id: true, clientId: true, title: true } } } });
+  const expiredOffers = await prisma.waitlistEntry.findMany({ where: { status: "offered", offerExpiresAt: { lte: now } }, include: { offeredAppointment: { select: { id: true, startsAt: true, endsAt: true } }, project: { select: { id: true, clientId: true, title: true } } } });
   let expired = 0;
   for (const entry of expiredOffers) {
     const released = await prisma.$transaction(async (tx) => {
@@ -22,6 +24,7 @@ export async function GET(request: Request) {
     if (released) {
       expired += 1;
       await sendPushToClient(entry.project.clientId, { title: "Oferta terminu wygasła", body: "Twój projekt nadal czeka na liście rezerwowej.", url: "/app/portal/calendar#lista-rezerwowa", tag: `waitlist-expired-${entry.id}` }).catch(() => undefined);
+      if (entry.offeredAppointment) await offerReleasedRange(entry.offeredAppointment.startsAt, entry.offeredAppointment.endsAt, entry.id).catch(() => undefined);
     }
   }
 
@@ -53,8 +56,19 @@ export async function GET(request: Request) {
       }
     }
     try {
-      const body = `${plan.prefix}: ${appointment.project.title} · ${formatCoolinkDateTime(appointment.startsAt)}. Sprawdź przygotowanie do wizyty w swoim koncie.`;
+      const body = plan.offsetHours === 72 ? `${plan.prefix}: ${appointment.project.title} · ${formatCoolinkDateTime(appointment.startsAt)}. Potwierdź obecność w swoim koncie.` : `${plan.prefix}: ${appointment.project.title} · ${formatCoolinkDateTime(appointment.startsAt)}. Sprawdź przygotowanie do wizyty w swoim koncie.`;
       if (isFirstAttempt) await prisma.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.project.id, appointmentId: appointment.id, type: `APPOINTMENT_REMINDER_${plan.offsetHours}H`, title: plan.title, body, href: "/app/portal/projects" } });
+      if (plan.offsetHours === 72 && !appointment.confirmationRequestedAt) await prisma.appointment.updateMany({ where: { id: appointment.id, confirmationRequestedAt: null }, data: { confirmationRequestedAt: new Date() } });
+      if (plan.offsetHours === 24 && !appointment.clientConfirmedAt && !appointment.reminderEscalatedAt) {
+        const claimed = await prisma.appointment.updateMany({ where: { id: appointment.id, clientConfirmedAt: null, reminderEscalatedAt: null }, data: { reminderEscalatedAt: new Date() } });
+        if (claimed.count) {
+          await prisma.$transaction([
+            prisma.tattooProject.update({ where: { id: appointment.project.id }, data: { nextAction: "Sprawdź brak potwierdzenia obecności klienta", nextActionDueAt: new Date() } }),
+            prisma.projectActivity.create({ data: { projectId: appointment.project.id, type: "attendance_confirmation_missing", message: "Klient nie potwierdził jeszcze obecności na 24 godziny przed wizytą.", visibility: "admin" } }),
+          ]);
+          await sendPushToAdmins({ title: "Brak potwierdzenia obecności", body: `${appointment.project.title} · ${formatCoolinkDateTime(appointment.startsAt)}`, url: "/admin/calendar", tag: `attendance-escalation-${appointment.id}` }).catch(() => undefined);
+        }
+      }
       await sendPushToClient(appointment.project.clientId, { title: plan.pushTitle, body, url: "/app/portal/projects", tag: `appointment-${appointment.id}-${plan.offsetHours}` });
       await prisma.reminderDelivery.update({ where: { id: delivery.id }, data: { sentAt: new Date(), error: null } });
       delivered += 1;
@@ -63,5 +77,6 @@ export async function GET(request: Request) {
     }
   }
   }
-  return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired });
+  const retention = await applyOperationalDataRetention().catch(() => null);
+  return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired, retention });
 }

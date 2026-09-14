@@ -1,0 +1,87 @@
+name: Quality and security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3120
+          SESSION_SECRET: ci-only-session-secret-93bc5b557ea9451fbb290b1ad2af08ae
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Isolated database RLS, IDOR and role tests
+        env:
+          DRY_RUN_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
+          DRY_RUN_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
+          DRY_RUN_DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+        run: |
+          if [ -z "$DRY_RUN_SUPABASE_URL" ] || [ -z "$DRY_RUN_DIRECT_URL" ]; then
+            echo "::warning::Pominięto test bazy: dodaj sekrety dedykowanego projektu testowego."
+            exit 0
+          fi
+          npx prisma migrate deploy
+          npm run db:security:audit
+          npm run db:security:verify
+          npm run db:security:http-verify
+      - name: Isolated client and admin HTTP authorization tests
+        env:
+          CI: "true"
+          DRY_RUN_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
+          DRY_RUN_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
+          DRY_RUN_DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3120
+          SESSION_SECRET: ci-only-session-secret-93bc5b557ea9451fbb290b1ad2af08ae
+          SMOKE_BASE_URL: http://127.0.0.1:3120
+        run: |
+          if [ -z "$DRY_RUN_SUPABASE_URL" ] || [ -z "$DRY_RUN_SUPABASE_PUBLISHABLE_KEY" ] || [ -z "$DRY_RUN_DIRECT_URL" ]; then
+            echo "::warning::Pominięto test HTTP: dodaj sekrety dedykowanego projektu testowego."
+            exit 0
+          fi
+          npm start -- --hostname 127.0.0.1 --port 3120 > /tmp/coolink-app.log 2>&1 &
+          APP_PID=$!
+          trap 'kill $APP_PID 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3120/ > /dev/null; then break; fi
+            if [ "$attempt" = "30" ]; then cat /tmp/coolink-app.log; exit 1; fi
+            sleep 1
+          done
+          npm run test:smoke:rls
+          npm run test:smoke:admin
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript-typescript }
+      - uses: github/codeql-action/analyze@v3

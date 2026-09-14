@@ -12,6 +12,7 @@ import {
 } from "@/lib/requestSecurity";
 import { sendPushToAdmins } from "@/lib/webPush";
 import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
+import { offerReleasedRange } from "@/lib/waitlistAutomation";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -109,6 +110,7 @@ export async function POST(request: Request, { params }: Params) {
 
   await sendPushToAdmins({ title: "Klient anulował wizytę", body: `${client.firstName} ${client.lastName} zwolnił termin.`, url: "/admin/calendar", tag: `client-cancel-${id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(id).catch(() => undefined);
+  await offerReleasedRange(appointment.startsAt, appointment.endsAt).catch(() => undefined);
 
   return setRateLimitHeaders(
     NextResponse.json({

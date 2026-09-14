@@ -42,14 +42,14 @@ function percent(value: number | undefined, fallback?: number) {
   return typeof next === "number" ? `${Math.min(100, Math.max(0, next))}%` : undefined;
 }
 
-function responsiveVariables(name: string, value: ResponsiveNumber | undefined, fallback?: number) {
+function responsiveVariables(name: string, value: ResponsiveNumber | undefined, fallback?: number, min = 0, max = 4_000) {
   const desktop = value?.desktop ?? fallback;
   const tablet = value?.tablet ?? desktop;
   const mobile = value?.mobile ?? tablet;
   return {
-    [`--builder-${name}-desktop`]: typeof desktop === "number" ? `${Math.min(4_000, Math.max(0, desktop))}px` : undefined,
-    [`--builder-${name}-tablet`]: typeof tablet === "number" ? `${Math.min(4_000, Math.max(0, tablet))}px` : undefined,
-    [`--builder-${name}-mobile`]: typeof mobile === "number" ? `${Math.min(4_000, Math.max(0, mobile))}px` : undefined,
+    [`--builder-${name}-desktop`]: typeof desktop === "number" ? `${Math.min(max, Math.max(min, desktop))}px` : undefined,
+    [`--builder-${name}-tablet`]: typeof tablet === "number" ? `${Math.min(max, Math.max(min, tablet))}px` : undefined,
+    [`--builder-${name}-mobile`]: typeof mobile === "number" ? `${Math.min(max, Math.max(min, mobile))}px` : undefined,
   } as BuilderCssProperties;
 }
 
@@ -58,13 +58,13 @@ function easing(value: ModuleStyle["animationEasing"] | ModuleStyle["transitionE
 }
 
 function transform(style: ModuleStyle, hover = false) {
-  const x = hover ? style.hoverTranslateX ?? style.translateX ?? 0 : style.translateX ?? 0;
-  const y = hover ? style.hoverTranslateY ?? style.translateY ?? 0 : style.translateY ?? 0;
+  const x = hover ? `${style.hoverTranslateX ?? style.translateX ?? 0}px` : "var(--builder-translate-x, 0px)";
+  const y = hover ? `${style.hoverTranslateY ?? style.translateY ?? 0}px` : "var(--builder-translate-y, 0px)";
   const scale = (hover ? style.hoverScale ?? style.scale : style.scale) ?? 1;
   const rotate = hover ? style.hoverRotate ?? style.rotate ?? 0 : style.rotate ?? 0;
   const skewX = style.skewX ?? 0;
   const skewY = style.skewY ?? 0;
-  return `translate3d(${x}px, ${y}px, 0) rotate(${rotate}deg) skew(${skewX}deg, ${skewY}deg) scale(${Math.min(5, Math.max(.05, scale))})`;
+  return `translate3d(${x}, ${y}, 0) rotate(${rotate}deg) skew(${skewX}deg, ${skewY}deg) scale(${Math.min(5, Math.max(.05, scale))})`;
 }
 
 function filter(style: ModuleStyle, hover = false) {
@@ -83,13 +83,16 @@ export function buildVisualStyle(style?: ModuleStyle): CSSProperties | undefined
     [`${name}Left`]: px(value.left),
   } : {};
   const gradient = style.gradientEnabled
-    ? style.gradientType === "radial"
+    ? style.gradientType === "mesh"
+      ? `radial-gradient(circle at 18% 22%, ${style.gradientColor1 || "#c99a4a"}, transparent 42%), radial-gradient(circle at 82% 18%, ${style.gradientColor2 || "#090807"}, transparent 45%), radial-gradient(circle at 72% 82%, ${style.gradientColor3 || "#7b2d26"}, transparent 48%), radial-gradient(circle at 22% 78%, ${style.gradientColor4 || "#172e28"}, transparent 45%)`
+      : style.gradientType === "radial"
       ? `radial-gradient(circle at center, ${style.gradientColor1 || "#c99a4a"} ${percent(style.gradientStop1, 0)}, ${style.gradientColor2 || "#090807"} ${percent(style.gradientStop2, 100)})`
       : `linear-gradient(${Math.min(360, Math.max(0, style.gradientAngle ?? 135))}deg, ${style.gradientColor1 || "#c99a4a"} ${percent(style.gradientStop1, 0)}, ${style.gradientColor2 || "#090807"} ${percent(style.gradientStop2, 100)})`
     : "";
   const image = style.backgroundImage ? `url(${JSON.stringify(style.backgroundImage)})` : "";
   const backgroundImage = [gradient, image].filter(Boolean).join(", ") || undefined;
-  const hasTransform = (style.translateX ?? 0) !== 0
+  const hasTransform = Boolean(style.responsiveTranslateX || style.responsiveTranslateY)
+    || (style.translateX ?? 0) !== 0
     || (style.translateY ?? 0) !== 0
     || (style.scale ?? 1) !== 1
     || (style.rotate ?? 0) !== 0
@@ -113,9 +116,9 @@ export function buildVisualStyle(style?: ModuleStyle): CSSProperties | undefined
     borderStyle: style.borderWidth ? style.borderStyle ?? "solid" : undefined,
     borderRadius: typeof style.borderRadius === "number" ? px(style.borderRadius, 0, 999) : undefined,
     minHeight: px(style.minHeight, 0, 4_000),
-    height: px(style.height, 0, 4_000),
+    height: style.responsiveHeight ? "var(--builder-height)" : px(style.height, 0, 4_000),
     maxHeight: px(style.maxHeight, 0, 4_000),
-    width: px(style.width, 0, 4_000),
+    width: style.responsiveWidth ? "var(--builder-width)" : px(style.width, 0, 4_000),
     minWidth: px(style.minWidth, 0, 4_000),
     maxWidth: px(style.maxWidth, 0, 4_000),
     aspectRatio: style.aspectRatio || undefined,
@@ -140,6 +143,14 @@ export function buildVisualStyle(style?: ModuleStyle): CSSProperties | undefined
     filter: hasFilter ? filter(style) : undefined,
     backdropFilter: style.backdropBlur ? `blur(${Math.min(80, Math.max(0, style.backdropBlur))}px)` : undefined,
     mixBlendMode: style.mixBlendMode || undefined,
+    WebkitMaskImage: style.maskImage ? `url(${JSON.stringify(style.maskImage)})` : undefined,
+    maskImage: style.maskImage ? `url(${JSON.stringify(style.maskImage)})` : undefined,
+    WebkitMaskSize: style.maskImage ? "cover" : undefined,
+    maskSize: style.maskImage ? "cover" : undefined,
+    WebkitMaskPosition: style.maskImage ? "center" : undefined,
+    maskPosition: style.maskImage ? "center" : undefined,
+    WebkitMaskRepeat: style.maskImage ? "no-repeat" : undefined,
+    maskRepeat: style.maskImage ? "no-repeat" : undefined,
     boxShadow: customShadow ? `${style.boxShadowX ?? 0}px ${style.boxShadowY ?? 12}px ${Math.max(0, style.boxShadowBlur ?? 30)}px ${style.boxShadowSpread ?? 0}px ${style.boxShadowColor || "#00000080"}` : undefined,
     cursor: style.cursor || undefined,
     fontStyle: style.fontStyle || undefined,
@@ -164,9 +175,9 @@ export function buildVisualStyle(style?: ModuleStyle): CSSProperties | undefined
     "--builder-transition-duration": `${Math.max(0, style.transitionDuration ?? 350)}ms`,
     "--builder-transition-easing": easing(style.transitionEasing),
     "--builder-animation-duration": `${Math.max(50, style.animationDuration ?? 700)}ms`,
-    "--builder-animation-delay": `${Math.max(0, style.animationDelay ?? 0)}ms`,
+    "--builder-animation-delay": `${Math.max(0, (style.animationDelay ?? 0) + (style.animationStagger ?? 0) * (style.animationOrder ?? 0))}ms`,
     "--builder-animation-easing": easing(style.animationEasing),
-    "--builder-animation-iteration": style.animationIteration === "infinite" ? "infinite" : "1",
+    "--builder-animation-iteration": style.animationIteration === "infinite" ? "infinite" : String(Math.min(50, Math.max(1, style.animationRepeat ?? 1))),
     "--builder-pattern-color": style.patternColor || style.color || "#c99a4a",
     "--builder-pattern-opacity": String(Math.min(1, Math.max(0, (style.patternOpacity ?? 18) / 100))),
     "--builder-pattern-size": `${Math.min(240, Math.max(4, style.patternSize ?? 28))}px`,
@@ -186,8 +197,16 @@ export function buildVisualStyle(style?: ModuleStyle): CSSProperties | undefined
     "--builder-icon-y": `${style.iconOffsetY ?? 0}px`,
     "--builder-icon-opacity": String(Math.min(1, Math.max(0, (style.iconOpacity ?? 100) / 100))),
     "--builder-icon-z": String(style.iconZIndex ?? 5),
+    "--builder-width": style.responsiveWidth ? `${style.responsiveWidth.mobile ?? style.responsiveWidth.tablet ?? style.responsiveWidth.desktop ?? style.width ?? 0}px` : undefined,
+    "--builder-height": style.responsiveHeight ? `${style.responsiveHeight.mobile ?? style.responsiveHeight.tablet ?? style.responsiveHeight.desktop ?? style.height ?? 0}px` : undefined,
+    "--builder-translate-x": `${style.responsiveTranslateX?.mobile ?? style.responsiveTranslateX?.tablet ?? style.responsiveTranslateX?.desktop ?? style.translateX ?? 0}px`,
+    "--builder-translate-y": `${style.responsiveTranslateY?.mobile ?? style.responsiveTranslateY?.tablet ?? style.responsiveTranslateY?.desktop ?? style.translateY ?? 0}px`,
     ...responsiveVariables("font-size", style.responsiveFontSize, style.fontSize),
     ...responsiveVariables("icon-size", style.iconSize, 24),
+    ...responsiveVariables("width", style.responsiveWidth, style.width),
+    ...responsiveVariables("height", style.responsiveHeight, style.height),
+    ...responsiveVariables("translate-x", style.responsiveTranslateX, style.translateX, -4_000, 4_000),
+    ...responsiveVariables("translate-y", style.responsiveTranslateY, style.translateY, -4_000, 4_000),
     ...box("margin", style.marginBox),
     ...box("padding", style.paddingBox),
     ...parseSafeCssDeclarations(style.customCss),
@@ -211,9 +230,16 @@ export function builderEffectClasses(style?: ModuleStyle) {
     style.shapeDividerTop && style.shapeDividerTop !== "none" ? `builder-divider-top builder-divider-top-${style.shapeDividerTop}` : "",
     style.shapeDividerBottom && style.shapeDividerBottom !== "none" ? `builder-divider-bottom builder-divider-bottom-${style.shapeDividerBottom}` : "",
     style.animation && style.animation !== "none" ? `builder-animate builder-animate-${style.animation}` : "",
+    style.animation && style.animation !== "none" ? `builder-animation-trigger-${style.animationTrigger ?? "load"}` : "",
     style.animationIteration === "infinite" ? "builder-animation-infinite" : "",
     style.parallax && style.parallax !== "none" ? `builder-parallax builder-parallax-${style.parallax}` : "",
     [style.hoverTranslateX, style.hoverTranslateY, style.hoverScale, style.hoverRotate, style.hoverOpacity, style.hoverBlur, style.hoverBrightness].some((value) => typeof value === "number") ? "builder-hover-effect" : "",
     style.backgroundAttachment === "fixed" ? "builder-fixed-background" : "",
+    style.responsiveWidth || style.responsiveHeight || style.responsiveTranslateX || style.responsiveTranslateY ? "builder-responsive-layout" : "",
+    style.scrollProgress ? "builder-scroll-progress-enabled" : "",
+    style.designToken && style.designToken !== "none" ? `builder-token-${style.designToken}` : "",
+    style.hiddenOn?.mobile ? "builder-hidden-mobile" : "",
+    style.hiddenOn?.tablet ? "builder-hidden-tablet" : "",
+    style.hiddenOn?.desktop ? "builder-hidden-desktop" : "",
   ].filter(Boolean).join(" ");
 }

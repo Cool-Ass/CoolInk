@@ -7,6 +7,7 @@ import AdminAppSettings from "@/components/admin/AdminAppSettings";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLE_LABEL, normalizeAdminRole } from "@/lib/adminPermissions";
 import CompactDisclosure from "@/components/ui/CompactDisclosure";
+import AdminMfaSettings from "@/components/admin/AdminMfaSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,9 @@ export default async function SettingsPage() {
         <GoogleCalendarIntegration />
       </CompactDisclosure>
       <AdminAppSettings />
+      <CompactDisclosure title="BEZPIECZEŃSTWO LOGOWANIA" summary="MFA i jednorazowe kody awaryjne">
+        <AdminMfaSettings />
+      </CompactDisclosure>
       <CompactDisclosure title="STYLE TATUAŻU" summary={`${tattooStyles.filter((style) => style.active).length} aktywnych opcji w formularzu klienta`} bodyClassName="[&>section]:border-0 [&>section]:p-0">
         <TattooStylesSettings initialStyles={tattooStyles} />
       </CompactDisclosure>

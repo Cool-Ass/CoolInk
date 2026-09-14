@@ -19,6 +19,7 @@ import ImageText from "@/components/modules/ImageText";
 import Spacer from "@/components/modules/Spacer";
 import BuilderWidgets from "@/components/modules/BuilderWidgets";
 import BuilderStyleLayers from "@/components/builder/BuilderStyleLayers";
+import BuilderPublicFrame from "@/components/builder/BuilderPublicFrame";
 import BuilderResizeHandles from "@/components/admin/builder/BuilderResizeHandles";
 import {
   MODULE_LABELS,
@@ -110,9 +111,10 @@ export interface ModuleRendererProps {
   onResizeModule?: (moduleId: string, style: ModuleStyle) => void;
   onResizeWidget?: (moduleId: string, widgetId: string, style: ModuleStyle) => void;
   onResizeColumn?: (moduleId: string, columnIndex: number, ownerId: string, style: ModuleStyle) => void;
+  editorDevice?: "desktop" | "tablet" | "mobile";
 }
 
-function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "selectedColumnIndex" | "selectedColumnOwnerId" | "onSelectWidget" | "onSelectColumn" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onDeleteColumn" | "onColumnsChange" | "onResizeWidget" | "onResizeColumn">) {
+function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: ModuleRendererGlobals, editable = false, nested?: Pick<ModuleRendererProps, "selectedWidgetId" | "selectedColumnIndex" | "selectedColumnOwnerId" | "onSelectWidget" | "onSelectColumn" | "onDeleteWidget" | "onDuplicateWidget" | "onDuplicateColumn" | "onDeleteColumn" | "onColumnsChange" | "onResizeWidget" | "onResizeColumn" | "editorDevice">) {
   switch (mod.type) {
     case "siteHeader": {
       const data = withDefaults("siteHeader", mod.data);
@@ -180,7 +182,7 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
-      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} selectedColumnOwnerId={nested?.selectedColumnOwnerId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex, ownerId) => nested?.onSelectColumn?.(mod.id, columnIndex, ownerId)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex, ownerId) => nested?.onDuplicateColumn?.(mod.id, columnIndex, ownerId)} onDeleteColumn={(columnIndex, ownerId) => nested?.onDeleteColumn?.(mod.id, columnIndex, ownerId)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} onResizeWidget={(widgetId, style) => nested?.onResizeWidget?.(mod.id, widgetId, style)} onResizeColumn={(columnIndex, ownerId, style) => nested?.onResizeColumn?.(mod.id, columnIndex, ownerId, style)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} editorDevice={nested?.editorDevice} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} selectedColumnOwnerId={nested?.selectedColumnOwnerId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex, ownerId) => nested?.onSelectColumn?.(mod.id, columnIndex, ownerId)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex, ownerId) => nested?.onDuplicateColumn?.(mod.id, columnIndex, ownerId)} onDeleteColumn={(columnIndex, ownerId) => nested?.onDeleteColumn?.(mod.id, columnIndex, ownerId)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} onResizeWidget={(widgetId, style) => nested?.onResizeWidget?.(mod.id, widgetId, style)} onResizeColumn={(columnIndex, ownerId, style) => nested?.onResizeColumn?.(mod.id, columnIndex, ownerId, style)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
     }
     default:
       return null;
@@ -212,19 +214,20 @@ export default function ModuleRenderer({
   onResizeModule,
   onResizeWidget,
   onResizeColumn,
+  editorDevice,
 }: ModuleRendererProps) {
   const visible = modules.filter((m) => editable || !m.hidden);
 
   return (
     <>
       {visible.map((mod, i) => {
-        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn });
+        const content = renderModule(mod, portfolioWorks, globals, editable, { selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn, editorDevice });
 
         const visualStyle = buildVisualStyle(mod.style);
         const styleClass = `${radiusClass(mod.style?.radius)} ${moduleLayoutClasses(mod.style, editable)} builder-styled-icons ${builderEffectClasses(mod.style)} ${mod.style?.cssClass ?? ""}`;
 
         if (!editable) {
-          return <div key={mod.id} id={mod.style?.anchorId} className={`relative isolate ${mod.type === "siteHeader" || mod.style?.anchorId === "site-header" || mod.style?.overflowX === "visible" || mod.style?.overflowY === "visible" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} style={visualStyle}><BuilderStyleLayers style={mod.style} /><div className="relative z-[3]">{content}</div></div>;
+          return <BuilderPublicFrame key={mod.id} id={mod.style?.anchorId} className={`relative isolate ${mod.type === "siteHeader" || mod.style?.anchorId === "site-header" || mod.style?.overflowX === "visible" || mod.style?.overflowY === "visible" ? "overflow-visible" : "overflow-hidden"} ${styleClass}`} visualStyle={visualStyle} builderStyle={mod.style}>{content}</BuilderPublicFrame>;
         }
 
         const isSelected = selectedId === mod.id;
@@ -260,7 +263,7 @@ export default function ModuleRenderer({
             } ${mod.hidden ? "opacity-40" : ""}`}
           >
             {/* Compact toolbar stays out of the section until its corner button is used. */}
-            {isSelected && onResizeModule && <BuilderResizeHandles style={mod.style} onResize={(style) => onResizeModule(mod.id, style)} label={MODULE_LABELS[mod.type]} />}
+            {isSelected && onResizeModule && <BuilderResizeHandles style={mod.style} device={editorDevice} onResize={(style) => onResizeModule(mod.id, style)} label={MODULE_LABELS[mod.type]} />}
             <div className="builder-editor-chrome group/tools pointer-events-auto absolute right-2 top-2 z-40 flex items-center shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="hidden items-center border border-ink-white/15 bg-ink-black/95 p-1 text-ink-grey backdrop-blur group-hover/tools:flex group-focus-within/tools:flex">
                 <span className="flex max-w-32 items-center gap-1.5 truncate border-r border-ink-white/10 px-2 text-[9px] text-ink-white"><GripVertical className="h-3.5 w-3.5 text-ink-gold" />{MODULE_LABELS[mod.type]}</span>

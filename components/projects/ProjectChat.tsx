@@ -67,13 +67,18 @@ export default function ProjectChat({
       try {
         const response = await fetch(api, { cache: "no-store" });
         const result = await response.json();
-        if (alive && response.ok && Array.isArray(result.messages)) setMessages(result.messages);
+        if (alive && response.ok && Array.isArray(result.messages)) {
+          setMessages(result.messages);
+          if (result.messages.some((message: Message) => message.author !== role && !message.readAt)) {
+            void fetch(api, { method: "PATCH" }).catch(() => undefined);
+          }
+        }
       } catch { /* polling is progressive enhancement; the composer still works */ }
     }
     void refreshConversation();
     const timer = window.setInterval(refreshConversation, 2500);
     return () => { alive = false; window.clearInterval(timer); };
-  }, [api]);
+  }, [api, role]);
 
   const add = (message: Message) => setMessages((items) => [...items, message]);
   async function removeMessage(messageId: string) {

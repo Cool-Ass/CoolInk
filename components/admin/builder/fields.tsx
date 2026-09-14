@@ -11,6 +11,17 @@ export function TextField({ label, value, onChange, placeholder }: { label: stri
   return <label className={labelClass}>{label}<input type="text" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={inputClass} /></label>;
 }
 
+function isoToLocalInput(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+export function DateTimeField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className={labelClass}>{label}<input type="datetime-local" value={isoToLocalInput(value)} onChange={(event) => { const date = new Date(event.target.value); onChange(event.target.value && !Number.isNaN(date.getTime()) ? date.toISOString() : ""); }} className={inputClass} /></label>;
+}
+
 export function TextareaField({ label, value, onChange, rows = 4, placeholder }: { label: string; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
   return <label className={labelClass}>{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={rows} placeholder={placeholder} className="resize-y border border-ink-white/15 bg-[#17191c] px-2.5 py-2 text-[12px] leading-relaxed normal-case tracking-normal text-ink-white outline-none transition-colors focus:border-ink-gold" /></label>;
 }

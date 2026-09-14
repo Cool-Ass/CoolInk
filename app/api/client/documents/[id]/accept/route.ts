@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
-export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się, aby potwierdzić dokument." }, { status: 401 });
   const { id } = await params;

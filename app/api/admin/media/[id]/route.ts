@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { deleteUploadedFile } from "@/lib/media";
 import { getMediaUsageMap } from "@/lib/mediaUsage";
 import { requireAdminApi } from "@/lib/adminApi";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -22,7 +24,8 @@ export async function PATCH(request: Request, { params }: Params) {
   return NextResponse.json({ media });
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const { id } = await params;
   const existing = await prisma.media.findUnique({ where: { id } });

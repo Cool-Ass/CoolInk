@@ -50,8 +50,13 @@ export async function linkAuthenticatedClient(user: SupabaseUser) {
     if (privacyAccepted) {
       const document = await tx.studioDocument.upsert({
         where: { slug: PRIVACY_POLICY_SLUG },
-        update: { title: "Polityka prywatności i informacja RODO", content: PRIVACY_POLICY_HTML, category: "policy", version: PRIVACY_POLICY_VERSION, published: true },
+        update: { title: "Polityka prywatności i informacja RODO", content: PRIVACY_POLICY_HTML, category: "policy", version: PRIVACY_POLICY_VERSION, published: true, archivedAt: null },
         create: { slug: PRIVACY_POLICY_SLUG, title: "Polityka prywatności i informacja RODO", content: PRIVACY_POLICY_HTML, category: "policy", version: PRIVACY_POLICY_VERSION, published: true },
+      });
+      await tx.studioDocumentVersion.upsert({
+        where: { documentId_version: { documentId: document.id, version: PRIVACY_POLICY_VERSION } },
+        create: { documentId: document.id, version: PRIVACY_POLICY_VERSION, title: document.title, content: document.content, category: document.category },
+        update: {},
       });
       await tx.documentAcceptance.upsert({ where: { clientId_documentId_version: { clientId: client.id, documentId: document.id, version: PRIVACY_POLICY_VERSION } }, create: { clientId: client.id, documentId: document.id, version: PRIVACY_POLICY_VERSION }, update: {} });
     }

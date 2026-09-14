@@ -13,6 +13,8 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const logoSource = imageSource(logoUrl);
@@ -25,9 +27,10 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, mfaCode }),
       });
       const data = await res.json();
+      if (data.mfaRequired) setMfaRequired(true);
       if (!res.ok) throw new Error(data.error || "Logowanie nie powiodło się.");
       router.push(next);
       router.refresh();
@@ -79,6 +82,20 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
                 placeholder="Twój e-mail administratora"
               />
             </label>
+
+            {mfaRequired && <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
+              KOD MFA LUB AWARYJNY
+              <input
+                autoFocus
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] tracking-[.2em] text-ink-white outline-none transition-colors focus:border-ink-gold"
+                placeholder="000000"
+              />
+            </label>}
 
             <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
               HASŁO

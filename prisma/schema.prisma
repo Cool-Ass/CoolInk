@@ -20,6 +20,10 @@ model AdminUser {
   name                      String?
   role                      String                     @default("owner") // owner | manager | artist | receptionist
   sessionVersion            Int                        @default(1)
+  mfaSecretEncrypted        String?
+  mfaEnabled                Boolean                    @default(false)
+  mfaRecoveryCodes          String?
+  mfaVerifiedAt             DateTime?
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
   googleCalendarConnections GoogleCalendarConnection[]
@@ -211,9 +215,26 @@ model StudioDocument {
   category    String               @default("other") // consent | preparation | aftercare | policy | other
   version     Int                  @default(1)
   published   Boolean              @default(false)
+  archivedAt  DateTime?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   acceptances DocumentAcceptance[]
+  revisions   StudioDocumentVersion[]
+}
+
+/// Immutable copy of every legal/document revision shown to clients.
+model StudioDocumentVersion {
+  id         String         @id @default(cuid())
+  documentId String
+  document   StudioDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version    Int
+  title      String
+  content    String
+  category   String
+  createdAt  DateTime       @default(now())
+
+  @@unique([documentId, version])
+  @@index([createdAt])
 }
 
 model DocumentAcceptance {
@@ -279,11 +300,31 @@ model Appointment {
   status             String                   @default("requested") // requested | confirmed | deposit_required | deposit_paid | completed | cancelled | no_show
   notes              String?
   price              Int?
+  serviceType        String?
+  workstation        String?
+  confirmationRequestedAt DateTime?
+  clientConfirmedAt  DateTime?
+  reminderEscalatedAt DateTime?
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
   googleCalendarSync GoogleCalendarEventSync?
   reminderDeliveries ReminderDelivery[]
   waitlistOffer      WaitlistEntry?           @relation("WaitlistOfferAppointment")
+}
+
+/// Replay and idempotency ledger for every signed inbound webhook.
+model WebhookReceipt {
+  id              String   @id @default(cuid())
+  provider        String
+  eventId         String
+  signatureDigest String
+  status          String   @default("received") // received | processed | failed
+  error           String?
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
 }
 
 /// A client who wants an earlier or otherwise better fitting appointment.

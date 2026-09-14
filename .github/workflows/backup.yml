@@ -1,0 +1,50 @@
+name: Encrypted production backup
+on:
+  schedule:
+    - cron: "23 3 * * 0"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Database backup
+        env:
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+        run: |
+          pg_dump "$DATABASE_DIRECT_URL" --format=custom --schema=public --no-owner --no-privileges --file=production.dump
+          pg_restore --list production.dump > /dev/null
+          psql "$DATABASE_DIRECT_URL" --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 --file=scripts/backupCounts.sql > expected-counts.txt
+      - name: Private media backup
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          node scripts/backupMedia.mjs media-backup
+          node scripts/verifyMediaBackup.mjs media-backup
+      - name: Encrypt archive
+        env:
+          BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
+        run: |
+          tar -czf backup.tar.gz production.dump expected-counts.txt media-backup
+          openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.tar.gz -out coolink-backup.enc -pass env:BACKUP_ENCRYPTION_PASSWORD
+          sha256sum coolink-backup.enc > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coolink-encrypted-backup-${{ github.run_id }}
+          path: |
+            coolink-backup.enc
+            SHA256SUMS.txt
+          retention-days: 90
+          if-no-files-found: error

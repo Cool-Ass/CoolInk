@@ -14,9 +14,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params;
   if (!(await prisma.client.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
-  await prisma.directMessage.updateMany({ where: { clientId: id, author: "client", readAt: null }, data: { readAt: new Date() } });
   const messages = await prisma.directMessage.findMany({ where: { clientId: id }, orderBy: { createdAt: "asc" }, take: 200 });
   return NextResponse.json({ messages: messages.map(serialize) });
+}
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { id } = await params;
+  if (!(await prisma.client.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
+  const result = await prisma.directMessage.updateMany({ where: { clientId: id, author: "client", readAt: null }, data: { readAt: new Date() } });
+  return NextResponse.json({ ok: true, updated: result.count });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

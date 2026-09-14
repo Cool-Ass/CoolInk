@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useRef, useState, type CSSProperties, type DragEvent } from "react";
+import { useEffect, useId, useRef, useState, type ComponentPropsWithoutRef, type CSSProperties, type DragEvent } from "react";
 import { Copy, Menu, Settings2, Trash2, X } from "lucide-react";
 import { IconPreview } from "@/components/admin/builder/IconPicker";
 import BuilderStyleLayers from "@/components/builder/BuilderStyleLayers";
@@ -16,6 +16,7 @@ import type { PortfolioWork } from "@/lib/portfolio";
 import type { PublicCalendarData } from "@/lib/publicCalendar";
 import GoogleReviews from "@/components/GoogleReviews";
 import BuilderResizeHandles from "@/components/admin/builder/BuilderResizeHandles";
+import BuilderPublicFrame from "@/components/builder/BuilderPublicFrame";
 
 interface BuilderWidgetProps {
   module: Module;
@@ -33,11 +34,31 @@ interface BuilderWidgetProps {
   onColumnsChange?: (columns: ColumnWidget[][]) => void;
   onResizeWidget?: (widgetId: string, style: NonNullable<ColumnWidget["style"]>) => void;
   onResizeColumn?: (columnIndex: number, ownerId: string, style: NonNullable<ColumnWidget["style"]>) => void;
+  editorDevice?: "desktop" | "tablet" | "mobile";
   portfolioWorks?: PortfolioWork[];
   calendar?: PublicCalendarData;
 }
 
-export default function BuilderWidgets({ module, showEmpty = false, editable = false, selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn, portfolioWorks = [], calendar }: BuilderWidgetProps) {
+function NestedRuntimeFrame({ editable, builderStyle, children, className = "", style, id, ...editorProps }: ComponentPropsWithoutRef<"div"> & { editable: boolean; builderStyle?: NonNullable<ColumnWidget["style"]> }) {
+  if (!editable) return <BuilderPublicFrame id={id} className={className} visualStyle={style} builderStyle={builderStyle}>{children}</BuilderPublicFrame>;
+  return <div {...editorProps} id={id} className={className} style={style}>{children}</div>;
+}
+
+function ResponsiveVideoEmbed({ url, title, autoplay, muted, loop, controls, preview }: { url: string; title: string; autoplay: boolean; muted: boolean; loop: boolean; controls: boolean; preview: boolean }) {
+  const [autoplayAllowed, setAutoplayAllowed] = useState(false);
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 767px)");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setAutoplayAllowed(!mobile.matches && !reduced.matches);
+    sync(); mobile.addEventListener("change", sync); reduced.addEventListener("change", sync);
+    return () => { mobile.removeEventListener("change", sync); reduced.removeEventListener("change", sync); };
+  }, []);
+  const src = toEmbedUrl(url, { autoplay: autoplay && autoplayAllowed, muted, loop, controls });
+  if (!src) return null;
+  return <iframe className={`h-full w-full ${preview ? "pointer-events-none" : ""}`} src={src} title={title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />;
+}
+
+export default function BuilderWidgets({ module, showEmpty = false, editable = false, editorDevice, selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn, portfolioWorks = [], calendar }: BuilderWidgetProps) {
   const widgetIdBase = useId().replace(/:/g, "");
   const widgetIdCounter = useRef(0);
   switch (module.type) {
@@ -83,7 +104,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const d = withDefaults("divider", module.data);
       const source = imageSource(d.icon);
       const alignment = d.alignment === "right" ? "ml-auto" : d.alignment === "left" ? "mr-auto" : "mx-auto";
-      return <div className="px-4 py-7 sm:px-6 sm:py-8 md:px-12">{source && <img src={source} alt="" className={`builder-content-icon mb-4 h-9 w-9 object-contain ${alignment}`} />}{d.style === "space" ? <div className="h-12" /> : <div className={`${alignment} ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} style={{ width: `${Math.min(100, Math.max(5, d.width ?? 100))}%`, height: `${Math.min(30, Math.max(1, d.thickness ?? 1))}px` }} />}</div>;
+      return <div className="px-4 py-7 sm:px-6 sm:py-8 md:px-12">{source && <img src={source} alt="" loading="lazy" decoding="async" className={`builder-content-icon mb-4 h-9 w-9 object-contain ${alignment}`} />}{d.style === "space" ? <div className="h-12" /> : <div className={`${alignment} ${d.style === "gold" ? "bg-ink-gold" : "bg-ink-white/20"}`} style={{ width: `${Math.min(100, Math.max(5, d.width ?? 100))}%`, height: `${Math.min(30, Math.max(1, d.thickness ?? 1))}px` }} />}</div>;
     }
     case "gallery": {
       const d = withDefaults("gallery", module.data);
@@ -142,8 +163,11 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
           {columns.map((widgets, columnIndex) => {
             const columnStyle = d.columnStyles?.[columnIndex] ?? {};
             const columnSelected = selectedColumnOwnerId === module.id && selectedColumnIndex === columnIndex && !selectedWidgetId;
-            return <div
+            return <NestedRuntimeFrame
               key={columnIndex}
+              editable={editable}
+              builderStyle={columnStyle}
+              id={columnStyle.anchorId}
               data-builder-column-owner={module.id}
               data-builder-column-index={columnIndex}
               onClick={(event) => { if (editable) { event.stopPropagation(); onSelectColumn?.(columnIndex, module.id); } }}
@@ -152,8 +176,8 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
               style={buildVisualStyle(columnStyle)}
               className={`builder-styled-icons ${builderEffectClasses(columnStyle)} ${columnStyle.cssClass ?? ""} relative isolate min-w-0 ${editable ? `min-h-28 border border-dashed bg-ink-black/15 p-2 ${columnSelected ? "border-ink-gold outline outline-1 outline-ink-gold" : "border-ink-gold/30"}` : ""}`}
             >
-              <BuilderStyleLayers style={columnStyle} />
-              {columnSelected && onResizeColumn && <BuilderResizeHandles style={columnStyle} onResize={(style) => onResizeColumn(columnIndex, module.id, style)} label={`kolumnę ${columnIndex + 1}`} />}
+              {editable && <BuilderStyleLayers style={columnStyle} />}
+              {columnSelected && onResizeColumn && <BuilderResizeHandles style={columnStyle} device={editorDevice} onResize={(style) => onResizeColumn(columnIndex, module.id, style)} label={`kolumnę ${columnIndex + 1}`} />}
               <div className="builder-editor-chrome relative z-20 mb-2 flex items-center justify-between text-ink-gold/70" hidden={!editable}>
                 <button type="button" title={`Edytuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onSelectColumn?.(columnIndex, module.id); }} className="pointer-events-auto flex items-center gap-1.5 px-1 py-1 hover:text-ink-gold-bright"><Settings2 className="h-3 w-3" />KOLUMNA {columnIndex + 1}</button>
                 <span className="flex items-center gap-1"><span>UPUŚĆ WIDGET</span>{onDuplicateColumn && <button type="button" title="Duplikuj kolumnę" aria-label={`Duplikuj kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onDuplicateColumn(columnIndex, module.id); }} className="pointer-events-auto flex h-6 w-6 items-center justify-center border border-ink-gold/30 text-ink-gold transition hover:bg-ink-gold/10"><Copy className="h-3 w-3" /></button>}{onDeleteColumn && columns.length > 1 && <button type="button" title="Usuń kolumnę" aria-label={`Usuń kolumnę ${columnIndex + 1}`} onClick={(event) => { event.stopPropagation(); onDeleteColumn(columnIndex, module.id); }} className="pointer-events-auto flex h-6 w-6 items-center justify-center border border-red-400/40 text-red-300 transition hover:bg-red-400/10"><Trash2 className="h-3 w-3" /></button>}</span>
@@ -161,8 +185,11 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
               <div className="relative z-[3]">
                 {widgets.length ? widgets.map((widget, widgetIndex) => {
                   const selected = selectedWidgetId === widget.id;
-                  return <div
+                  return <NestedRuntimeFrame
                     key={widget.id}
+                    editable={editable}
+                    builderStyle={widget.style}
+                    id={widget.style?.anchorId}
                     data-builder-widget-id={widget.id}
                     draggable={editable}
                     onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData(COLUMN_WIDGET_MIME, JSON.stringify({ moduleId: module.id, widgetId: widget.id, columnIndex })); event.dataTransfer.effectAllowed = "move"; }}
@@ -172,14 +199,14 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
                     style={buildVisualStyle(widget.style)}
                     className={`group/widget builder-styled-icons ${builderEffectClasses(widget.style)} relative isolate min-w-0 ${editable ? `cursor-pointer outline outline-2 outline-offset-[-2px] ${selected ? "outline-ink-gold" : "outline-transparent hover:outline-ink-gold/55"}` : ""} ${widget.style?.cssClass ?? ""}`}
                   >
-                    <BuilderStyleLayers style={widget.style} />
-                    {selected && onResizeWidget && <BuilderResizeHandles style={widget.style} onResize={(style) => onResizeWidget(widget.id, style)} label={MODULE_LABELS[widget.type]} />}
+                    {editable && <BuilderStyleLayers style={widget.style} />}
+                    {selected && onResizeWidget && <BuilderResizeHandles style={widget.style} device={editorDevice} onResize={(style) => onResizeWidget(widget.id, style)} label={MODULE_LABELS[widget.type]} />}
                     {editable && <div className={`builder-editor-chrome pointer-events-auto absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab whitespace-nowrap px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span>{onDuplicateWidget && <button type="button" title="Duplikuj widget" aria-label={`Duplikuj: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDuplicateWidget(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Copy className="h-3 w-3" /></button>}<button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Trash2 className="h-3 w-3" /></button></div>}
-                    <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} editable={editable && widget.type === "innerSection"} selectedWidgetId={selectedWidgetId} selectedColumnIndex={selectedColumnIndex} selectedColumnOwnerId={selectedColumnOwnerId} onSelectWidget={onSelectWidget} onSelectColumn={onSelectColumn} onDeleteWidget={onDeleteWidget} onDuplicateWidget={onDuplicateWidget} onDuplicateColumn={onDuplicateColumn} onDeleteColumn={onDeleteColumn} onResizeWidget={onResizeWidget} onResizeColumn={onResizeColumn} onColumnsChange={widget.type === "innerSection" ? (nestedColumns) => { const next = columns.map((items) => items.map((current) => current.id === widget.id ? { ...current, data: { ...withDefaults("innerSection", current.data), columns: nestedColumns } } : current)); update(next); } : undefined} portfolioWorks={portfolioWorks} calendar={calendar} /></div>
-                  </div>;
+                    <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} editable={editable && widget.type === "innerSection"} editorDevice={editorDevice} selectedWidgetId={selectedWidgetId} selectedColumnIndex={selectedColumnIndex} selectedColumnOwnerId={selectedColumnOwnerId} onSelectWidget={onSelectWidget} onSelectColumn={onSelectColumn} onDeleteWidget={onDeleteWidget} onDuplicateWidget={onDuplicateWidget} onDuplicateColumn={onDuplicateColumn} onDeleteColumn={onDeleteColumn} onResizeWidget={onResizeWidget} onResizeColumn={onResizeColumn} onColumnsChange={widget.type === "innerSection" ? (nestedColumns) => { const next = columns.map((items) => items.map((current) => current.id === widget.id ? { ...current, data: { ...withDefaults("innerSection", current.data), columns: nestedColumns } } : current)); update(next); } : undefined} portfolioWorks={portfolioWorks} calendar={calendar} /></div>
+                  </NestedRuntimeFrame>;
                 }) : editable ? <div className="flex min-h-24 items-center justify-center p-4 text-center text-[10px] leading-relaxed text-ink-grey">Przeciągnij widget z lewego panelu tutaj</div> : null}
               </div>
-            </div>;
+            </NestedRuntimeFrame>;
           })}
         </div>
       </section>;
@@ -190,10 +217,10 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
     }
     case "video": {
       const d = withDefaults("video", module.data);
-      const src = toEmbedUrl(d.url, { autoplay: Boolean(d.autoplay), muted: d.muted !== false, loop: Boolean(d.loop), controls: d.controls !== false });
+      const src = toEmbedUrl(d.url, { autoplay: false, muted: d.muted !== false, loop: Boolean(d.loop), controls: d.controls !== false });
       if (!src && !showEmpty) return null;
       const aspect = d.aspect === "cinema" ? "aspect-[21/9]" : d.aspect === "square" ? "aspect-square" : d.aspect === "portrait" ? "mx-auto aspect-[9/16] max-w-md" : "aspect-video";
-      return <figure className="px-4 py-8 sm:px-6 sm:py-10 md:px-12"><h2 className="mb-4 break-words font-display text-3xl text-ink-white">{d.title}</h2>{src ? <div className={`${aspect} overflow-hidden bg-ink-charcoal`}><iframe className={`h-full w-full ${showEmpty ? "pointer-events-none" : ""}`} src={src} title={d.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <div className={`flex ${aspect} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey`}>Wklej link do filmu YouTube lub Vimeo</div>}{d.caption && <figcaption className="mt-3 break-words text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
+      return <figure className="px-4 py-8 sm:px-6 sm:py-10 md:px-12"><h2 className="mb-4 break-words font-display text-3xl text-ink-white">{d.title}</h2>{src ? <div className={`${aspect} overflow-hidden bg-ink-charcoal`}><ResponsiveVideoEmbed url={d.url} title={d.title} autoplay={Boolean(d.autoplay)} muted={d.muted !== false} loop={Boolean(d.loop)} controls={d.controls !== false} preview={showEmpty} /></div> : <div className={`flex ${aspect} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-sm text-ink-grey`}>Wklej link do filmu YouTube lub Vimeo</div>}{d.caption && <figcaption className="mt-3 break-words text-sm text-ink-grey">{d.caption}</figcaption>}</figure>;
     }
     case "map": {
       const d = withDefaults("map", module.data);
@@ -230,7 +257,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const html = String(d.html ?? "");
       const backgroundColor = typeof d.backgroundColor === "string" ? d.backgroundColor : "#111111";
       const document = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data: blob:; media-src https:; font-src https: data:; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"><style>${css}</style></head><body>${html}</body></html>`;
-      return <section className="w-full" style={{ backgroundColor }}><iframe title={title || "Własny moduł HTML i CSS"} srcDoc={document} sandbox="" referrerPolicy="no-referrer" className="block w-full border-0" style={{ height }} /></section>;
+      return <section className="w-full" style={{ backgroundColor }}><iframe title={title || "Własny moduł HTML i CSS"} srcDoc={document} sandbox="" referrerPolicy="no-referrer" loading="lazy" className="block w-full border-0" style={{ height }} /></section>;
     }
     default: return null;
   }
@@ -256,7 +283,7 @@ function GalleryWidget({ data, images, layoutStyle, editing }: { data: GalleryMo
   const aspect = data.aspect === "portrait" ? "aspect-[4/5]" : data.aspect === "landscape" ? "aspect-video" : data.aspect === "auto" ? "" : "aspect-square";
   const imageEffect = data.hoverEffect === "zoom" ? "group-hover/gallery:scale-110" : data.hoverEffect === "grayscale" ? "grayscale group-hover/gallery:grayscale-0" : data.hoverEffect === "reveal" ? "scale-105 grayscale group-hover/gallery:scale-100 group-hover/gallery:grayscale-0" : "";
   const frameEffect = data.hoverEffect === "lift" ? "transition-transform duration-500 hover:-translate-y-2 hover:shadow-2xl" : "";
-  return <><div style={layoutStyle} className={`px-4 py-7 sm:px-6 sm:py-8 md:px-12 ${data.layout === "masonry" ? "builder-gallery-masonry" : "builder-gallery-grid grid"} ${gap}`}>{images.map((image, index) => image ? <button key={index} type="button" disabled={!editing && data.lightbox === false} aria-label={data.lightbox === false ? undefined : `Powiększ zdjęcie ${index + 1}`} onClick={(event) => { if (editing) return; event.stopPropagation(); if (data.lightbox !== false) setPreview(image); }} className={`group/gallery relative mb-3 block w-full overflow-hidden bg-ink-charcoal text-left ${aspect} ${radius} ${frameEffect} disabled:cursor-default`}>{data.aspect === "auto" ? <img src={image} alt={`Zdjęcie galerii ${index + 1}`} className={`h-auto w-full object-cover ${imageEffect} transition duration-700 ease-out`} /> : <Image src={image} alt={`Zdjęcie galerii ${index + 1}`} fill className={`object-cover ${imageEffect} transition duration-700 ease-out`} sizes="(max-width: 639px) 100vw, 33vw" />}</button> : <div key={index} className={`flex ${aspect || "min-h-48"} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-center text-xs text-ink-grey`}>Zdjęcie {index + 1}</div>)}</div>{preview && <div role="dialog" aria-modal="true" aria-label="Podgląd zdjęcia" onClick={(event) => { event.stopPropagation(); setPreview(null); }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><button type="button" aria-label="Zamknij podgląd" onClick={() => setPreview(null)} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center border border-white/30 bg-black/60 text-white hover:border-ink-gold hover:text-ink-gold"><X className="h-5 w-5" /></button><img src={preview} alt="Powiększone zdjęcie z galerii" onClick={(event) => event.stopPropagation()} className="max-h-[90vh] max-w-[95vw] object-contain" /></div>}</>;
+  return <><div style={layoutStyle} className={`px-4 py-7 sm:px-6 sm:py-8 md:px-12 ${data.layout === "masonry" ? "builder-gallery-masonry" : "builder-gallery-grid grid"} ${gap}`}>{images.map((image, index) => image ? <button key={index} type="button" disabled={!editing && data.lightbox === false} aria-label={data.lightbox === false ? undefined : `Powiększ zdjęcie ${index + 1}`} onClick={(event) => { if (editing) return; event.stopPropagation(); if (data.lightbox !== false) setPreview(image); }} className={`group/gallery relative mb-3 block w-full overflow-hidden bg-ink-charcoal text-left ${aspect} ${radius} ${frameEffect} disabled:cursor-default`}>{data.aspect === "auto" ? <img src={image} alt={`Zdjęcie galerii ${index + 1}`} loading="lazy" decoding="async" className={`h-auto w-full object-cover ${imageEffect} transition duration-700 ease-out`} /> : <Image src={image} alt={`Zdjęcie galerii ${index + 1}`} fill className={`object-cover ${imageEffect} transition duration-700 ease-out`} sizes="(max-width: 639px) 100vw, 33vw" />}</button> : <div key={index} className={`flex ${aspect || "min-h-48"} items-center justify-center border border-dashed border-ink-white/25 bg-ink-charcoal text-center text-xs text-ink-grey`}>Zdjęcie {index + 1}</div>)}</div>{preview && <div role="dialog" aria-modal="true" aria-label="Podgląd zdjęcia" onClick={(event) => { event.stopPropagation(); setPreview(null); }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"><button type="button" aria-label="Zamknij podgląd" onClick={() => setPreview(null)} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center border border-white/30 bg-black/60 text-white hover:border-ink-gold hover:text-ink-gold"><X className="h-5 w-5" /></button><img src={preview} alt="Powiększone zdjęcie z galerii" decoding="async" onClick={(event) => event.stopPropagation()} className="max-h-[90vh] max-w-[95vw] object-contain" /></div>}</>;
 }
 
 function FaqWidget({ title, items, variant, initiallyOpen, allowMultiple, iconStyle }: { title: string; items: { question: string; answer: string }[]; variant: "lines" | "cards" | "split"; initiallyOpen: "none" | "first"; allowMultiple: boolean; iconStyle: "plus" | "chevron" | "arrow" }) {

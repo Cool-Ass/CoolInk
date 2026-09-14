@@ -2,8 +2,11 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 const { randomUUID } = require("crypto");
-const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.cjs");
+const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
+const securityEnv = loadDryRunEnvironment();
+requireTestProject(securityEnv);
+process.env.DATABASE_URL = requireTestDatabase(securityEnv);
 const prisma = new PrismaClient();
 const base = (process.env.SMOKE_BASE_URL || "http://127.0.0.1:3120").replace(/\/$/, "");
 const tag = `admin-smoke-${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -11,7 +14,8 @@ const assert = (value, message) => { if (!value) throw new Error(message); };
 const cookieOf = (response) => (response.headers.getSetCookie ? response.headers.getSetCookie() : [response.headers.get("set-cookie")].filter(Boolean)).map((value) => value.split(";", 1)[0]).join("; ");
 
 async function call(path, options = {}, cookie = "") {
-  const response = await fetch(`${base}${path}`, { ...options, headers: { ...(cookie ? { cookie } : {}), ...(options.headers || {}) } });
+  const mutationHeaders = ["POST", "PATCH", "PUT", "DELETE"].includes(options.method || "GET") ? { origin: new URL(base).origin, "sec-fetch-site": "same-origin" } : {};
+  const response = await fetch(`${base}${path}`, { ...options, headers: { ...(cookie ? { cookie } : {}), ...mutationHeaders, ...(options.headers || {}) } });
   return { response, body: await response.text() };
 }
 
@@ -40,9 +44,15 @@ async function main() {
 
     const message = await call(`/api/admin/projects/${project.id}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: "Prywatna wiadomość testowa 🙂" }) }, cookie);
     assert(message.response.status === 201, `admin message returned ${message.response.status}`);
+    const unreadClientMessage = await prisma.projectMessage.create({ data: { projectId: project.id, author: "client", body: "Nieprzeczytana odpowiedź klienta" } });
     const history = await call(`/api/admin/projects/${project.id}/messages`, {}, cookie);
     assert(history.response.status === 200 && JSON.parse(history.body).messages.some((item) => item.body === "Prywatna wiadomość testowa 🙂"), "admin message history is unavailable");
-    const messageNotification = await prisma.clientNotification.count({ where: { clientId: client.id, projectId: project.id, type: "PROJECT_MESSAGE" } });
+    assert(!(await prisma.projectMessage.findUniqueOrThrow({ where: { id: unreadClientMessage.id } })).readAt, "GET message history mutated read state.");
+    const foreignReadAck = await call(`/api/admin/projects/${project.id}/messages`, { method: "PATCH", headers: { origin: "https://attacker.example" } }, cookie);
+    assert(foreignReadAck.response.status === 403, `foreign message acknowledgement returned ${foreignReadAck.response.status}`);
+    const readAck = await call(`/api/admin/projects/${project.id}/messages`, { method: "PATCH" }, cookie);
+    assert(readAck.response.status === 200 && (await prisma.projectMessage.findUniqueOrThrow({ where: { id: unreadClientMessage.id } })).readAt, "Admin message acknowledgement failed.");
+    const messageNotification = await prisma.clientNotification.count({ where: { clientId: client.id, projectId: project.id, type: "NEW_STUDIO_MESSAGE" } });
     assert(messageNotification === 1, `message notification duplicated or missing (${messageNotification})`);
 
     const proposal = await call(`/api/admin/projects/${project.id}/proposed-appointment`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: "2034-01-10T10:00:00.000Z", endsAt: "2034-01-10T11:00:00.000Z", note: "Propozycja testowa" }) }, cookie);

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/adminApi";
+import { rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 
 export async function GET(request: Request) {
   const access = await requireAdminApi();
   if (!access.ok) return access.response;
+  const limit = await rateLimit(request, "admin-search", 60, 60_000, access.admin.id);
+  if (!limit.allowed) return tooManyRequests(limit);
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 80) ?? "";
   if (query.length < 2) return NextResponse.json({ results: [] });
 

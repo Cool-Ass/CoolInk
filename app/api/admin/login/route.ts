@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth";
 import { createSessionToken, sessionCookieOptions, SESSION_COOKIE } from "@/lib/session";
 import { isSameOrigin, rateLimit, setRateLimitHeaders, tooManyRequests } from "@/lib/requestSecurity";
+import { decryptMfaSecret, verifyMfaCode } from "@/lib/adminMfa";
 
 // A real bcrypt hash with cost 12. Comparing against it keeps unknown-account
 // requests close to the same cost as a normal password check.
@@ -23,6 +24,20 @@ export async function POST(request: Request) {
   const validPassword = await verifyPassword(password, admin?.passwordHash ?? DUMMY_PASSWORD_HASH);
   if (!admin || !validPassword) {
     return setRateLimitHeaders(NextResponse.json({ error: "Nieprawidłowy e-mail lub hasło." }, { status: 401 }), limit);
+  }
+
+  if (admin.mfaEnabled) {
+    const mfaCode = String(body?.mfaCode ?? "").slice(0, 32);
+    if (!mfaCode) return setRateLimitHeaders(NextResponse.json({ error: "Podaj kod z aplikacji lub kod awaryjny.", mfaRequired: true }, { status: 428 }), limit);
+    if (!admin.mfaSecretEncrypted) return NextResponse.json({ error: "Konfiguracja MFA jest uszkodzona. Skontaktuj się z administratorem systemu." }, { status: 503 });
+    const verified = verifyMfaCode(decryptMfaSecret(admin.mfaSecretEncrypted), admin.mfaRecoveryCodes, mfaCode);
+    if (!verified.ok) return setRateLimitHeaders(NextResponse.json({ error: "Nieprawidłowy kod MFA.", mfaRequired: true }, { status: 401 }), limit);
+    if (verified.remainingRecoveryCodes !== admin.mfaRecoveryCodes) {
+      await prisma.$transaction([
+        prisma.adminUser.update({ where: { id: admin.id }, data: { mfaRecoveryCodes: verified.remainingRecoveryCodes } }),
+        prisma.adminAuditLog.create({ data: { adminUserId: admin.id, action: "mfa.recovery.use", targetType: "AdminUser", targetId: admin.id, summary: "Użyto jednorazowego kodu awaryjnego MFA." } }),
+      ]);
+    }
   }
 
   const token = await createSessionToken({ sub: admin.id, email: admin.email, version: admin.sessionVersion });

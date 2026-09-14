@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { get as getBlob, put as putBlob } from "@vercel/blob";
 import { getClientAccessToken, getCurrentClient, getSupabaseConfig } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
+import { verifyPrivateImageToken } from "@/lib/privateMedia";
 
 function isBlobLocation(value: string) {
   try {
@@ -13,11 +14,12 @@ function isBlobLocation(value: string) {
 
 /** Streams a private inspiration image only after proving that the current
  * client owns the project. Object paths never become public URLs. */
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const client = await getCurrentClient();
   const token = await getClientAccessToken();
   const { id } = await params;
   if (!client || !token) return NextResponse.json({ error: "Brak dostępu." }, { status: 401 });
+  if (!verifyPrivateImageToken(request, id, "client", client.id)) return NextResponse.json({ error: "Link wygasł. Odśwież widok." }, { status: 403 });
   const image = await prisma.projectImage.findFirst({ where: { id, project: { clientId: client.id } } });
   if (!image) return NextResponse.json({ error: "Nie znaleziono pliku." }, { status: 404 });
 

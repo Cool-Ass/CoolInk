@@ -5,9 +5,19 @@
  */
 const { PrismaClient } = require("@prisma/client");
 const { randomUUID } = require("crypto");
+const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
+const dryRun = loadDryRunEnvironment();
+requireTestProject(dryRun);
+process.env.DATABASE_URL = requireTestDatabase(dryRun);
 const prisma = new PrismaClient();
-const privateTables = ["Client", "TattooProject", "Appointment", "ClientNotification", "ProjectActivity", "ProjectMessage", "AvailableSlot", "WorkingHoursOverride", "CalendarEvent", "GoogleCalendarConnection", "GoogleCalendarSelection", "GoogleCalendarEventSync"];
+const privateTables = [
+  "AdminUser", "AdminAuditLog", "AdminPushSubscription", "Page", "PageRevision", "PortfolioItem", "Media", "SiteSetting", "NavItem", "ContactMessage",
+  "Client", "AccountDeletionRequest", "StudioDocument", "StudioDocumentVersion", "DocumentAcceptance", "TattooProject", "Appointment", "WebhookReceipt",
+  "WaitlistEntry", "PushSubscription", "ReminderDelivery", "InventoryItem", "InventoryMovement", "RateLimitBucket", "ProjectActivity", "ClientNotification",
+  "AvailabilityBlock", "WorkingHours", "AvailableSlot", "WorkingHoursOverride", "Promotion", "CalendarEvent", "GoogleCalendarConnection",
+  "GoogleCalendarSelection", "GoogleCalendarEventSync", "ProjectImage", "ProjectMessage", "DirectMessage",
+];
 
 function quote(value) { return `"${value.replaceAll('"', '""')}"`; }
 

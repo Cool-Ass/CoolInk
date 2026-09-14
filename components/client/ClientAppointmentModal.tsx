@@ -16,6 +16,8 @@ type Appointment = {
   endsAt: string;
   status: string;
   price: number | null;
+  confirmationRequestedAt?: string | null;
+  clientConfirmedAt?: string | null;
 };
 
 export default function ClientAppointmentModal({
@@ -33,6 +35,8 @@ export default function ClientAppointmentModal({
   const [confirmCancellation, setConfirmCancellation] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingAttendance, setConfirmingAttendance] = useState(false);
+  const [attendanceConfirmed, setAttendanceConfirmed] = useState(Boolean(appointment.clientConfirmedAt));
   const start = new Date(appointment.startsAt);
   const end = new Date(appointment.endsAt);
   const now = new Date();
@@ -61,6 +65,17 @@ export default function ClientAppointmentModal({
     } finally {
       setCancelling(false);
     }
+  }
+
+  async function confirmAttendance() {
+    setConfirmingAttendance(true); setError("");
+    try {
+      const response = await fetch(`/api/client/appointments/${appointment.id}/attendance`, { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Nie udało się potwierdzić obecności.");
+      setAttendanceConfirmed(true); router.refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Nie udało się potwierdzić obecności."); }
+    finally { setConfirmingAttendance(false); }
   }
 
   return (
@@ -94,11 +109,11 @@ export default function ClientAppointmentModal({
           <AppointmentResponse appointmentId={appointment.id} />
         )}
         {appointment.status === "confirmed" && (
-          <AddToCalendar
+          <><AddToCalendar
             id={appointment.id}
             startsAt={appointment.startsAt}
             endsAt={appointment.endsAt}
-          />
+          />{appointment.confirmationRequestedAt && <div className="mt-4 border border-emerald-400/30 bg-emerald-400/5 p-4"><p className="text-sm text-ink-white">{attendanceConfirmed ? "Obecność potwierdzona." : "Potwierdź, że termin jest aktualny."}</p>{!attendanceConfirmed && <AppButton className="mt-3" type="button" disabled={confirmingAttendance} onClick={() => void confirmAttendance()}>{confirmingAttendance ? "POTWIERDZANIE…" : "POTWIERDZAM OBECNOŚĆ"}</AppButton>}</div>}</>
         )}
         {canCancel && (
           <div className="mt-6 border-t border-ink-white/10 pt-5">

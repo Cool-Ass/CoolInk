@@ -18,6 +18,13 @@ export async function POST(request: Request) {
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się, aby zaproponować termin." }, { status: 401 });
   const body = await request.json().catch(() => null);
+  if (body?.confirmationAcknowledged !== true) return NextResponse.json({ error: "Potwierdź poprawność projektu, terminu i zgód." }, { status: 400 });
+  const submittedConsentVersions = new Map<string, number>((Array.isArray(body?.consents) ? body.consents : []).map((item: unknown) => {
+    const consent = item as { id?: unknown; version?: unknown };
+    return [String(consent.id ?? ""), Number(consent.version)] as const;
+  }));
+  const requiredConsents = await prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, version: true } });
+  if (requiredConsents.some((document) => submittedConsentVersions.get(document.id) !== document.version)) return NextResponse.json({ error: "Zaakceptuj aktualne wersje wszystkich wymaganych zgód." }, { status: 409 });
   const requestedProjectId = String(body?.projectId ?? "");
   const startsAt = new Date(String(body?.startsAt ?? ""));
   const endsAt = new Date(String(body?.endsAt ?? ""));
@@ -29,7 +36,7 @@ export async function POST(request: Request) {
   if (!projectId && description.length < (serviceType === "consultation" ? 5 : 12)) return NextResponse.json({ error: serviceType === "consultation" ? "Napisz krótko, co chcesz omówić." : "Opisz swój pomysł w co najmniej 12 znakach." }, { status: 400 });
   // Working hours are a studio-side planning aid, not public availability.
   // A client may request only an exact range explicitly published as free.
-  const availability = await verifyExplicitAppointmentAvailability(startsAt, endsAt);
+  const availability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, prisma, { serviceType });
   if (!availability.ok) return NextResponse.json({ error: availability.error }, { status: availability.status });
   const ownedProject = projectId ? await prisma.tattooProject.findFirst({ where: { id: projectId, clientId: client.id }, select: { id: true } }) : null;
   if (projectId && !ownedProject) return NextResponse.json({ error: "Nie znaleziono Twojej wizyty." }, { status: 404 });
@@ -41,20 +48,25 @@ export async function POST(request: Request) {
   const consultationMode = ["studio", "phone", "video"].includes(String(body?.consultationMode)) ? String(body.consultationMode) : "studio";
   const result = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
-    const lockedAvailability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, tx);
+    const lockedAvailability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, tx, { serviceType });
     if (!lockedAvailability.ok) throw new Error(`BOOKING_CONFLICT:${lockedAvailability.error}`);
     const lockedSlot = await tx.availableSlot.findFirst({ where: { isPublic: true, startsAt: { lte: startsAt }, endsAt: { gte: endsAt } }, select: { title: true } });
     const lockedType = isConsultationSlot(lockedSlot ?? {}) ? "consultation" : "tattoo";
+    const lockedConsents = await tx.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, title: true, version: true } });
+    if (lockedConsents.some((document) => submittedConsentVersions.get(document.id) !== document.version)) throw new Error("CONSENT_CHANGED");
+    await Promise.all(lockedConsents.map((document) => tx.documentAcceptance.upsert({ where: { clientId_documentId_version: { clientId: client.id, documentId: document.id, version: document.version } }, create: { clientId: client.id, documentId: document.id, version: document.version }, update: {} })));
     const project = ownedProject ? await tx.tattooProject.update({ where: { id: ownedProject.id }, data: { status: "awaiting_confirmation", nextAction: "Potwierdź klientowi wybrany termin" } }) : await tx.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description, kind: lockedType, consultationMode: lockedType === "consultation" ? consultationMode : null, styles: lockedType === "tattoo" ? styles : "", placement: lockedType === "tattoo" ? placement : null, size: lockedType === "tattoo" ? size : null, leadSource: normalizeLeadSource(body?.leadSource), preferredDateNote: formatCoolinkDateTime(startsAt), status: "awaiting_confirmation", nextAction: lockedType === "consultation" ? "Potwierdź termin konsultacji" : "Przejrzyj zgłoszenie i potwierdź termin", activities: { create: { type: lockedType === "consultation" ? "consultation_created" : "project_created", message: lockedType === "consultation" ? "Klient poprosił o konsultację." : activityMessage("project_created"), visibility: "admin" } } } });
-    const appointment = await tx.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "requested", notes: notes || null } });
+    if (lockedConsents.length) await tx.projectActivity.create({ data: { projectId: project.id, type: "consents_accepted", message: `Zaakceptowano: ${lockedConsents.map((document) => `${document.title} (wersja ${document.version})`).join(", ")}.`, visibility: "client" } });
+    const appointment = await tx.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "requested", notes: notes || null, serviceType: lockedType } });
     await tx.projectActivity.create({ data: { projectId: project.id, type: "appointment_requested", message: activityMessage("appointment_requested", formatCoolinkDateTime(startsAt)), visibility: "admin" } });
     await tx.clientNotification.create({ data: { clientId: client.id, type: lockedType === "consultation" ? "consultation_requested" : "appointment_requested", title: lockedType === "consultation" ? "Prośba o konsultację wysłana" : "Prośba o wizytę wysłana", body: lockedType === "consultation" ? "Studio potwierdzi termin konsultacji i wróci z odpowiedzią." : "Studio sprawdzi szczegóły oraz wybrany termin i wróci z odpowiedzią.", href: "/app/portal/projects", projectId: project.id, appointmentId: appointment.id } });
     return { appointment, projectId: project.id, serviceType: lockedType };
   }).catch((error: unknown) => {
-    if (error instanceof Error && error.message.startsWith("BOOKING_CONFLICT:")) return null;
+    if (error instanceof Error && error.message.startsWith("BOOKING_CONFLICT:")) return { failure: "booking" as const };
+    if (error instanceof Error && error.message === "CONSENT_CHANGED") return { failure: "consent" as const };
     throw error;
   });
-  if (!result) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
+  if ("failure" in result) return NextResponse.json({ error: result.failure === "consent" ? "Treść wymaganej zgody właśnie się zmieniła. Otwórz formularz ponownie i zaakceptuj nową wersję." : "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
   await sendPushToAdmins({ title: result.serviceType === "consultation" ? "Nowa konsultacja" : "Nowa prośba o wizytę", body: `${client.firstName} ${client.lastName}: ${formatCoolinkDateTime(startsAt)}`, url: `/admin/clients/${client.id}`, tag: `client-appointment-${result.appointment.id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(result.appointment.id).catch(() => undefined);
   return NextResponse.json(result, { status: 201 });

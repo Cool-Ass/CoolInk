@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { normalizeBookingBufferRules } from "@/lib/bookingRules";
 
 type HoursPayload = { weekday: number; enabled: boolean; startsAt: string; endsAt: string };
 
@@ -29,6 +30,7 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const bufferMinutes = Number(body?.bufferMinutes);
   if (!Number.isInteger(bufferMinutes) || bufferMinutes < 0 || bufferMinutes > 240 || bufferMinutes % 5 !== 0) return NextResponse.json({ error: "Bufor ustaw od 0 do 240 minut, co 5 minut." }, { status: 400 });
+  const bufferRules = normalizeBookingBufferRules(body?.bufferRules);
   const visibleMonths = Number(body?.visibleMonths ?? 3);
   const defaultFreeStart = String(body?.defaultFreeStart ?? "10:00");
   const defaultFreeEnd = String(body?.defaultFreeEnd ?? "18:00");
@@ -37,6 +39,7 @@ export async function PUT(request: Request) {
 
   await prisma.$transaction([
     prisma.siteSetting.upsert({ where: { key: "booking_buffer_minutes" }, update: { value: String(bufferMinutes) }, create: { key: "booking_buffer_minutes", value: String(bufferMinutes) } }),
+    prisma.siteSetting.upsert({ where: { key: "booking_buffer_rules" }, update: { value: JSON.stringify(bufferRules) }, create: { key: "booking_buffer_rules", value: JSON.stringify(bufferRules) } }),
     prisma.siteSetting.upsert({ where: { key: "calendar_visible_months" }, update: { value: String(visibleMonths) }, create: { key: "calendar_visible_months", value: String(visibleMonths) } }),
     prisma.siteSetting.upsert({ where: { key: "calendar_default_free_start" }, update: { value: defaultFreeStart }, create: { key: "calendar_default_free_start", value: defaultFreeStart } }),
     prisma.siteSetting.upsert({ where: { key: "calendar_default_free_end" }, update: { value: defaultFreeEnd }, create: { key: "calendar_default_free_end", value: defaultFreeEnd } }),

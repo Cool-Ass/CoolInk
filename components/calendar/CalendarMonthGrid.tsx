@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent, ReactNode } from "react";
+import { useRef, type MouseEvent, type ReactNode, type WheelEvent } from "react";
 import { localDateKey, type CalendarDayVisualAppearance } from "@/lib/calendarHub";
 
 const DAYS = ["PN", "WT", "ŚR", "CZ", "PT", "SB", "ND"];
@@ -55,6 +55,7 @@ export default function CalendarMonthGrid({
   wholeDayButton?: boolean;
   compact?: boolean;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const monthLabel = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
   const cellClass = (date: Date) => {
     const appearance = appearanceFor(date);
@@ -62,6 +63,14 @@ export default function CalendarMonthGrid({
   };
   const cellStyle = (_date: Date) => undefined;
   const dateLabel = (date: Date) => ariaLabelFor?.(date) ?? date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const scroller = scrollRef.current;
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+    const previousLeft = scroller.scrollLeft;
+    scroller.scrollLeft += event.deltaY;
+    if (scroller.scrollLeft !== previousLeft) event.preventDefault();
+  };
 
   return <div className="min-w-0">
     <div className="mb-3 flex items-center justify-between gap-3">
@@ -69,7 +78,7 @@ export default function CalendarMonthGrid({
       <h2 className="min-w-0 text-center font-display text-xl sm:text-2xl">{monthLabel}</h2>
       <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={onNext} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button>
     </div>
-    <div className="overflow-x-auto pb-1">
+    <div ref={scrollRef} onWheel={handleWheel} className="overflow-x-auto overscroll-x-contain pb-1">
       <div className={`grid grid-cols-7 border-l border-t border-ink-white/10 ${compact ? "min-w-[600px]" : "min-w-[680px]"}`}>
         {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-[10px] text-ink-grey">{day}</div>)}
         {dates.map((date) => wholeDayButton ? (

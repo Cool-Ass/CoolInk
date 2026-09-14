@@ -7,8 +7,11 @@
  */
 const { PrismaClient } = require("@prisma/client");
 const { randomUUID } = require("crypto");
-const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.cjs");
+const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
+const securityEnv = loadDryRunEnvironment();
+requireTestProject(securityEnv);
+process.env.DATABASE_URL = requireTestDatabase(securityEnv);
 const prisma = new PrismaClient();
 const base = (process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
 const tag = `fixture-smoke-${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -28,10 +31,14 @@ function cookieHeader(response) {
 }
 
 async function call(path, options = {}, cookie = "") {
+  const mutationHeaders = ["POST", "PATCH", "PUT", "DELETE"].includes(options.method || "GET")
+    ? { origin: new URL(base).origin, "sec-fetch-site": "same-origin" }
+    : {};
   const response = await fetch(`${base}${path}`, {
     ...options,
     headers: {
       ...(cookie ? { cookie } : {}),
+      ...mutationHeaders,
       ...(options.headers || {}),
     },
   });
@@ -127,7 +134,7 @@ async function main() {
     const cancelled = await prisma.appointment.create({
       data: { projectId: project.id, startsAt: new Date("2032-05-02T10:00:00.000Z"), endsAt: new Date("2032-05-02T11:00:00.000Z"), status: "cancelled" },
     });
-    await prisma.projectMessage.create({ data: { projectId: project.id, author: "admin", body: `Admin smoke message ${tag}` } });
+    const unreadAdminMessage = await prisma.projectMessage.create({ data: { projectId: project.id, author: "admin", body: `Admin smoke message ${tag}` } });
 
     const privateEvent = await prisma.calendarEvent.create({
       data: { title: `PRIVATE_GOOGLE_${tag}`, startsAt: new Date("2032-05-03T10:00:00.000Z"), endsAt: new Date("2032-05-03T11:00:00.000Z"), isPublic: false },
@@ -153,6 +160,11 @@ async function main() {
 
     const messages = await call(`/api/client/projects/${project.id}/messages`, {}, cookie);
     assert(messages.response.status === 200 && messages.body.includes(`Admin smoke message ${tag}`), "Client message history did not render.");
+    assert(!(await prisma.projectMessage.findUniqueOrThrow({ where: { id: unreadAdminMessage.id } })).readAt, "GET message history mutated read state.");
+    const foreignReadAck = await call(`/api/client/projects/${project.id}/messages`, { method: "PATCH", headers: { origin: "https://attacker.example" } }, cookie);
+    assert(foreignReadAck.response.status === 403, `foreign message acknowledgement returned ${foreignReadAck.response.status}`);
+    const readAck = await call(`/api/client/projects/${project.id}/messages`, { method: "PATCH" }, cookie);
+    assert(readAck.response.status === 200 && (await prisma.projectMessage.findUniqueOrThrow({ where: { id: unreadAdminMessage.id } })).readAt, "Client message acknowledgement failed.");
     const sendMessage = await call(`/api/client/projects/${project.id}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: `Client smoke reply ${tag}` }) }, cookie);
     assert(sendMessage.response.status === 201, `client message returned ${sendMessage.response.status}`);
 

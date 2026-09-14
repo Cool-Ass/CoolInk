@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!admin) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const connection = await prisma.googleCalendarConnection.findUnique({ where: { adminUserId: admin.id } });
   if (!connection?.active) return NextResponse.json({ error: "Najpierw połącz Google Calendar." }, { status: 409 });
-  if (!process.env.GOOGLE_CALENDAR_CLIENT_ID || !process.env.GOOGLE_CALENDAR_CLIENT_SECRET || !process.env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY) return NextResponse.json({ error: "Brakuje server-side konfiguracji Google Calendar. Synchronizacja nie została uruchomiona." }, { status: 503 });
+  if (!process.env.GOOGLE_CALENDAR_CLIENT_ID || !process.env.GOOGLE_CALENDAR_CLIENT_SECRET || !(process.env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS || process.env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY)) return NextResponse.json({ error: "Brakuje server-side konfiguracji Google Calendar. Synchronizacja nie została uruchomiona." }, { status: 503 });
   try {
     return NextResponse.json({ ok: true, result: await syncGoogleCalendarForAdmin(admin.id) });
   } catch (error) {

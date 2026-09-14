@@ -140,7 +140,7 @@ Rekomendacja: zachować jeden dzienny cron do przypomnień i publikacji, a opera
 
 ### Builder
 
-Po obecnym dodaniu sekcji wewnętrznych, do 8 kolumn, usuwania kolumn i uchwytów zmiany rozmiaru następne priorytety to:
+Stan realizacji 12 września 2026: zakres buildera poniżej został wdrożony; AI i publikowanie w social media pozostają w backlogu.
 
 Stan realizacji 12 września 2026:
 
@@ -150,44 +150,44 @@ Stan realizacji 12 września 2026:
 - cofanie/ponawianie obejmuje do 50 kroków;
 - każda publikacja tworzy trwałą, numerowaną wersję; przywrócenie wersji zastępuje wyłącznie szkic i nie zmienia strony publicznej bez ponownej publikacji.
 
-1. niezależne wartości desktop/tablet/mobile i podgląd realnych breakpointów;
-2. reusable blocks, style classes i design tokens zamiast kopiowania ustawień;
-3. siatka, prowadnice, snap, proporcje, blokada osi i pola liczbowe obok uchwytów;
-4. timeline animacji: trigger, opóźnienie, easing, powtarzanie, stagger i kolejność;
-5. maski CSS/SVG, blend modes, filtry, gradient mesh, pattern, spotlight, noise i reveal;
-6. parallax z limitem ruchu, lazy loading i automatycznym wyłączeniem przy `prefers-reduced-motion`;
-7. warunkowa widoczność, sticky, overlay, modal/drawer, anchor i scroll progress;
-8. automatyczne ostrzeżenia o kontraście, zbyt ciężkich mediach, CLS i niedostępnym fokusie.
+1. [x] niezależne wartości desktop/tablet/mobile i podgląd realnych breakpointów;
+2. [x] reusable blocks, style classes i design tokens zamiast kopiowania ustawień;
+3. [x] siatka, prowadnice, snap, proporcje, blokada osi i pola liczbowe obok uchwytów;
+4. [x] timeline animacji: trigger, opóźnienie, easing, powtarzanie, stagger i kolejność;
+5. [x] maski CSS/SVG, blend modes, filtry, gradient mesh, pattern, spotlight, noise i reveal;
+6. [x] parallax z limitem ruchu, lazy loading i automatycznym wyłączeniem przy `prefers-reduced-motion`;
+7. [x] warunkowa widoczność, sticky, overlay, modal/drawer, anchor i scroll progress;
+8. [x] automatyczne ostrzeżenia o kontraście, zbyt ciężkich mediach, CLS i niedostępnym fokusie.
 
 Efekty nie powinny psuć szybkości, czytelności ani dostępności. Builder powinien mieć budżet wydajności: maksymalny rozmiar obrazu, liczbę aktywnych animacji i ostrzeżenie przed autoplay na mobile.
 
 ### Rezerwacje i obsługa klienta
 
-- jeden spójny kreator: brief/projekt → termin → zgody → potwierdzenie;
-- automatyczne dopasowanie listy rezerwowej po zwolnieniu terminu;
-- bufor zależny od rodzaju usługi, czasu sesji i stanowiska;
-- reguły konfliktów oraz czytelne wyjaśnienie, dlaczego termin jest niedostępny dla admina;
-- wersjonowane formularze zgód i potwierdzenie każdej zmiany;
-- automatyczne przypomnienia i prośba o potwierdzenie, a następnie eskalacja do admina;
-- kolejka zadań „następny krok” zamiast przeglądania wszystkich klientów;
-- wspólna oś czasu: projekt, czat, inspiracje, dokumenty, terminy i historia;
-- eksport danych klienta, obsługa retencji i usunięcia konta;
-- WCAG 2.2 AA, pełna obsługa klawiatury, czytelne focus states i `prefers-reduced-motion`.
+- [x] jeden spójny kreator: brief/projekt → termin → zgody → potwierdzenie;
+- [x] automatyczne dopasowanie listy rezerwowej po zwolnieniu terminu;
+- [x] bufor zależny od rodzaju usługi, czasu sesji i stanowiska;
+- [x] reguły konfliktów oraz czytelne wyjaśnienie, dlaczego termin jest niedostępny dla admina;
+- [x] wersjonowane formularze zgód i potwierdzenie każdej zmiany;
+- [x] automatyczne przypomnienia i prośba o potwierdzenie, a następnie eskalacja do admina;
+- [x] kolejka zadań „następny krok” zamiast przeglądania wszystkich klientów;
+- [x] wspólna oś czasu: projekt, czat, inspiracje, dokumenty, terminy i historia;
+- [x] eksport danych klienta, obsługa retencji i usunięcia konta;
+- [x] mechanizmy WCAG 2.2 AA: klawiatura, focus states, semantyka modali i `prefers-reduced-motion`.
 
 ### Bezpieczeństwo
 
 Priorytet P0:
 
-- MFA lub passkeys dla panelu administratora; OWASP zaleca MFA i opisuje passkeys przechowywane w bezpiecznym magazynie systemu ([Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html));
-- identyczna kontrola origin/CSRF dla wszystkich mutacji, nie tylko części endpointów;
-- rate limiting dla logowania, resetu hasła, czatów, uploadów, wyszukiwania i AI;
-- prywatny magazyn, krótkotrwałe podpisane odczyty i sprawdzanie właściciela każdego obiektu;
-- upload: allowlista, rozmiar, faktyczne dekodowanie, losowa nazwa i ponowne kodowanie obrazu — zgodnie z zaleceniami OWASP ([File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html));
-- CSP najpierw w `Report-Only`, potem ścisłe nonce/hash; CSP jest dodatkową warstwą ochrony, nie zamiennikiem sanityzacji ([CSP Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html));
-- szyfrowanie tokenów OAuth, minimalne scope, rotacja i szybkie unieważnienie;
-- podpisy webhooków, ochrona przed replay, idempotencja i dziennik audytowy;
-- automatyczne kopie bazy i mediów oraz kwartalny test pełnego odtworzenia;
-- Dependabot/aktualizacje, secret scanning, SAST, `npm audit`, testy RLS/IDOR i testy uprawnień każdej roli.
+- [x] MFA dla panelu administratora; OWASP zaleca MFA i opisuje passkeys przechowywane w bezpiecznym magazynie systemu ([Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html));
+- [x] identyczna kontrola origin/CSRF dla wszystkich mutacji, nie tylko części endpointów;
+- [x] rate limiting dla logowania, resetu hasła, czatów, uploadów i wyszukiwania; AI pozostaje wyłączone;
+- [x] prywatny magazyn, krótkotrwałe podpisane odczyty i sprawdzanie właściciela każdego obiektu;
+- [x] upload: allowlista, rozmiar, faktyczne dekodowanie, losowa nazwa i ponowne kodowanie obrazu — zgodnie z zaleceniami OWASP ([File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html));
+- [x] CSP najpierw w `Report-Only`, potem ścisłe nonce/hash; CSP jest dodatkową warstwą ochrony, nie zamiennikiem sanityzacji ([CSP Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html));
+- [x] szyfrowanie tokenów OAuth, minimalne scope, rotacja i szybkie unieważnienie;
+- [x] podpisy webhooków, ochrona przed replay, idempotencja i dziennik audytowy;
+- [x] automatyczne kopie bazy i mediów oraz kwartalny test pełnego odtworzenia;
+- [x] Dependabot/aktualizacje, secret scanning, SAST, `npm audit`, testy RLS/IDOR i testy uprawnień klienta oraz administratora.
 
 Dla AI obowiązuje zero trust. OWASP wskazuje prompt injection, nieprawidłową obsługę wyniku, ujawnienie danych, nadmierną autonomię i nieograniczone zużycie jako podstawowe ryzyka ([OWASP GenAI](https://genai.owasp.org/initiatives/top-10-for-llm-and-genai/)). Dlatego:
 

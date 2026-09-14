@@ -136,9 +136,9 @@ export default function BuilderTopBar({
         <div className="flex items-center gap-1 border border-ink-white/15 p-1" role="group" aria-label="Podgląd na urządzeniach">
           {(
             [
-              { mode: "desktop" as const, icon: "🖥", label: "Komputer" },
-              { mode: "tablet" as const, icon: "📋", label: "Tablet" },
-              { mode: "mobile" as const, icon: "📱", label: "Telefon" },
+              { mode: "desktop" as const, icon: "🖥", label: "Komputer 1440 px" },
+              { mode: "tablet" as const, icon: "📋", label: "Tablet 768 px" },
+              { mode: "mobile" as const, icon: "📱", label: "Telefon 390 px" },
             ]
           ).map((d) => (
             <button

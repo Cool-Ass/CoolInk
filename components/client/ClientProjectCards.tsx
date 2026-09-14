@@ -19,6 +19,9 @@ type Appointment = {
   endsAt: string;
   status: string;
   price: number | null;
+  createdAt: string;
+  confirmationRequestedAt?: string | null;
+  clientConfirmedAt?: string | null;
 };
 type Project = {
   id: string;
@@ -33,7 +36,7 @@ type Project = {
   depositStatus: string;
   depositAmount: number | null;
   appointments: Appointment[];
-  images: { id: string; url: string; caption: string | null }[];
+  images: { id: string; url: string; caption: string | null; createdAt: string }[];
   messages: {
     id: string;
     author: string;
@@ -42,7 +45,17 @@ type Project = {
     readAt: string | null;
     attachment: { id: string; caption: string | null; url: string } | null;
   }[];
+  activities: { id: string; type: string; message: string; createdAt: string }[];
 };
+
+function projectTimeline(project: Project) {
+  return [
+    ...project.activities.map((item) => ({ id: `activity-${item.id}`, at: item.createdAt, label: item.type === "consents_accepted" ? "DOKUMENTY" : "HISTORIA", text: item.message })),
+    ...project.messages.map((item) => ({ id: `message-${item.id}`, at: item.createdAt, label: "CZAT", text: item.body || (item.attachment ? "Dodano zdjęcie do rozmowy." : "Wiadomość") })),
+    ...project.images.map((item) => ({ id: `image-${item.id}`, at: item.createdAt, label: "INSPIRACJA", text: item.caption || "Dodano inspirację." })),
+    ...project.appointments.map((item) => ({ id: `appointment-${item.id}`, at: item.createdAt, label: "TERMIN", text: `${formatCoolinkDateTime(item.startsAt)} · ${item.status}` })),
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 30);
+}
 
 export default function ClientProjectCards({
   projects,
@@ -235,8 +248,9 @@ export default function ClientProjectCards({
                 </p>
               )}
             </section>
+            <section className="border-y border-ink-white/10 py-4"><p className="text-xs tracking-widest text-ink-gold">WSPÓLNA OŚ CZASU</p><div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">{projectTimeline(selected).map((item) => <article key={item.id} className="grid gap-1 border-l border-ink-white/20 pl-3 sm:grid-cols-[92px_1fr_auto]"><p className="text-[9px] tracking-[.1em] text-ink-gold">{item.label}</p><p className="text-xs leading-relaxed text-ink-grey">{item.text}</p><time className="text-[9px] text-ink-grey/70">{formatCoolinkDateTime(item.at, { dateStyle: "short", timeStyle: "short" })}</time></article>)}{projectTimeline(selected).length === 0 && <p className="text-xs text-ink-grey">Brak historii projektu.</p>}</div></section>
             <section>
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] tracking-widest text-ink-gold">INSPIRACJE</p><p className="mt-1 text-[11px] text-ink-grey">JPG, PNG lub WEBP · maks. 10 MB</p></div><><input ref={inspirationInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { void uploadInspiration(event.target.files?.[0]); }} /><AppButton type="button" variant="secondary" disabled={uploading} onClick={() => inspirationInput.current?.click()}>{uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{uploading ? " DODAWANIE…" : " DODAJ INSPIRACJĘ"}</AppButton></></div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] tracking-widest text-ink-gold">INSPIRACJE</p><p className="mt-1 text-[11px] text-ink-grey">JPG, PNG lub WEBP · maks. 8 MB</p></div><><input ref={inspirationInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { void uploadInspiration(event.target.files?.[0]); }} /><AppButton type="button" variant="secondary" disabled={uploading} onClick={() => inspirationInput.current?.click()}>{uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}{uploading ? " DODAWANIE…" : " DODAJ INSPIRACJĘ"}</AppButton></></div>
               <div className="mt-3">
                 <InspirationPreview images={selected.images} />
               </div>

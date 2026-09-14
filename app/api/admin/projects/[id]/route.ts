@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { del as deleteBlob } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
+import { deletePrivateProjectMedia } from "@/lib/privateMedia";
 import { requireAdminApi } from "@/lib/adminApi";
 import {
   activityMessage,
@@ -135,11 +135,11 @@ export async function DELETE(request: Request, { params }: Params) {
     await prisma.appointment.updateMany({ where: { id: { in: appointmentIds } }, data: { status: "cancelled" } });
     await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
   }
+  const media = await deletePrivateProjectMedia(project.images.map((image) => image.url));
+  if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć prywatnych plików projektu. Projekt nie został usunięty." }, { status: 502 });
   await prisma.$transaction(async (tx) => {
     await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "project.delete", targetType: "TattooProject", targetId: id, summary: "Usunięto projekt wraz z powiązaną historią." } });
     await tx.tattooProject.delete({ where: { id } });
   });
-  const blobUrls = project.images.map((image) => image.url).filter((url) => url.includes(".blob.vercel-storage.com"));
-  if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) await deleteBlob(blobUrls).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }

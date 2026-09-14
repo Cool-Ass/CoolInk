@@ -7,6 +7,7 @@ import { isSameOrigin } from "@/lib/requestSecurity";
 import { bookingConflict, lockBookingCalendar } from "@/lib/bookingRules";
 import { sendPushToAdmins } from "@/lib/webPush";
 import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
+import { offerReleasedRange } from "@/lib/waitlistAutomation";
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -49,5 +50,6 @@ export async function POST(request: Request, { params }: Params) {
   await recordWorkflowEvent({ projectId: appointment.projectId, type: accepted ? "APPOINTMENT_ACCEPTED" : "APPOINTMENT_REJECTED", notification: accepted ? { title: "Termin potwierdzony", body: "Twoja odpowiedź została zapisana. Szczegóły wizyty są widoczne na koncie.", appointmentId: id } : undefined });
   await sendPushToAdmins({ title: accepted ? "Klient zaakceptował termin" : "Klient odrzucił termin", body: `${client.firstName} ${client.lastName} odpowiedział na propozycję wizyty.`, url: `/admin/clients/${client.id}`, tag: `client-response-${id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(id).catch(() => undefined);
+  if (!accepted) await offerReleasedRange(appointment.startsAt, appointment.endsAt, appointment.waitlistOffer?.id).catch(() => undefined);
   return NextResponse.json({ appointment: nextAppointment });
 }

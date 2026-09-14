@@ -10,8 +10,14 @@ export function requestIp(request: Request) {
 }
 
 export function isSameOrigin(request: Request) {
+  const expected = new URL(request.url).origin;
   const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  if (origin) return origin === expected;
+  const referer = request.headers.get("referer");
+  if (referer) {
+    try { return new URL(referer).origin === expected; } catch { return false; }
+  }
+  return request.headers.get("sec-fetch-site") === "same-origin";
 }
 
 export async function rateLimit(request: Request, scope: string, maxHits: number, windowMs: number, discriminator = "") : Promise<RateLimitResult> {

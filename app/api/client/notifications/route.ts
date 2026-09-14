@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 export async function GET() {
   const client = await getCurrentClient();
@@ -10,6 +11,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
   const body = await request.json().catch(() => null);

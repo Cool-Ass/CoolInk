@@ -7,6 +7,7 @@ import {
   tooManyRequests,
 } from "@/lib/requestSecurity";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { privateImageUrl } from "@/lib/privateMedia";
 
 const MAX_MESSAGE_LENGTH = 2_000;
 
@@ -24,7 +25,7 @@ function serialize(message: {
   createdAt: Date;
   readAt: Date | null;
   attachment: { id: string; caption: string | null } | null;
-}) {
+}, clientId: string) {
   return {
     id: message.id,
     author: message.author,
@@ -35,7 +36,7 @@ function serialize(message: {
       ? {
           id: message.attachment.id,
           caption: message.attachment.caption,
-          url: `/api/client/images/${message.attachment.id}`,
+          url: privateImageUrl(message.attachment.id, "client", clientId),
         }
       : null,
   };
@@ -57,17 +58,38 @@ export async function GET(
       { error: "Nie znaleziono projektu." },
       { status: 404 },
     );
-  await prisma.projectMessage.updateMany({
-    where: { projectId: id, author: "admin", readAt: null },
-    data: { readAt: new Date() },
-  });
   const messages = await prisma.projectMessage.findMany({
     where: { projectId: id },
     include: { attachment: { select: { id: true, caption: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
   });
-  return NextResponse.json({ messages: messages.map(serialize) });
+  return NextResponse.json({ messages: messages.map((message) => serialize(message, client.id)) });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const client = await getCurrentClient();
+  const { id } = await params;
+  if (!client)
+    return NextResponse.json(
+      { error: "Zaloguj się ponownie." },
+      { status: 401 },
+    );
+  if (!isSameOrigin(request))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await ownedProject(id, client.id)))
+    return NextResponse.json(
+      { error: "Nie znaleziono projektu." },
+      { status: 404 },
+    );
+  const result = await prisma.projectMessage.updateMany({
+    where: { projectId: id, author: "admin", readAt: null },
+    data: { readAt: new Date() },
+  });
+  return NextResponse.json({ ok: true, updated: result.count });
 }
 
 export async function POST(
@@ -109,5 +131,5 @@ export async function POST(
     return created;
   });
   await sendPushToAdmins({ title: "Nowa wiadomość od klienta", body: `${client.firstName} ${client.lastName}: ${text.slice(0, 120)}`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-message-${message.id}` }).catch(() => undefined);
-  return NextResponse.json({ message: serialize(message) }, { status: 201 });
+  return NextResponse.json({ message: serialize(message, client.id) }, { status: 201 });
 }

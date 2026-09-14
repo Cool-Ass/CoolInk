@@ -15,9 +15,16 @@ export async function GET() {
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
   const opened = await prisma.directMessage.findFirst({ where: { clientId: client.id, author: "admin" }, select: { id: true } });
   if (!opened) return NextResponse.json({ messages: [], canReply: false });
-  await prisma.directMessage.updateMany({ where: { clientId: client.id, author: "admin", readAt: null }, data: { readAt: new Date() } });
   const messages = await prisma.directMessage.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "asc" }, take: 200 });
   return NextResponse.json({ messages: messages.map(serialize), canReply: true });
+}
+
+export async function PATCH(request: Request) {
+  const client = await getCurrentClient();
+  if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const result = await prisma.directMessage.updateMany({ where: { clientId: client.id, author: "admin", readAt: null }, data: { readAt: new Date() } });
+  return NextResponse.json({ ok: true, updated: result.count });
 }
 
 export async function POST(request: Request) {

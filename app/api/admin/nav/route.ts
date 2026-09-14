@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/adminApi";
 import { safeHref } from "@/lib/safeHref";
+import { isSameOrigin } from "@/lib/requestSecurity";
 
 export async function GET() {
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
@@ -10,6 +11,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   const href = safeHref(body?.href, "");

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { del as deleteBlob } from "@vercel/blob";
 import { requireAdminApi } from "@/lib/adminApi";
 import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { prisma } from "@/lib/prisma";
+import { deletePrivateProjectMedia } from "@/lib/privateMedia";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,6 +38,7 @@ export async function DELETE(request: Request, { params }: Params) {
       select: {
         firstName: true,
         lastName: true,
+        supabaseUserId: true,
         projects: {
           select: {
             appointments: { select: { id: true } },
@@ -47,6 +48,9 @@ export async function DELETE(request: Request, { params }: Params) {
       },
     });
     if (!client) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (client.supabaseUserId && (!supabaseUrl || !serviceKey)) return NextResponse.json({ error: "Automatyczne usuwanie konta wymaga klucza SUPABASE_SERVICE_ROLE_KEY. Konto nie zostało zmienione." }, { status: 503 });
 
     const appointmentIds = client.projects.flatMap((project) => project.appointments.map((appointment) => appointment.id));
     if (appointmentIds.length) {
@@ -54,12 +58,22 @@ export async function DELETE(request: Request, { params }: Params) {
       await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
     }
 
+    const media = await deletePrivateProjectMedia(client.projects.flatMap((project) => project.images.map((image) => image.url)));
+    if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć wszystkich prywatnych plików. Dane klienta nie zostały usunięte." }, { status: 502 });
+
+    if (client.supabaseUserId) {
+      const authDeletion = await fetch(`${supabaseUrl!}/auth/v1/admin/users/${encodeURIComponent(client.supabaseUserId)}`, {
+        method: "DELETE",
+        headers: { apikey: serviceKey!, Authorization: `Bearer ${serviceKey!}` },
+        cache: "no-store",
+      });
+      if (!authDeletion.ok && authDeletion.status !== 404) return NextResponse.json({ error: "Supabase nie potwierdził usunięcia konta logowania. Dane klienta nie zostały usunięte." }, { status: 502 });
+    }
+
     await prisma.$transaction(async (tx) => {
-      await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "client.delete", targetType: "Client", targetId: id, summary: `Usunięto konto klienta ${client.firstName} ${client.lastName} wraz z powiązanymi danymi.` } });
+      await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "client.delete", targetType: "Client", targetId: id, summary: `Usunięto konto klienta ${client.firstName} ${client.lastName} wraz z powiązanymi danymi.`, metadata: JSON.stringify({ supabaseAuthDeleted: Boolean(client.supabaseUserId) }) } });
       await tx.client.delete({ where: { id } });
     });
-    const blobUrls = client.projects.flatMap((project) => project.images.map((image) => image.url)).filter((url) => url.includes(".blob.vercel-storage.com"));
-    if (blobUrls.length && process.env.BLOB_READ_WRITE_TOKEN) await deleteBlob(blobUrls).catch(() => undefined);
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Nie udało się usunąć konta klienta." }, { status: 409 }); }
 }

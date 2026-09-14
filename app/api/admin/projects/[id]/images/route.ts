@@ -1,17 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { del as deleteBlob, put as putBlob } from "@vercel/blob";
+import { put as putBlob } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/adminApi";
 import { getSupabaseConfig } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { preparePrivateImage, PrivateImageUploadError } from "@/lib/privateImageUpload";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
+import { deletePrivateProjectMedia, privateImageUrl } from "@/lib/privateMedia";
 
 type Params = { params: Promise<{ id: string }> };
-
-function isBlobUrl(value: string) {
-  try { return new URL(value).hostname.endsWith(".blob.vercel-storage.com"); } catch { return false; }
-}
 
 export async function POST(request: Request, { params }: Params) {
   const access = await requireAdminApi("operations.manage");
@@ -44,7 +41,7 @@ export async function POST(request: Request, { params }: Params) {
   const caption = String(form?.get("caption") ?? "").trim().slice(0, 500) || null;
   const image = await prisma.projectImage.create({ data: { projectId: id, url: storedLocation, caption } });
   await prisma.projectActivity.create({ data: { projectId: id, type: "inspiration_added_by_studio", message: "Studio dodało inspirację do projektu.", visibility: "client" } });
-  return NextResponse.json({ image: { id: image.id, caption: image.caption, url: `/api/admin/images/${image.id}` } }, { status: 201 });
+  return NextResponse.json({ image: { id: image.id, caption: image.caption, createdAt: image.createdAt.toISOString(), url: privateImageUrl(image.id, "admin", access.admin.id) } }, { status: 201 });
 }
 
 export async function DELETE(request: Request, { params }: Params) {
@@ -55,12 +52,8 @@ export async function DELETE(request: Request, { params }: Params) {
   const imageId = new URL(request.url).searchParams.get("imageId") ?? "";
   const image = await prisma.projectImage.findFirst({ where: { id: imageId, projectId: id }, select: { id: true, url: true } });
   if (!image) return NextResponse.json({ error: "Nie znaleziono inspiracji." }, { status: 404 });
+  const media = await deletePrivateProjectMedia([image.url]);
+  if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć prywatnego pliku." }, { status: 502 });
   await prisma.projectImage.delete({ where: { id: image.id } });
-  if (isBlobUrl(image.url) && process.env.BLOB_READ_WRITE_TOKEN) await deleteBlob(image.url).catch(() => undefined);
-  else if (!isBlobUrl(image.url)) {
-    const { url } = getSupabaseConfig();
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (serviceKey) await fetch(`${url}/storage/v1/object/project-inspirations/${image.url}`, { method: "DELETE", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, cache: "no-store" }).catch(() => undefined);
-  }
   return NextResponse.json({ ok: true });
 }

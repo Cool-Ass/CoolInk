@@ -2,8 +2,11 @@
 const { PrismaClient } = require("@prisma/client");
 const { randomUUID } = require("crypto");
 const bcrypt = require("bcryptjs");
-const { loadDryRunEnvironment, requireTestProject } = require("./dryRunTestEnv.cjs");
+const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
+const securityEnv = loadDryRunEnvironment();
+requireTestProject(securityEnv);
+process.env.DATABASE_URL = requireTestDatabase(securityEnv);
 const prisma = new PrismaClient();
 const base = (process.env.SMOKE_BASE_URL || "http://127.0.0.1:3002").replace(/\/$/, "");
 const tag = `after-rls-${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -14,7 +17,8 @@ function cookies(response) {
   return values.map((value) => value.split(";", 1)[0]).join("; ");
 }
 async function call(path, options = {}, cookie = "") {
-  const response = await fetch(`${base}${path}`, { ...options, headers: { ...(cookie ? { cookie } : {}), ...(options.headers || {}) } });
+  const mutationHeaders = ["POST", "PATCH", "PUT", "DELETE"].includes(options.method || "GET") ? { origin: new URL(base).origin, "sec-fetch-site": "same-origin" } : {};
+  const response = await fetch(`${base}${path}`, { ...options, headers: { ...(cookie ? { cookie } : {}), ...mutationHeaders, ...(options.headers || {}) } });
   return { response, body: await response.text() };
 }
 async function register(label) {

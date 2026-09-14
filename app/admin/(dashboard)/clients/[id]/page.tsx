@@ -5,6 +5,7 @@ import { getCurrentAdmin } from "@/lib/auth";
 import { hasAdminPermission } from "@/lib/adminPermissions";
 import ClientWorkspace from "@/components/admin/ClientWorkspace";
 import { getMessageTemplates } from "@/lib/messageTemplates";
+import { privateImageUrl } from "@/lib/privateMedia";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,10 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     depositStatus: project.depositStatus,
     depositAmount: project.depositAmount,
     depositPaymentMethod: project.depositPaymentMethod,
-    appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, notes: item.notes, price: item.price })),
+    appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, notes: item.notes, price: item.price, createdAt: item.createdAt.toISOString() })),
     activities: project.activities.map((item) => ({ id: item.id, message: item.message, createdAt: item.createdAt.toISOString() })),
-    images: project.images.map((image) => ({ id: image.id, caption: image.caption, url: `/api/admin/images/${image.id}` })),
-    messages: project.messages.map((item) => ({ id: item.id, author: item.author, body: item.body, createdAt: item.createdAt.toISOString(), readAt: item.readAt?.toISOString() ?? null, attachment: item.attachment ? { ...item.attachment, url: `/api/admin/images/${item.attachment.id}` } : null })),
+    images: project.images.map((image) => ({ id: image.id, caption: image.caption, createdAt: image.createdAt.toISOString(), url: privateImageUrl(image.id, "admin", admin?.id || "") })),
+    messages: project.messages.map((item) => ({ id: item.id, author: item.author, body: item.body, createdAt: item.createdAt.toISOString(), readAt: item.readAt?.toISOString() ?? null, attachment: item.attachment ? { ...item.attachment, url: privateImageUrl(item.attachment.id, "admin", admin?.id || "") } : null })),
   }));
 
   return <div className="flex flex-col gap-3"><Link href="/admin/clients" className="text-xs text-ink-grey hover:text-ink-gold">← KLIENCI</Link><ClientWorkspace client={{ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, notes: client.notes }} projects={projects} directMessages={client.directMessages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: null }))} messageTemplates={messageTemplates} canManageFinance={Boolean(admin && hasAdminPermission(admin.role, "finance.manage"))} canDeleteProject={Boolean(admin && hasAdminPermission(admin.role, "projects.delete"))} /></div>;
