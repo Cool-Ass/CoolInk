@@ -28,7 +28,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3120
           SESSION_SECRET: ci-only-session-secret-93bc5b557ea9451fbb290b1ad2af08ae
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Isolated database RLS, IDOR and role tests
