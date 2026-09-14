@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const TEST_PROJECT_REF = "elwdamixzdqmjcgqaiyq";
+const TEST_PROJECT_REF = "cydcxgysqvrvcooboqrw";
 
 function loadDryRunEnvironment() {
   const file = path.join(process.cwd(), ".env.dryrun.local");

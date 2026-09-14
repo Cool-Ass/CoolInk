@@ -43,7 +43,7 @@ jobs:
             echo "::warning::Pominięto test bazy: dodaj sekrety dedykowanego projektu testowego."
             exit 0
           fi
-          npx prisma migrate deploy
+          npm run db:test:prepare
           npm run db:security:audit
           npm run db:security:verify
           npm run db:security:http-verify

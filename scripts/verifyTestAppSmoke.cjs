@@ -22,7 +22,7 @@ async function call(path, options = {}, cookie = "") {
   return { response, body: await response.text() };
 }
 async function register(label) {
-  const email = `${tag}-${label}@example.test`;
+  const email = `${tag}-${label}@example.com`;
   const password = `CoolInk!${randomUUID()}A1`;
   const { response, body } = await call("/api/client/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: `Smoke ${label}`, lastName: "RLS", email, password, privacyAcknowledged: true }) });
   assert(response.status === 200, `registration ${label} returned ${response.status}`);

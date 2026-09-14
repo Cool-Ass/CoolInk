@@ -15,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:deploy": "prisma migrate deploy",
+    "db:test:prepare": "node scripts/prepareTestDatabase.cjs",
     "db:seed": "tsx prisma/seed.ts",
     "db:security:audit": "node scripts/auditTestDatabaseSecurity.cjs",
     "db:security:verify": "node scripts/verifyTestRls.cjs",

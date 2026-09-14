@@ -35,7 +35,7 @@ async function request(url, key, token, method, table) {
 }
 
 async function signUp(url, key, label, prisma) {
-  const email = `coolink-security-${label}-${Date.now()}-${randomUUID().slice(0, 8)}@example.test`;
+  const email = `coolink-security-${label}-${Date.now()}-${randomUUID().slice(0, 8)}@example.com`;
   const password = `CoolInk!${randomUUID()}A1`;
   const response = await fetch(`${url}/auth/v1/signup`, { method: "POST", headers: headers(key), body: JSON.stringify({ email, password }) });
   let data = await response.json().catch(() => ({}));
