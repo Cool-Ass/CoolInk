@@ -18,6 +18,7 @@ const privateTables = [
   "AvailabilityBlock", "WorkingHours", "AvailableSlot", "WorkingHoursOverride", "Promotion", "CalendarEvent", "GoogleCalendarConnection",
   "GoogleCalendarSelection", "GoogleCalendarEventSync", "ProjectImage", "ProjectMessage", "DirectMessage",
 ];
+const writeProbeTables = ["Client", "TattooProject", "Appointment", "ClientNotification", "ProjectImage", "ProjectMessage", "DirectMessage"];
 
 function quote(value) { return `"${value.replaceAll('"', '""')}"`; }
 
@@ -52,6 +53,11 @@ async function main() {
       const q = quote(table);
       for (const role of ["anon", "authenticated"]) {
         await deniedAs(role, `SELECT * FROM public.${q} LIMIT 1`);
+      }
+    }
+    for (const table of writeProbeTables) {
+      const q = quote(table);
+      for (const role of ["anon", "authenticated"]) {
         await deniedAs(role, `INSERT INTO public.${q} DEFAULT VALUES`);
         await deniedAs(role, `UPDATE public.${q} SET "id" = "id" WHERE false`);
         await deniedAs(role, `DELETE FROM public.${q} WHERE false`);
@@ -72,7 +78,7 @@ async function main() {
     // workflow available after RLS is enabled.
     const serverRead = await prisma.client.findUnique({ where: { id: clientA.id }, include: { projects: true } });
     if (!serverRead || serverRead.projects[0]?.id !== projectA.id) throw new Error("Prisma owner access is unavailable");
-    console.log("PASS: anon/authenticated CRUD blocked; client A cannot access client B; Prisma owner access works.");
+    console.log(`PASS: anon/authenticated SELECT blocked on ${privateTables.length} tables, writes blocked on sensitive tables; client A cannot access client B; Prisma owner access works.`);
   } finally {
     await prisma.client.deleteMany({ where: { id: { in: [clientA.id, clientB.id] } } });
     await prisma.$disconnect();
