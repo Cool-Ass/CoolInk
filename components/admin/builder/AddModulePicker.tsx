@@ -99,16 +99,16 @@ export default function AddModulePicker({
       .includes(normalizedQuery);
 
   return (
-    <div className="flex min-h-full flex-col bg-[#1d1f22]">
-      <div className="border-b border-white/10 px-4 py-4 text-center">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#1d1f22]">
+      <div className="shrink-0 border-b border-white/10 px-4 py-4 text-center">
         <p className="text-[13px] font-semibold text-white">Elementy</p>
-        <p className="mt-1 text-[10px] leading-relaxed text-white/45">
+        <p className="mt-1 text-[10px] leading-relaxed text-white/65">
           Przeciągnij widget na stronę lub kliknij, aby dodać go {insertAfterSelection ? "pod zaznaczeniem" : "na końcu"}.
         </p>
       </div>
 
-      <div className="p-3">
-        <label className="flex h-9 items-center gap-2 border border-white/15 bg-[#17191c] px-3 text-white/55 focus-within:border-ink-gold">
+      <div className="shrink-0 p-3">
+        <label className="flex min-h-11 min-w-0 items-center gap-2 border border-white/20 bg-[#17191c] px-3 text-white/60 transition-colors hover:border-white/35 focus-within:border-ink-gold focus-within:ring-1 focus-within:ring-ink-gold">
           <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="sr-only">Szukaj widgetu</span>
           <input
@@ -116,12 +116,12 @@ export default function AddModulePicker({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Wyszukaj widget…"
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:italic placeholder:text-white/35"
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:italic placeholder:text-white/50"
           />
         </label>
       </div>
 
-      <div className="space-y-5 px-3 pb-5">
+      <div data-lenis-prevent className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-5 [scrollbar-gutter:stable]">
         {(["widgets", "templates"] as const).map((category) => {
           const types = MODULE_TYPE_ORDER.filter(
             (type) => !["siteHeader", "siteFooter", "maintenance"].includes(type) && MODULE_CATEGORIES[type] === category && matches(type),
@@ -132,7 +132,7 @@ export default function AddModulePicker({
               <p className="mb-2 px-1 text-[9px] font-semibold tracking-[0.16em] text-ink-gold/90">
                 {category === "widgets" ? "WIDGETY" : "GOTOWE SEKCJE"}
               </p>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))" }}>
                 {types.map((type) => {
                   const Icon = ICONS[type];
                   return (
@@ -146,10 +146,10 @@ export default function AddModulePicker({
                         event.dataTransfer.effectAllowed = "copy";
                       }}
                       onClick={() => onAdd(type)}
-                      className="group flex min-h-16 cursor-grab flex-col items-center justify-center gap-1.5 border border-white/10 bg-[#202226] px-1.5 py-2 text-center text-white/70 transition hover:border-ink-gold/70 hover:bg-ink-gold/5 hover:text-white active:cursor-grabbing"
+                      className="group flex min-h-16 min-w-0 cursor-grab flex-col items-center justify-center gap-1.5 border border-white/15 bg-[#202226] px-1.5 py-2 text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
                     >
                       <Icon className="h-5 w-5 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" />
-                      <span className="text-[10px] leading-tight">{MODULE_LABELS[type]}</span>
+                      <span className="line-clamp-2 break-words text-[10px] leading-tight">{MODULE_LABELS[type]}</span>
                     </button>
                   );
                 })}
@@ -158,7 +158,7 @@ export default function AddModulePicker({
           );
         })}
         {!MODULE_TYPE_ORDER.filter((type) => !["siteHeader", "siteFooter", "maintenance"].includes(type)).some(matches) && (
-          <p className="border border-dashed border-white/15 p-4 text-center text-[11px] text-white/45">
+          <p role="status" className="border border-dashed border-white/20 p-4 text-center text-[11px] text-white/65">
             Nie znaleziono takiego widgetu.
           </p>
         )}

@@ -125,7 +125,7 @@ export default function BuilderNavigator({
                   ? "border-ink-gold bg-ink-gold/10"
                   : "border-transparent hover:bg-white/[0.035]"
             }`}
-            style={{ paddingLeft: `${10 + depth * 14}px` }}
+            style={{ paddingLeft: `${Math.min(10 + depth * 14, 66)}px` }}
           >
             <button
               type="button"
@@ -175,7 +175,7 @@ export default function BuilderNavigator({
                         ? "border-ink-gold bg-ink-gold/10 text-ink-gold"
                         : "border-transparent text-ink-grey hover:bg-white/[0.035] hover:text-ink-white"
                   }`}
-                  style={{ paddingLeft: `${24 + depth * 14}px` }}
+                  style={{ paddingLeft: `${Math.min(24 + depth * 14, 80)}px` }}
                 >
                   <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-ink-grey/50" />
                   {isInner ? (
@@ -210,22 +210,23 @@ export default function BuilderNavigator({
     <aside
       data-lenis-prevent
       aria-label="Nawigator struktury strony"
-      className="fixed bottom-4 right-4 top-52 z-[120] flex w-[min(22rem,calc(100vw-2rem))] flex-col border border-ink-white/15 bg-[#151618]/[0.98] shadow-2xl shadow-black/70 backdrop-blur-xl sm:top-36 lg:top-28 2xl:top-20"
+      onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}
+      className="builder-floating-panel fixed bottom-2 right-2 top-44 z-[140] flex min-h-0 w-[min(22rem,calc(100vw-1rem))] flex-col overflow-hidden border border-white/20 bg-[#151618]/[0.98] shadow-2xl shadow-black/70 backdrop-blur-xl sm:bottom-4 sm:right-4 sm:top-36 sm:w-[min(22rem,calc(100vw-2rem))] lg:top-28 2xl:top-20"
     >
-      <header className="flex items-center justify-between border-b border-ink-white/10 px-4 py-3">
-        <div>
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-[13px] font-medium text-ink-white">
             <Layers3 className="h-4 w-4 text-ink-gold" />
             NAWIGATOR
           </div>
           <p className="mt-1 text-[11px] text-ink-grey">Sekcje, kolumny i widgety</p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Zamknij nawigator" className="flex h-9 w-9 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold">
+        <button type="button" onClick={onClose} aria-label="Zamknij nawigator" className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/20 text-white/60 hover:border-ink-gold hover:text-ink-gold">
           <X className="h-4 w-4" />
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain py-2 [scrollbar-gutter:stable]">
         {modules.map((module, index) => {
           const sectionKey = `section:${module.id}`;
           const sectionSelected = selectedId === module.id && !selectedWidgetId && selectedColumnIndex === null;

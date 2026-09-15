@@ -36,17 +36,19 @@ export default function ModuleSettingsSidebar({ module, scope = "section", edito
     { id: "advanced" as const, label: "ZAAWANS.", icon: Settings2 },
   ];
   return (
-    <div className="flex min-h-full flex-col bg-[#1d1f22]">
-      <div className="flex h-12 items-center border-b border-white/10 px-3">
-        <button onClick={onClose} aria-label="Wróć do elementów" title="Wróć do elementów" className="flex h-8 w-8 items-center justify-center text-white/55 transition hover:text-ink-gold"><ArrowLeft className="h-4 w-4" /></button>
-        <p className="min-w-0 flex-1 truncate pr-8 text-center text-[13px] font-semibold text-white">{editorLabel ?? `Edytuj: ${MODULE_LABELS[module.type]}`}</p>
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#1d1f22]">
+      <div className="flex h-12 shrink-0 items-center border-b border-white/10 px-2">
+        <button type="button" onClick={onClose} aria-label="Wróć do elementów" title="Wróć do elementów" className="flex h-11 w-11 shrink-0 items-center justify-center text-white/60 transition-colors hover:bg-white/5 hover:text-ink-gold"><ArrowLeft aria-hidden className="h-4 w-4" /></button>
+        <p className="min-w-0 flex-1 truncate pr-11 text-center text-[13px] font-semibold text-white" title={editorLabel ?? `Edytuj: ${MODULE_LABELS[module.type]}`}>{editorLabel ?? `Edytuj: ${MODULE_LABELS[module.type]}`}</p>
       </div>
 
-      <div className="grid grid-cols-3 border-b border-white/10">{tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 border-b-2 px-1 text-[8px] transition ${tab === id ? "border-white text-white" : "border-transparent text-white/45 hover:text-white/75"}`}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</div>
-      <div className="flex flex-col gap-3 p-3">
+      <div role="tablist" aria-label="Zakładki ustawień elementu" className="grid shrink-0 grid-cols-3 border-b border-white/10">{tabs.map(({ id, label, icon: Icon }) => <button key={id} id={`builder-sidebar-tab-${id}`} type="button" role="tab" aria-selected={tab === id} aria-controls={`builder-sidebar-panel-${id}`} tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)} onKeyDown={(event) => { const index = tabs.findIndex((item) => item.id === id); const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0; const target = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : offset ? (index + offset + tabs.length) % tabs.length : -1; if (target < 0) return; event.preventDefault(); const next = tabs[target].id; setTab(next); requestAnimationFrame(() => document.getElementById(`builder-sidebar-tab-${next}`)?.focus()); }} className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 border-b-2 px-1 text-[8px] transition-colors ${tab === id ? "border-ink-gold bg-ink-gold/5 text-white" : "border-transparent text-white/55 hover:bg-white/[0.035] hover:text-white"}`}><Icon aria-hidden className="h-4 w-4" /><span className="truncate">{label}</span></button>)}</div>
+      <div data-lenis-prevent role="tabpanel" id={`builder-sidebar-panel-${tab}`} aria-labelledby={`builder-sidebar-tab-${tab}`} className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3 [scrollbar-gutter:stable]">
+        <div className="flex min-w-0 flex-col gap-3">
         {tab === "content" && (scope === "column" ? <ColumnLayoutControls width={columnWidth ?? 100} onWidthChange={onColumnWidthChange} /> : renderFields(module, onChange, portfolioItems, globalContact))}
         {tab === "style" && <><div className="grid grid-cols-3 gap-1.5 border-b border-white/10 pb-3"><button type="button" onClick={() => { copiedBuilderStyle = structuredClone(module.style ?? {}); setStyleAction("Skopiowano"); }} className="flex min-h-9 items-center justify-center gap-1 border border-white/15 text-[9px] text-white/65 hover:border-ink-gold hover:text-ink-gold"><Copy className="h-3 w-3" />KOPIUJ</button><button type="button" disabled={!copiedBuilderStyle} onClick={() => { if (copiedBuilderStyle) { onStyleChange(structuredClone(copiedBuilderStyle)); setStyleAction("Wklejono"); } }} className="flex min-h-9 items-center justify-center gap-1 border border-white/15 text-[9px] text-white/65 hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"><ClipboardPaste className="h-3 w-3" />WKLEJ</button><button type="button" onClick={() => { onStyleChange({}); setStyleAction("Zresetowano"); }} className="flex min-h-9 items-center justify-center gap-1 border border-white/15 text-[9px] text-white/65 hover:border-red-400 hover:text-red-300"><RotateCcw className="h-3 w-3" />RESET</button></div>{styleAction && <p role="status" className="-mt-1 text-[9px] text-ink-gold">{styleAction} styl.</p>}<StylePresetControls value={module.style ?? {}} onChange={onStyleChange} /><BackgroundControls value={module.style} onChange={onStyleChange} /></>}
         {tab === "advanced" && <AdvancedControls value={module.style} onChange={onStyleChange} />}
+        </div>
       </div>
     </div>
   );

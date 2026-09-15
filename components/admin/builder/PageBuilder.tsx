@@ -678,7 +678,7 @@ export default function PageBuilder({
   }
 
   return (
-    <div className="flex h-screen flex-col bg-ink-black text-ink-white">
+    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-ink-black text-ink-white">
       <BuilderTopBar
         title={page.title}
         status={page.status}
@@ -730,10 +730,11 @@ export default function PageBuilder({
         />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside
           data-lenis-prevent
-          className="w-[304px] max-w-[34vw] shrink-0 overflow-y-auto border-r border-white/10 bg-[#1d1f22]"
+          aria-label="Panel narzędzi buildera"
+          className="builder-sidebar h-full min-h-0 w-[304px] max-w-[85vw] shrink-0 overflow-hidden border-r border-white/10 bg-[#1d1f22]"
         >
           {activeEditorModule ? (
             <ModuleSettingsSidebar
