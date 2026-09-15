@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Blocks, Grid3X3, Plus, Ruler, Save, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Blocks, ChevronLeft, ChevronRight, GripVertical, Grid3X3, Plus, Ruler, Save, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react";
 import ModuleRenderer, { type ModuleRendererGlobals } from "@/components/ModuleRenderer";
 import BuilderTopBar, { type DeviceMode } from "@/components/admin/builder/BuilderTopBar";
 import BuilderNavigator from "@/components/admin/builder/BuilderNavigator";
@@ -101,6 +101,7 @@ const DEVICE_WIDTHS: Record<DeviceMode, string> = {
 
 interface ReusableBlock { id: string; name: string; module: Module }
 const REUSABLE_BLOCKS_KEY = "coolink-builder-reusable-blocks-v1";
+const SIDEBAR_PREFS_KEY = "coolink-builder-sidebar-v1";
 
 function createBuilderEntry(type: ModuleType) {
   if (!isColumnWidgetType(type)) return { module: createModule(type), widgetId: null as string | null };
@@ -144,6 +145,9 @@ export default function PageBuilder({
   const [snapSize, setSnapSize] = useState(8);
   const [reusableBlocks, setReusableBlocks] = useState<ReusableBlock[]>([]);
   const [selectedReusableBlock, setSelectedReusableBlock] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(304);
+  const [sidebarPrefsLoaded, setSidebarPrefsLoaded] = useState(false);
   const isSystemPage = isSystemPageSlug(page.slug);
   const dirty = JSON.stringify(modules) !== lastSavedSignature;
   const auditIssues = useMemo(() => auditBuilderPage(modules), [modules]);
@@ -164,6 +168,26 @@ export default function PageBuilder({
     } catch { /* optional browser library */ }
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let stored: { open?: boolean; width?: number } | null = null;
+    try {
+      stored = JSON.parse(window.localStorage.getItem(SIDEBAR_PREFS_KEY) ?? "null") as { open?: boolean; width?: number } | null;
+    } catch { /* optional builder preference */ }
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (typeof stored?.open === "boolean") setSidebarOpen(stored.open);
+      if (typeof stored?.width === "number") setSidebarWidth(Math.min(460, Math.max(264, stored.width)));
+      setSidebarPrefsLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!sidebarPrefsLoaded) return;
+    try { window.localStorage.setItem(SIDEBAR_PREFS_KEY, JSON.stringify({ open: sidebarOpen, width: sidebarWidth })); } catch { /* optional builder preference */ }
+  }, [sidebarOpen, sidebarPrefsLoaded, sidebarWidth]);
 
   const saveLocalDraft = useCallback((current: Module[], base: string) => {
     try {
@@ -297,6 +321,35 @@ export default function PageBuilder({
     window.addEventListener("keydown", keyboardHistory);
     return () => window.removeEventListener("keydown", keyboardHistory);
   }, [handleRedo, handleUndo]);
+
+  useEffect(() => {
+    function keyboardSidebar(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "p") return;
+      event.preventDefault();
+      setSidebarOpen((open) => !open);
+    }
+    window.addEventListener("keydown", keyboardSidebar);
+    return () => window.removeEventListener("keydown", keyboardSidebar);
+  }, []);
+
+  function startSidebarResize(event: React.PointerEvent<HTMLDivElement>) {
+    if (!sidebarOpen) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = sidebarWidth;
+    const resize = (moveEvent: PointerEvent) => {
+      const max = Math.min(460, Math.max(304, window.innerWidth * 0.65));
+      setSidebarWidth(Math.min(max, Math.max(264, startWidth + moveEvent.clientX - startX)));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", resize);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", resize);
+    window.addEventListener("pointerup", stop, { once: true });
+  }
 
   const selectedModule = modules.find((m) => m.id === selectedId) ?? null;
   const selectedWidget = selectedModule?.type === "columns" && selectedWidgetId
@@ -731,27 +784,33 @@ export default function PageBuilder({
       )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <aside
-          data-lenis-prevent
-          aria-label="Panel narzędzi buildera"
-          className="builder-sidebar h-full min-h-0 w-[304px] max-w-[85vw] shrink-0 overflow-hidden border-r border-white/10 bg-[#1d1f22]"
-        >
-          {activeEditorModule ? (
-            <ModuleSettingsSidebar
-              key={activeEditorModule.id}
-              module={activeEditorModule}
-              scope={selectedWidget ? "widget" : selectedColumnIndex !== null ? "column" : "section"}
-              editorLabel={selectedColumnIndex !== null && !selectedWidget ? `Edytuj kolumnę ${selectedColumnIndex + 1}` : undefined}
-              columnWidth={selectedColumnData && selectedColumnIndex !== null ? selectedColumnData.columnWidths?.[selectedColumnIndex] ?? 100 / Math.max(1, selectedColumnData.columns.length) : undefined}
-              onColumnWidthChange={updateSelectedColumnWidth}
-              onChange={(data) => selectedWidget ? updateSelectedWidget({ data }) : selectedColumnIndex !== null ? undefined : updateModule(activeEditorModule.id, data)}
-              onStyleChange={(style) => selectedWidget ? updateSelectedWidget({ style }) : selectedColumnIndex !== null ? updateSelectedColumnStyle(style) : updateModuleStyle(activeEditorModule.id, style)}
-              onClose={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
-              portfolioItems={portfolioItems}
-              globalContact={globals.contact}
-            />
-          ) : <AddModulePicker onAdd={addModule} />}
-        </aside>
+        <div className="relative z-[70] h-full min-h-0 shrink-0" style={{ width: sidebarOpen ? `min(${sidebarWidth}px, 85vw)` : 0 }}>
+          <aside
+            id="builder-sidebar-panel"
+            data-lenis-prevent
+            aria-label="Panel narzędzi buildera"
+            hidden={!sidebarOpen}
+            className="builder-sidebar h-full min-h-0 w-full overflow-hidden border-r border-white/10 bg-[#1d1f22]"
+          >
+            {activeEditorModule ? (
+              <ModuleSettingsSidebar
+                key={activeEditorModule.id}
+                module={activeEditorModule}
+                scope={selectedWidget ? "widget" : selectedColumnIndex !== null ? "column" : "section"}
+                editorLabel={selectedColumnIndex !== null && !selectedWidget ? `Edytuj kolumnę ${selectedColumnIndex + 1}` : undefined}
+                columnWidth={selectedColumnData && selectedColumnIndex !== null ? selectedColumnData.columnWidths?.[selectedColumnIndex] ?? 100 / Math.max(1, selectedColumnData.columns.length) : undefined}
+                onColumnWidthChange={updateSelectedColumnWidth}
+                onChange={(data) => selectedWidget ? updateSelectedWidget({ data }) : selectedColumnIndex !== null ? undefined : updateModule(activeEditorModule.id, data)}
+                onStyleChange={(style) => selectedWidget ? updateSelectedWidget({ style }) : selectedColumnIndex !== null ? updateSelectedColumnStyle(style) : updateModuleStyle(activeEditorModule.id, style)}
+                onClose={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
+                portfolioItems={portfolioItems}
+                globalContact={globals.contact}
+              />
+            ) : <AddModulePicker onAdd={addModule} />}
+          </aside>
+          {sidebarOpen && <div role="separator" aria-label="Zmień szerokość panelu" aria-orientation="vertical" aria-valuemin={264} aria-valuemax={460} aria-valuenow={Math.round(sidebarWidth)} tabIndex={0} title="Przeciągnij, aby zmienić szerokość panelu" onPointerDown={startSidebarResize} onKeyDown={(event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; event.preventDefault(); setSidebarWidth((width) => Math.min(460, Math.max(264, width + (event.key === "ArrowRight" ? 16 : -16)))); }} className="group absolute inset-y-0 right-[-4px] z-[71] w-2 cursor-col-resize touch-none outline-none focus-visible:bg-ink-gold/35"><span className="absolute inset-y-0 left-1/2 w-px bg-transparent transition-colors group-hover:bg-ink-gold/60 group-focus-visible:bg-ink-gold" /><GripVertical aria-hidden className="absolute left-1/2 top-[calc(50%+2.5rem)] h-5 w-3 -translate-x-1/2 text-transparent transition-colors group-hover:text-ink-gold group-focus-visible:text-ink-gold" /></div>}
+          <button type="button" aria-controls="builder-sidebar-panel" aria-expanded={sidebarOpen} aria-label={sidebarOpen ? "Ukryj panel narzędzi" : "Pokaż panel narzędzi"} title={`${sidebarOpen ? "Ukryj" : "Pokaż"} panel (Ctrl+P)`} onClick={() => setSidebarOpen((open) => !open)} className="absolute left-full top-1/2 z-[72] flex h-14 w-7 -translate-y-1/2 items-center justify-center border border-l-0 border-white/15 bg-[#1d1f22] text-white/55 shadow-xl transition-colors hover:border-ink-gold/60 hover:text-ink-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-gold">{sidebarOpen ? <ChevronLeft aria-hidden className="h-4 w-4" /> : <ChevronRight aria-hidden className="h-4 w-4" />}</button>
+        </div>
 
         <div
           data-lenis-prevent

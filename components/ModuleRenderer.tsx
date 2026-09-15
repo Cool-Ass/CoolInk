@@ -287,7 +287,7 @@ export default function ModuleRenderer({
       {editable && visible.length === 0 && (
         <div className="flex h-[50vh] flex-col items-center justify-center gap-2 border border-dashed border-ink-gold/40 px-6 text-center text-[14px] text-ink-grey">
           <p className="text-ink-white">Zacznij budować tę stronę</p>
-          <p>Wybierz po prawej pierwszą sekcję, np. Hero, Tekst albo Obraz + tekst.</p>
+          <p>Wybierz w panelu po lewej pierwszą sekcję, np. Hero, Tekst albo Obraz + tekst.</p>
         </div>
       )}
     </>

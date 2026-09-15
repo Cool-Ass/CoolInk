@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlignLeft,
   BetweenHorizontalStart,
   CalendarDays,
   Columns3,
   GalleryHorizontal,
+  Grid3X3,
   Heading,
   Image as ImageIcon,
   Images,
@@ -43,6 +44,8 @@ import {
   MODULE_CATEGORIES,
   type ModuleType,
 } from "@/lib/modules";
+
+const FAVORITES_KEY = "coolink-builder-widget-favorites-v1";
 
 const ICONS: Record<ModuleType, LucideIcon> = {
   siteHeader: PanelTop,
@@ -90,13 +93,33 @@ export default function AddModulePicker({
   insertAfterSelection?: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<"all" | "favorites">("all");
+  const [favorites, setFavorites] = useState<ModuleType[]>([]);
   const normalizedQuery = query.trim().toLocaleLowerCase("pl-PL");
+
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(FAVORITES_KEY) ?? "[]");
+      if (Array.isArray(stored)) queueMicrotask(() => { if (!cancelled) setFavorites(stored.filter((type): type is ModuleType => MODULE_TYPE_ORDER.includes(type))); });
+    } catch { /* optional builder preference */ }
+    return () => { cancelled = true; };
+  }, []);
+
+  function toggleFavorite(type: ModuleType) {
+    setFavorites((current) => {
+      const next = current.includes(type) ? current.filter((item) => item !== type) : [...current, type];
+      try { window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next)); } catch { /* optional builder preference */ }
+      return next;
+    });
+  }
 
   const matches = (type: ModuleType) =>
     !normalizedQuery ||
     `${MODULE_LABELS[type]} ${MODULE_DESCRIPTIONS[type]}`
       .toLocaleLowerCase("pl-PL")
       .includes(normalizedQuery);
+  const visibleTypes = MODULE_TYPE_ORDER.filter((type) => !["siteHeader", "siteFooter", "maintenance"].includes(type) && matches(type) && (view === "all" || favorites.includes(type)));
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#1d1f22]">
@@ -119,13 +142,15 @@ export default function AddModulePicker({
             className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:italic placeholder:text-white/50"
           />
         </label>
+        <div role="group" aria-label="Filtr elementów" className="mt-2 grid grid-cols-2 gap-1 border border-white/10 bg-[#17191c] p-1">
+          <button type="button" aria-pressed={view === "all"} onClick={() => setView("all")} className={`flex min-h-10 items-center justify-center gap-1.5 px-2 text-[9px] tracking-[0.08em] transition-colors ${view === "all" ? "bg-white/10 text-white" : "text-white/55 hover:bg-white/5 hover:text-white"}`}><Grid3X3 aria-hidden className="h-3.5 w-3.5" />WSZYSTKIE</button>
+          <button type="button" aria-pressed={view === "favorites"} onClick={() => setView("favorites")} className={`flex min-h-10 items-center justify-center gap-1.5 px-2 text-[9px] tracking-[0.08em] transition-colors ${view === "favorites" ? "bg-ink-gold/15 text-ink-gold" : "text-white/55 hover:bg-white/5 hover:text-white"}`}><Star aria-hidden className="h-3.5 w-3.5" />ULUBIONE {favorites.length ? `(${favorites.length})` : ""}</button>
+        </div>
       </div>
 
       <div data-lenis-prevent className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-5 [scrollbar-gutter:stable]">
         {(["widgets", "templates"] as const).map((category) => {
-          const types = MODULE_TYPE_ORDER.filter(
-            (type) => !["siteHeader", "siteFooter", "maintenance"].includes(type) && MODULE_CATEGORIES[type] === category && matches(type),
-          );
+          const types = visibleTypes.filter((type) => MODULE_CATEGORIES[type] === category);
           if (!types.length) return null;
           return (
             <section key={category}>
@@ -135,31 +160,30 @@ export default function AddModulePicker({
               <div className="grid min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))" }}>
                 {types.map((type) => {
                   const Icon = ICONS[type];
+                  const favorite = favorites.includes(type);
                   return (
-                    <button
+                    <div
                       key={type}
-                      type="button"
                       draggable
                       title={`${MODULE_LABELS[type]} — ${MODULE_DESCRIPTIONS[type]}`}
                       onDragStart={(event) => {
                         event.dataTransfer.setData(PALETTE_WIDGET_MIME, type);
                         event.dataTransfer.effectAllowed = "copy";
                       }}
-                      onClick={() => onAdd(type)}
-                      className="group flex min-h-16 min-w-0 cursor-grab flex-col items-center justify-center gap-1.5 border border-white/15 bg-[#202226] px-1.5 py-2 text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
+                      className="group relative min-h-20 min-w-0 cursor-grab border border-white/15 bg-[#202226] text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
                     >
-                      <Icon className="h-5 w-5 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" />
-                      <span className="line-clamp-2 break-words text-[10px] leading-tight">{MODULE_LABELS[type]}</span>
-                    </button>
+                      <button type="button" onClick={() => onAdd(type)} className="flex min-h-20 w-full min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 pr-8 text-center"><Icon aria-hidden className="h-5 w-5 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" /><span className="line-clamp-2 break-words text-[10px] leading-tight">{MODULE_LABELS[type]}</span></button>
+                      <button type="button" aria-pressed={favorite} aria-label={favorite ? `Usuń ${MODULE_LABELS[type]} z ulubionych` : `Dodaj ${MODULE_LABELS[type]} do ulubionych`} title={favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"} onClick={() => toggleFavorite(type)} className={`absolute right-0 top-0 z-10 flex h-11 w-11 items-center justify-center transition-colors ${favorite ? "text-ink-gold" : "text-white/30 hover:text-white"}`}><Star aria-hidden className={`h-3.5 w-3.5 ${favorite ? "fill-current" : ""}`} /></button>
+                    </div>
                   );
                 })}
               </div>
             </section>
           );
         })}
-        {!MODULE_TYPE_ORDER.filter((type) => !["siteHeader", "siteFooter", "maintenance"].includes(type)).some(matches) && (
+        {!visibleTypes.length && (
           <p role="status" className="border border-dashed border-white/20 p-4 text-center text-[11px] text-white/65">
-            Nie znaleziono takiego widgetu.
+            {view === "favorites" && !favorites.length ? "Oznacz gwiazdką najczęściej używane elementy, aby mieć je zawsze pod ręką." : "Nie znaleziono takiego widgetu."}
           </p>
         )}
       </div>
