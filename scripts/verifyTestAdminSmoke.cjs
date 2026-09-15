@@ -28,6 +28,7 @@ async function main() {
     prisma.client.create({ data: { firstName: "Admin", lastName: "Smoke", email: `client-${email}` } }),
   ]);
   const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Admin smoke", description: "Workflow test." } });
+  let availableSlotId = null;
   try {
     const login = await call("/api/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
     assert(login.response.status === 200, `admin login returned ${login.response.status}`);
@@ -55,6 +56,8 @@ async function main() {
     const messageNotification = await prisma.clientNotification.count({ where: { clientId: client.id, projectId: project.id, type: "NEW_STUDIO_MESSAGE" } });
     assert(messageNotification === 1, `message notification duplicated or missing (${messageNotification})`);
 
+    const availableSlot = await prisma.availableSlot.create({ data: { startsAt: new Date("2034-01-10T09:00:00.000Z"), endsAt: new Date("2034-01-10T13:00:00.000Z"), title: "Admin smoke", isPublic: true } });
+    availableSlotId = availableSlot.id;
     const proposal = await call(`/api/admin/projects/${project.id}/proposed-appointment`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: "2034-01-10T10:00:00.000Z", endsAt: "2034-01-10T11:00:00.000Z", note: "Propozycja testowa" }) }, cookie);
     assert(proposal.response.status === 201, `proposal returned ${proposal.response.status}`);
     const proposed = JSON.parse(proposal.body).appointment;
@@ -95,6 +98,7 @@ async function main() {
     assert(await prisma.projectMessage.count({ where: { projectId: project.id } }) === 0, "project messages survived deletion");
     console.log("PASS: admin login, dashboard/pages, private project messages, project deletion cascade, pricing/deposit/note, proposal, multi-session, edit, completed, no-show, cancel, and activity-log cardinality.");
   } finally {
+    if (availableSlotId) await prisma.availableSlot.delete({ where: { id: availableSlotId } }).catch(() => null);
     await prisma.adminUser.delete({ where: { id: admin.id } }).catch(() => null);
     await prisma.client.delete({ where: { id: client.id } }).catch(() => null);
     await prisma.$disconnect();

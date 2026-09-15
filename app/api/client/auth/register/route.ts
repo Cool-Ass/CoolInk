@@ -12,8 +12,9 @@ export async function POST(request: Request) {
   if (!firstName || firstName.length > 80 || !lastName || lastName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12 || password.length > 128 || !privacyAcknowledged) return NextResponse.json({ error: "Podaj imię, nazwisko, poprawny e-mail, hasło min. 12 znaków i potwierdź zapoznanie się z polityką prywatności." }, { status: 400 });
   const result = await supabaseAuth("/signup", { method: "POST", body: JSON.stringify({ email, password, data: { first_name: firstName, last_name: lastName, privacy_policy_version: PRIVACY_POLICY_VERSION } }) }); const data = await result.json();
   if (!result.ok) return NextResponse.json({ error: "Nie udało się utworzyć konta. Jeśli ten adres był już użyty, spróbuj się zalogować lub odzyskać hasło." }, { status: 400 });
-  if (data.session?.access_token) { const profile = await supabaseAuth("/user", { headers: { Authorization: `Bearer ${data.session.access_token}` } }); const user = await profile.json(); if (!profile.ok || !(await linkAuthenticatedClient(user))) return NextResponse.json({ error: "Nie udało się bezpiecznie utworzyć profilu klienta." }, { status: 409 }); }
-  const response = NextResponse.json({ needsEmailConfirmation: !data.session });
-  if (data.session?.access_token) { response.cookies.set(CLIENT_ACCESS_COOKIE, data.session.access_token, clientCookieOptions); response.cookies.set(CLIENT_REFRESH_COOKIE, data.session.refresh_token, clientCookieOptions); }
+  const session = data.session ?? (data.access_token && data.refresh_token ? data : null);
+  if (session?.access_token) { const profile = await supabaseAuth("/user", { headers: { Authorization: `Bearer ${session.access_token}` } }); const user = await profile.json(); if (!profile.ok || !(await linkAuthenticatedClient(user))) return NextResponse.json({ error: "Nie udało się bezpiecznie utworzyć profilu klienta." }, { status: 409 }); }
+  const response = NextResponse.json({ needsEmailConfirmation: !session });
+  if (session?.access_token) { response.cookies.set(CLIENT_ACCESS_COOKIE, session.access_token, clientCookieOptions); response.cookies.set(CLIENT_REFRESH_COOKIE, session.refresh_token, clientCookieOptions); }
   return setRateLimitHeaders(response, limit);
 }

@@ -10,6 +10,12 @@ describe("request origin protection", () => {
     expect(isSameOrigin(new Request("https://coolinktattoo.pl/api/client/profile", { headers: { origin: "https://coolinktattoo.pl" } }))).toBe(true);
     expect(isSameOrigin(new Request("https://coolinktattoo.pl/api/client/profile", { headers: { origin: "https://attacker.test" } }))).toBe(false);
   });
+
+  it("uses the public forwarded origin behind a trusted proxy", () => {
+    const headers = { origin: "https://coolinktattoo.pl", "x-forwarded-host": "coolinktattoo.pl", "x-forwarded-proto": "https" };
+    expect(isSameOrigin(new Request("http://internal:3000/api/contact", { headers }))).toBe(true);
+    expect(isSameOrigin(new Request("http://internal:3000/api/contact", { headers: { ...headers, origin: "https://attacker.test" } }))).toBe(false);
+  });
 });
 
 describe("signed webhooks", () => {

@@ -10,7 +10,10 @@ export function requestIp(request: Request) {
 }
 
 export function isSameOrigin(request: Request) {
-  const expected = new URL(request.url).origin;
+  const requestUrl = new URL(request.url);
+  const protocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || requestUrl.protocol.replace(":", "");
+  const host = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || request.headers.get("host") || requestUrl.host;
+  const expected = `${protocol}://${host}`;
   const origin = request.headers.get("origin");
   if (origin) return origin === expected;
   const referer = request.headers.get("referer");

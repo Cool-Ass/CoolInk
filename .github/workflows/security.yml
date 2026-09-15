@@ -22,8 +22,8 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DATABASE_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
+          DIRECT_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3120
@@ -35,9 +35,9 @@ jobs:
         env:
           DRY_RUN_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
           DRY_RUN_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
-          DRY_RUN_DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
-          DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DRY_RUN_DIRECT_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
+          DATABASE_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
+          DIRECT_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
         run: |
           if [ -z "$DRY_RUN_SUPABASE_URL" ] || [ -z "$DRY_RUN_DIRECT_URL" ]; then
             echo "::warning::Pominięto test bazy: dodaj sekrety dedykowanego projektu testowego."
@@ -52,9 +52,9 @@ jobs:
           CI: "true"
           DRY_RUN_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
           DRY_RUN_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
-          DRY_RUN_DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
-          DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          DRY_RUN_DIRECT_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
+          DATABASE_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
+          DIRECT_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3120
