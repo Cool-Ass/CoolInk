@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AppButton from "@/components/ui/AppButton";
 import AppModal from "@/components/ui/AppModal";
@@ -24,6 +24,7 @@ export default function BookingRequestForm({
   onClose,
   tattooStyles = styles,
   consents = [],
+  intro,
 }: {
   startsAt: string;
   endsAt: string;
@@ -34,6 +35,7 @@ export default function BookingRequestForm({
   onClose: () => void;
   tattooStyles?: string[];
   consents?: BookingConsent[];
+  intro?: ReactNode;
 }) {
   const router = useRouter();
   const consultation = serviceType === "consultation";
@@ -126,6 +128,7 @@ export default function BookingRequestForm({
 
   return <AppModal title={consultation ? "Umów konsultację" : "Umów wizytę"} subtitle={consultation ? "Krótka rozmowa przed podjęciem decyzji o projekcie." : "Studio najpierw sprawdzi szczegóły i potwierdzi termin."} size="lg" onClose={onClose}>
     {done ? <div className="py-7 text-center"><p className="text-sm tracking-[.16em] text-ink-gold">{consultation ? "KONSULTACJA ZGŁOSZONA" : "PROŚBA O WIZYTĘ WYSŁANA"}</p><h2 className="mt-3 font-display text-3xl">Dziękujemy.</h2><p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-grey">{consultation ? "Studio potwierdzi termin konsultacji. Wszystkie informacje znajdziesz w swoim koncie." : "Studio odpowie po sprawdzeniu szczegółów oraz terminu."}</p>{completionWarning && <p role="alert" className="mx-auto mt-4 max-w-md border border-amber-400/40 bg-amber-400/10 p-3 text-left text-sm text-amber-200">{completionWarning}</p>}{createdProjectId && (inspirations.length === 0 || completionWarning) && <div className="mx-auto mt-5 max-w-md text-left"><p className="text-sm text-ink-grey">Zdjęcia możesz uzupełnić później:</p><InspirationUpload projectId={createdProjectId} /></div>}<AppButton className="mt-6" onClick={onClose}>PRZEJDŹ DO PROJEKTÓW</AppButton></div> : <form onSubmit={submit} className="space-y-5">
+      {intro && <div className="mb-5">{intro}</div>}
       <ol aria-label="Etapy rezerwacji" className="grid grid-cols-4 gap-1 text-center text-[9px] tracking-[.08em] text-ink-grey sm:text-[10px]">{["PROJEKT", "TERMIN", "ZGODY", "POTWIERDZENIE"].map((label, index) => { const number = index + 1; return <li key={label} aria-current={number === step ? "step" : undefined} className={`border-b pb-2 ${number === step ? "border-ink-gold text-ink-gold" : number < step ? "border-emerald-400 text-emerald-300" : "border-ink-white/20"}`}>{number} {label}</li>; })}</ol>
 
       {step === 1 && <div className="space-y-5">

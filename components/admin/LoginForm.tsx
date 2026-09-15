@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { imageSource } from "@/lib/imageSource";
 
-function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
+function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedNext = searchParams.get("next");
@@ -17,7 +15,6 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const logoSource = imageSource(logoUrl);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -42,33 +39,8 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink-black px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
-          <div className="relative h-16 w-48">
-            {logoSource ? (
-              <Image
-                src={logoSource}
-                alt="CoolInk Tattoo Studio — logo"
-                fill
-                priority
-                className="object-contain mix-blend-screen"
-                sizes="192px"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center font-display text-3xl tracking-[0.08em] text-ink-white" aria-label="CoolInk Tattoo Studio">
-                COOLINK
-              </div>
-            )}
-          </div>
-        </div>
-
         <div className="border border-ink-white/15 bg-ink-charcoal/60 p-8 backdrop-blur-sm">
-          <p className="mb-1 text-[13px] font-medium tracking-[0.3em] text-ink-gold">
-            PANEL ADMINISTRACYJNY
-          </p>
-          <h1 className="mb-6 font-display text-2xl text-ink-white">Zaloguj się</h1>
-
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
               EMAIL
@@ -125,17 +97,14 @@ function LoginFormInner({ logoUrl }: { logoUrl?: string | null }) {
             </button>
           </form>
         </div>
-
-        <p className="mt-6 text-center text-[12px] text-ink-grey/70">Dostęp wyłącznie dla zespołu CoolInk.</p>
       </div>
-    </div>
   );
 }
 
-export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
+export default function LoginForm() {
   return (
     <Suspense fallback={null}>
-      <LoginFormInner logoUrl={logoUrl} />
+      <LoginFormInner />
     </Suspense>
   );
 }

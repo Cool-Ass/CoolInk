@@ -8,14 +8,22 @@ export const SYSTEM_PAGE_SLUGS = {
   header: "system-header",
   footer: "system-footer",
   maintenance: "system-maintenance",
+  adminLogin: "system-admin-login",
+  clientLogin: "system-client-login",
+  bookingForm: "system-booking-form",
+  projectForm: "system-project-form",
 } as const;
 
 export type SystemPageKind = keyof typeof SYSTEM_PAGE_SLUGS;
 
-const META: Record<SystemPageKind, { title: string; legacyType: ModuleType }> = {
+const META: Record<SystemPageKind, { title: string; legacyType?: ModuleType }> = {
   header: { title: "Nagłówek strony", legacyType: "siteHeader" },
   footer: { title: "Stopka strony", legacyType: "siteFooter" },
   maintenance: { title: "Ekran trybu budowy", legacyType: "maintenance" },
+  adminLogin: { title: "Logowanie administratora" },
+  clientLogin: { title: "Logowanie i rejestracja klienta" },
+  bookingForm: { title: "Formularz umawiania wizyty" },
+  projectForm: { title: "Formularz nowego projektu" },
 };
 
 export function isSystemPageSlug(slug: string) {
@@ -72,6 +80,42 @@ function builderSystemModules(kind: SystemPageKind, content: SiteContent, navLin
     ], { background: "charcoal", padding: "md", gap: 24, widths: [34, 42, 24], style: { contentWidth: "full", borderColor: "rgba(255,255,255,.1)", borderWidth: 1, anchorId: "site-footer" } })];
   }
 
+  if (kind === "adminLogin") {
+    return [section([[
+      widget("image", { image: content.brand.logoUrl, alt: content.brand.logoAlt, caption: "", aspect: "wide", fit: "contain", maxWidth: 190, alignment: "left" }),
+      widget("text", { text: "PANEL ADMINISTRACYJNY", alignment: "left" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 2.4, textTransform: "uppercase" }),
+      widget("heading", { text: "Zaloguj się", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 54 }),
+      widget("text", { text: "Bezpieczny dostęp wyłącznie dla zespołu CoolInk.", alignment: "left" }, { color: content.theme.muted, fontSize: 15, lineHeight: 1.6 }),
+    ]], { background: "transparent", padding: "md", style: { contentWidth: "full", anchorId: "admin-login-intro" } })];
+  }
+
+  if (kind === "clientLogin") {
+    return [section([[
+      widget("image", { image: content.brand.logoUrl, alt: content.brand.logoAlt, caption: "", aspect: "wide", fit: "contain", maxWidth: 190, alignment: "left" }),
+      widget("text", { text: "KONTO KLIENTA", alignment: "left" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 2.4, textTransform: "uppercase" }),
+      widget("heading", { text: "STREFA KLIENTA", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 64, textTransform: "uppercase" }),
+      widget("text", { text: "Sprawdź wolne terminy, śledź projekty, rozmawiaj ze studiem i przesyłaj inspiracje w jednym miejscu.", alignment: "left" }, { color: content.theme.muted, fontSize: 17, lineHeight: 1.65 }),
+      widget("button", { label: "SPRAWDŹ KALENDARZ", href: "/#kalendarz", alignment: "left", style: "outline", width: "auto" }, { fontSize: 11, letterSpacing: 1.2 }),
+    ]], { background: "transparent", padding: "md", style: { contentWidth: "full", anchorId: "client-login-intro" } })];
+  }
+
+  if (kind === "bookingForm") {
+    return [section([[
+      widget("text", { text: "REZERWACJA", alignment: "left" }, { color: content.theme.accent, fontSize: 10, letterSpacing: 2.2, textTransform: "uppercase" }),
+      widget("heading", { text: "Opowiedz o planowanej wizycie", level: "h2", alignment: "left" }, { color: content.theme.text, fontSize: 30 }),
+      widget("text", { text: "Przejdź przez projekt, termin, zgody i potwierdzenie. Studio sprawdzi dane przed ostatecznym zatwierdzeniem wizyty.", alignment: "left" }, { color: content.theme.muted, fontSize: 13, lineHeight: 1.55 }),
+    ]], { background: "charcoal", padding: "sm", style: { contentWidth: "full", surface: "outline", anchorId: "booking-form-intro" } })];
+  }
+
+  if (kind === "projectForm") {
+    return [section([[
+      widget("text", { text: "NOWY PROJEKT", alignment: "left" }, { color: content.theme.accent, fontSize: 11, letterSpacing: 2.2, textTransform: "uppercase" }),
+      widget("heading", { text: "Opowiedz mi o swoim tatuażu.", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 58 }),
+      widget("text", { text: "To zajmie kilka minut. Zgłoszenie trafi bezpośrednio do panelu studia.", alignment: "left" }, { color: content.theme.muted, fontSize: 16, lineHeight: 1.65 }),
+      widget("button", { label: "WRÓĆ DO KONTA", href: "/app/portal", alignment: "left", style: "outline", width: "auto" }, { fontSize: 11, letterSpacing: 1.2 }),
+    ]], { background: "transparent", padding: "md", style: { contentWidth: "full", anchorId: "project-form-intro" } })];
+  }
+
   const source = withDefaults("maintenance", legacy?.data ?? content.maintenance);
   return [section([[
     widget("text", { text: `${source.brandLabel}  /  ${source.statusLabel}`, alignment: "center" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 3, textTransform: "uppercase" }),
@@ -84,9 +128,11 @@ function builderSystemModules(kind: SystemPageKind, content: SiteContent, navLin
 }
 
 function migrateLegacy(kind: SystemPageKind, modules: Module[], content: SiteContent, navLinks: NavLink[]) {
+  const legacyType = META[kind].legacyType;
+  if (!legacyType) return { changed: false, modules };
   let changed = false;
   const migrated = modules.flatMap((module) => {
-    if (module.type !== META[kind].legacyType) return [module];
+    if (module.type !== legacyType) return [module];
     changed = true;
     return builderSystemModules(kind, content, navLinks, module);
   });

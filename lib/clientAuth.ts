@@ -44,9 +44,21 @@ export async function linkAuthenticatedClient(user: SupabaseUser) {
   const lastName = String(meta.last_name ?? fullName.slice(1).join(" ") ?? "").trim().slice(0, 80);
   const privacyAccepted = Number(meta.privacy_policy_version) === PRIVACY_POLICY_VERSION;
   return prisma.$transaction(async (tx) => {
+    const registeredNow = !existing?.supabaseUserId;
     const client = existing
       ? await tx.client.update({ where: { id: existing.id }, data: { supabaseUserId: user.id, firstName: firstName || existing.firstName, lastName: lastName || existing.lastName } })
       : await tx.client.create({ data: { email, supabaseUserId: user.id, firstName, lastName } });
+    if (registeredNow) {
+      const displayName = [client.firstName, client.lastName].filter(Boolean).join(" ") || client.email;
+      await tx.contactMessage.create({
+        data: {
+          name: displayName,
+          email: client.email,
+          subject: "Nowe konto klienta",
+          message: `${displayName} (${client.email}) zarejestrował(a) nowe konto klienta.`,
+        },
+      });
+    }
     if (privacyAccepted) {
       const document = await tx.studioDocument.upsert({
         where: { slug: PRIVACY_POLICY_SLUG },

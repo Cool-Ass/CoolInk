@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import CalendarMonthGrid, { calendarEntryClassName } from "@/components/calendar/CalendarMonthGrid";
 import { CALENDAR_AVAILABLE_COLOR, CALENDAR_UNAVAILABLE_COLOR, calendarAvailabilityEntries, isConsultationSlot, localDateKey, resolveAvailableRanges, resolveCalendarDayAppearance } from "@/lib/calendarHub";
@@ -86,6 +86,7 @@ interface Props {
   rescheduleAppointmentId?: string;
   rescheduleServiceType?: "tattoo" | "consultation";
   consents?: BookingConsent[];
+  formIntro?: ReactNode;
 }
 
 export default function ClientBookingCalendar({
@@ -107,6 +108,7 @@ export default function ClientBookingCalendar({
   rescheduleAppointmentId,
   rescheduleServiceType,
   consents = [],
+  formIntro,
 }: Props) {
   const router = useRouter();
   const today = dayStart(new Date());
@@ -270,6 +272,6 @@ export default function ClientBookingCalendar({
     </div>
 
     {mode === "client" && dayDetailsOpen && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle={ranges.length > 0 ? "Wybierz dostępny termin lub zobacz szczegóły wydarzenia." : "Szczegóły wydarzenia."} size={selectedEvents.some((item) => item.imageUrls?.length) ? "lg" : "sm"} onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
-    {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+    {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
   </>;
 }

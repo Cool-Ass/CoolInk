@@ -48,8 +48,8 @@ export default async function PagesListPage() {
       <MaintenanceModeCard initialEnabled={maintenanceEnabled} homepageId={homepage.id} />
 
       <section>
-        <div className="mb-3"><p className="text-[10px] tracking-[.18em] text-ink-gold">ELEMENTY GLOBALNE</p><h2 className="mt-1 font-display text-2xl">Edytuj bezpośrednio w builderze</h2><p className="mt-1 text-xs text-ink-grey">Nagłówek, stopka i ekran budowy mają własny podgląd, wersję roboczą i publikację.</p></div>
-        <div className="grid gap-3 md:grid-cols-3">{systemPages.map((page) => <Link key={page.id} href={`/admin/pages/${page.id}`} className="border border-ink-white/10 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><div className="flex items-center justify-between gap-3"><p className="font-display text-xl">{page.title}</p><span className="text-ink-gold">EDYTUJ →</span></div><p className="mt-2 text-[10px] tracking-[.1em] text-ink-grey">GLOBALNY · {page.status === "published" ? "OPUBLIKOWANY" : "WERSJA ROBOCZA"}</p></Link>)}</div>
+        <div className="mb-3"><p className="text-[10px] tracking-[.18em] text-ink-gold">EKRANY SYSTEMOWE</p><h2 className="mt-1 font-display text-2xl">Edytuj bezpośrednio w builderze</h2><p className="mt-1 text-xs text-ink-grey">Treści i oprawę ekranów możesz zmieniać wizualnie. Własny HTML i CSS działa w bezpiecznej, odizolowanej ramce; pola logowania i wysyłania danych pozostają chronione.</p></div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{systemPages.map((page) => <Link key={page.id} href={`/admin/pages/${page.id}`} className="border border-ink-white/10 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><div className="flex items-center justify-between gap-3"><p className="font-display text-xl">{page.title}</p><span className="text-ink-gold">EDYTUJ →</span></div><p className="mt-2 text-[10px] tracking-[.1em] text-ink-grey">SYSTEMOWY · {page.status === "published" ? "OPUBLIKOWANY" : "WERSJA ROBOCZA"}</p></Link>)}</div>
       </section>
 
       {pages.length === 0 ? (
