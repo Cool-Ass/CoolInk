@@ -17,6 +17,8 @@ import type { PublicCalendarData } from "@/lib/publicCalendar";
 import GoogleReviews from "@/components/GoogleReviews";
 import BuilderResizeHandles from "@/components/admin/builder/BuilderResizeHandles";
 import BuilderPublicFrame from "@/components/builder/BuilderPublicFrame";
+import ClientAccountForm from "@/components/client/ClientAccountForm";
+import LoginForm from "@/components/admin/LoginForm";
 
 interface BuilderWidgetProps {
   module: Module;
@@ -37,6 +39,7 @@ interface BuilderWidgetProps {
   editorDevice?: "desktop" | "tablet" | "mobile";
   portfolioWorks?: PortfolioWork[];
   calendar?: PublicCalendarData;
+  clientAuth?: { oauthError?: string; returnTo?: string; bookingIntent?: boolean };
 }
 
 function NestedRuntimeFrame({ editable, builderStyle, children, className = "", style, id, ...editorProps }: ComponentPropsWithoutRef<"div"> & { editable: boolean; builderStyle?: NonNullable<ColumnWidget["style"]> }) {
@@ -58,7 +61,46 @@ function ResponsiveVideoEmbed({ url, title, autoplay, muted, loop, controls, pre
   return <iframe className={`h-full w-full ${preview ? "pointer-events-none" : ""}`} src={src} title={title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />;
 }
 
-export default function BuilderWidgets({ module, showEmpty = false, editable = false, editorDevice, selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn, portfolioWorks = [], calendar }: BuilderWidgetProps) {
+function BeforeAfterWidget({ beforeImage, afterImage, beforeLabel, afterLabel, initialPosition, aspect, editing }: { beforeImage: string; afterImage: string; beforeLabel: string; afterLabel: string; initialPosition: number; aspect: "landscape" | "square" | "portrait"; editing: boolean }) {
+  const [position, setPosition] = useState(Math.min(95, Math.max(5, initialPosition)));
+  const before = imageSource(beforeImage);
+  const after = imageSource(afterImage);
+  const ratio = aspect === "portrait" ? "aspect-[4/5]" : aspect === "square" ? "aspect-square" : "aspect-video";
+  if (!before && !after && !editing) return null;
+  const layer = (source: string | null, label: string) => source
+    ? <Image src={source} alt={label} fill className="object-cover" sizes="100vw" />
+    : <div className="flex h-full w-full items-center justify-center bg-ink-charcoal text-xs text-ink-grey">Wybierz zdjęcie „{label}”</div>;
+  return <figure className="px-2 py-2"><div className={`relative overflow-hidden border border-ink-white/15 ${ratio}`}>
+    {layer(after, afterLabel)}
+    <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>{layer(before, beforeLabel)}</div>
+    <span className="absolute left-3 top-3 bg-black/70 px-2 py-1 text-[9px] tracking-[.12em] text-white">{beforeLabel}</span>
+    <span className="absolute right-3 top-3 bg-black/70 px-2 py-1 text-[9px] tracking-[.12em] text-white">{afterLabel}</span>
+    <span aria-hidden className="pointer-events-none absolute inset-y-0 w-px bg-white shadow-[0_0_0_1px_rgba(0,0,0,.35)]" style={{ left: `${position}%` }}><span className="absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-black/65 text-white">↔</span></span>
+    <input disabled={editing} aria-label="Porównaj zdjęcia przed i po" type="range" min={5} max={95} value={position} onChange={(event) => setPosition(Number(event.target.value))} className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0 disabled:cursor-default" />
+  </div></figure>;
+}
+
+function CountdownWidget({ targetDate, expiredText }: { targetDate: string; expiredText: string }) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    const update = () => setRemaining(Math.max(0, new Date(targetDate).getTime() - Date.now()));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [targetDate]);
+  if (!targetDate) return <p className="mt-5 text-lg text-ink-gold">Ustaw datę odliczania</p>;
+  if (remaining === null) return <div className="mt-6 h-20 max-w-xl animate-pulse bg-ink-charcoal" aria-label="Ładowanie odliczania" />;
+  if (remaining <= 0) return <p className="mt-5 text-lg text-ink-gold">{expiredText}</p>;
+  const units = [
+    ["DNI", Math.floor(remaining / 86_400_000)],
+    ["GODZ.", Math.floor((remaining / 3_600_000) % 24)],
+    ["MIN.", Math.floor((remaining / 60_000) % 60)],
+    ["SEK.", Math.floor((remaining / 1000) % 60)],
+  ] as const;
+  return <div className="mt-6 grid max-w-xl grid-cols-4 gap-2">{units.map(([label, value]) => <div key={label} className="border border-ink-white/15 bg-black/25 px-2 py-3 text-center"><strong className="block font-display text-3xl text-ink-white md:text-5xl">{String(value).padStart(2, "0")}</strong><span className="text-[9px] tracking-[.14em] text-ink-grey">{label}</span></div>)}</div>;
+}
+
+export default function BuilderWidgets({ module, showEmpty = false, editable = false, editorDevice, selectedWidgetId, selectedColumnIndex, selectedColumnOwnerId, onSelectWidget, onSelectColumn, onDeleteWidget, onDuplicateWidget, onDuplicateColumn, onDeleteColumn, onColumnsChange, onResizeWidget, onResizeColumn, portfolioWorks = [], calendar, clientAuth }: BuilderWidgetProps) {
   const widgetIdBase = useId().replace(/:/g, "");
   const widgetIdCounter = useRef(0);
   switch (module.type) {
@@ -100,6 +142,10 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
     }
     case "booking":
       return <BookingSection content={withDefaults("booking", module.data)} calendar={calendar} />;
+    case "clientAuthForm":
+      return <div className={`flex w-full flex-col items-center px-2 py-2 ${showEmpty ? "pointer-events-none" : ""}`}>{clientAuth?.bookingIntent && <div className="mb-4 w-full max-w-md border-l-2 border-ink-gold bg-ink-gold/5 px-4 py-3 text-sm leading-relaxed text-ink-grey">Wybrałeś termin. Po zalogowaniu wrócimy do jego rezerwacji.</div>}<ClientAccountForm oauthError={clientAuth?.oauthError} returnTo={clientAuth?.returnTo} preview={showEmpty} /></div>;
+    case "adminLoginForm":
+      return <div className={`flex w-full justify-center px-2 py-2 ${showEmpty ? "pointer-events-none" : ""}`}><LoginForm preview={showEmpty} /></div>;
     case "divider": {
       const d = withDefaults("divider", module.data);
       const source = imageSource(d.icon);
@@ -202,7 +248,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
                     {editable && <BuilderStyleLayers style={widget.style} />}
                     {selected && onResizeWidget && <BuilderResizeHandles style={widget.style} device={editorDevice} onResize={(style) => onResizeWidget(widget.id, style)} label={MODULE_LABELS[widget.type]} />}
                     {editable && <div className={`builder-editor-chrome pointer-events-auto absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab whitespace-nowrap px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span>{onDuplicateWidget && <button type="button" title="Duplikuj widget" aria-label={`Duplikuj: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDuplicateWidget(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Copy className="h-3 w-3" /></button>}<button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Trash2 className="h-3 w-3" /></button></div>}
-                    <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} editable={editable && widget.type === "innerSection"} editorDevice={editorDevice} selectedWidgetId={selectedWidgetId} selectedColumnIndex={selectedColumnIndex} selectedColumnOwnerId={selectedColumnOwnerId} onSelectWidget={onSelectWidget} onSelectColumn={onSelectColumn} onDeleteWidget={onDeleteWidget} onDuplicateWidget={onDuplicateWidget} onDuplicateColumn={onDuplicateColumn} onDeleteColumn={onDeleteColumn} onResizeWidget={onResizeWidget} onResizeColumn={onResizeColumn} onColumnsChange={widget.type === "innerSection" ? (nestedColumns) => { const next = columns.map((items) => items.map((current) => current.id === widget.id ? { ...current, data: { ...withDefaults("innerSection", current.data), columns: nestedColumns } } : current)); update(next); } : undefined} portfolioWorks={portfolioWorks} calendar={calendar} /></div>
+                    <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} editable={editable && widget.type === "innerSection"} editorDevice={editorDevice} selectedWidgetId={selectedWidgetId} selectedColumnIndex={selectedColumnIndex} selectedColumnOwnerId={selectedColumnOwnerId} onSelectWidget={onSelectWidget} onSelectColumn={onSelectColumn} onDeleteWidget={onDeleteWidget} onDuplicateWidget={onDuplicateWidget} onDuplicateColumn={onDuplicateColumn} onDeleteColumn={onDeleteColumn} onResizeWidget={onResizeWidget} onResizeColumn={onResizeColumn} onColumnsChange={widget.type === "innerSection" ? (nestedColumns) => { const next = columns.map((items) => items.map((current) => current.id === widget.id ? { ...current, data: { ...withDefaults("innerSection", current.data), columns: nestedColumns } } : current)); update(next); } : undefined} portfolioWorks={portfolioWorks} calendar={calendar} clientAuth={clientAuth} /></div>
                   </NestedRuntimeFrame>;
                 }) : editable ? <div className="flex min-h-24 items-center justify-center p-4 text-center text-[10px] leading-relaxed text-ink-grey">Przeciągnij widget z lewego panelu tutaj</div> : null}
               </div>
@@ -248,6 +294,14 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const styles = { charcoal: "bg-ink-charcoal text-ink-white", gold: "bg-ink-gold text-ink-black", outline: "border border-ink-gold text-ink-white" };
       const muted = d.style === "gold" ? "text-ink-black/70" : "text-ink-grey";
       return <section className={`mx-4 my-8 px-4 py-8 sm:mx-6 sm:my-10 sm:px-6 sm:py-10 md:mx-12 md:px-10 ${styles[d.style]}`}><p className={`break-words text-[11px] tracking-[0.16em] ${d.style === "gold" ? "text-ink-black/70" : "text-ink-gold"}`}>{d.eyebrow}</p><h2 className="mt-3 break-words font-display text-3xl">{d.title}</h2><p className={`mt-3 max-w-2xl whitespace-pre-line break-words leading-relaxed ${muted}`}>{d.body}</p>{d.buttonLabel && <a href={safeHref(d.href)} onClick={showEmpty ? (event) => event.preventDefault() : undefined} className={`mt-6 inline-flex min-h-11 max-w-full items-center break-words border px-5 py-3 text-sm tracking-[0.08em] ${d.style === "gold" ? "border-ink-black text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.buttonLabel}</a>}</section>;
+    }
+    case "beforeAfter": {
+      const d = withDefaults("beforeAfter", module.data);
+      return <BeforeAfterWidget beforeImage={d.beforeImage} afterImage={d.afterImage} beforeLabel={d.beforeLabel} afterLabel={d.afterLabel} initialPosition={d.position} aspect={d.aspect} editing={showEmpty} />;
+    }
+    case "countdown": {
+      const d = withDefaults("countdown", module.data);
+      return <section className="px-4 py-10 sm:px-6 md:px-12"><p className="text-[10px] tracking-[.18em] text-ink-gold">{d.eyebrow}</p><h2 className="mt-2 font-display text-4xl text-ink-white md:text-6xl">{d.title}</h2><CountdownWidget targetDate={d.targetDate} expiredText={d.expiredText} />{d.buttonLabel && <a href={safeHref(d.href)} onClick={showEmpty ? (event) => event.preventDefault() : undefined} className="mt-6 inline-flex min-h-11 items-center border border-ink-gold px-5 py-3 text-xs tracking-[.1em] text-ink-gold">{d.buttonLabel}</a>}</section>;
     }
     case "customCode": {
       const d = withDefaults("customCode", module.data);

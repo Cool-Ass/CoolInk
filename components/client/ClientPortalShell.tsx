@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import ClientHeaderUtilities from "@/components/client/ClientHeaderUtilities";
 import ClientLogoutButton from "@/components/client/ClientLogoutButton";
+import { imageSource } from "@/lib/imageSource";
 
 const links = [
   { href: "/app/portal", label: "Start", icon: Home, exact: true },
@@ -25,15 +26,17 @@ type Props = {
   unreadNotifications: number;
   messages: { id: string; projectId: string; project: string; body: string; createdAt: string; unread: boolean }[];
   notifications: { id: string; title: string; body: string; href: string | null; createdAt: string; unread: boolean }[];
+  logoUrl?: string;
   children: ReactNode;
 };
 
-export default function ClientPortalShell({ firstName, unreadMessages, unreadNotifications, messages, notifications, children }: Props) {
+export default function ClientPortalShell({ firstName, unreadMessages, unreadNotifications, messages, notifications, logoUrl, children }: Props) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
   const active = (href: string, exact?: boolean) => exact ? pathname === href : pathname.startsWith(href);
-  const logo = logoFailed ? <span className="font-display text-base tracking-[.08em] text-ink-white">COOLINK</span> : <Image src="/images/logo-white.jpg" alt="CoolInk Tattoo Studio" width={112} height={34} priority onError={() => setLogoFailed(true)} className="h-full w-full object-contain object-left mix-blend-screen" />;
+  const logoSource = imageSource(logoUrl) ?? "/images/logo-white.jpg";
+  const logo = logoFailed ? <span className="font-display text-base tracking-[.08em] text-ink-white">COOLINK</span> : <Image src={logoSource} alt="CoolInk Tattoo Studio" width={112} height={34} priority onError={() => setLogoFailed(true)} className="h-full w-full object-contain object-left" />;
 
   return <main className="client-shell flex min-h-screen bg-ink-black text-ink-white">
     <aside className="studio-sidebar">

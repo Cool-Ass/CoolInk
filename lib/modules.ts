@@ -31,6 +31,10 @@ export type ModuleType =
   | "googleReviews"
   | "iconList"
   | "callout"
+  | "beforeAfter"
+  | "countdown"
+  | "clientAuthForm"
+  | "adminLoginForm"
   | "customCode";
 
 export interface ModuleBase {
@@ -435,6 +439,10 @@ export type ColumnWidgetType =
   | "googleReviews"
   | "iconList"
   | "callout"
+  | "beforeAfter"
+  | "countdown"
+  | "clientAuthForm"
+  | "adminLoginForm"
   | "customCode";
 export interface ColumnWidget { id: string; type: ColumnWidgetType; data: Record<string, unknown>; style?: ModuleStyle; }
 export interface ColumnsModuleData extends Record<string, unknown> {
@@ -455,6 +463,8 @@ export interface QuoteModuleData { quote: string; author: string; role: string; 
 export interface GoogleReviewsModuleData { eyebrow: string; heading: string; body: string; buttonLabel: string; limit: number; layout: "cards" | "list"; }
 export interface IconListModuleData { title: string; items: string[]; style: "check" | "dot" | "arrow"; layout: "list" | "cards" | "steps"; columns: "one" | "two" | "three"; }
 export interface CalloutModuleData { eyebrow: string; title: string; body: string; buttonLabel: string; href: string; style: "charcoal" | "gold" | "outline"; }
+export interface BeforeAfterModuleData { beforeImage: string; afterImage: string; beforeLabel: string; afterLabel: string; position: number; aspect: "landscape" | "square" | "portrait"; }
+export interface CountdownModuleData { eyebrow: string; title: string; targetDate: string; expiredText: string; buttonLabel: string; href: string; }
 export interface CustomCodeModuleData { title: string; html: string; css: string; height: number; backgroundColor: string; }
 
 export type ModuleDataFor<T extends ModuleType> = T extends "hero"
@@ -511,6 +521,12 @@ export type ModuleDataFor<T extends ModuleType> = T extends "hero"
   ? IconListModuleData
   : T extends "callout"
   ? CalloutModuleData
+  : T extends "beforeAfter"
+  ? BeforeAfterModuleData
+  : T extends "countdown"
+  ? CountdownModuleData
+  : T extends "clientAuthForm" | "adminLoginForm"
+  ? Record<string, unknown>
   : T extends "customCode"
   ? CustomCodeModuleData
   : T extends "siteHeader"
@@ -562,6 +578,10 @@ export const MODULE_LABELS: Record<ModuleType, string> = {
   googleReviews: "Opinie Google",
   iconList: "Lista korzyści",
   callout: "Wyróżniony komunikat",
+  beforeAfter: "Przed i po",
+  countdown: "Odliczanie",
+  clientAuthForm: "Logowanie / rejestracja klienta",
+  adminLoginForm: "Logowanie administratora",
   customCode: "Własny HTML + CSS",
 };
 
@@ -597,11 +617,15 @@ export const MODULE_DESCRIPTIONS: Record<ModuleType, string> = {
   googleReviews: "Aktualna ocena i najtrafniejsze opinie z profilu Google Maps.",
   iconList: "Lista zalet, informacji lub kolejnych kroków.",
   callout: "Wyróżniona treść z opcjonalnym przyciskiem.",
+  beforeAfter: "Interaktywne porównanie dwóch zdjęć przesuwanym suwakiem.",
+  countdown: "Odliczanie do wydarzenia, zapisów lub premiery.",
+  clientAuthForm: "Bezpieczny formularz konta klienta ustawiany w dowolnej kolumnie.",
+  adminLoginForm: "Bezpieczny formularz logowania zespołu ustawiany w dowolnej kolumnie.",
   customCode: "Zaawansowany, izolowany blok z własnym kodem HTML i CSS.",
 };
 
 export const MODULE_CATEGORIES: Record<ModuleType, "widgets" | "templates"> = {
-  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", innerSection: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", googleReviews: "widgets", iconList: "widgets", callout: "widgets", customCode: "widgets",
+  heading: "widgets", text: "widgets", image: "widgets", button: "widgets", navigation: "widgets", divider: "widgets", gallery: "widgets", columns: "widgets", innerSection: "widgets", spacer: "widgets", faq: "widgets", video: "widgets", map: "widgets", quote: "widgets", googleReviews: "widgets", iconList: "widgets", callout: "widgets", beforeAfter: "widgets", countdown: "widgets", clientAuthForm: "widgets", adminLoginForm: "widgets", customCode: "widgets",
   siteHeader: "templates", siteFooter: "templates", maintenance: "templates", hero: "templates", about: "templates", stats: "templates", ctaBar: "templates", portfolio: "templates", studio: "templates", contact: "templates", booking: "templates", textSection: "templates", imageText: "templates",
 };
 
@@ -615,6 +639,10 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
   "columns",
   "innerSection",
   "callout",
+  "beforeAfter",
+  "countdown",
+  "clientAuthForm",
+  "adminLoginForm",
   "customCode",
   "iconList",
   "faq",
@@ -641,7 +669,7 @@ export const MODULE_TYPE_ORDER: ModuleType[] = [
 
 export const COLUMN_WIDGET_TYPES: ColumnWidgetType[] = [
   "heading", "text", "image", "button", "navigation", "portfolio", "booking", "gallery", "callout", "iconList",
-  "faq", "quote", "googleReviews", "video", "map", "divider", "spacer", "customCode", "innerSection",
+  "faq", "quote", "googleReviews", "video", "map", "beforeAfter", "countdown", "clientAuthForm", "adminLoginForm", "divider", "spacer", "customCode", "innerSection",
 ];
 
 export function isColumnWidgetType(type: string): type is ColumnWidgetType {
@@ -891,6 +919,13 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
       return { title: "Dlaczego warto", items: ["Pierwsza korzyść", "Druga korzyść", "Trzecia korzyść"], style: "check", layout: "list", columns: "one" } satisfies IconListModuleData;
     case "callout":
       return { eyebrow: "WYRÓŻNIONA INFORMACJA", title: "Przyciągnij uwagę odbiorcy", body: "Dodaj krótki opis tego, co jest dla klienta najważniejsze.", buttonLabel: "Dowiedz się więcej", href: "#", style: "charcoal" } satisfies CalloutModuleData;
+    case "beforeAfter":
+      return { beforeImage: "", afterImage: "", beforeLabel: "PRZED", afterLabel: "PO", position: 50, aspect: "landscape" } satisfies BeforeAfterModuleData;
+    case "countdown":
+      return { eyebrow: "NAJBLIŻSZE WYDARZENIE", title: "Start już wkrótce", targetDate: "", expiredText: "Wydarzenie już trwa", buttonLabel: "ZOBACZ SZCZEGÓŁY", href: "#" } satisfies CountdownModuleData;
+    case "clientAuthForm":
+    case "adminLoginForm":
+      return {};
     case "customCode":
       return {
         title: "Własna sekcja",

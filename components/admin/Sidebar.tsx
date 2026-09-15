@@ -58,7 +58,7 @@ export default function Sidebar({
     <aside className="studio-sidebar">
       <div className="studio-sidebar-logo gap-2">
         <div className="relative h-8 w-24">
-          {logoSource ? <Image src={logoSource} alt="CoolInk" fill className="object-contain mix-blend-screen" sizes="112px" /> : <span className="flex h-full items-center font-display text-base tracking-[0.08em] text-ink-white">COOLINK</span>}
+          {logoSource ? <Image src={logoSource} alt="CoolInk" fill className="object-contain" sizes="112px" /> : <span className="flex h-full items-center font-display text-base tracking-[0.08em] text-ink-white">COOLINK</span>}
         </div>
       </div>
 

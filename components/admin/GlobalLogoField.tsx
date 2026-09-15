@@ -29,7 +29,7 @@ export default function GlobalLogoField({ initialLogoUrl }: { initialLogoUrl: st
 
   return (
     <div className="flex flex-col gap-5">
-      <ImageUploadField label="Logo (nagłówek, stopka, panel logowania)" value={logoUrl} onChange={setLogoUrl} />
+      <ImageUploadField label="Logo (nagłówek, stopka, panele logowania)" value={logoUrl} onChange={setLogoUrl} previewFit="contain" transparentPreview helpText="Najlepszy efekt: PNG, WebP lub SVG z przezroczystym tłem. Przezroczystość zostanie zachowana." />
       <button
         onClick={handleSave}
         disabled={saving}

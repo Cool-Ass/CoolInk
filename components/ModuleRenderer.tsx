@@ -44,6 +44,7 @@ export interface ModuleRendererGlobals {
   contact?: { address: string; phone: string; email: string; hours: string };
   calendar?: PublicCalendarData;
   theme?: SiteContent["theme"];
+  clientAuth?: { oauthError?: string; returnTo?: string; bookingIntent?: boolean };
 }
 
 function moduleLayoutClasses(style?: ModuleStyle, editable = false) {
@@ -178,11 +179,11 @@ function renderModule(mod: Module, portfolioWorks: PortfolioWork[], globals?: Mo
     }
     case "spacer":
       return <Spacer data={withDefaults("spacer", mod.data)} />;
-    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "innerSection": case "faq": case "video": case "map": case "quote": case "googleReviews": case "iconList": case "callout": case "customCode": {
+    case "heading": case "text": case "image": case "button": case "navigation": case "divider": case "gallery": case "columns": case "innerSection": case "faq": case "video": case "map": case "quote": case "googleReviews": case "iconList": case "callout": case "beforeAfter": case "countdown": case "clientAuthForm": case "adminLoginForm": case "customCode": {
       const data = { ...mod.data };
       if (mod.type === "button" || mod.type === "callout") data.href = safeHref(data.href);
       if (mod.type === "map") data.embedUrl = safeMapEmbedUrl(data.embedUrl);
-      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} editorDevice={nested?.editorDevice} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} selectedColumnOwnerId={nested?.selectedColumnOwnerId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex, ownerId) => nested?.onSelectColumn?.(mod.id, columnIndex, ownerId)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex, ownerId) => nested?.onDuplicateColumn?.(mod.id, columnIndex, ownerId)} onDeleteColumn={(columnIndex, ownerId) => nested?.onDeleteColumn?.(mod.id, columnIndex, ownerId)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} onResizeWidget={(widgetId, style) => nested?.onResizeWidget?.(mod.id, widgetId, style)} onResizeColumn={(columnIndex, ownerId, style) => nested?.onResizeColumn?.(mod.id, columnIndex, ownerId, style)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} />;
+      return <BuilderWidgets module={{ ...mod, data }} showEmpty={editable} editable={editable} editorDevice={nested?.editorDevice} selectedWidgetId={nested?.selectedWidgetId} selectedColumnIndex={nested?.selectedColumnIndex} selectedColumnOwnerId={nested?.selectedColumnOwnerId} onSelectWidget={(widgetId, columnIndex) => nested?.onSelectWidget?.(mod.id, widgetId, columnIndex)} onSelectColumn={(columnIndex, ownerId) => nested?.onSelectColumn?.(mod.id, columnIndex, ownerId)} onDeleteWidget={(widgetId, columnIndex) => nested?.onDeleteWidget?.(mod.id, widgetId, columnIndex)} onDuplicateWidget={(widgetId, columnIndex) => nested?.onDuplicateWidget?.(mod.id, widgetId, columnIndex)} onDuplicateColumn={(columnIndex, ownerId) => nested?.onDuplicateColumn?.(mod.id, columnIndex, ownerId)} onDeleteColumn={(columnIndex, ownerId) => nested?.onDeleteColumn?.(mod.id, columnIndex, ownerId)} onColumnsChange={(columns) => nested?.onColumnsChange?.(mod.id, columns)} onResizeWidget={(widgetId, style) => nested?.onResizeWidget?.(mod.id, widgetId, style)} onResizeColumn={(columnIndex, ownerId, style) => nested?.onResizeColumn?.(mod.id, columnIndex, ownerId, style)} portfolioWorks={portfolioWorks} calendar={globals?.calendar} clientAuth={globals?.clientAuth} />;
     }
     default:
       return null;

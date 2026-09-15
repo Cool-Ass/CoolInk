@@ -24,10 +24,14 @@ import {
   Quote,
   Rows3,
   Search,
+  SplitSquareHorizontal,
   Sparkles,
   Star,
   SquareCode,
   StretchHorizontal,
+  Timer,
+  LogIn,
+  UserPlus,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -71,6 +75,10 @@ const ICONS: Record<ModuleType, LucideIcon> = {
   googleReviews: Star,
   iconList: ListChecks,
   callout: Megaphone,
+  beforeAfter: SplitSquareHorizontal,
+  countdown: Timer,
+  clientAuthForm: UserPlus,
+  adminLoginForm: LogIn,
   customCode: SquareCode,
 };
 
@@ -124,7 +132,7 @@ export default function AddModulePicker({
               <p className="mb-2 px-1 text-[9px] font-semibold tracking-[0.16em] text-ink-gold/90">
                 {category === "widgets" ? "WIDGETY" : "GOTOWE SEKCJE"}
               </p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-3 gap-1">
                 {types.map((type) => {
                   const Icon = ICONS[type];
                   return (
@@ -138,7 +146,7 @@ export default function AddModulePicker({
                         event.dataTransfer.effectAllowed = "copy";
                       }}
                       onClick={() => onAdd(type)}
-                      className="group flex min-h-20 cursor-grab flex-col items-center justify-center gap-2 border border-white/15 bg-[#202226] px-2 py-3 text-center text-white/75 transition hover:border-ink-gold hover:bg-ink-gold/5 hover:text-white active:cursor-grabbing"
+                      className="group flex min-h-16 cursor-grab flex-col items-center justify-center gap-1.5 border border-white/10 bg-[#202226] px-1.5 py-2 text-center text-white/70 transition hover:border-ink-gold/70 hover:bg-ink-gold/5 hover:text-white active:cursor-grabbing"
                     >
                       <Icon className="h-5 w-5 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" />
                       <span className="text-[10px] leading-tight">{MODULE_LABELS[type]}</span>

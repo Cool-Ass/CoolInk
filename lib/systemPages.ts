@@ -81,22 +81,28 @@ function builderSystemModules(kind: SystemPageKind, content: SiteContent, navLin
   }
 
   if (kind === "adminLogin") {
-    return [section([[
-      widget("image", { image: content.brand.logoUrl, alt: content.brand.logoAlt, caption: "", aspect: "wide", fit: "contain", maxWidth: 190, alignment: "left" }),
-      widget("text", { text: "PANEL ADMINISTRACYJNY", alignment: "left" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 2.4, textTransform: "uppercase" }),
-      widget("heading", { text: "Zaloguj się", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 54 }),
-      widget("text", { text: "Bezpieczny dostęp wyłącznie dla zespołu CoolInk.", alignment: "left" }, { color: content.theme.muted, fontSize: 15, lineHeight: 1.6 }),
-    ]], { background: "transparent", padding: "md", style: { contentWidth: "full", anchorId: "admin-login-intro" } })];
+    return [section([
+      [
+        widget("image", { image: content.brand.logoUrl, alt: content.brand.logoAlt, caption: "", aspect: "wide", fit: "contain", maxWidth: 190, alignment: "left" }),
+        widget("text", { text: "PANEL ADMINISTRACYJNY", alignment: "left" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 2.4, textTransform: "uppercase" }),
+        widget("heading", { text: "Zaloguj się", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 54 }),
+        widget("text", { text: "Bezpieczny dostęp wyłącznie dla zespołu CoolInk.", alignment: "left" }, { color: content.theme.muted, fontSize: 15, lineHeight: 1.6 }),
+      ],
+      [widget("adminLoginForm", {})],
+    ], { background: "transparent", padding: "md", gap: 36, widths: [56, 44], style: { contentWidth: "full", anchorId: "admin-login" } })];
   }
 
   if (kind === "clientLogin") {
-    return [section([[
-      widget("image", { image: content.brand.logoUrl, alt: content.brand.logoAlt, caption: "", aspect: "wide", fit: "contain", maxWidth: 190, alignment: "left" }),
-      widget("text", { text: "KONTO KLIENTA", alignment: "left" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 2.4, textTransform: "uppercase" }),
-      widget("heading", { text: "STREFA KLIENTA", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 64, textTransform: "uppercase" }),
-      widget("text", { text: "Sprawdź wolne terminy, śledź projekty, rozmawiaj ze studiem i przesyłaj inspiracje w jednym miejscu.", alignment: "left" }, { color: content.theme.muted, fontSize: 17, lineHeight: 1.65 }),
-      widget("button", { label: "SPRAWDŹ KALENDARZ", href: "/#kalendarz", alignment: "left", style: "outline", width: "auto" }, { fontSize: 11, letterSpacing: 1.2 }),
-    ]], { background: "transparent", padding: "md", style: { contentWidth: "full", anchorId: "client-login-intro" } })];
+    return [section([
+      [
+        widget("image", { image: content.brand.logoUrl, alt: content.brand.logoAlt, caption: "", aspect: "wide", fit: "contain", maxWidth: 190, alignment: "left" }),
+        widget("text", { text: "KONTO KLIENTA", alignment: "left" }, { color: content.theme.accent, fontSize: 12, letterSpacing: 2.4, textTransform: "uppercase" }),
+        widget("heading", { text: "STREFA KLIENTA", level: "h1", alignment: "left" }, { color: content.theme.text, fontSize: 64, textTransform: "uppercase" }),
+        widget("text", { text: "Sprawdź wolne terminy, śledź projekty, rozmawiaj ze studiem i przesyłaj inspiracje w jednym miejscu.", alignment: "left" }, { color: content.theme.muted, fontSize: 17, lineHeight: 1.65 }),
+        widget("button", { label: "SPRAWDŹ KALENDARZ", href: "/#kalendarz", alignment: "left", style: "outline", width: "auto" }, { fontSize: 11, letterSpacing: 1.2 }),
+      ],
+      [widget("clientAuthForm", {})],
+    ], { background: "transparent", padding: "md", gap: 36, widths: [54, 46], style: { contentWidth: "full", anchorId: "client-login" } })];
   }
 
   if (kind === "bookingForm") {
@@ -139,6 +145,35 @@ function migrateLegacy(kind: SystemPageKind, modules: Module[], content: SiteCon
   return { changed, modules: migrated };
 }
 
+function containsWidget(columns: ColumnWidget[][], type: ColumnWidgetType): boolean {
+  return columns.some((column) => column.some((item) => item.type === type || (item.type === "innerSection" && containsWidget(withDefaults("innerSection", item.data).columns, type))));
+}
+
+function ensureAuthFormWidget(kind: SystemPageKind, modules: Module[]) {
+  const type = kind === "clientLogin" ? "clientAuthForm" : kind === "adminLogin" ? "adminLoginForm" : null;
+  if (!type) return { changed: false, modules };
+  if (modules.some((module) => module.type === "columns" && containsWidget(withDefaults("columns", module.data).columns, type))) return { changed: false, modules };
+
+  let inserted = false;
+  const layouts = ["one", "two", "three", "four", "five", "six", "seven", "eight"] as const;
+  const next = modules.map((module) => {
+    if (inserted || module.type !== "columns") return module;
+    const data = withDefaults("columns", module.data);
+    const existingCount = data.columns.length;
+    if (existingCount >= 8) return module;
+    inserted = true;
+    const columns = [...data.columns, [widget(type, {})]];
+    const previousWidths = data.columnWidths?.length === existingCount ? data.columnWidths : Array(existingCount).fill(100 / Math.max(1, existingCount));
+    const formWidth = existingCount === 1 ? 44 : 32;
+    const total = previousWidths.reduce((sum, value) => sum + Math.max(1, Number(value) || 0), 0);
+    const columnWidths = [...previousWidths.map((value) => (Math.max(1, Number(value) || 0) / total) * (100 - formWidth)), formWidth];
+    return { ...module, data: { ...data, layout: layouts[columns.length - 1], columns, columnWidths, columnStyles: [...(data.columnStyles ?? []), {}], verticalAlign: "center" } };
+  });
+  return inserted
+    ? { changed: true, modules: next }
+    : { changed: true, modules: [...modules, section([[widget(type, {})]], { padding: "sm", style: { contentWidth: "normal" } })] };
+}
+
 export async function ensureSystemPages(content: SiteContent, navLinks: NavLink[]) {
   return Promise.all((Object.keys(SYSTEM_PAGE_SLUGS) as SystemPageKind[]).map(async (kind) => {
     const slug = SYSTEM_PAGE_SLUGS[kind];
@@ -148,8 +183,12 @@ export async function ensureSystemPages(content: SiteContent, navLinks: NavLink[
       return prisma.page.create({ data: { title: META[kind].title, slug, modules, publishedModules: modules, status: "published", isHomepage: false, showInNav: false, navOrder: 10_000 } });
     }
 
-    const draft = migrateLegacy(kind, parseModules(existing.modules), content, navLinks);
-    const published = existing.publishedModules ? migrateLegacy(kind, parseModules(existing.publishedModules), content, navLinks) : null;
+    const draftLegacy = migrateLegacy(kind, parseModules(existing.modules), content, navLinks);
+    const draftAuth = ensureAuthFormWidget(kind, draftLegacy.modules);
+    const draft = { changed: draftLegacy.changed || draftAuth.changed, modules: draftAuth.modules };
+    const publishedLegacy = existing.publishedModules ? migrateLegacy(kind, parseModules(existing.publishedModules), content, navLinks) : null;
+    const publishedAuth = publishedLegacy ? ensureAuthFormWidget(kind, publishedLegacy.modules) : null;
+    const published = publishedLegacy && publishedAuth ? { changed: publishedLegacy.changed || publishedAuth.changed, modules: publishedAuth.modules } : null;
     if (!draft.changed && !published?.changed) return existing;
     return prisma.page.update({ where: { id: existing.id }, data: {
       modules: draft.changed ? serializeModules(draft.modules) : existing.modules,

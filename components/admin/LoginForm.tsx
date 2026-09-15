@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-function LoginFormInner() {
+function LoginFormInner({ preview = false }: { preview?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedNext = searchParams.get("next");
@@ -18,6 +18,7 @@ function LoginFormInner() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (preview) return;
     setLoading(true);
     setError(null);
     try {
@@ -101,10 +102,10 @@ function LoginFormInner() {
   );
 }
 
-export default function LoginForm() {
+export default function LoginForm({ preview = false }: { preview?: boolean }) {
   return (
     <Suspense fallback={null}>
-      <LoginFormInner />
+      <LoginFormInner preview={preview} />
     </Suspense>
   );
 }

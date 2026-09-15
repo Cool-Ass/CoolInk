@@ -89,7 +89,7 @@ export default function Header({
             scrolled ? "h-10 w-28 sm:h-11 sm:w-32 md:h-12 md:w-36" : "h-11 w-32 sm:h-14 sm:w-40 md:h-16 md:w-48"
           }`}
         >
-          {logoSource ? <Image src={logoSource} alt={logoAlt} fill priority className="object-contain mix-blend-screen" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">{brandName}</span>}
+          {logoSource ? <Image src={logoSource} alt={logoAlt} fill priority className="object-contain" sizes="192px" /> : <span className="flex h-full items-center font-display text-xl tracking-[0.08em] text-ink-white">{brandName}</span>}
         </Link>
 
         {/* Nav */}

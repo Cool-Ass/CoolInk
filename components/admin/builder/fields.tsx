@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Link2, Unlink } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Ban, Check, ChevronDown, Circle, Columns3, Eye, EyeOff, Grid3X3, Layers3, Link2, List, Maximize2, Minimize2, MoveHorizontal, MoveVertical, PanelBottom, PanelTop, RotateCw, Rows3, Sparkles, Square, StretchHorizontal, Unlink, ZoomIn, type LucideIcon } from "lucide-react";
 import type { SpacingBox } from "@/lib/modules";
 
 const labelClass = "flex flex-col gap-1.5 text-[10px] tracking-[0.08em] text-ink-grey";
@@ -26,8 +26,25 @@ export function TextareaField({ label, value, onChange, rows = 4, placeholder }:
   return <label className={labelClass}>{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={rows} placeholder={placeholder} className="resize-y border border-ink-white/15 bg-[#17191c] px-2.5 py-2 text-[12px] leading-relaxed normal-case tracking-normal text-ink-white outline-none transition-colors focus:border-ink-gold" /></label>;
 }
 
+function selectIcon(value: string): LucideIcon | null {
+  const icons: Record<string, LucideIcon> = {
+    none: Ban, auto: Sparkles, left: AlignLeft, center: AlignCenter, centered: AlignCenter, right: AlignRight, justify: AlignJustify,
+    top: ArrowUp, bottom: ArrowDown, start: ArrowLeft, end: ArrowRight, "top left": ArrowUp, "top right": ArrowUp, "bottom left": ArrowDown, "bottom right": ArrowDown,
+    full: Maximize2, wide: StretchHorizontal, normal: Square, narrow: Minimize2, sm: Minimize2, md: Square, lg: Maximize2, xl: Maximize2,
+    one: Square, two: Columns3, three: Columns3, four: Grid3X3, five: Grid3X3, six: Grid3X3, seven: Grid3X3, eight: Grid3X3,
+    row: Rows3, "row-reverse": Rows3, column: Columns3, "column-reverse": Columns3, grid: Grid3X3, masonry: Layers3, list: List, cards: Grid3X3, steps: List,
+    visible: Eye, hidden: EyeOff, clip: Minimize2, cover: Maximize2, contain: Minimize2, stretch: StretchHorizontal,
+    horizontal: MoveHorizontal, vertical: MoveVertical, both: Maximize2, static: Square, relative: MoveHorizontal, sticky: PanelTop, absolute: Layers3,
+    fade: Eye, "fade-up": ArrowUp, "fade-down": ArrowDown, "fade-left": ArrowLeft, "fade-right": ArrowRight, zoom: ZoomIn, rotate: RotateCw, "blur-in": Eye,
+    primary: Square, outline: Square, plain: List, line: StretchHorizontal, gold: StretchHorizontal, space: MoveVertical,
+    first: PanelTop, last: PanelBottom, check: Check, dot: Circle, arrow: ArrowRight, landscape: StretchHorizontal, portrait: MoveVertical, square: Square,
+  };
+  return icons[value] ?? null;
+}
+
 export function SelectField<T extends string>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string }[] }) {
-  return <label className={labelClass}>{label}<select value={value} onChange={(event) => onChange(event.target.value as T)} className={inputClass}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+  const selected = options.find((option) => option.value === value)?.label ?? value;
+  return <div className={labelClass}><span className="flex items-center justify-between gap-2"><span>{label}</span><span className="truncate normal-case tracking-normal text-white/60">{selected}</span></span><div role="group" aria-label={label} className="grid grid-cols-4 gap-1">{options.map((option) => { const Icon = selectIcon(option.value); const active = option.value === value; return <button key={option.value} type="button" aria-pressed={active} aria-label={option.label} title={option.label} onClick={() => onChange(option.value)} className={`flex min-h-9 min-w-0 items-center justify-center gap-1 border px-1.5 text-[9px] transition ${active ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-white/10 bg-[#17191c] text-white/50 hover:border-white/25 hover:text-white"}`}>{Icon ? <Icon className="h-4 w-4 shrink-0" /> : <span className="truncate">{option.label}</span>}</button>; })}</div></div>;
 }
 
 export function NumberField({ label, value, onChange, min, max, step = 1 }: { label: string; value: number; onChange: (value: number) => void; min?: number; max?: number; step?: number }) {

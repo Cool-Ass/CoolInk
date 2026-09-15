@@ -10,10 +10,16 @@ export default function ImageUploadField({
   value,
   onChange,
   label = "Obraz",
+  previewFit = "cover",
+  transparentPreview = false,
+  helpText,
 }: {
   value: string;
   onChange: (url: string) => void;
   label?: string;
+  previewFit?: "cover" | "contain";
+  transparentPreview?: boolean;
+  helpText?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -46,8 +52,8 @@ export default function ImageUploadField({
       <label className="text-[12px] tracking-[0.12em] text-ink-grey">{label}</label>
 
       {previewSource && (
-        <div className="relative h-40 w-full max-w-xs overflow-hidden border border-ink-white/15 bg-ink-charcoal">
-          <Image src={previewSource} alt="" fill className="object-cover" sizes="320px" />
+        <div className="relative h-40 w-full max-w-xs overflow-hidden border border-ink-white/15 bg-ink-charcoal" style={transparentPreview ? { backgroundColor: "#181818", backgroundImage: "linear-gradient(45deg,#2a2a2a 25%,transparent 25%),linear-gradient(-45deg,#2a2a2a 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2a2a2a 75%),linear-gradient(-45deg,transparent 75%,#2a2a2a 75%)", backgroundSize: "20px 20px", backgroundPosition: "0 0,0 10px,10px -10px,-10px 0" } : undefined}>
+          <Image src={previewSource} alt="" fill className={previewFit === "contain" ? "object-contain p-3" : "object-cover"} sizes="320px" />
           <button
             type="button"
             onClick={() => {
@@ -59,6 +65,8 @@ export default function ImageUploadField({
           </button>
         </div>
       )}
+
+      {helpText && <p className="-mt-1 text-[10px] leading-relaxed text-ink-grey">{helpText}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
         <input
