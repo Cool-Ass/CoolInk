@@ -17,6 +17,10 @@ html {
   scroll-behavior: auto;
 }
 
+.public-site:has([data-public-admin-bar]) {
+  --public-admin-offset: 36px;
+}
+
 body {
   background-color: var(--color-ink-black);
   color: var(--color-ink-white);
@@ -68,7 +72,7 @@ body {
   }
 
   .public-site .builder-columns-grid {
-    gap: min(8vw, 2rem) !important;
+    gap: min(var(--builder-column-gap, 24px), 8vw, 2rem) !important;
   }
 
   .public-site .builder-custom-font-size :where(h1, h2, h3, h4, h5, h6, p, li, a, button, figcaption, blockquote) {
@@ -249,7 +253,7 @@ body {
 @media (min-width: 1024px) { .builder-hidden-desktop { display: none !important; } }
 
 .builder-scroll-progress { transform: scaleX(var(--builder-scroll-progress, 0)); transform-origin: left; }
-.builder-canvas-grid { background-image: linear-gradient(rgba(201,154,74,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(201,154,74,.08) 1px, transparent 1px); background-size: var(--builder-grid-size, 8px) var(--builder-grid-size, 8px); }
+.builder-grid-overlay { background-image: linear-gradient(rgba(120,210,235,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(120,210,235,.22) 1px, transparent 1px); background-size: var(--builder-grid-size, 8px) var(--builder-grid-size, 8px); }
 
 @media (max-width: 767px) {
   .builder-fixed-background { background-attachment: scroll !important; }
@@ -462,7 +466,7 @@ select:disabled {
   top: 0;
   z-index: 40;
   display: flex;
-  min-height: 3.8125rem;
+  min-height: 3.25rem;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid color-mix(in srgb, var(--color-ink-white) 10%, transparent);
@@ -486,7 +490,7 @@ select:disabled {
 .studio-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .studio-eyebrow {
@@ -500,7 +504,7 @@ select:disabled {
   margin-top: 0.25rem;
   color: var(--color-ink-white);
   font-family: var(--font-display);
-  font-size: 1.875rem;
+  font-size: 1.625rem;
   line-height: 1.1;
 }
 
@@ -513,12 +517,14 @@ select:disabled {
 }
 
 .studio-panel {
+  border-radius: 0.5rem;
   border: 1px solid color-mix(in srgb, var(--color-ink-white) 12%, transparent);
   background: color-mix(in srgb, var(--color-ink-charcoal) 30%, transparent);
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .studio-icon-action {
+  border-radius: 0.375rem;
   display: inline-flex;
   width: 2.25rem;
   height: 2.25rem;
@@ -613,14 +619,14 @@ select:disabled {
 
 .builder-sidebar :where(button, summary, a[href]),
 .builder-floating-panel :where(button, summary, a[href]) {
-  min-height: 44px;
+  min-height: 32px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
 .builder-sidebar :where(button[aria-label]),
 .builder-floating-panel :where(button[aria-label]) {
-  min-width: 44px;
+  min-width: 32px;
 }
 
 .builder-sidebar :where(button, input, textarea, select, summary, a[href]):focus-visible,
@@ -671,7 +677,17 @@ select:disabled {
 @media (min-width: 1280px) {
   .studio-workspace,
   .client-workspace.studio-workspace {
-    padding: 1.75rem;
+    padding: 1.25rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .builder-sidebar :where(button, summary, a[href]),
+  .builder-floating-panel :where(button, summary, a[href]) {
+    min-height: 44px;
+  }
+  .builder-sidebar button[aria-label*="ulubionych"] {
+    opacity: 1;
   }
 }
 

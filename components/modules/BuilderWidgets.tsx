@@ -107,11 +107,11 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
     case "heading": {
       const d = withDefaults("heading", module.data);
       const Tag = d.level;
-      return <section className={`px-2 py-2 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`builder-content-icon mb-3 h-9 w-9 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="whitespace-pre-line break-words font-display text-3xl text-ink-white md:text-5xl">{d.text}</Tag></section>;
+      return <section className={`px-2 py-1.5 ${d.alignment === "center" ? "text-center" : "text-left"}`}>{d.icon && <IconPreview name={d.icon} className={`builder-content-icon mb-2 h-8 w-8 text-ink-gold ${d.alignment === "center" ? "mx-auto" : ""}`} />}<Tag className="whitespace-pre-line break-words font-display text-2xl text-ink-white md:text-4xl">{d.text}</Tag></section>;
     }
     case "text": {
       const d = withDefaults("text", module.data);
-      return <section className={`px-2 py-2 ${d.alignment === "center" ? "text-center" : "text-left"}`}><p className="whitespace-pre-line break-words text-base leading-relaxed text-ink-grey md:text-lg">{d.text}</p></section>;
+      return <section className={`px-2 py-1.5 ${d.alignment === "center" ? "text-center" : "text-left"}`}><p className="whitespace-pre-line break-words text-sm leading-relaxed text-ink-grey md:text-base">{d.text}</p></section>;
     }
     case "image": {
       const d = withDefaults("image", module.data);
@@ -127,7 +127,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
     }
     case "button": {
       const d = withDefaults("button", module.data);
-      const size = d.size === "sm" ? "min-h-9 px-3 py-2 text-xs" : d.size === "lg" ? "min-h-14 px-8 py-4 text-base" : "min-h-11 px-5 py-3 text-sm";
+      const size = d.size === "sm" ? "min-h-8 px-3 py-1.5 text-[11px]" : d.size === "lg" ? "min-h-11 px-6 py-3 text-sm" : "min-h-9 px-4 py-2 text-xs";
       const radius = d.radius === "pill" ? "rounded-full" : d.radius === "sm" ? "rounded-md" : "";
       return <div className={`px-2 py-2 ${d.alignment === "center" ? "text-center" : d.alignment === "right" ? "text-right" : "text-left"}`}><a href={safeHref(d.href)} target={d.target === "new" ? "_blank" : undefined} rel={d.target === "new" ? "noopener noreferrer" : undefined} onClick={showEmpty ? (event) => event.preventDefault() : undefined} className={`inline-flex max-w-full items-center justify-center gap-2 break-words border tracking-[0.08em] transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold ${size} ${radius} ${d.width === "full" ? "w-full" : ""} ${d.style === "primary" ? "border-ink-gold bg-ink-gold text-ink-black" : "border-ink-gold text-ink-gold"}`}>{d.icon && d.iconPosition !== "right" && <IconPreview name={d.icon} className="builder-content-icon h-4 w-4" />}{d.label}{d.icon && d.iconPosition === "right" && <IconPreview name={d.icon} className="builder-content-icon h-4 w-4" />}</a></div>;
     }
@@ -173,7 +173,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
       const columns = Array.from({ length: columnCount }, (_, index) => d.columns[index] ?? []);
       const backgroundTone = d.background === "charcoal" ? "bg-ink-charcoal" : d.background === "gold" ? "bg-ink-gold text-ink-black" : "bg-transparent";
       const background = `${backgroundTone} ${d.mobileLayout === "row" ? "builder-columns-row-mobile" : ""}`;
-      const padding = d.padding === "sm" ? "py-8" : d.padding === "lg" ? "py-20" : "py-12";
+      const padding = d.padding === "none" ? "py-0" : d.padding === "sm" ? "py-4" : d.padding === "lg" ? "py-12" : "py-8";
       const gridTemplate = (d.columnWidths?.length === columnCount ? d.columnWidths : Array(columnCount).fill(100 / columnCount)).map((width) => `${Math.max(5, Number(width) || 0)}fr`).join(" ");
       const alignment = d.verticalAlign === "center" ? "items-center" : d.verticalAlign === "end" ? "items-end" : d.verticalAlign === "stretch" ? "items-stretch" : "items-start";
 
@@ -204,8 +204,8 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
         moveWidget(readColumnDragPayload(event.dataTransfer.getData(COLUMN_WIDGET_MIME)), columnIndex, beforeIndex);
       }
 
-      return <section className={`${background} ${module.type === "innerSection" ? "px-2 md:px-3" : "px-4 md:px-8"} ${padding}`}>
-        <div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>
+      return <section className={`${background} ${module.type === "innerSection" ? "px-1.5 md:px-2" : "px-3 md:px-5"} ${padding}`}>
+        <div className={`builder-columns-grid grid ${alignment}`} style={{ gap: `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-gap": `${Math.min(160, Math.max(0, d.gap ?? 24))}px`, "--builder-column-template": gridTemplate } as CSSProperties}>
           {columns.map((widgets, columnIndex) => {
             const columnStyle = d.columnStyles?.[columnIndex] ?? {};
             const columnSelected = selectedColumnOwnerId === module.id && selectedColumnIndex === columnIndex && !selectedWidgetId;
@@ -220,7 +220,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
               onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PALETTE_WIDGET_MIME) ? "copy" : "move"; }}
               onDrop={(event) => handleDrop(event, columnIndex, widgets.length)}
               style={buildVisualStyle(columnStyle)}
-              className={`builder-styled-icons ${builderEffectClasses(columnStyle)} ${columnStyle.cssClass ?? ""} relative isolate min-w-0 ${editable ? `min-h-28 border border-dashed bg-ink-black/15 p-2 ${columnSelected ? "border-ink-gold outline outline-1 outline-ink-gold" : "border-ink-gold/30"}` : ""}`}
+              className={`builder-styled-icons ${builderEffectClasses(columnStyle)} ${columnStyle.cssClass ?? ""} relative isolate min-w-0 ${editable ? `min-h-20 rounded-md border border-dashed bg-ink-black/15 p-1.5 ${columnSelected ? "border-ink-gold outline outline-1 outline-ink-gold" : "border-ink-gold/30"}` : ""}`}
             >
               {editable && <BuilderStyleLayers style={columnStyle} />}
               {columnSelected && onResizeColumn && <BuilderResizeHandles style={columnStyle} device={editorDevice} onResize={(style) => onResizeColumn(columnIndex, module.id, style)} label={`kolumnę ${columnIndex + 1}`} />}
@@ -250,7 +250,7 @@ export default function BuilderWidgets({ module, showEmpty = false, editable = f
                     {editable && <div className={`builder-editor-chrome pointer-events-auto absolute left-1/2 top-0 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center bg-ink-gold text-ink-black opacity-0 shadow-lg ${selected ? "opacity-100" : "group-hover/widget:opacity-100"}`}><span className="cursor-grab whitespace-nowrap px-2 py-1">⠿ {MODULE_LABELS[widget.type]}</span>{onDuplicateWidget && <button type="button" title="Duplikuj widget" aria-label={`Duplikuj: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDuplicateWidget(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Copy className="h-3 w-3" /></button>}<button type="button" title="Usuń widget" aria-label={`Usuń: ${MODULE_LABELS[widget.type]}`} onClick={(event) => { event.stopPropagation(); onDeleteWidget?.(widget.id, columnIndex); }} className="flex h-7 w-7 items-center justify-center border-l border-ink-black/20 hover:bg-black/10"><Trash2 className="h-3 w-3" /></button></div>}
                     <div className="relative z-[3]"><BuilderWidgets module={{ ...widget, hidden: false } as Module} showEmpty={showEmpty} editable={editable && widget.type === "innerSection"} editorDevice={editorDevice} selectedWidgetId={selectedWidgetId} selectedColumnIndex={selectedColumnIndex} selectedColumnOwnerId={selectedColumnOwnerId} onSelectWidget={onSelectWidget} onSelectColumn={onSelectColumn} onDeleteWidget={onDeleteWidget} onDuplicateWidget={onDuplicateWidget} onDuplicateColumn={onDuplicateColumn} onDeleteColumn={onDeleteColumn} onResizeWidget={onResizeWidget} onResizeColumn={onResizeColumn} onColumnsChange={widget.type === "innerSection" ? (nestedColumns) => { const next = columns.map((items) => items.map((current) => current.id === widget.id ? { ...current, data: { ...withDefaults("innerSection", current.data), columns: nestedColumns } } : current)); update(next); } : undefined} portfolioWorks={portfolioWorks} calendar={calendar} clientAuth={clientAuth} /></div>
                   </NestedRuntimeFrame>;
-                }) : editable ? <div className="flex min-h-24 items-center justify-center p-4 text-center text-[10px] leading-relaxed text-ink-grey">Przeciągnij widget z lewego panelu tutaj</div> : null}
+                }) : editable ? <div className="flex min-h-16 items-center justify-center p-2 text-center text-[9px] leading-relaxed text-ink-grey">Przeciągnij widget tutaj</div> : null}
               </div>
             </NestedRuntimeFrame>;
           })}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ModuleRenderer from "@/components/ModuleRenderer";
+import PublicAdminBar from "@/components/admin/PublicAdminBar";
 import { getSiteContent } from "@/lib/content";
 import { getPublicNavLinks } from "@/lib/nav";
 import { getPublishedPortfolioWorks } from "@/lib/portfolio";
@@ -54,6 +55,7 @@ export default async function Home() {
 
   return (
     <main style={siteThemeStyle(content.theme)} className="public-site relative">
+      <PublicAdminBar pageId={homepage?.id} />
       {maintenanceEnabled && admin && (
         <aside className="fixed bottom-4 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 flex-col gap-3 border border-amber-400/50 bg-ink-black/95 px-4 py-3 text-ink-white shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between" aria-label="Tryb budowy">
           <p className="text-[13px] leading-relaxed text-amber-100">

@@ -449,7 +449,7 @@ export interface ColumnsModuleData extends Record<string, unknown> {
   layout: "one" | "two" | "three" | "four" | "five" | "six" | "seven" | "eight";
   columns: ColumnWidget[][];
   background: "transparent" | "charcoal" | "gold";
-  padding: "sm" | "md" | "lg";
+  padding: "none" | "sm" | "md" | "lg";
   gap?: number;
   verticalAlign?: "start" | "center" | "end" | "stretch";
   columnWidths?: number[];
@@ -897,7 +897,7 @@ export function defaultModuleData(type: ModuleType): Record<string, unknown> {
       return {
         layout: "one",
         background: "transparent",
-        padding: "md",
+        padding: "sm",
         gap: 24,
         verticalAlign: "start",
         columnWidths: [100],

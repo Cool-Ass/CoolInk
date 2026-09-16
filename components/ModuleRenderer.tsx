@@ -50,17 +50,17 @@ export interface ModuleRendererGlobals {
 function moduleLayoutClasses(style?: ModuleStyle, editable = false) {
   const padding = {
     none: "p-0",
-    sm: "p-3 md:p-5",
-    md: "p-4 sm:p-5 md:p-8",
-    lg: "p-5 sm:p-8 md:p-12",
-    xl: "p-6 sm:p-12 md:p-20",
+    sm: "p-2 md:p-3",
+    md: "p-3 sm:p-4 md:p-6",
+    lg: "p-4 sm:p-6 md:p-8",
+    xl: "p-5 sm:p-8 md:p-12",
   }[style?.padding ?? "none"];
   const margin = {
     none: "my-0",
-    sm: "my-3",
-    md: "my-6",
-    lg: "my-8 sm:my-10",
-    xl: "my-10 sm:my-16",
+    sm: "my-2",
+    md: "my-4",
+    lg: "my-6 sm:my-8",
+    xl: "my-8 sm:my-10",
   }[style?.margin ?? "none"];
   const width = {
     full: "w-full",

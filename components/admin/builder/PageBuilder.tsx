@@ -94,10 +94,12 @@ export interface BuilderPage {
 }
 
 const DEVICE_WIDTHS: Record<DeviceMode, string> = {
-  desktop: "1440px",
+  desktop: "100%",
   tablet: "768px",
   mobile: "390px",
 };
+
+interface CanvasGuide { id: number; axis: "x" | "y"; position: number }
 
 interface ReusableBlock { id: string; name: string; module: Module }
 const REUSABLE_BLOCKS_KEY = "coolink-builder-reusable-blocks-v1";
@@ -143,6 +145,11 @@ export default function PageBuilder({
   const [showGrid, setShowGrid] = useState(false);
   const [showGuides, setShowGuides] = useState(false);
   const [snapSize, setSnapSize] = useState(8);
+  const [guides, setGuides] = useState<CanvasGuide[]>([
+    { id: 1, axis: "x", position: 50 },
+    { id: 2, axis: "y", position: 50 },
+  ]);
+  const guideIdRef = useRef(2);
   const [reusableBlocks, setReusableBlocks] = useState<ReusableBlock[]>([]);
   const [selectedReusableBlock, setSelectedReusableBlock] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -730,6 +737,18 @@ export default function PageBuilder({
     showToast(`Wersja ${version} została przywrócona jako szkic.`);
   }
 
+  function addGuide(axis: CanvasGuide["axis"]) {
+    guideIdRef.current += 1;
+    const id = guideIdRef.current;
+    setGuides((current) => [...current, { id, axis, position: 50 }]);
+    setShowGuides(true);
+  }
+
+  function updateGuide(id: number, position: number) {
+    const safePosition = Math.min(100, Math.max(0, position));
+    setGuides((current) => current.map((guide) => guide.id === id ? { ...guide, position: safePosition } : guide));
+  }
+
   return (
     <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-ink-black text-ink-white">
       <BuilderTopBar
@@ -809,12 +828,12 @@ export default function PageBuilder({
             ) : <AddModulePicker onAdd={addModule} />}
           </aside>
           {sidebarOpen && <div role="separator" aria-label="Zmień szerokość panelu" aria-orientation="vertical" aria-valuemin={264} aria-valuemax={460} aria-valuenow={Math.round(sidebarWidth)} tabIndex={0} title="Przeciągnij, aby zmienić szerokość panelu" onPointerDown={startSidebarResize} onKeyDown={(event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; event.preventDefault(); setSidebarWidth((width) => Math.min(460, Math.max(264, width + (event.key === "ArrowRight" ? 16 : -16)))); }} className="group absolute inset-y-0 right-[-4px] z-[71] w-2 cursor-col-resize touch-none outline-none focus-visible:bg-ink-gold/35"><span className="absolute inset-y-0 left-1/2 w-px bg-transparent transition-colors group-hover:bg-ink-gold/60 group-focus-visible:bg-ink-gold" /><GripVertical aria-hidden className="absolute left-1/2 top-[calc(50%+2.5rem)] h-5 w-3 -translate-x-1/2 text-transparent transition-colors group-hover:text-ink-gold group-focus-visible:text-ink-gold" /></div>}
-          <button type="button" aria-controls="builder-sidebar-panel" aria-expanded={sidebarOpen} aria-label={sidebarOpen ? "Ukryj panel narzędzi" : "Pokaż panel narzędzi"} title={`${sidebarOpen ? "Ukryj" : "Pokaż"} panel (Ctrl+P)`} onClick={() => setSidebarOpen((open) => !open)} className="absolute left-full top-1/2 z-[72] flex h-14 w-7 -translate-y-1/2 items-center justify-center border border-l-0 border-white/15 bg-[#1d1f22] text-white/55 shadow-xl transition-colors hover:border-ink-gold/60 hover:text-ink-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-gold">{sidebarOpen ? <ChevronLeft aria-hidden className="h-4 w-4" /> : <ChevronRight aria-hidden className="h-4 w-4" />}</button>
+          <button type="button" aria-controls="builder-sidebar-panel" aria-expanded={sidebarOpen} aria-label={sidebarOpen ? "Ukryj panel narzędzi" : "Pokaż panel narzędzi"} title={`${sidebarOpen ? "Ukryj" : "Pokaż"} panel (Ctrl+P)`} onClick={() => setSidebarOpen((open) => !open)} className="absolute left-full top-1/2 z-[72] flex h-11 w-6 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-white/15 bg-[#1d1f22] text-white/55 shadow-xl transition-colors hover:border-ink-gold/60 hover:text-ink-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-gold">{sidebarOpen ? <ChevronLeft aria-hidden className="h-3.5 w-3.5" /> : <ChevronRight aria-hidden className="h-3.5 w-3.5" />}</button>
         </div>
 
         <div
           data-lenis-prevent
-          className="min-w-0 flex-1 overflow-auto bg-[#101113] px-4 py-6 md:px-7"
+          className={`min-w-0 flex-1 overflow-auto bg-[#101113] ${device === "desktop" ? "p-0" : "px-3 py-3"}`}
           onClick={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
           onDragOver={(event) => { if (event.dataTransfer.types.includes(PALETTE_WIDGET_MIME)) event.preventDefault(); }}
           onDrop={dropOnCanvas}
@@ -822,16 +841,33 @@ export default function PageBuilder({
           <div
             data-builder-device={device}
             data-builder-snap={snapSize}
-            className={`builder-canvas relative mx-auto shrink-0 border border-ink-white/10 bg-ink-black transition-[width] duration-300 ${showGrid ? "builder-canvas-grid" : ""}`}
+            className="builder-canvas relative mx-auto min-h-full shrink-0 border border-ink-white/10 bg-ink-black transition-[width] duration-300"
             style={{ width: DEVICE_WIDTHS[device], "--builder-grid-size": `${snapSize}px`, ...(globals.theme ? siteThemeStyle(globals.theme) : {}) } as CSSProperties}
           >
             <div className="builder-editor-chrome sticky top-0 z-[60] flex items-center gap-1 border-b border-white/10 bg-[#17181a]/90 p-1.5 backdrop-blur-xl" onClick={(event) => event.stopPropagation()}>
-              <button type="button" title="Siatka" aria-label="Siatka" aria-pressed={showGrid} onClick={() => setShowGrid((value) => !value)} className={`flex h-8 w-8 items-center justify-center border ${showGrid ? "border-ink-gold text-ink-gold" : "border-white/10 text-white/45"}`}><Grid3X3 className="h-3.5 w-3.5" /></button>
-              <button type="button" title="Prowadnice" aria-label="Prowadnice" aria-pressed={showGuides} onClick={() => setShowGuides((value) => !value)} className={`flex h-8 w-8 items-center justify-center border ${showGuides ? "border-ink-gold text-ink-gold" : "border-white/10 text-white/45"}`}><Ruler className="h-3.5 w-3.5" /></button>
-              <details className="relative text-[9px] text-white/60"><summary title="Narzędzia i biblioteka bloków" aria-label="Narzędzia i biblioteka bloków" className="flex h-8 w-8 cursor-pointer list-none items-center justify-center border border-white/10 text-white/45 marker:hidden hover:border-ink-gold/60 hover:text-ink-gold"><SlidersHorizontal className="h-3.5 w-3.5" /></summary><div className="absolute left-0 top-full z-[80] mt-1 w-72 border border-white/15 bg-[#17181a]/98 p-3 shadow-2xl backdrop-blur-xl"><label className="block text-[9px] tracking-[.1em] text-white/55"><span className="flex items-center justify-between"><span>PRZYCIĄGANIE</span><span>{snapSize} PX</span></span><input aria-label="Rozmiar siatki przyciągania" type="range" min={1} max={100} value={snapSize} onChange={(event) => setSnapSize(Math.min(100, Math.max(1, Number(event.target.value) || 1)))} className="mt-2 w-full accent-[#c99a4a]" /></label><div className="my-3 h-px bg-white/10" /><button type="button" onClick={saveReusableBlock} disabled={!selectedModule} className="flex min-h-9 w-full items-center gap-2 border border-white/10 px-2 text-white/60 hover:border-ink-gold/60 hover:text-ink-gold disabled:opacity-30"><Save className="h-3.5 w-3.5" />ZAPISZ ZAZNACZENIE JAKO BLOK</button><p className="mb-1 mt-3 flex items-center gap-2 tracking-[.1em] text-white/45"><Blocks className="h-3.5 w-3.5" />BIBLIOTEKA BLOKÓW</p><div className="max-h-36 space-y-1 overflow-y-auto">{reusableBlocks.length ? reusableBlocks.map((block) => <button key={block.id} type="button" aria-pressed={selectedReusableBlock === block.id} onClick={() => setSelectedReusableBlock(block.id)} className={`w-full truncate border px-2 py-2 text-left ${selectedReusableBlock === block.id ? "border-ink-gold text-ink-gold" : "border-white/10 text-white/55"}`}>{block.name}</button>) : <p className="border border-dashed border-white/10 px-2 py-3 text-center text-white/35">Brak zapisanych bloków</p>}</div><div className="mt-2 grid grid-cols-[1fr_36px] gap-1"><button type="button" onClick={insertReusableBlock} disabled={!selectedReusableBlock} className="flex min-h-9 items-center justify-center gap-1 border border-ink-gold/50 text-ink-gold disabled:opacity-30"><Plus className="h-3.5 w-3.5" />WSTAW</button><button type="button" title="Usuń blok" aria-label="Usuń blok z biblioteki" onClick={deleteReusableBlock} disabled={!selectedReusableBlock} className="flex min-h-9 items-center justify-center border border-red-400/30 text-red-300 disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /></button></div></div></details>
+              <button type="button" title="Siatka" aria-label="Siatka" aria-pressed={showGrid} onClick={() => setShowGrid((value) => !value)} className={`flex h-8 w-8 items-center justify-center rounded-md border ${showGrid ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-white/10 text-white/45"}`}><Grid3X3 className="h-3.5 w-3.5" /></button>
+              <button type="button" title="Prowadnice" aria-label="Prowadnice" aria-pressed={showGuides} onClick={() => setShowGuides((value) => !value)} className={`flex h-8 w-8 items-center justify-center rounded-md border ${showGuides ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-white/10 text-white/45"}`}><Ruler className="h-3.5 w-3.5" /></button>
+              <details className="relative text-[9px] text-white/60">
+                <summary title="Narzędzia: siatka, prowadnice i bloki" aria-label="Narzędzia: siatka, prowadnice i bloki" className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md border border-white/10 text-white/45 marker:hidden hover:border-ink-gold/60 hover:text-ink-gold"><SlidersHorizontal className="h-3.5 w-3.5" /></summary>
+                <div className="absolute left-0 top-full z-[80] mt-1 max-h-[calc(100dvh-8rem)] w-72 overflow-y-auto rounded-md border border-white/15 bg-[#17181a]/98 p-2.5 shadow-2xl backdrop-blur-xl">
+                  <div className="grid grid-cols-[1fr_64px] items-end gap-2">
+                    <label className="block text-[8px] tracking-[.1em] text-white/55"><span>SIATKA / SNAP</span><input aria-label="Rozmiar siatki przyciągania" type="range" min={2} max={100} value={snapSize} onChange={(event) => setSnapSize(Math.min(100, Math.max(2, Number(event.target.value) || 2)))} className="mt-1.5 h-7 w-full accent-[#c99a4a]" /></label>
+                    <label className="text-[8px] tracking-[.1em] text-white/55">PX<input aria-label="Rozmiar siatki w pikselach" type="number" min={2} max={100} value={snapSize} onChange={(event) => setSnapSize(Math.min(100, Math.max(2, Number(event.target.value) || 2)))} className="mt-1 h-8 w-full rounded-md border border-white/15 bg-black/35 px-2 text-[10px] text-white outline-none focus:border-ink-gold" /></label>
+                  </div>
+                  <div className="my-2 h-px bg-white/10" />
+                  <div className="mb-1.5 flex items-center justify-between"><span className="tracking-[.1em] text-white/45">PROWADNICE</span><span className="flex gap-1"><button type="button" onClick={() => addGuide("x")} className="h-8 rounded-md border border-white/12 px-2 text-[8px] hover:border-cyan-300/60 hover:text-cyan-200">+ PIONOWA</button><button type="button" onClick={() => addGuide("y")} className="h-8 rounded-md border border-white/12 px-2 text-[8px] hover:border-cyan-300/60 hover:text-cyan-200">+ POZIOMA</button></span></div>
+                  <div className="max-h-32 space-y-1 overflow-y-auto pr-0.5">{guides.length ? guides.map((guide, index) => <div key={guide.id} className="grid grid-cols-[1fr_64px_32px] items-center gap-1 rounded-md bg-white/[0.035] px-1.5 py-1"><span>{guide.axis === "x" ? "Pionowa" : "Pozioma"} {index + 1}</span><label className="sr-only" htmlFor={`guide-${guide.id}`}>Pozycja prowadnicy {index + 1} w procentach</label><input id={`guide-${guide.id}`} type="number" min={0} max={100} value={guide.position} onChange={(event) => updateGuide(guide.id, Number(event.target.value))} className="h-7 rounded-md border border-white/12 bg-black/35 px-1.5 text-right text-[9px] text-white outline-none focus:border-ink-gold" /><button type="button" aria-label={`Usuń prowadnicę ${index + 1}`} title="Usuń prowadnicę" onClick={() => setGuides((current) => current.filter((item) => item.id !== guide.id))} className="flex h-7 w-7 items-center justify-center rounded-md text-red-300/70 hover:bg-red-400/10 hover:text-red-300"><Trash2 className="h-3 w-3" /></button></div>) : <p className="py-2 text-center text-white/35">Brak prowadnic</p>}</div>
+                  <div className="my-2 h-px bg-white/10" />
+                  <button type="button" onClick={saveReusableBlock} disabled={!selectedModule} className="flex min-h-8 w-full items-center gap-2 rounded-md border border-white/10 px-2 text-white/60 hover:border-ink-gold/60 hover:text-ink-gold disabled:opacity-30"><Save className="h-3.5 w-3.5" />ZAPISZ ZAZNACZENIE JAKO BLOK</button>
+                  <p className="mb-1 mt-2 flex items-center gap-2 tracking-[.1em] text-white/45"><Blocks className="h-3.5 w-3.5" />BIBLIOTEKA BLOKÓW</p>
+                  <div className="max-h-28 space-y-1 overflow-y-auto">{reusableBlocks.length ? reusableBlocks.map((block) => <button key={block.id} type="button" aria-pressed={selectedReusableBlock === block.id} onClick={() => setSelectedReusableBlock(block.id)} className={`min-h-8 w-full truncate rounded-md border px-2 text-left ${selectedReusableBlock === block.id ? "border-ink-gold text-ink-gold" : "border-white/10 text-white/55"}`}>{block.name}</button>) : <p className="rounded-md border border-dashed border-white/10 px-2 py-2 text-center text-white/35">Brak zapisanych bloków</p>}</div>
+                  <div className="mt-1.5 grid grid-cols-[1fr_32px] gap-1"><button type="button" onClick={insertReusableBlock} disabled={!selectedReusableBlock} className="flex min-h-8 items-center justify-center gap-1 rounded-md border border-ink-gold/50 text-ink-gold disabled:opacity-30"><Plus className="h-3.5 w-3.5" />WSTAW</button><button type="button" title="Usuń blok" aria-label="Usuń blok z biblioteki" onClick={deleteReusableBlock} disabled={!selectedReusableBlock} className="flex min-h-8 items-center justify-center rounded-md border border-red-400/30 text-red-300 disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /></button></div>
+                </div>
+              </details>
               <details className="relative ml-auto text-[9px] text-white/60"><summary title="Audyt strony" aria-label={`Audyt strony: ${auditIssues.length || "bez problemów"}`} className={`flex h-8 cursor-pointer list-none items-center gap-1.5 border px-2 marker:hidden ${auditIssues.some((issue) => issue.severity === "error") ? "border-red-400/60 text-red-300" : auditIssues.length ? "border-amber-400/60 text-amber-300" : "border-emerald-400/40 text-emerald-300"}`}><ShieldCheck className="h-3.5 w-3.5" /><span>{auditIssues.length || "OK"}</span></summary>{auditIssues.length > 0 && <div className="absolute right-0 top-full z-[80] mt-1 max-h-64 w-[min(28rem,80vw)] overflow-y-auto border border-white/15 bg-black/95 p-2 shadow-2xl">{auditIssues.map((issue) => <p key={issue.id} className={`border-b border-white/10 px-1 py-2 leading-relaxed ${issue.severity === "error" ? "text-red-300" : "text-amber-200"}`}>{issue.message}</p>)}</div>}</details>
             </div>
-            {showGuides && <div aria-hidden className="pointer-events-none absolute inset-0 z-[35]"><span className="absolute inset-y-0 left-1/2 border-l border-dashed border-cyan-300/55" /><span className="absolute inset-y-0 left-1/3 border-l border-dashed border-cyan-300/25" /><span className="absolute inset-y-0 left-2/3 border-l border-dashed border-cyan-300/25" /><span className="absolute inset-x-0 top-1/2 border-t border-dashed border-cyan-300/40" /></div>}
+            {showGrid && <div aria-hidden className="builder-grid-overlay pointer-events-none absolute inset-0 z-[34]" />}
+            {showGuides && <div aria-hidden className="pointer-events-none absolute inset-0 z-[35]">{guides.map((guide) => <span key={guide.id} className={guide.axis === "x" ? "absolute inset-y-0 border-l border-dashed border-cyan-300/60" : "absolute inset-x-0 border-t border-dashed border-cyan-300/60"} style={guide.axis === "x" ? { left: `${guide.position}%` } : { top: `${guide.position}%` }} />)}</div>}
             <ModuleRenderer
               modules={modules}
               editorDevice={device}

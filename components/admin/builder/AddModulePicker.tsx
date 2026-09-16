@@ -123,15 +123,15 @@ export default function AddModulePicker({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#1d1f22]">
-      <div className="shrink-0 border-b border-white/10 px-4 py-4 text-center">
-        <p className="text-[13px] font-semibold text-white">Elementy</p>
-        <p className="mt-1 text-[10px] leading-relaxed text-white/65">
+      <div className="shrink-0 border-b border-white/10 px-3 py-2.5 text-center">
+        <p className="text-[11px] font-semibold text-white">Elementy</p>
+        <p className="mt-0.5 text-[9px] leading-relaxed text-white/60">
           Przeciągnij widget na stronę lub kliknij, aby dodać go {insertAfterSelection ? "pod zaznaczeniem" : "na końcu"}.
         </p>
       </div>
 
-      <div className="shrink-0 p-3">
-        <label className="flex min-h-11 min-w-0 items-center gap-2 border border-white/20 bg-[#17191c] px-3 text-white/60 transition-colors hover:border-white/35 focus-within:border-ink-gold focus-within:ring-1 focus-within:ring-ink-gold">
+      <div className="shrink-0 p-2.5">
+        <label className="flex min-h-9 min-w-0 items-center gap-2 rounded-md border border-white/15 bg-[#17191c] px-2.5 text-white/60 transition-colors hover:border-white/30 focus-within:border-ink-gold focus-within:ring-1 focus-within:ring-ink-gold">
           <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="sr-only">Szukaj widgetu</span>
           <input
@@ -139,25 +139,25 @@ export default function AddModulePicker({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Wyszukaj widget…"
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:italic placeholder:text-white/50"
+            className="min-w-0 flex-1 bg-transparent text-[11px] text-white outline-none placeholder:italic placeholder:text-white/50"
           />
         </label>
-        <div role="group" aria-label="Filtr elementów" className="mt-2 grid grid-cols-2 gap-1 border border-white/10 bg-[#17191c] p-1">
-          <button type="button" aria-pressed={view === "all"} onClick={() => setView("all")} className={`flex min-h-10 items-center justify-center gap-1.5 px-2 text-[9px] tracking-[0.08em] transition-colors ${view === "all" ? "bg-white/10 text-white" : "text-white/55 hover:bg-white/5 hover:text-white"}`}><Grid3X3 aria-hidden className="h-3.5 w-3.5" />WSZYSTKIE</button>
-          <button type="button" aria-pressed={view === "favorites"} onClick={() => setView("favorites")} className={`flex min-h-10 items-center justify-center gap-1.5 px-2 text-[9px] tracking-[0.08em] transition-colors ${view === "favorites" ? "bg-ink-gold/15 text-ink-gold" : "text-white/55 hover:bg-white/5 hover:text-white"}`}><Star aria-hidden className="h-3.5 w-3.5" />ULUBIONE {favorites.length ? `(${favorites.length})` : ""}</button>
+        <div role="group" aria-label="Filtr elementów" className="mt-1.5 grid grid-cols-2 gap-px rounded-md border border-white/10 bg-white/10 p-px">
+          <button type="button" aria-pressed={view === "all"} onClick={() => setView("all")} className={`flex min-h-8 items-center justify-center gap-1 rounded-[4px] px-2 text-[8px] tracking-[0.08em] transition-colors ${view === "all" ? "bg-white/10 text-white" : "bg-[#17191c] text-white/55 hover:bg-white/5 hover:text-white"}`}><Grid3X3 aria-hidden className="h-3 w-3" />WSZYSTKIE</button>
+          <button type="button" aria-pressed={view === "favorites"} onClick={() => setView("favorites")} className={`flex min-h-8 items-center justify-center gap-1 rounded-[4px] px-2 text-[8px] tracking-[0.08em] transition-colors ${view === "favorites" ? "bg-ink-gold/15 text-ink-gold" : "bg-[#17191c] text-white/55 hover:bg-white/5 hover:text-white"}`}><Star aria-hidden className="h-3 w-3" />ULUBIONE {favorites.length ? `(${favorites.length})` : ""}</button>
         </div>
       </div>
 
-      <div data-lenis-prevent className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-5 [scrollbar-gutter:stable]">
+      <div data-lenis-prevent className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden overscroll-contain px-2.5 pb-3 [scrollbar-gutter:stable]">
         {(["widgets", "templates"] as const).map((category) => {
           const types = visibleTypes.filter((type) => MODULE_CATEGORIES[type] === category);
           if (!types.length) return null;
           return (
             <section key={category}>
-              <p className="mb-2 px-1 text-[9px] font-semibold tracking-[0.16em] text-ink-gold/90">
+              <p className="mb-1.5 px-1 text-[8px] font-semibold tracking-[0.14em] text-ink-gold/90">
                 {category === "widgets" ? "WIDGETY" : "GOTOWE SEKCJE"}
               </p>
-              <div className="grid min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))" }}>
+              <div className="grid min-w-0 grid-cols-3 gap-1">
                 {types.map((type) => {
                   const Icon = ICONS[type];
                   const favorite = favorites.includes(type);
@@ -170,10 +170,10 @@ export default function AddModulePicker({
                         event.dataTransfer.setData(PALETTE_WIDGET_MIME, type);
                         event.dataTransfer.effectAllowed = "copy";
                       }}
-                      className="group relative min-h-20 min-w-0 cursor-grab border border-white/15 bg-[#202226] text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
+                      className="group relative min-h-16 min-w-0 cursor-grab rounded-md border border-white/12 bg-[#202226] text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
                     >
-                      <button type="button" onClick={() => onAdd(type)} className="flex min-h-20 w-full min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 pr-8 text-center"><Icon aria-hidden className="h-5 w-5 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" /><span className="line-clamp-2 break-words text-[10px] leading-tight">{MODULE_LABELS[type]}</span></button>
-                      <button type="button" aria-pressed={favorite} aria-label={favorite ? `Usuń ${MODULE_LABELS[type]} z ulubionych` : `Dodaj ${MODULE_LABELS[type]} do ulubionych`} title={favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"} onClick={() => toggleFavorite(type)} className={`absolute right-0 top-0 z-10 flex h-11 w-11 items-center justify-center transition-colors ${favorite ? "text-ink-gold" : "text-white/30 hover:text-white"}`}><Star aria-hidden className={`h-3.5 w-3.5 ${favorite ? "fill-current" : ""}`} /></button>
+                      <button type="button" onClick={() => onAdd(type)} className="flex min-h-16 w-full min-w-0 flex-col items-center justify-center gap-1 px-1.5 py-1.5 text-center"><Icon aria-hidden className="h-4 w-4 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" /><span className="line-clamp-2 max-w-[78%] break-words text-[9px] leading-tight">{MODULE_LABELS[type]}</span></button>
+                      <button type="button" aria-pressed={favorite} aria-label={favorite ? `Usuń ${MODULE_LABELS[type]} z ulubionych` : `Dodaj ${MODULE_LABELS[type]} do ulubionych`} title={favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"} onClick={() => toggleFavorite(type)} className={`absolute right-0 top-0 z-10 flex h-8 w-8 items-center justify-center rounded-tr-md transition-colors ${favorite ? "text-ink-gold" : "text-white/25 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-white"}`}><Star aria-hidden className={`h-3 w-3 ${favorite ? "fill-current" : ""}`} /></button>
                     </div>
                   );
                 })}

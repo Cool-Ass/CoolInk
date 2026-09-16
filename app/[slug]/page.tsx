@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import RichText from "@/components/RichText";
 import ModuleRenderer from "@/components/ModuleRenderer";
+import PublicAdminBar from "@/components/admin/PublicAdminBar";
 import { prisma } from "@/lib/prisma";
 import { getPublicNavLinks } from "@/lib/nav";
 import { getSiteContent } from "@/lib/content";
@@ -60,6 +61,7 @@ export default async function CmsPage({ params }: Props) {
 
   return (
     <main style={siteThemeStyle(content.theme)} className="public-site relative min-h-screen bg-ink-black">
+      <PublicAdminBar pageId={page.id} />
       <ModuleRenderer modules={headerModules} globals={globals} />
 
       {modules.length > 0 ? (

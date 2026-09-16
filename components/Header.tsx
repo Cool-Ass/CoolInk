@@ -71,7 +71,7 @@ export default function Header({
 
   return (
     <header
-      className={`${preview ? "relative" : "fixed inset-x-0 top-0"} z-50 transition-colors duration-500 ${
+      className={`${preview ? "relative" : "fixed inset-x-0 top-[var(--public-admin-offset,0px)]"} z-50 transition-colors duration-500 ${
         scrolled
           ? "border-b border-ink-white/10 bg-ink-black/85 backdrop-blur-md"
           : "border-b border-ink-white/10 bg-ink-black/55 backdrop-blur-sm"
