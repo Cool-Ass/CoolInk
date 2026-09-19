@@ -6,6 +6,9 @@ import { hasAdminPermission } from "@/lib/adminPermissions";
 import ClientWorkspace from "@/components/admin/ClientWorkspace";
 import { getMessageTemplates } from "@/lib/messageTemplates";
 import { privateImageUrl } from "@/lib/privateMedia";
+import LoyaltyCard from "@/components/client/LoyaltyCard";
+import { getLoyaltyCard } from "@/lib/loyalty";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,8 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     getMessageTemplates(),
   ]);
   if (!client) notFound();
+  const loyalty = await getLoyaltyCard(id);
+  const unsettled = await prisma.appointment.findMany({ where: { project: { clientId: id, kind: { not: "consultation" } }, status: "completed", loyaltyEntry: null, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { project: { select: { title: true } } }, orderBy: { startsAt: "desc" } });
 
   const projects = client.projects.map((project) => ({
     id: project.id,
@@ -41,5 +46,5 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     messages: project.messages.map((item) => ({ id: item.id, author: item.author, body: item.body, createdAt: item.createdAt.toISOString(), readAt: item.readAt?.toISOString() ?? null, attachment: item.attachment ? { ...item.attachment, url: privateImageUrl(item.attachment.id, "admin", admin?.id || "") } : null })),
   }));
 
-  return <div className="flex flex-col gap-3"><Link href="/admin/clients" className="text-xs text-ink-grey hover:text-ink-gold">← KLIENCI</Link><ClientWorkspace client={{ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, notes: client.notes }} projects={projects} directMessages={client.directMessages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: null }))} messageTemplates={messageTemplates} canManageFinance={Boolean(admin && hasAdminPermission(admin.role, "finance.manage"))} canDeleteProject={Boolean(admin && hasAdminPermission(admin.role, "projects.delete"))} /></div>;
+  return <div className="flex flex-col gap-3"><Link href="/admin/clients" className="text-xs text-ink-grey hover:text-ink-gold">← KLIENCI</Link><LoyaltyCard card={loyalty} clientId={admin && hasAdminPermission(admin.role, "finance.manage") ? id : undefined} visits={unsettled.map((item) => ({ id: item.id, title: item.project.title, date: formatCoolinkDateTime(item.startsAt), price: item.price }))} /><ClientWorkspace client={{ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, notes: client.notes }} projects={projects} directMessages={client.directMessages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: null }))} messageTemplates={messageTemplates} canManageFinance={Boolean(admin && hasAdminPermission(admin.role, "finance.manage"))} canDeleteProject={Boolean(admin && hasAdminPermission(admin.role, "projects.delete"))} /></div>;
 }
