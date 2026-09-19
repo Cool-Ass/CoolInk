@@ -62,7 +62,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-4">
+      <nav aria-label="Nawigacja studia" className="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-4">
         {sections.map((section) => (
           <div key={section.label}>
             <p className="px-3 pb-1.5 text-[9px] font-semibold tracking-[0.18em] text-ink-grey/60">
@@ -79,6 +79,7 @@ export default function Sidebar({
                     key={link.href}
                     href={link.href}
                     data-active={active}
+                    aria-current={active ? "page" : undefined}
                     className={`studio-nav-link transition-colors ${active ? "text-ink-gold" : "text-ink-grey hover:text-ink-white"}`}
                   >
                     <Icon className="h-3.5 w-3.5 shrink-0" />{link.label}

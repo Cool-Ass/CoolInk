@@ -46,7 +46,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (syncIssues > 0) actions.push({ key: "calendar-sync", priority: 1, label: "KALENDARZ", title: `${syncIssues} ${syncIssues === 1 ? "problem synchronizacji" : "problemy synchronizacji"}`, detail: "Sprawdź połączenie z Kalendarzem Google, aby uniknąć rozbieżności terminów.", href: "/admin/calendar" });
   actions.sort((a, b) => a.priority - b.priority || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER));
 
-  return <div className="studio-page">
+  return <div className="studio-page studio-dashboard">
     {access === "denied" && <div role="alert" className="border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Twoja rola nie ma dostępu do tego obszaru. Możesz nadal korzystać z dostępnych funkcji operacyjnych.</div>}
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="studio-eyebrow">CENTRUM DOWODZENIA</p><h1 className="studio-page-title">Co wymaga Twojej uwagi?</h1><p className="studio-page-description">Najważniejsze sprawy są ustawione według pilności.</p></div><div className="flex gap-2"><div className="min-w-24 border border-red-400/35 bg-red-500/5 px-3 py-2"><p className="text-[9px] tracking-[.1em] text-red-200">PILNE</p><p className="mt-0.5 font-display text-2xl">{actions.filter((item) => item.priority === 1).length}</p></div><div className="min-w-24 border border-ink-white/15 bg-ink-charcoal/25 px-3 py-2"><p className="text-[9px] tracking-[.1em] text-ink-grey">DO ZROBIENIA</p><p className="mt-0.5 font-display text-2xl">{actions.length}</p></div></div></header>
 

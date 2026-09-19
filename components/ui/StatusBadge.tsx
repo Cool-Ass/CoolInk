@@ -5,5 +5,5 @@ const styles: Record<string, string> = { requested: "border-amber-400/45 bg-ambe
 
 export default function StatusBadge({ status, children }: { status: string; children?: ReactNode }) {
   const appointmentStatuses = new Set(["requested", "proposed", "confirmed", "completed", "cancelled", "no_show"]);
-  return <span className={`inline-flex items-center border px-2 py-1 text-[10px] tracking-[0.1em] ${styles[status] ?? "border-ink-white/20 bg-ink-white/5 text-ink-grey"}`}>{children ?? (appointmentStatuses.has(status) ? appointmentStatusLabel(status) : projectStatusLabel(status))}</span>;
+  return <span className={`studio-status inline-flex items-center border px-2 py-1 text-[10px] tracking-[0.1em] ${styles[status] ?? "border-ink-white/20 bg-ink-white/5 text-ink-grey"}`}>{children ?? (appointmentStatuses.has(status) ? appointmentStatusLabel(status) : projectStatusLabel(status))}</span>;
 }

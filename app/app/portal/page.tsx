@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { CLIENT_STATUS } from "@/lib/projectWorkflow";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
+import { CalendarDays, Images, MessageCircle, ArrowUpRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -31,16 +32,20 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
       <p className="studio-eyebrow">STREFA KLIENTA</p>
       <h1 className="studio-page-title">Cześć, {client.firstName}.</h1>
     </header>
-    {primary && <section className="border-l-2 border-ink-gold bg-ink-gold/5 p-4">
+    {nextVisit && <section className="studio-hero grid items-center gap-5 sm:grid-cols-[1fr_auto]">
+      <div><p className="studio-eyebrow">TWOJA NAJBLIŻSZA WIZYTA</p><h2 className="mt-3 text-2xl font-semibold sm:text-3xl">{formatCoolinkDateTime(nextVisit.startsAt)}</h2><p className="mb-3 mt-2 text-sm text-ink-grey">{nextVisit.project.title}</p><StatusBadge status={nextVisit.status} /></div>
+      <Link href="/app/portal/projects" className="studio-primary-link">Szczegóły wizyty <ArrowUpRight aria-hidden className="h-4 w-4" /></Link>
+    </section>}
+    {primary && <section className="studio-panel p-5">
       <p className="text-xs tracking-[.14em] text-ink-gold">TWÓJ NASTĘPNY KROK</p>
       <div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="font-display text-xl sm:text-2xl">{primary.title}</h2>{primary.kind === "consultation" && <span className="border border-blue-400/50 px-2 py-1 text-[10px] text-blue-200">KONSULTACJA</span>}<StatusBadge status={primary.status} /></div><p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-grey">{nextCopy}</p><Link href="/app/portal/projects" className="mt-3 inline-block border border-ink-gold px-3 py-2 text-[10px] text-ink-gold hover:bg-ink-gold hover:text-ink-black">OTWÓRZ SZCZEGÓŁY →</Link>
     </section>}
 
-    {!primary && <p className="border-l-2 border-ink-gold/60 pl-3 text-sm leading-relaxed text-ink-grey">Wybierz wolny termin w kalendarzu. Utworzysz i opiszesz nowy projekt albo dodasz wizytę do istniejącego.</p>}
+    {!primary && <section className="studio-hero"><p className="studio-eyebrow">TWÓJ POMYSŁ. TWOJA HISTORIA.</p><h2 className="mt-3 text-2xl font-semibold">Zacznij od wolnego terminu.</h2><p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-grey">Wybierz termin w kalendarzu, opisz swój pomysł i dodaj inspiracje. Szczegóły ustalimy razem.</p><Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="studio-primary-link mt-5">Sprawdź terminy <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {nextVisit && <Link href="/app/portal/projects" className="border border-blue-400/30 bg-blue-400/5 p-4 hover:border-blue-300"><p className="text-[10px] tracking-widest text-blue-200">NAJBLIŻSZY TERMIN</p><p className="mt-2 font-display text-xl">{formatCoolinkDateTime(nextVisit.startsAt)}</p><p className="mt-1 text-xs text-ink-grey">{nextVisit.project.title}</p></Link>}
-      <Link href="/app/portal/projects" className="border border-ink-white/15 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><p className="text-[10px] tracking-widest text-ink-gold">PROJEKTY I KONSULTACJE</p><p className="mt-2 font-display text-2xl">{projects.length}</p><p className="mt-1 text-xs text-ink-grey">Historia, terminy, zdjęcia i status.</p></Link>
-      <Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="border border-emerald-500/35 bg-emerald-500/5 p-4 hover:border-emerald-400"><p className="text-[10px] tracking-widest text-emerald-300">KALENDARZ</p><p className="mt-2 font-display text-2xl">Wolne terminy</p><p className="mt-1 text-xs text-ink-grey">Wizyta lub konsultacja.</p></Link>
+      <Link href="/app/portal/projects" className="studio-shortcut"><Images aria-hidden /><div><p className="text-sm font-medium">Twoje projekty · {projects.length}</p><p className="mt-1 text-xs text-ink-grey">Inspiracje, historia i szczegóły.</p></div></Link>
+      <Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="studio-shortcut"><CalendarDays aria-hidden /><div><p className="text-sm font-medium">Wolne terminy</p><p className="mt-1 text-xs text-ink-grey">Umów wizytę lub konsultację.</p></div></Link>
+      <Link href="/app/portal/messages" className="studio-shortcut"><MessageCircle aria-hidden /><div><p className="text-sm font-medium">Kontakt ze studiem</p><p className="mt-1 text-xs text-ink-grey">Ustalmy szczegóły Twojego pomysłu.</p></div></Link>
     </div>
   </div>;
 }

@@ -18,29 +18,40 @@ export default function AppDrawer({
   children: ReactNode;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") { event.preventDefault(); onCloseRef.current(); }
+      if (event.key === "Tab") {
+        const items = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]') ?? []);
+        const first = items[0]; const last = items.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
+      previousFocus?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[150]" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" aria-label="Zamknij panel" onClick={onClose} className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
-      <aside className="absolute inset-y-0 right-0 flex w-full max-w-[460px] flex-col border-l border-ink-white/15 bg-[#111214] text-ink-white shadow-[-24px_0_70px_rgba(0,0,0,.55)]">
+    <div className="studio-drawer fixed inset-0 z-[150]" role="dialog" aria-modal="true" aria-label={title}>
+      <button type="button" tabIndex={-1} aria-label="Zamknij panel" onClick={onClose} className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
+      <aside ref={panelRef} className="absolute inset-y-0 right-0 flex w-full max-w-[460px] flex-col border-l border-ink-white/15 bg-[#1b1e23] text-ink-white shadow-[-24px_0_70px_rgba(0,0,0,.35)] sm:rounded-l-2xl">
         <header className="shrink-0 border-b border-ink-white/10 bg-[#111214]/95 px-4 py-4 backdrop-blur sm:px-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="font-display text-3xl leading-none">{title}</h2>
+              <h2 className="text-xl font-semibold leading-snug">{title}</h2>
               {subtitle && <p className="mt-2 text-xs leading-relaxed text-ink-grey">{subtitle}</p>}
             </div>
             <button ref={closeRef} type="button" onClick={onClose} aria-label="Zamknij" className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold">

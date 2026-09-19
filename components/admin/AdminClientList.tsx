@@ -6,6 +6,7 @@ import { FolderKanban, MessageSquare, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ActionIcon from "@/components/ui/ActionIcon";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import AppDrawer from "@/components/ui/AppDrawer";
 import { useToast } from "@/components/admin/ToastProvider";
 
 type ClientListItem = {
@@ -24,6 +25,10 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
   const [visibleClients, setVisibleClients] = useState(clients);
   const [clientToDelete, setClientToDelete] = useState<ClientListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [query, setQuery] = useState("");
+  const [onlyProjects, setOnlyProjects] = useState(false);
+  const [preview, setPreview] = useState<ClientListItem | null>(null);
+  const filteredClients = visibleClients.filter((client) => (!onlyProjects || client.projectCount > 0) && `${client.firstName} ${client.lastName} ${client.email} ${client.phone ?? ""} ${client.tags}`.toLocaleLowerCase("pl-PL").includes(query.trim().toLocaleLowerCase("pl-PL")));
 
   async function removeClient() {
     if (!clientToDelete) return;
@@ -48,15 +53,20 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
   }
 
   return <div className="studio-panel overflow-hidden p-0">
+    <div className="flex flex-wrap items-center gap-3 border-b border-ink-white/10 p-3">
+      <label className="min-w-0 flex-1"><span className="sr-only">Szukaj klienta</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Szukaj po nazwisku, e-mailu, telefonie…" className="w-full border border-ink-white/15 bg-ink-black px-3 py-2 text-sm" /></label>
+      <label className="flex items-center gap-2 text-xs text-ink-grey"><input type="checkbox" checked={onlyProjects} onChange={(event) => setOnlyProjects(event.target.checked)} />Z projektami</label>
+      <span aria-live="polite" className="text-xs text-ink-grey">{filteredClients.length} wyników</span>
+    </div>
     <div className="divide-y divide-ink-white/10">
-      {visibleClients.map((client) => {
+      {filteredClients.map((client) => {
         const fullName = `${client.firstName} ${client.lastName}`;
         return <article key={client.id} className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
-          <Link href={`/admin/clients/${client.id}`} className="min-w-0 flex-1">
+          <button type="button" onClick={() => setPreview(client)} className="min-w-0 flex-1 text-left">
             <span className="text-sm text-ink-white transition-colors hover:text-ink-gold">{fullName}</span>
             <span className="mt-0.5 block truncate text-[11px] text-ink-grey">{client.email}{client.phone ? ` · ${client.phone}` : ""}</span>
             {client.tags && <span className="mt-0.5 block truncate text-[10px] text-ink-gold">{client.tags}</span>}
-          </Link>
+          </button>
           <span className="hidden shrink-0 text-[10px] text-ink-grey lg:block">{client.projectCount} {client.projectCount === 1 ? "projekt" : "projektów"}</span>
           <div className="flex shrink-0 items-center gap-1.5">
             <ActionIcon icon={FolderKanban} label={`Otwórz projekty klienta ${fullName}`} href={`/admin/clients/${client.id}?view=projects`} />
@@ -65,7 +75,12 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
           </div>
         </article>;
       })}
+      {!filteredClients.length && <p className="p-6 text-center text-sm text-ink-grey">Brak pasujących klientów. Zmień wyszukiwanie lub filtr.</p>}
     </div>
+    {preview && <AppDrawer title={`${preview.firstName} ${preview.lastName}`} subtitle="Szybki podgląd klienta" onClose={() => setPreview(null)}>
+      <dl className="space-y-4 text-sm"><div><dt className="text-xs text-ink-grey">E-mail</dt><dd className="mt-1 break-all">{preview.email}</dd></div><div><dt className="text-xs text-ink-grey">Telefon</dt><dd className="mt-1">{preview.phone || "Nie podano"}</dd></div><div><dt className="text-xs text-ink-grey">Projekty</dt><dd className="mt-1">{preview.projectCount}</dd></div>{preview.tags && <div><dt className="text-xs text-ink-grey">Tagi</dt><dd className="mt-1">{preview.tags}</dd></div>}</dl>
+      <div className="mt-6 flex flex-wrap gap-2"><Link className="studio-primary-link" href={`/admin/clients/${preview.id}`}>Otwórz kartę klienta →</Link><Link className="rounded-lg border border-ink-white/15 px-3 py-2 text-sm" href={`/admin/clients/${preview.id}?view=messages`}>Wiadomości</Link></div>
+    </AppDrawer>}
     {clientToDelete && <ConfirmModal message={`Usunąć konto ${clientToDelete.firstName} ${clientToDelete.lastName}? Operacja trwale usunie również projekty, wizyty i historię klienta.`} onCancel={() => !deleting && setClientToDelete(null)} onConfirm={removeClient} pending={deleting} pendingLabel="USUWANIE…" />}
   </div>;
 }

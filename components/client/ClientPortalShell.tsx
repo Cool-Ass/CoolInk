@@ -39,6 +39,7 @@ export default function ClientPortalShell({ firstName, unreadMessages, unreadNot
   const logo = logoFailed ? <span className="font-display text-base tracking-[.08em] text-ink-white">COOLINK</span> : <Image src={logoSource} alt="CoolInk Tattoo Studio" width={112} height={34} priority onError={() => setLogoFailed(true)} className="h-full w-full object-contain object-left" />;
 
   return <main className="client-shell flex min-h-screen bg-ink-black text-ink-white">
+    <a href="#client-workspace" className="studio-skip-link">Przejdź do treści</a>
     <aside className="studio-sidebar">
       <Link href="/" aria-label="CoolInk Tattoo Studio" className="studio-sidebar-logo"><span className="h-8 w-24">{logo}</span></Link>
       <div className="px-5 pb-2 pt-4"><p className="text-[9px] font-semibold tracking-[.18em] text-ink-grey/60">TWOJE KONTO</p><p className="mt-1 truncate text-sm text-ink-white">{firstName}</p></div>
@@ -53,7 +54,7 @@ export default function ClientPortalShell({ firstName, unreadMessages, unreadNot
         <div className="flex min-w-0 items-center gap-3"><Link href="/" aria-label="CoolInk Tattoo Studio" className="h-8 w-24 md:hidden">{logo}</Link><p className="hidden truncate text-xs tracking-[.04em] text-ink-grey md:block">Klient · <span className="text-ink-white">{firstName}</span></p></div>
         <div className="flex items-center gap-2"><ClientHeaderUtilities messages={messages} notifications={notifications} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} /><span className="hidden border border-ink-white/20 px-4 py-2.5 sm:block"><ClientLogoutButton /></span></div>
       </header>
-      <div className="client-workspace studio-workspace"><div className="mx-auto w-full max-w-[1800px]">{children}</div></div>
+      <div id="client-workspace" tabIndex={-1} className="client-workspace studio-workspace"><div className="mx-auto w-full max-w-[1280px]">{children}</div></div>
     </div>
 
     <nav aria-label="Główna nawigacja klienta" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-white/15 bg-ink-charcoal/95 px-1 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_36px_rgba(0,0,0,.35)] backdrop-blur-xl md:hidden">

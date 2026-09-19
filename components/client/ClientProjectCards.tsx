@@ -182,7 +182,8 @@ export default function ClientProjectCards({
                 <img
                   src={previewSource}
                   alt="Inspiracja projektu"
-                  className="aspect-[16/5] max-h-28 w-full object-cover"
+                  loading="lazy"
+                  className="aspect-[16/9] max-h-44 w-full object-cover"
                 />
               )}
               <div className="p-3 pr-10">
