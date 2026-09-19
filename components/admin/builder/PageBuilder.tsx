@@ -137,6 +137,8 @@ export default function PageBuilder({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewExitRef = useRef<HTMLButtonElement>(null);
   const [lastSavedSignature, setLastSavedSignature] = useState(() => JSON.stringify(initialPage.modules ?? []));
   const [navigatorOpen, setNavigatorOpen] = useState(true);
   const [versionsOpen, setVersionsOpen] = useState(false);
@@ -318,6 +320,7 @@ export default function PageBuilder({
 
   useEffect(() => {
     function keyboardHistory(event: KeyboardEvent) {
+      if (previewOpen) return;
       const target = event.target as HTMLElement | null;
       if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") return;
@@ -327,10 +330,11 @@ export default function PageBuilder({
     }
     window.addEventListener("keydown", keyboardHistory);
     return () => window.removeEventListener("keydown", keyboardHistory);
-  }, [handleRedo, handleUndo]);
+  }, [handleRedo, handleUndo, previewOpen]);
 
   useEffect(() => {
     function keyboardSidebar(event: KeyboardEvent) {
+      if (previewOpen) return;
       const target = event.target as HTMLElement | null;
       if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "p") return;
@@ -339,7 +343,22 @@ export default function PageBuilder({
     }
     window.addEventListener("keydown", keyboardSidebar);
     return () => window.removeEventListener("keydown", keyboardSidebar);
+  }, [previewOpen]);
+
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    requestAnimationFrame(() => document.getElementById("builder-preview-button")?.focus());
   }, []);
+
+  useEffect(() => {
+    if (!previewOpen) return;
+    previewExitRef.current?.focus();
+    function exitOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !event.defaultPrevented) closePreview();
+    }
+    window.addEventListener("keydown", exitOnEscape);
+    return () => window.removeEventListener("keydown", exitOnEscape);
+  }, [previewOpen, closePreview]);
 
   function startSidebarResize(event: React.PointerEvent<HTMLDivElement>) {
     if (!sidebarOpen) return;
@@ -749,6 +768,15 @@ export default function PageBuilder({
     setGuides((current) => current.map((guide) => guide.id === id ? { ...guide, position: safePosition } : guide));
   }
 
+  if (previewOpen) return (
+    <div data-lenis-prevent className="h-[100dvh] overflow-y-auto bg-ink-black">
+      <button ref={previewExitRef} type="button" onClick={closePreview} aria-label="Wróć do edytora" title="Wróć do edytora (Esc)" className="fixed bottom-4 right-4 z-[300] rounded-full border border-white/20 bg-black/85 px-3 py-2 text-xs text-white shadow-lg backdrop-blur hover:border-ink-gold hover:text-ink-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold">← Edytor · Esc</button>
+      <main className="public-site min-h-full" style={globals.theme ? siteThemeStyle(globals.theme) : undefined}>
+        <ModuleRenderer modules={modules} portfolioWorks={portfolioItems} globals={globals} />
+      </main>
+    </div>
+  );
+
   return (
     <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-ink-black text-ink-white">
       <BuilderTopBar
@@ -771,6 +799,7 @@ export default function PageBuilder({
         onRedo={handleRedo}
         navigatorOpen={navigatorOpen}
         onToggleNavigator={() => { setNavigatorOpen((open) => !open); setVersionsOpen(false); }}
+        onPreview={() => setPreviewOpen(true)}
         versionsOpen={versionsOpen}
         onToggleVersions={() => { setVersionsOpen((open) => !open); setNavigatorOpen(false); }}
         isHomepage={page.isHomepage}

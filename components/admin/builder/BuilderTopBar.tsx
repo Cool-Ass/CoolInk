@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { History, ListTree, Redo2, Undo2 } from "lucide-react";
+import { Eye, History, ListTree, Redo2, Undo2 } from "lucide-react";
 
 export type DeviceMode = "desktop" | "tablet" | "mobile";
 
@@ -25,6 +25,7 @@ interface BuilderTopBarProps {
   onRedo: () => void;
   navigatorOpen: boolean;
   onToggleNavigator: () => void;
+  onPreview: () => void;
   versionsOpen: boolean;
   onToggleVersions: () => void;
   isHomepage: boolean;
@@ -58,6 +59,7 @@ export default function BuilderTopBar({
   onRedo,
   navigatorOpen,
   onToggleNavigator,
+  onPreview,
   versionsOpen,
   onToggleVersions,
   isHomepage,
@@ -120,6 +122,7 @@ export default function BuilderTopBar({
           <ListTree className="h-3.5 w-3.5" />
           NAWIGATOR
         </button>
+        <button id="builder-preview-button" type="button" onClick={onPreview} title="Podgląd aktualnych zmian bez narzędzi edycji" className="flex h-8 items-center gap-1.5 rounded-md border border-ink-white/15 px-2 text-[9px] tracking-[0.06em] text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold"><Eye aria-hidden className="h-3.5 w-3.5" />PODGLĄD</button>
         <button
           type="button"
           onClick={onToggleVersions}
