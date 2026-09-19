@@ -12,6 +12,7 @@ requireTestProject(dryRun);
 process.env.DATABASE_URL = requireTestDatabase(dryRun);
 const prisma = new PrismaClient();
 const privateTables = [
+  "LoyaltyEntry",
   "AdminUser", "AdminAuditLog", "AdminPushSubscription", "Page", "PageRevision", "PortfolioItem", "Media", "SiteSetting", "NavItem", "ContactMessage",
   "Client", "AccountDeletionRequest", "StudioDocument", "StudioDocumentVersion", "DocumentAcceptance", "TattooProject", "Appointment", "WebhookReceipt",
   "WaitlistEntry", "PushSubscription", "ReminderDelivery", "InventoryItem", "InventoryMovement", "RateLimitBucket", "ProjectActivity", "ClientNotification",

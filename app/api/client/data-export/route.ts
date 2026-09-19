@@ -16,6 +16,7 @@ export async function GET(request: Request) {
       notifications: true,
       directMessages: true,
       deletionRequest: true,
+      loyaltyEntries: { select: { kind: true, stamps: true, grossCents: true, discountCents: true, paidCents: true, createdAt: true, voidedAt: true } },
     },
   });
   if (!data) return NextResponse.json({ error: "Profil nie istnieje." }, { status: 404 });

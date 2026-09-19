@@ -44,6 +44,7 @@ jobs:
             exit 0
           fi
           npm run db:test:prepare
+          node scripts/verifyLoyaltyMigration.cjs
           npm run db:security:audit
           npm run db:security:verify
           npm run db:security:http-verify
@@ -75,6 +76,7 @@ jobs:
           done
           npm run test:smoke:rls
           npm run test:smoke:admin
+          node scripts/verifyLoyaltySmoke.cjs
   codeql:
     runs-on: ubuntu-latest
     permissions:

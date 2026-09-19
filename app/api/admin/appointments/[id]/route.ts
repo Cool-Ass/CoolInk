@@ -34,6 +34,8 @@ export async function PATCH(request: Request, { params }: Params) {
   const changed = timeChanged || status !== appointment.status;
   const updated = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
+    const settled = await tx.loyaltyEntry.findFirst({ where: { appointmentId: id, voidedAt: null } });
+    if (settled && (status !== "completed" || timeChanged || price !== appointment.price || serviceType !== appointment.serviceType)) throw new Error("LOYALTY_LOCKED");
     const lockedConflict = await bookingConflict(startsAt, endsAt, id, !Boolean(body?.ignoreBuffer), tx, { serviceType, workstation });
     if (status !== "cancelled" && (lockedConflict.appointment || lockedConflict.block)) throw new Error("BOOKING_CONFLICT");
     const item = await tx.appointment.update({ where: { id }, data: { startsAt, endsAt, status, price, serviceType, workstation, notes: typeof body?.notes === "string" ? body.notes.trim() || null : appointment.notes } });
@@ -50,9 +52,11 @@ export async function PATCH(request: Request, { params }: Params) {
     else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: status === "confirmed" ? "Wizyta potwierdzona" : "Aktualizacja wizyty", body: message, href: "/app/portal/visits" } });
     return item;
   }).catch((error: unknown) => {
+    if (error instanceof Error && error.message === "LOYALTY_LOCKED") return NextResponse.json({ error: "Wizyta jest rozliczona. Najpierw wycofaj rozliczenie w karcie lojalnościowej klienta." }, { status: 409 });
     if (error instanceof Error && error.message === "BOOKING_CONFLICT") return null;
     throw error;
   });
+  if (updated instanceof NextResponse) return updated;
   if (!updated) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny zakres." }, { status: 409 });
   await syncAppointmentToGoogle(updated.id).catch(() => undefined);
   if (status === "cancelled" && appointment.status !== "cancelled") await offerReleasedRange(appointment.startsAt, appointment.endsAt).catch(() => undefined);
@@ -64,7 +68,18 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params; const appointment = await prisma.appointment.findUnique({ where: { id }, include: { project: { select: { clientId: true } } } });
   if (!appointment) return NextResponse.json({ error: "Wizyta nie istnieje." }, { status: 404 });
-  await prisma.$transaction(async (tx) => { await tx.appointment.update({ where: { id }, data: { status: "cancelled" } }); await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: "appointment_cancelled", message: "Wizyta została anulowana przez studio.", visibility: "admin" } }); const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true } }); const project = await tx.tattooProject.findUniqueOrThrow({ where: { id: appointment.projectId }, select: { status: true, depositStatus: true } }); await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: projectStatusAfterAppointmentChange(sessions, project.depositStatus, project.status) } }); await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal" } }); });
+  const cancelled = await prisma.$transaction(async (tx) => {
+    await lockBookingCalendar(tx);
+    if (await tx.loyaltyEntry.findFirst({ where: { appointmentId: id, voidedAt: null } })) return false;
+    await tx.appointment.update({ where: { id }, data: { status: "cancelled" } });
+    await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: "appointment_cancelled", message: "Wizyta została anulowana przez studio.", visibility: "admin" } });
+    const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true } });
+    const project = await tx.tattooProject.findUniqueOrThrow({ where: { id: appointment.projectId }, select: { status: true, depositStatus: true } });
+    await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: projectStatusAfterAppointmentChange(sessions, project.depositStatus, project.status) } });
+    await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal" } });
+    return true;
+  });
+  if (!cancelled) return NextResponse.json({ error: "Najpierw wycofaj rozliczenie w karcie lojalnościowej klienta." }, { status: 409 });
   await syncAppointmentToGoogle(id).catch(() => undefined);
   if (appointment.status !== "cancelled") await offerReleasedRange(appointment.startsAt, appointment.endsAt).catch(() => undefined);
   return NextResponse.json({ ok: true });

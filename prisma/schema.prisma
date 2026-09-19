@@ -190,6 +190,7 @@ model Client {
   pushSubscriptions PushSubscription[]
   waitlistEntries   WaitlistEntry[]
   deletionRequest   AccountDeletionRequest?
+  loyaltyEntries    LoyaltyEntry[]
 }
 
 /// Client-initiated privacy request. CRM and statutory records are not
@@ -309,7 +310,31 @@ model Appointment {
   updatedAt          DateTime                 @updatedAt
   googleCalendarSync GoogleCalendarEventSync?
   reminderDeliveries ReminderDelivery[]
+  loyaltyEntry      LoyaltyEntry?
   waitlistOffer      WaitlistEntry?           @relation("WaitlistOfferAppointment")
+}
+
+/// Auditable paid visits and paper-card imports. A deleted project does not erase loyalty history.
+model LoyaltyEntry {
+  id             String   @id @default(cuid())
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointmentId  String?  @unique
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  key            String   @unique
+  kind           String   // visit | paper
+  stamps         Int
+  grossCents     Int      @default(0)
+  discountCents  Int      @default(0)
+  paidCents      Int      @default(0)
+  note           String
+  adminId        String
+  createdAt      DateTime @default(now())
+  voidedAt       DateTime?
+  voidReason     String?
+  voidedBy       String?
+
+  @@index([clientId, createdAt])
 }
 
 /// Replay and idempotency ledger for every signed inbound webhook.

@@ -7,6 +7,7 @@ const { PrismaClient } = require("@prisma/client");
 const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
 const tables = [
+  "LoyaltyEntry",
   "AdminUser", "AdminAuditLog", "AdminPushSubscription", "Appointment", "AvailabilityBlock", "Client", "ClientNotification",
   "AccountDeletionRequest", "AvailableSlot", "CalendarEvent",
   "GoogleCalendarConnection", "GoogleCalendarSelection", "GoogleCalendarEventSync",

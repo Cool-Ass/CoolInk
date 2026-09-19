@@ -6,6 +6,8 @@ import { CLIENT_STATUS } from "@/lib/projectWorkflow";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { CalendarDays, Images, MessageCircle, ArrowUpRight } from "lucide-react";
+import LoyaltyCard from "@/components/client/LoyaltyCard";
+import { getLoyaltyCard } from "@/lib/loyalty";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
   const primary = projects.find((project) => !["completed", "cancelled"].includes(project.status)) ?? projects[0];
   const nextVisit = projects.flatMap((project) => project.appointments.map((appointment) => ({ ...appointment, project }))).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
   const nextCopy = primary ? CLIENT_STATUS[primary.status as keyof typeof CLIENT_STATUS]?.next ?? "Studio wróci z kolejnym krokiem." : "";
+  const loyalty = await getLoyaltyCard(current.id);
 
   return <div className="studio-page">
     <header>
@@ -42,6 +45,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
     </section>}
 
     {!primary && <section className="studio-hero"><p className="studio-eyebrow">TWÓJ POMYSŁ. TWOJA HISTORIA.</p><h2 className="mt-3 text-2xl font-semibold">Zacznij od wolnego terminu.</h2><p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-grey">Wybierz termin w kalendarzu, opisz swój pomysł i dodaj inspiracje. Szczegóły ustalimy razem.</p><Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="studio-primary-link mt-5">Sprawdź terminy <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}
+    <LoyaltyCard card={loyalty} />
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       <Link href="/app/portal/projects" className="studio-shortcut"><Images aria-hidden /><div><p className="text-sm font-medium">Twoje projekty · {projects.length}</p><p className="mt-1 text-xs text-ink-grey">Inspiracje, historia i szczegóły.</p></div></Link>
       <Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="studio-shortcut"><CalendarDays aria-hidden /><div><p className="text-sm font-medium">Wolne terminy</p><p className="mt-1 text-xs text-ink-grey">Umów wizytę lub konsultację.</p></div></Link>
