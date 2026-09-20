@@ -1,5 +1,24 @@
 # Karta lojalnościowa i przegląd obsługi — 20.09.2026
 
+## Aktualizacja: ustawienia i usprawnienia obsługi
+
+- Ustawienia → Program lojalnościowy: próg pieczątki (domyślnie **powyżej 800 zł**), liczba pieczątek (5), rabat (50%), maksymalny rabat (700 zł), domyślna cena sesji (1400 zł). Dokładnie 800 zł nie daje pieczątki. Cenę sesji i limit rabatu edytuje się niezależnie.
+- Zmiany ustawień zapisuje właściciel; dziennik zawiera poprzednie i nowe wartości. Zmiana liczby pieczątek zmienia liczbę dostępnych nagród z zachowanego salda. Stare rozliczenia i zwroty zachowują oryginalne kwoty i liczbę pieczątek. Nieaktualny formularz nie może zapisać rozliczenia.
+- W projekcie admin podaje zakres sesji i stawkę. Klient widzi szacunek w sesjach; starszych wycen PLN nie konwertujemy. Indywidualne wyceny małych tatuaży nadal są dostępne.
+- Karta klienta: „Zakończ i rozlicz wizytę”, opcjonalna kolejna sesja w kolejce działań. Można zakończyć bez płatności — bez pieczątki. Ekran admina pokazuje kolejkę nierozliczonych zakończonych wizyt.
+- Anulowanie projektu pod blokadą kalendarza zwalnia wizyty, zamyka jego listę rezerwową, synchronizuje kalendarz i proponuje zwolnione zakresy kolejnym oczekującym.
+- Linki z ekranu Start i powiadomień o projektach otwierają konkretny projekt/wizytę. Etapy projektów klienta są uproszczone; status wizyty i zadatku pozostają osobne.
+- Kreator ma zapis, wczytanie i usunięcie prywatnego szkicu na koncie oraz ostrzeżenie o niezapisanych zmianach. Szkic zawiera tekst, nie zdjęcia, terminy ani zgody. Zdjęcia trzeba ponownie wybrać, zgody potwierdzić, a termin jest sprawdzany przy wysłaniu.
+- Klient zgłasza chęć użycia nagrody przy rezerwacji. Studio widzi prośbę w notatkach i rozliczeniu. Nie rezerwuje to ani nie zużywa pieczątek.
+
+### Weryfikacja i wycofanie
+
+Testy obejmują granicę 800/800,01 zł, zmienne zasady, nieaktualne wyceny rabatu, role, obce konta, powtórzenia, zakończenie bez płatności i szkice. CI dodatkowo sprawdza migracje w wycofywanej transakcji oraz rzeczywiste rozliczenia i izolację danych na bazie testowej.
+
+Migracje są rozszerzające i nie usuwają historii. Przy awarii wstrzymać rozliczenia. Nie cofać aplikacji do wersji zakładającej pięć pieczątek, jeżeli użyto innych ustawień — taka wersja błędnie interpretuje nowe wpisy. Preferować poprawkę do przodu, zachowując wszystkie dane i ustawienia.
+
+Poniżej zachowano wcześniejszą analizę i pierwotne zasady jako kontekst historyczny; aktualne zachowanie opisano powyżej.
+
 ## Wdrożenie lojalności
 
 - Admin: karta klienta → „Rozlicz opłaconą wizytę”. Najpierw oznacz wizytę jako zrealizowaną. Podaj cenę po innych rabatach, zaznacz odbiór całej należności (z zadatkiem) i zapisz.

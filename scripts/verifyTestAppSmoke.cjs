@@ -99,6 +99,14 @@ async function main() {
     assert(icsForeign.response.status === 404, `foreign ICS returned ${icsForeign.response.status}`);
     assert(icsCancelled.response.status === 404, `cancelled ICS returned ${icsCancelled.response.status}`);
     const portal = await call("/app/portal", {}, a.cookie); assert(portal.response.status === 200, `portal returned ${portal.response.status}`);
+    const draft = { title: "Szkic A", description: "Prywatny pomysł", placement: "Ramię", size: "15 cm", notes: "", consultationMode: "studio", leadSource: "", styles: [] };
+    const savedDraft = await call("/api/client/booking-draft", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) }, a.cookie);
+    assert(savedDraft.response.status === 200, "Draft save failed");
+    const ownDraft = await call("/api/client/booking-draft", {}, a.cookie);
+    const otherDraft = await call("/api/client/booking-draft", {}, b.cookie);
+    assert(JSON.parse(ownDraft.body).draft.title === draft.title && JSON.parse(otherDraft.body).draft === null, "Private draft isolation failed");
+    const deepLink = await call(`/app/portal/projects?project=${projectA}&appointment=${proposedA.id}`, {}, a.cookie);
+    assert(deepLink.response.status === 200 && deepLink.body.includes("RLS project A"), "Project deep link failed");
     const visits = await call("/app/portal/visits", {}, a.cookie); assert(visits.response.status === 200, `project visits returned ${visits.response.status}`);
     assert(visits.body.includes("PROJEKTY / ZGŁOSZENIA") && visits.body.includes("RLS project A"), "project view did not render the client-owned project");
     console.log("PASS: contact security, client registration/login, same-e-mail admin/client isolation, profile, projects, proposal accept/reject, notifications, documents, ICS, Google Calendar link restrictions and A/B endpoint isolation.");

@@ -1,3 +1,4 @@
+import { clientProjectStage } from "@/lib/projectWorkflow";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentClient } from "@/lib/clientAuth";
@@ -37,11 +38,11 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
     </header>
     {nextVisit && <section className="studio-hero grid items-center gap-5 sm:grid-cols-[1fr_auto]">
       <div><p className="studio-eyebrow">TWOJA NAJBLIŻSZA WIZYTA</p><h2 className="mt-3 text-2xl font-semibold sm:text-3xl">{formatCoolinkDateTime(nextVisit.startsAt)}</h2><p className="mb-3 mt-2 text-sm text-ink-grey">{nextVisit.project.title}</p><StatusBadge status={nextVisit.status} /></div>
-      <Link href="/app/portal/projects" className="studio-primary-link">Szczegóły wizyty <ArrowUpRight aria-hidden className="h-4 w-4" /></Link>
+      <Link href={`/app/portal/projects?project=${nextVisit.project.id}&appointment=${nextVisit.id}`} className="studio-primary-link">Szczegóły wizyty <ArrowUpRight aria-hidden className="h-4 w-4" /></Link>
     </section>}
     {primary && <section className="studio-panel p-5">
       <p className="text-xs tracking-[.14em] text-ink-gold">TWÓJ NASTĘPNY KROK</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="font-display text-xl sm:text-2xl">{primary.title}</h2>{primary.kind === "consultation" && <span className="border border-blue-400/50 px-2 py-1 text-[10px] text-blue-200">KONSULTACJA</span>}<StatusBadge status={primary.status} /></div><p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-grey">{nextCopy}</p><Link href="/app/portal/projects" className="mt-3 inline-block border border-ink-gold px-3 py-2 text-[10px] text-ink-gold hover:bg-ink-gold hover:text-ink-black">OTWÓRZ SZCZEGÓŁY →</Link>
+      <div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="font-display text-xl sm:text-2xl">{primary.title}</h2>{primary.kind === "consultation" && <span className="border border-blue-400/50 px-2 py-1 text-[10px] text-blue-200">KONSULTACJA</span>}<StatusBadge status={primary.status}>{clientProjectStage(primary.status)}</StatusBadge></div><p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-grey">{nextCopy}</p><Link href={`/app/portal/projects?project=${primary.id}`} className="mt-3 inline-block border border-ink-gold px-3 py-2 text-[10px] text-ink-gold hover:bg-ink-gold hover:text-ink-black">OTWÓRZ SZCZEGÓŁY →</Link>
     </section>}
 
     {!primary && <section className="studio-hero"><p className="studio-eyebrow">TWÓJ POMYSŁ. TWOJA HISTORIA.</p><h2 className="mt-3 text-2xl font-semibold">Zacznij od wolnego terminu.</h2><p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-grey">Wybierz termin w kalendarzu, opisz swój pomysł i dodaj inspiracje. Szczegóły ustalimy razem.</p><Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="studio-primary-link mt-5">Sprawdź terminy <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}

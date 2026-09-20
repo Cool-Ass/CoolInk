@@ -171,6 +171,7 @@ model ContactMessage {
 /// CRM profile. Client login/authentication will be connected in the client-app phase;
 /// it is intentionally separate from AdminUser so client data never shares admin access.
 model Client {
+  bookingDraft              Json?
   id                String                  @id @default(cuid())
   supabaseUserId    String?                 @unique
   firstName         String
@@ -267,6 +268,9 @@ model TattooProject {
   leadSource           String?
   estimatedPrice       Int?
   estimatedPriceMax    Int?
+  estimatedSessionsMin Int?
+  estimatedSessionsMax Int?
+  sessionPriceCents    Int?
   finalPrice           Int?
   status               String            @default("inquiry") // see lib/projectWorkflow.ts for the full, client-friendly workflow
   preferredDateNote    String?
@@ -302,6 +306,7 @@ model Appointment {
   notes              String?
   price              Int?
   serviceType        String?
+  loyaltyRequested   Boolean @default(false)
   workstation        String?
   confirmationRequestedAt DateTime?
   clientConfirmedAt  DateTime?

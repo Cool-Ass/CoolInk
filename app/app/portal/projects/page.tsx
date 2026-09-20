@@ -7,7 +7,8 @@ import ClientProjectCards from "@/components/client/ClientProjectCards";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ project?: string; appointment?: string }> }) {
+  const query = await searchParams;
   const current = await getCurrentClient();
   if (!current) redirect("/app");
 
@@ -17,13 +18,16 @@ export default async function ProjectsPage() {
     orderBy: { updatedAt: "desc" },
   });
 
-  return <ClientProjectCards projects={projects.map((project) => ({
+  return <ClientProjectCards key={`${query.project || ""}:${query.appointment || ""}`} initialProjectId={query.project} initialAppointmentId={query.appointment} projects={projects.map((project) => ({
     id: project.id,
     kind: project.kind,
     title: project.title,
     description: project.description,
     status: project.status,
     next: CLIENT_STATUS[project.status as keyof typeof CLIENT_STATUS]?.next ?? "Studio wróci z kolejnym krokiem.",
+    estimatedSessionsMin: project.estimatedSessionsMin,
+    estimatedSessionsMax: project.estimatedSessionsMax,
+    sessionPriceCents: project.sessionPriceCents,
     estimatedPrice: project.estimatedPrice,
     estimatedPriceMax: project.estimatedPriceMax,
     finalPrice: project.finalPrice,

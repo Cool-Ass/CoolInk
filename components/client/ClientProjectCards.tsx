@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { sessionEstimateLabel } from "@/lib/sessionEstimate";
+import { clientProjectStage } from "@/lib/projectWorkflow";
 import Link from "next/link";
 import { ImagePlus, LoaderCircle, Pencil, Trash2 } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
@@ -30,6 +32,9 @@ type Project = {
   description: string;
   status: string;
   next: string;
+  estimatedSessionsMin: number | null;
+  estimatedSessionsMax: number | null;
+  sessionPriceCents: number | null;
   estimatedPrice: number | null;
   estimatedPriceMax: number | null;
   finalPrice: number | null;
@@ -59,14 +64,18 @@ function projectTimeline(project: Project) {
 
 export default function ClientProjectCards({
   projects,
+  initialProjectId,
+  initialAppointmentId,
 }: {
   projects: Project[];
+  initialProjectId?: string;
+  initialAppointmentId?: string;
 }) {
-  const [selected, setSelected] = useState<Project | null>(null);
+  const [selected, setSelected] = useState<Project | null>(() => projects.find((p) => p.id === initialProjectId || p.appointments.some((a) => a.id === initialAppointmentId)) ?? null);
   const [appointment, setAppointment] = useState<{
     item: Appointment;
     title: string;
-  } | null>(null);
+  } | null>(() => { const project = projects.find((p) => p.appointments.some((a) => a.id === initialAppointmentId)); const item = project?.appointments.find((a) => a.id === initialAppointmentId); return project && item ? { item, title: project.title } : null; });
   const [cancelProject, setCancelProject] = useState<Project | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [deleteProject, setDeleteProject] = useState<Project | null>(null);
@@ -189,7 +198,7 @@ export default function ClientProjectCards({
               <div className="p-3 pr-10">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">{project.kind === "consultation" && <span className="mb-1 inline-block border border-blue-400/40 px-1.5 py-0.5 text-[9px] text-blue-200">KONSULTACJA</span>}<h3 className="truncate font-display text-lg">{project.title}</h3></div>
-                  <StatusBadge status={project.status} />
+                  <StatusBadge status={project.status}>{clientProjectStage(project.status)}</StatusBadge>
                 </div>
                 <p className="mt-1.5 line-clamp-1 text-[11px] text-ink-grey">
                   {project.next}
@@ -198,7 +207,7 @@ export default function ClientProjectCards({
                   {project.appointments.length}{" "}
                   {project.kind === "consultation" ? "termin konsultacji" : project.appointments.length === 1 ? "sesja" : "sesje"}
                 </p>
-                {project.kind !== "consultation" && <p className="mt-1 line-clamp-1 text-[11px] text-ink-grey">{project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice && project.estimatedPriceMax ? `Wycena: ${project.estimatedPrice}–${project.estimatedPriceMax} zł` : project.estimatedPrice ? `Wycena od ${project.estimatedPrice} zł` : project.estimatedPriceMax ? `Wycena do ${project.estimatedPriceMax} zł` : "Wycena w trakcie ustalania"}</p>}
+                {project.kind !== "consultation" && <p className="mt-1 line-clamp-1 text-[11px] text-ink-grey">{sessionEstimateLabel(project) || (project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice && project.estimatedPriceMax ? `Wycena: ${project.estimatedPrice}–${project.estimatedPriceMax} zł` : project.estimatedPrice ? `Wycena od ${project.estimatedPrice} zł` : project.estimatedPriceMax ? `Wycena do ${project.estimatedPriceMax} zł` : "Wycena w trakcie ustalania")}</p>}
               </div>
               </button>
               <ActionIcon icon={Trash2} label={`Usuń projekt ${project.title}`} tone="destructive" className="absolute right-2 top-2 z-10" onClick={() => setDeleteProject(project)} />
@@ -218,11 +227,11 @@ export default function ClientProjectCards({
             <section>
               <div className="flex items-center justify-between gap-3"><p className="text-[10px] tracking-widest text-ink-gold">SZCZEGÓŁY PROJEKTU</p><button type="button" onClick={() => setEditingDetails((value) => !value)} className="inline-flex items-center gap-1.5 text-[10px] text-ink-grey hover:text-ink-gold"><Pencil className="h-3 w-3" />{editingDetails ? "ZAMKNIJ EDYCJĘ" : "EDYTUJ"}</button></div>
               <div className="mt-2">
-                <StatusBadge status={selected.status} />
+                <StatusBadge status={selected.status}>{clientProjectStage(selected.status)}</StatusBadge>
               </div>
               {editingDetails ? <div className="mt-3 grid gap-3"><label className="text-[10px] tracking-[.1em] text-ink-grey">TYTUŁ<input value={details.title} maxLength={160} onChange={(event) => setDetails({ ...details, title: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><label className="text-[10px] tracking-[.1em] text-ink-grey">OPIS<textarea value={details.description} maxLength={5000} rows={3} onChange={(event) => setDetails({ ...details, description: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><div className="flex items-center gap-3"><AppButton type="button" disabled={savingDetails} onClick={() => void saveDetails()}>{savingDetails ? "ZAPISYWANIE…" : "ZAPISZ"}</AppButton><button type="button" onClick={() => { setEditingDetails(false); setDetails({ title: selected.title, description: selected.description }); }} className="text-xs text-ink-grey">ANULUJ</button></div>{detailsError && <p role="alert" className="text-xs text-red-300">{detailsError}</p>}</div> : <><p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-grey">{selected.description}</p><p className="mt-2 text-xs text-ink-gold">{selected.next}</p></>}
             </section>
-            {selected.kind !== "consultation" && <section className="border-y border-ink-white/10 py-4"><p className="text-xs tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{selected.estimatedPrice && selected.estimatedPriceMax ? `${selected.estimatedPrice}–${selected.estimatedPriceMax} zł` : selected.estimatedPrice ? `od ${selected.estimatedPrice} zł` : selected.estimatedPriceMax ? `do ${selected.estimatedPriceMax} zł` : "W trakcie ustalania"}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADATEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" && !selected.depositAmount ? "Jeszcze nieustalony" : selected.depositStatus === "not_required" ? "Zadatek niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || "Jeszcze nieustalony"}`}</p></div></div></section>}
+            {selected.kind !== "consultation" && <section className="border-y border-ink-white/10 py-4"><p className="text-xs tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{sessionEstimateLabel(selected) || (selected.estimatedPrice && selected.estimatedPriceMax ? `${selected.estimatedPrice}–${selected.estimatedPriceMax} zł` : selected.estimatedPrice ? `od ${selected.estimatedPrice} zł` : selected.estimatedPriceMax ? `do ${selected.estimatedPriceMax} zł` : "W trakcie ustalania")}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADATEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" && !selected.depositAmount ? "Jeszcze nieustalony" : selected.depositStatus === "not_required" ? "Zadatek niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || "Jeszcze nieustalony"}`}</p></div></div></section>}
             <section>
               <p className="text-xs tracking-widest text-ink-gold">{selected.kind === "consultation" ? "TERMIN KONSULTACJI" : "SESJE"}</p>
               {selected.appointments.length ? (

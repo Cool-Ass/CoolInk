@@ -34,8 +34,27 @@ async function main() {
         if (!rejected) throw new Error("Loyalty database constraint missing");
       }
       await tx.$executeRawUnsafe(`DELETE FROM "Appointment" WHERE id = 'visit'`);
+      const settingsSql = readFileSync("prisma/migrations/20260920090000_configurable_loyalty/migration.sql", "utf8");
+      for (const statement of settingsSql.split(";").map((value) => value.trim()).filter(Boolean)) await tx.$executeRawUnsafe(statement);
+      await tx.$executeRawUnsafe(`UPDATE "LoyaltyEntry" SET stamps = -8, "grossCents" = 200000, "discountCents" = 90000, "paidCents" = 110000`);
+      for (const statement of [
+        `UPDATE "LoyaltyEntry" SET stamps = -51`,
+        `UPDATE "LoyaltyEntry" SET "discountCents" = 200001, "paidCents" = -1`,
+      ]) {
+        await tx.$executeRawUnsafe("SAVEPOINT settings_invalid");
+        let rejected = false;
+        try { await tx.$executeRawUnsafe(statement); } catch { rejected = true; }
+        await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT settings_invalid");
+        if (!rejected) throw new Error("Configurable loyalty constraint missing");
+      }
       const entries = await tx.$queryRawUnsafe('SELECT "appointmentId" FROM "LoyaltyEntry"');
       if (entries.length !== 1 || entries[0].appointmentId !== null) throw new Error("Deleting a project erased loyalty history");
+      await tx.$executeRawUnsafe('CREATE TABLE "TattooProject" ("id" TEXT PRIMARY KEY)');
+      const workflowSql = readFileSync("prisma/migrations/20260920091000_workflow_extensions/migration.sql", "utf8");
+      for (const statement of workflowSql.split(";").map((value) => value.trim()).filter(Boolean)) await tx.$executeRawUnsafe(statement);
+      await tx.$executeRawUnsafe(`INSERT INTO "TattooProject" (id, "estimatedSessionsMin", "estimatedSessionsMax", "sessionPriceCents") VALUES ('project', 2, 4, 140000)`);
+      const oldClient = await tx.$queryRawUnsafe('SELECT "bookingDraft" FROM "Client"');
+      if (oldClient.length !== 1 || oldClient[0].bookingDraft !== null) throw new Error("Workflow migration changed existing client data");
       throw rollback;
     }, { timeout: 30000 });
   } catch (error) { if (error !== rollback && error.message !== rollback.message) throw error; }

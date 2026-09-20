@@ -20,6 +20,15 @@ export const PROJECT_STATUSES = [
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
+export function clientProjectStage(status: string) {
+  if (status === "completed") return "Zakończony";
+  if (status === "cancelled") return "Anulowany";
+  if (["in_progress", "awaiting_next_session"].includes(status)) return "W realizacji";
+  if (["confirmed", "scheduled", "designing"].includes(status)) return "Przygotowanie do sesji";
+  if (["date_proposed", "awaiting_confirmation", "awaiting_deposit", "accepted"].includes(status)) return "Ustalanie wizyty";
+  return "Ustalanie pomysłu";
+}
+
 export const ADMIN_STATUS_LABEL: Record<ProjectStatus, string> = {
   inquiry: "Nowe zgłoszenie",
   reviewing: "Do przejrzenia",

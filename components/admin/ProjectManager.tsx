@@ -21,6 +21,9 @@ export default function ProjectManager({
   initialStatus,
   initialLeadSource,
   initialNotes,
+  estimatedSessionsMin,
+  estimatedSessionsMax,
+  sessionPriceCents,
   estimatedPrice,
   estimatedPriceMax,
   finalPrice,
@@ -42,6 +45,9 @@ export default function ProjectManager({
   initialStatus: string;
   initialLeadSource: string | null;
   initialNotes: string | null;
+  estimatedSessionsMin: number | null;
+  estimatedSessionsMax: number | null;
+  sessionPriceCents: number | null;
   estimatedPrice: number | null;
   estimatedPriceMax: number | null;
   finalPrice: number | null;
@@ -62,6 +68,9 @@ export default function ProjectManager({
   const [leadSource, setLeadSource] = useState(initialLeadSource ?? "");
   const [kind, setKind] = useState(initialKind);
   const [notes, setNotes] = useState(initialNotes ?? "");
+  const [sessionsMin, setSessionsMin] = useState(String(estimatedSessionsMin ?? ""));
+  const [sessionsMax, setSessionsMax] = useState(String(estimatedSessionsMax ?? ""));
+  const [sessionPrice, setSessionPrice] = useState(String((sessionPriceCents ?? 140000) / 100));
   const [estimate, setEstimate] = useState(estimatedPrice?.toString() ?? "");
   const [estimateMax, setEstimateMax] = useState(estimatedPriceMax?.toString() ?? "");
   const [final, setFinal] = useState(finalPrice?.toString() ?? "");
@@ -100,7 +109,7 @@ export default function ProjectManager({
           internalNotes: notes,
           nextAction,
           nextActionDueAt,
-          ...(canManageFinance ? { estimatedPrice: estimate, estimatedPriceMax: estimateMax, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
+          ...(canManageFinance ? { estimatedSessionsMin: sessionsMin, estimatedSessionsMax: sessionsMax, sessionPriceCents: sessionPrice ? Math.round(Number(sessionPrice.replace(",", ".")) * 100) : null, estimatedPrice: estimate, estimatedPriceMax: estimateMax, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
         }),
       });
       const data = await res.json();
@@ -266,6 +275,8 @@ export default function ProjectManager({
           />
         </label>
       </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">{[["SESJE OD", sessionsMin, setSessionsMin], ["SESJE DO", sessionsMax, setSessionsMax], ["STAWKA ZA SESJĘ (ZŁ)", sessionPrice, setSessionPrice]].map(([label, value, setter], index) => <label key={String(label)} className="text-xs text-ink-grey">{String(label)}<input type="number" min="1" max={index < 2 ? 100 : 1000000} step={index < 2 ? 1 : 0.01} disabled={!canManageFinance} value={String(value)} onChange={(event) => (setter as (value: string) => void)(event.target.value)} className="mt-1 block w-full border border-ink-white/20 bg-transparent p-2 text-sm" /></label>)}</div>
+      <p className="mt-2 text-xs text-ink-grey">Szacunek w sesjach jest orientacyjny. Pola PLN pozostają dla małych tatuaży i starszych wycen; nie przeliczamy ich automatycznie.</p>
       <section className="mt-4 border-t border-ink-white/10 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] tracking-[0.12em] text-ink-gold">INSPIRACJE</p><p className="mt-1 text-[11px] text-ink-grey">Widoczne tylko dla klienta i studia · JPG, PNG lub WEBP do 8 MB</p></div><div><input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void uploadInspiration(event.target.files?.[0])} /><button type="button" disabled={uploading} onClick={() => imageInput.current?.click()} className="inline-flex min-h-9 items-center gap-2 border border-ink-gold/60 px-3 py-2 text-[10px] text-ink-gold disabled:opacity-50">{uploading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}{uploading ? "DODAWANIE…" : "DODAJ INSPIRACJĘ"}</button></div></div>
         {images.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">{images.map((image) => { const source = imageSource(image.url); return source ? <div key={image.id} className="group relative aspect-square overflow-hidden border border-ink-white/15"><img src={source} alt={image.caption || "Inspiracja projektu"} className="h-full w-full object-cover" /><button type="button" onClick={() => void removeInspiration(image.id)} aria-label="Usuń inspirację" className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center border border-red-400/60 bg-ink-black/85 text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button></div> : null; })}</div>}

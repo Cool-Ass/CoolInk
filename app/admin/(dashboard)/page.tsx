@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_STATUS_LABEL } from "@/lib/projectWorkflow";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { getCurrentAdmin } from "@/lib/auth";
+import { hasAdminPermission } from "@/lib/adminPermissions";
 import { coolinkDayRange, formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { start, end } = coolinkDayRange(now);
   const soon = new Date(now); soon.setDate(soon.getDate() + 14);
   const staleMessage = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+  const admin = await getCurrentAdmin();
+  const unpaid = admin && hasAdminPermission(admin.role, "finance.manage") ? await prisma.appointment.findMany({ where: { status: "completed", loyaltyEntry: null, project: { kind: "tattoo" }, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" }, take: 50 }) : [];
 
   const [today, newProjects, actionProjects, upcoming, unreadMessages, unreadDirectMessages, syncIssues, waitlistEntries] = await Promise.all([
     prisma.appointment.findMany({ where: { startsAt: { gte: start, lt: end }, status: { notIn: ["cancelled", "no_show"] } }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" } }),
@@ -47,6 +51,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   actions.sort((a, b) => a.priority - b.priority || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER));
 
   return <div className="studio-page studio-dashboard">
+    {unpaid.length > 0 && <section className="studio-panel"><h2 className="text-sm font-semibold">Zakończone wizyty do rozliczenia · {unpaid.length}{unpaid.length === 50 ? "+" : ""}</h2><p className="mt-1 text-xs text-ink-grey">Potwierdź płatność w karcie klienta. Starsze wizyty nie są rozliczane automatycznie.</p><div className="mt-2 max-h-60 divide-y divide-ink-white/10 overflow-y-auto">{unpaid.map((visit) => <Link key={visit.id} href={`/admin/clients/${visit.project.clientId}`} className="block py-2 text-xs hover:text-ink-gold">{visit.project.client.firstName} {visit.project.client.lastName} · {visit.project.title} · {fmt(visit.startsAt)}</Link>)}</div></section>}
     {access === "denied" && <div role="alert" className="border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Twoja rola nie ma dostępu do tego obszaru. Możesz nadal korzystać z dostępnych funkcji operacyjnych.</div>}
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="studio-eyebrow">CENTRUM DOWODZENIA</p><h1 className="studio-page-title">Co wymaga Twojej uwagi?</h1><p className="studio-page-description">Najważniejsze sprawy są ustawione według pilności.</p></div><div className="flex gap-2"><div className="min-w-24 border border-red-400/35 bg-red-500/5 px-3 py-2"><p className="text-[9px] tracking-[.1em] text-red-200">PILNE</p><p className="mt-0.5 font-display text-2xl">{actions.filter((item) => item.priority === 1).length}</p></div><div className="min-w-24 border border-ink-white/15 bg-ink-charcoal/25 px-3 py-2"><p className="text-[9px] tracking-[.1em] text-ink-grey">DO ZROBIENIA</p><p className="mt-0.5 font-display text-2xl">{actions.length}</p></div></div></header>
 

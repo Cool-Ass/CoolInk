@@ -1,3 +1,4 @@
+import { parseSessionEstimate } from "@/lib/sessionEstimate";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deletePrivateProjectMedia } from "@/lib/privateMedia";
@@ -23,7 +24,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const financialFields = ["estimatedPrice", "estimatedPriceMax", "finalPrice", "depositStatus", "depositAmount", "depositPaymentMethod"];
+  const financialFields = ["estimatedSessionsMin", "estimatedSessionsMax", "sessionPriceCents", "estimatedPrice", "estimatedPriceMax", "finalPrice", "depositStatus", "depositAmount", "depositPaymentMethod"];
   if (financialFields.some((field) => Object.prototype.hasOwnProperty.call(body ?? {}, field)) && !hasAdminPermission(access.admin.role, "finance.manage")) return NextResponse.json({ error: "Twoja rola nie ma uprawnień do danych finansowych." }, { status: 403 });
   const project = await prisma.tattooProject.findUnique({ where: { id } });
   if (!project)
@@ -41,6 +42,8 @@ export async function PATCH(request: Request, { params }: Params) {
     const value = Number(body?.[key]);
     return Number.isInteger(value) && value >= 0 && value <= 10_000_000 ? value : Number.NaN;
   };
+  let sessionEstimate;
+  try { sessionEstimate = parseSessionEstimate(body, project); } catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
   const estimatedPrice = money("estimatedPrice", project.estimatedPrice);
   const estimatedPriceMax = money("estimatedPriceMax", project.estimatedPriceMax);
   const finalPrice = money("finalPrice", project.finalPrice);
@@ -74,6 +77,7 @@ export async function PATCH(request: Request, { params }: Params) {
           typeof body?.internalNotes === "string"
             ? body.internalNotes.slice(0, 5000)
             : project.internalNotes,
+        ...sessionEstimate,
         estimatedPrice,
         estimatedPriceMax,
         finalPrice,

@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLE_LABEL, normalizeAdminRole } from "@/lib/adminPermissions";
 import CompactDisclosure from "@/components/ui/CompactDisclosure";
 import AdminMfaSettings from "@/components/admin/AdminMfaSettings";
+import LoyaltySettings from "@/components/admin/LoyaltySettings";
+import { getLoyaltyRules } from "@/lib/loyaltySettings";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,9 @@ export default async function SettingsPage() {
         <GoogleCalendarIntegration />
       </CompactDisclosure>
       <AdminAppSettings />
+      <CompactDisclosure title="PROGRAM LOJALNOŚCIOWY" summary="Cena sesji, próg pieczątki i zasady rabatu">
+        <LoyaltySettings initial={await getLoyaltyRules()} />
+      </CompactDisclosure>
       <CompactDisclosure title="BEZPIECZEŃSTWO LOGOWANIA" summary="MFA i jednorazowe kody awaryjne">
         <AdminMfaSettings />
       </CompactDisclosure>
