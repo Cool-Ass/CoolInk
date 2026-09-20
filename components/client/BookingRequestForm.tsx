@@ -77,7 +77,8 @@ export default function BookingRequestForm({
       if (!response.ok) throw new Error(result.error || "Nie udało się zapisać szkicu.");
       if (action === "load") {
         if (!result.draft) { setDraftMessage("Brak zapisanego szkicu."); return; }
-        setData(result.draft); setSavedData(JSON.stringify(result.draft)); setProjectId(""); setStep(1);
+        setData(result.draft); setSavedData(JSON.stringify(result.draft)); setProjectId(""); setStep(1); setConfirmationAcknowledged(false);
+        setAcceptedConsentIds(new Set(consents.filter((item) => item.accepted).map((item) => item.id)));
       } else if (action === "save") setSavedData(snapshot);
       setDraftMessage(action === "delete" ? "Usunięto szkic z konta." : action === "load" ? "Wczytano treść. Sprawdź termin i ponownie potwierdź zgody." : "Szkic zapisany na koncie. Zdjęcia, termin i zgody nie są zapisywane w szkicu.");
     } catch (error) { setDraftMessage(error instanceof Error ? error.message : "Błąd połączenia."); }

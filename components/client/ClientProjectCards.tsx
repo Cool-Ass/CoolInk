@@ -85,7 +85,7 @@ export default function ClientProjectCards({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [editingDetails, setEditingDetails] = useState(false);
-  const [details, setDetails] = useState({ title: "", description: "" });
+  const [details, setDetails] = useState({ title: selected?.title ?? "", description: selected?.description ?? "" });
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState("");
   const inspirationInput = useRef<HTMLInputElement>(null);
