@@ -3,6 +3,16 @@ import { put, get } from "@vercel/blob";
 import { preparePrivateImage } from "@/lib/privateImageUpload";
 import { isPrivateBlobLocation, privateImageUrl } from "@/lib/privateMedia";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { deletePrivateProjectMedia } from "@/lib/privateMedia";
+
+export async function deleteDirectMessagesWithMedia(where: Prisma.DirectMessageWhereInput) {
+  const messages = await prisma.directMessage.findMany({ where, select: { id: true, imageUrl: true } });
+  const media = await deletePrivateProjectMedia(messages.flatMap((message) => message.imageUrl ? [message.imageUrl] : []));
+  if (media.failures.length) throw new Error("Nie udało się usunąć zdjęć rozmowy.");
+  return prisma.directMessage.deleteMany({ where: { ...where, id: { in: messages.map((message) => message.id) } } });
+}
 
 export async function readChatInput(request: Request, owner: string) {
   if (!request.headers.get("content-type")?.includes("multipart/form-data")) {
