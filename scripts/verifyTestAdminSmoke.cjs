@@ -2,6 +2,7 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 const { randomUUID } = require("crypto");
+const { isDeepStrictEqual } = require("node:util");
 const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
 const securityEnv = loadDryRunEnvironment();
@@ -39,7 +40,7 @@ async function main() {
     const layoutSave = await call("/api/admin/section-layout", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ scope: "dashboard", layout, adminId: "foreign" }) }, cookie);
     assert(layoutSave.response.status === 200, "section layout save failed");
     const savedLayout = await prisma.siteSetting.findUnique({ where: { key: `admin_layout:${admin.id}:dashboard` } });
-    assert(savedLayout && JSON.stringify(JSON.parse(savedLayout.value)) === JSON.stringify(layout), "section layout was not persisted for session owner");
+    assert(savedLayout && isDeepStrictEqual(JSON.parse(savedLayout.value), layout), "section layout was not persisted for session owner");
     await prisma.siteSetting.delete({ where: { key: savedLayout.key } });
 
     const formFields = JSON.stringify([{ id: "question", label: "Czy rozumiesz zasady?", type: "single", required: true, options: ["Tak", "Nie"] }]);
