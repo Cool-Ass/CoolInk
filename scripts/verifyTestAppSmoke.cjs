@@ -74,7 +74,7 @@ async function main() {
   const unconfirmedA = await prisma.appointment.create({ data: { projectId: projectA, startsAt: new Date("2030-05-04T10:00:00.000Z"), endsAt: new Date("2030-05-04T11:00:00.000Z"), status: "proposed" } });
   const notificationA = await prisma.clientNotification.create({ data: { clientId: clientA.id, type: "TEST", title: "Smoke", body: "test" } });
   const notificationB = await prisma.clientNotification.create({ data: { clientId: clientB.id, type: "TEST", title: "Smoke", body: "test" } });
-  const doc = await prisma.studioDocument.create({ data: { title: `Smoke ${tag}`, slug: `smoke-${tag}`, content: "test", published: true } });
+  const doc = await prisma.studioDocument.create({ data: { title: `Smoke ${tag}`, slug: `smoke-${tag}`, content: "test", published: true, formFields: JSON.stringify([{ id: "note", label: "Odpowiedź", type: "text", required: true, options: [] }]) } });
   try {
     const profile = await call("/api/client/profile", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: "Smoke", lastName: "Updated", phone: "123" }) }, a.cookie);
     assert(profile.response.status === 200, `profile returned ${profile.response.status}`);
@@ -93,7 +93,13 @@ async function main() {
     const markOwn = await call("/api/client/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: notificationA.id }) }, a.cookie);
     const markForeign = await call("/api/client/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: notificationB.id }) }, a.cookie);
     assert(markOwn.response.status === 200 && markForeign.response.status === 404, "notification ownership check failed");
-    const document = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST" }, a.cookie); assert(document.response.status === 200, `document acceptance returned ${document.response.status}`);
+    const staleDocument = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: 0, answers: { note: "tak" } }) }, a.cookie);
+    assert(staleDocument.response.status === 409, "stale document version was accepted");
+    const missingAnswer = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: doc.version, answers: {} }) }, a.cookie);
+    assert(missingAnswer.response.status === 400, "required document field was bypassed");
+    const document = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: doc.version, answers: { note: "tak" } }) }, a.cookie); assert(document.response.status === 200, `document acceptance returned ${document.response.status}`);
+    const accepted = await prisma.documentAcceptance.findUnique({ where: { clientId_documentId_version: { clientId: clientA.id, documentId: doc.id, version: doc.version } } });
+    assert(accepted && JSON.parse(accepted.answers).note === "tak", "document answer was not stored with client and version");
     const icsOwn = await call(`/api/client/appointments/${proposedA.id}/calendar`, {}, a.cookie); const icsForeign = await call(`/api/client/appointments/${proposedB.id}/calendar`, {}, a.cookie); const icsCancelled = await call(`/api/client/appointments/${cancelledA.id}/calendar`, {}, a.cookie);
     assert(icsOwn.response.status === 200 && icsOwn.response.headers.get("content-type")?.includes("text/calendar"), "own ICS failed");
     assert(icsForeign.response.status === 404, `foreign ICS returned ${icsForeign.response.status}`);

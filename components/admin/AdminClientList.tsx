@@ -17,6 +17,7 @@ type ClientListItem = {
   phone: string | null;
   tags: string;
   projectCount: number;
+  stamps: number;
 };
 
 export default function AdminClientList({ clients, canDeleteClients }: { clients: ClientListItem[]; canDeleteClients: boolean }) {
@@ -67,7 +68,7 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
             <span className="mt-0.5 block truncate text-[11px] text-ink-grey">{client.email}{client.phone ? ` · ${client.phone}` : ""}</span>
             {client.tags && <span className="mt-0.5 block truncate text-[10px] text-ink-gold">{client.tags}</span>}
           </button>
-          <span className="hidden shrink-0 text-[10px] text-ink-grey lg:block">{client.projectCount} {client.projectCount === 1 ? "projekt" : "projektów"}</span>
+          <div className="max-w-28 shrink-0 text-right"><span className="hidden text-[10px] text-ink-grey sm:block">{client.projectCount} {client.projectCount === 1 ? "projekt" : "projektów"}</span><div role="img" aria-label={`${client.stamps} pieczątek`} title={`${client.stamps} pieczątek`} className="mt-1 flex flex-wrap justify-end gap-1">{Array.from({ length: Math.min(10, client.stamps) }, (_, index) => <span key={index} className="h-2 w-2 rounded-full bg-ink-gold" />)}{client.stamps > 10 && <span className="text-[10px] text-ink-gold">+{client.stamps - 10}</span>}</div></div>
           <div className="flex shrink-0 items-center gap-1.5">
             <ActionIcon icon={FolderKanban} label={`Otwórz projekty klienta ${fullName}`} href={`/admin/clients/${client.id}?view=projects`} />
             <ActionIcon icon={MessageSquare} label={`Wyślij wiadomość do ${fullName}`} tone="gold" href={`/admin/clients/${client.id}?view=messages`} />

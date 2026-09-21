@@ -1,4 +1,5 @@
 "use client";
+import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
 
 import { useRef, useState } from "react";
 import { sessionEstimateLabel } from "@/lib/sessionEstimate";
@@ -137,7 +138,7 @@ export default function ClientProjectCards({
     setUploadError("");
     try {
       const form = new FormData();
-      form.set("file", file);
+      form.set("file", await prepareBrowserImage(file));
       form.set("caption", file.name.replace(/\.[^.]+$/, "").slice(0, 120));
       const response = await fetch(`/api/client/projects/${selected.id}/images`, { method: "POST", body: form });
       const result = await response.json().catch(() => ({}));

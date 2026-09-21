@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/ToastProvider";
+import DocumentFieldEditor from "@/components/admin/DocumentFieldEditor";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import AppButton from "@/components/ui/AppButton";
 import AppModal from "@/components/ui/AppModal";
@@ -16,6 +17,7 @@ export default function NewDocumentForm() {
     title: "",
     category: "consent",
     content: "",
+    formFields: "[]",
     published: false,
   });
   async function submit(event: FormEvent) {
@@ -35,6 +37,7 @@ export default function NewDocumentForm() {
         title: "",
         category: "consent",
         content: "",
+    formFields: "[]",
         published: false,
       });
       router.refresh();
@@ -97,6 +100,7 @@ export default function NewDocumentForm() {
               onChange={(content) => setValues({ ...values, content })}
               label="TREŚĆ DOKUMENTU"
             />
+            <DocumentFieldEditor value={values.formFields} onChange={(formFields) => setValues({ ...values, formFields })} />
             <label className="flex items-center gap-3 border-t border-ink-white/10 pt-4 text-sm text-ink-white">
               <input
                 type="checkbox"

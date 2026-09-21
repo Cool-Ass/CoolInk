@@ -214,6 +214,7 @@ model StudioDocument {
   title       String
   slug        String               @unique
   content     String
+  formFields  String               @default("[]")
   category    String               @default("other") // consent | preparation | aftercare | policy | other
   version     Int                  @default(1)
   published   Boolean              @default(false)
@@ -232,6 +233,7 @@ model StudioDocumentVersion {
   version    Int
   title      String
   content    String
+  formFields String         @default("[]")
   category   String
   createdAt  DateTime       @default(now())
 
@@ -246,6 +248,7 @@ model DocumentAcceptance {
   client     Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   document   StudioDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
   version    Int
+  answers    String         @default("{}")
   acceptedAt DateTime       @default(now())
 
   @@unique([clientId, documentId, version])
@@ -690,6 +693,7 @@ model DirectMessage {
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   author    String // client | admin
   body      String
+  imageUrl  String?
   readAt    DateTime?
   createdAt DateTime @default(now())
 

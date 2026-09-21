@@ -2,6 +2,7 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 const { randomUUID } = require("crypto");
+const { isDeepStrictEqual } = require("node:util");
 const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 
 const securityEnv = loadDryRunEnvironment();
@@ -35,10 +36,41 @@ async function main() {
     const cookie = cookieOf(login.response);
     assert(cookie.includes("coolink_admin_session="), "admin login did not establish a session");
 
-    for (const path of ["/admin", "/admin/clients", "/admin/calendar", "/admin/documents"]) {
+    const layout = { order: ["actions", "today"], hidden: ["upcoming"], collapsed: ["today"] };
+    const layoutSave = await call("/api/admin/section-layout", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ scope: "dashboard", layout, adminId: "foreign" }) }, cookie);
+    assert(layoutSave.response.status === 200, "section layout save failed");
+    const savedLayout = await prisma.siteSetting.findUnique({ where: { key: `admin_layout:${admin.id}:dashboard` } });
+    assert(savedLayout && isDeepStrictEqual(JSON.parse(savedLayout.value), layout), "section layout was not persisted for session owner");
+    await prisma.siteSetting.delete({ where: { key: savedLayout.key } });
+
+    const formFields = JSON.stringify([{ id: "question", label: "Czy rozumiesz zasady?", type: "single", required: true, options: ["Tak", "Nie"] }]);
+    const createdDocument = await call("/api/admin/documents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: tag, content: "<p>Test formularza</p>", category: "other", formFields, published: false }) }, cookie);
+    assert(createdDocument.response.status === 201, "document form creation failed");
+    const formDocument = JSON.parse(createdDocument.body).document;
+    try {
+      const revision = await prisma.studioDocumentVersion.findUnique({ where: { documentId_version: { documentId: formDocument.id, version: 1 } } });
+      assert(revision.formFields === formFields, "document revision lost form fields");
+      await prisma.documentAcceptance.create({ data: { clientId: client.id, documentId: formDocument.id, version: 1, answers: JSON.stringify({ question: "Tak" }) } });
+      const answers = await call(`/api/admin/documents/${formDocument.id}/responses`, {}, cookie);
+      assert(answers.response.status === 200 && JSON.parse(answers.body).responses[0].answers.question === "Tak", "document answers unavailable to admin");
+    } finally { await prisma.studioDocument.delete({ where: { id: formDocument.id } }); }
+
+    for (const path of ["/admin", "/admin/clients", `/admin/clients/${client.id}`, "/admin/calendar", "/admin/documents", "/admin/statistics", "/admin/settings"]) {
       const page = await call(path, {}, cookie);
       assert(page.response.status === 200, `${path} returned ${page.response.status}`);
     }
+
+    const stickerData = await require("sharp")({ create: { width: 8, height: 8, channels: 4, background: { r: 201, g: 154, b: 74, alpha: 0.5 } } }).png().toBuffer();
+    const stickerForm = new FormData();
+    stickerForm.set("file", new File([stickerData], "smoke-sticker.png", { type: "image/png" }));
+    const stickerUpload = await call("/api/chat-stickers", { method: "POST", body: stickerForm }, cookie);
+    assert(stickerUpload.response.status === 201, `sticker upload returned ${stickerUpload.response.status}`);
+    const sticker = JSON.parse(stickerUpload.body).sticker;
+    try {
+      assert(sticker.url.startsWith("data:image/webp;base64,"), "sticker was not safely re-encoded");
+      const library = await call("/api/chat-stickers", {}, cookie);
+      assert(library.response.status === 200 && JSON.parse(library.body).stickers.some((item) => item.id === sticker.id), "sticker library lost uploaded image");
+    } finally { await prisma.siteSetting.deleteMany({ where: { key: sticker.id } }); }
 
     const settings = await call(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "scheduled", internalNotes: "Prywatna notatka testowa", estimatedPrice: 600, finalPrice: 750, depositStatus: "paid", depositAmount: 150, depositPaymentMethod: "BLIK" }) }, cookie);
     assert(settings.response.status === 200, `project edit returned ${settings.response.status}`);

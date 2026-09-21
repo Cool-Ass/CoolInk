@@ -174,7 +174,7 @@ async function main() {
     const markAll = await call("/api/client/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "all" }) }, cookie);
     assert(markOne.response.status === 200 && markAll.response.status === 200, "Client notification read actions failed.");
 
-    const acceptDocument = await call(`/api/client/documents/${document.id}/accept`, { method: "POST" }, cookie);
+    const acceptDocument = await call(`/api/client/documents/${document.id}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: document.version, answers: {} }) }, cookie);
     assert(acceptDocument.response.status === 200, `document acceptance returned ${acceptDocument.response.status}`);
 
     const projectPage = await call("/app/portal/visits", {}, cookie);

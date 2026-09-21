@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FilePenLine, Trash2 } from "lucide-react";
+import DocumentFieldEditor from "@/components/admin/DocumentFieldEditor";
+import DocumentResponses from "@/components/admin/DocumentResponses";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import { useToast } from "@/components/admin/ToastProvider";
 import ActionIcon from "@/components/ui/ActionIcon";
@@ -22,6 +24,7 @@ export type ManagedDocument = {
   id: string;
   title: string;
   content: string;
+  formFields: string;
   category: string;
   version: number;
   published: boolean;
@@ -31,6 +34,7 @@ export type ManagedDocument = {
 export default function DocumentManager({ documents }: { documents: ManagedDocument[] }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const [responses, setResponses] = useState<ManagedDocument | null>(null);
   const [editing, setEditing] = useState<ManagedDocument | null>(null);
   const [removing, setRemoving] = useState<ManagedDocument | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,12 +87,14 @@ export default function DocumentManager({ documents }: { documents: ManagedDocum
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className={`mr-1 text-[10px] tracking-[0.08em] ${document.published ? "text-ink-gold" : "text-ink-grey"}`}>{document.published ? "OPUBLIKOWANY" : "SZKIC"}</span>
+          <button type="button" onClick={() => setResponses(document)} className="text-xs text-ink-gold">Odpowiedzi</button>
           <ActionIcon icon={FilePenLine} label={`Edytuj dokument ${document.title}`} tone="gold" onClick={() => setEditing({ ...document })} />
           <ActionIcon icon={Trash2} label={`Usuń dokument ${document.title}`} tone="destructive" onClick={() => setRemoving(document)} />
         </div>
       </article>)}
     </div>
 
+    {responses && <DocumentResponses id={responses.id} title={responses.title} onClose={() => setResponses(null)} />}
     {editing && <AppModal title="Edytuj dokument" subtitle={`Aktualna wersja ${editing.version}. Zmiana treści utworzy kolejną wersję i poprosi klientów o ponowną akceptację.`} size="lg" onClose={busy ? () => undefined : () => setEditing(null)} closeOnBackdrop={!busy}>
       <form onSubmit={save} className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -96,6 +102,7 @@ export default function DocumentManager({ documents }: { documents: ManagedDocum
           <label className="grid gap-2 text-[10px] tracking-widest text-ink-grey">KATEGORIA<select value={editing.category} onChange={(event) => setEditing({ ...editing, category: event.target.value })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"><option value="consent">Zgoda</option><option value="preparation">Przygotowanie</option><option value="aftercare">Pielęgnacja</option><option value="policy">Regulamin</option><option value="other">Inne</option></select></label>
         </div>
         <RichTextEditor value={editing.content} onChange={(content) => setEditing({ ...editing, content })} label="TREŚĆ DOKUMENTU" />
+        <DocumentFieldEditor value={editing.formFields} onChange={(formFields) => setEditing({ ...editing, formFields })} />
         <label className="flex items-center gap-3 border-t border-ink-white/10 pt-4 text-sm text-ink-white"><input type="checkbox" checked={editing.published} onChange={(event) => setEditing({ ...editing, published: event.target.checked })} className="h-4 w-4 accent-[#c99a4a]" />Opublikuj dla klientów</label>
         <div className="flex justify-end gap-2"><AppButton type="button" variant="ghost" disabled={busy} onClick={() => setEditing(null)}>ANULUJ</AppButton><AppButton disabled={busy}>{busy ? "ZAPISYWANIE…" : "ZAPISZ DOKUMENT"}</AppButton></div>
       </form>

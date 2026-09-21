@@ -1,3 +1,4 @@
+import { deleteDirectMessagesWithMedia } from "@/lib/chatImage";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentClient } from "@/lib/clientAuth";
@@ -39,7 +40,7 @@ export async function DELETE(request: Request) {
     const directId = parsed.id.startsWith("direct:") ? parsed.id.slice(7) : null;
     const [projectResult, directResult] = await Promise.all([
       directId ? Promise.resolve({ count: 0 }) : prisma.projectMessage.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "admin", project: { clientId: parsed.client.id } } }),
-      parsed.id === "all" || directId ? prisma.directMessage.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: directId! }), clientId: parsed.client.id, author: "admin" } }) : Promise.resolve({ count: 0 }),
+      parsed.id === "all" || directId ? deleteDirectMessagesWithMedia({ ...(parsed.id === "all" ? {} : { id: directId! }), clientId: parsed.client.id, author: "admin" }) : Promise.resolve({ count: 0 }),
     ]);
     return NextResponse.json({ ok: true, deleted: projectResult.count + directResult.count });
   }
