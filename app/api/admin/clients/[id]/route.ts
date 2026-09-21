@@ -39,6 +39,7 @@ export async function DELETE(request: Request, { params }: Params) {
         firstName: true,
         lastName: true,
         supabaseUserId: true,
+        directMessages: { select: { imageUrl: true } },
         projects: {
           select: {
             appointments: { select: { id: true } },
@@ -58,7 +59,7 @@ export async function DELETE(request: Request, { params }: Params) {
       await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
     }
 
-    const media = await deletePrivateProjectMedia(client.projects.flatMap((project) => project.images.map((image) => image.url)));
+    const media = await deletePrivateProjectMedia([...client.projects.flatMap((project) => project.images.map((image) => image.url)), ...client.directMessages.flatMap((message) => message.imageUrl ? [message.imageUrl] : [])]);
     if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć wszystkich prywatnych plików. Dane klienta nie zostały usunięte." }, { status: 502 });
 
     if (client.supabaseUserId) {

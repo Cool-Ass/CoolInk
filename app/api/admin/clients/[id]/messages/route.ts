@@ -1,3 +1,5 @@
+import { deletePrivateProjectMedia } from "@/lib/privateMedia";
+import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,16 +8,14 @@ import { sendPushToClient } from "@/lib/webPush";
 
 const MAX_MESSAGE_LENGTH = 2_000;
 
-function serialize(message: { id: string; author: string; body: string; createdAt: Date; readAt: Date | null }) {
-  return { ...message, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: null };
-}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await getCurrentAdmin())) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
+  const admin = await getCurrentAdmin();
+  if (!admin) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params;
   if (!(await prisma.client.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
   const messages = await prisma.directMessage.findMany({ where: { clientId: id }, orderBy: { createdAt: "asc" }, take: 200 });
-  return NextResponse.json({ messages: messages.map(serialize) });
+  return NextResponse.json({ messages: messages.map((message) => serializeDirectMessage(message, "admin", admin.id)) });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -36,16 +36,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!limit.allowed) return tooManyRequests(limit);
   const client = await prisma.client.findUnique({ where: { id }, select: { id: true } });
   if (!client) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
-  const input = await request.json().catch(() => null);
-  const body = String(input?.body ?? "").trim();
-  if (!body || body.length > MAX_MESSAGE_LENGTH) return NextResponse.json({ error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` }, { status: 400 });
+  let input: Awaited<ReturnType<typeof readChatInput>>;
+  try { input = await readChatInput(request, id); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Nie udało się odczytać wiadomości." }, { status: 422 }); }
+  const { body, imageUrl } = input;
+  if ((!body && !imageUrl) || body.length > MAX_MESSAGE_LENGTH) return NextResponse.json({ error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` }, { status: 400 });
   const message = await prisma.$transaction(async (tx) => {
-    const created = await tx.directMessage.create({ data: { clientId: id, author: "admin", body } });
+    const created = await tx.directMessage.create({ data: { clientId: id, author: "admin", body, imageUrl } });
     await tx.clientNotification.create({ data: { clientId: id, type: "NEW_STUDIO_MESSAGE", title: "Nowa wiadomość od studia", body: body.slice(0, 240), href: "/app/portal/messages#studio" } });
     return created;
   });
   await sendPushToClient(id, { title: "Nowa wiadomość od CoolInk", body: body.slice(0, 160), url: "/app/portal/messages#studio", tag: `studio-direct-${message.id}` }).catch(() => undefined);
-  return NextResponse.json({ message: serialize(message) }, { status: 201 });
+  return NextResponse.json({ message: serializeDirectMessage(message, "admin", admin.id) }, { status: 201 });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -58,6 +59,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const removeAll = url.searchParams.get("all") === "true";
   const messageId = url.searchParams.get("messageId");
   if (!removeAll && !messageId) return NextResponse.json({ error: "Wybierz wiadomość lub całą rozmowę." }, { status: 400 });
+  const attachments = await prisma.directMessage.findMany({ where: removeAll ? { clientId: id } : { id: messageId!, clientId: id }, select: { imageUrl: true } });
+  const media = await deletePrivateProjectMedia(attachments.flatMap((item) => item.imageUrl ? [item.imageUrl] : []));
+  if (media.failures.length) return NextResponse.json({ error: "Nie udało się usunąć zdjęć. Spróbuj ponownie." }, { status: 502 });
   const result = await prisma.directMessage.deleteMany({ where: removeAll ? { clientId: id } : { id: messageId!, clientId: id } });
   if (!removeAll && result.count === 0) return NextResponse.json({ error: "Wiadomość nie istnieje." }, { status: 404 });
   return NextResponse.json({ ok: true, removed: result.count });

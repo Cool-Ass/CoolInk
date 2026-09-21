@@ -40,8 +40,11 @@ export async function POST(request: Request, { params }: Params) {
   }
   const caption = String(form?.get("caption") ?? "").trim().slice(0, 500) || null;
   const image = await prisma.projectImage.create({ data: { projectId: id, url: storedLocation, caption } });
+  const attachment = { id: image.id, caption: image.caption, url: privateImageUrl(image.id, "admin", access.admin.id) };
+  const message = form?.get("chat") === "true" ? await prisma.projectMessage.create({ data: { projectId: id, author: "admin", body: String(form.get("chatMessage") ?? "").trim().slice(0, 2000), attachmentId: image.id } }) : null;
+  await prisma.clientNotification.create({ data: { clientId: project.clientId, projectId: id, type: "PROJECT_IMAGE", title: message ? "Nowe zdjęcie w rozmowie" : "Studio dodało inspirację", body: project.title, href: `/app/portal/projects?project=${id}` } });
   await prisma.projectActivity.create({ data: { projectId: id, type: "inspiration_added_by_studio", message: "Studio dodało inspirację do projektu.", visibility: "client" } });
-  return NextResponse.json({ image: { id: image.id, caption: image.caption, createdAt: image.createdAt.toISOString(), url: privateImageUrl(image.id, "admin", access.admin.id) } }, { status: 201 });
+  return NextResponse.json({ image: { ...attachment, createdAt: image.createdAt.toISOString() }, message: message ? { ...message, createdAt: message.createdAt.toISOString(), readAt: null, attachment } : null }, { status: 201 });
 }
 
 export async function DELETE(request: Request, { params }: Params) {

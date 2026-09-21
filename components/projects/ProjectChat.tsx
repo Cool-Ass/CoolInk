@@ -1,7 +1,9 @@
 "use client";
+import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
 
 import { useEffect, useRef, useState } from "react";
 import { Paperclip, Send, Smile, Trash2 } from "lucide-react";
+import ChatStickers from "@/components/projects/ChatStickers";
 import AppModal from "@/components/ui/AppModal";
 import EmptyState from "@/components/ui/EmptyState";
 import { imageSource } from "@/lib/imageSource";
@@ -17,6 +19,7 @@ type Message = {
   attachment: { id: string; caption: string | null; url?: string } | null;
 };
 const EMOJI = [
+  "😀", "😃", "😄", "😁", "😆", "🥹", "🥰", "😘", "🥳", "🤔", "🫡", "🫶", "🤗", "😅", "😭", "😮", "🤯", "😴", "😇", "😉", "🤞", "✌️", "🤙", "👏", "👋", "🫰", "💛", "💚", "💙", "💜", "🤍", "💔", "🌹", "🌻", "🦋", "🐺", "🐉", "🐈", "🦁", "🐍", "🦅", "💀", "☠️", "⚡", "⭐", "🌈", "🎉", "🎁", "🏆", "🪄", "📅", "⏰", "📍", "💬", "💡", "❗", "❓", "✔️", "❌", "💎",
   "🙂", "😊", "😂", "😍", "🤩", "😎", "👍", "👌",
   "🙌", "🤝", "💪", "🙏", "❤️", "🖤", "🔥", "✨",
   "🎨", "🖌️", "📸", "✅", "💯", "🤘", "🌙", "☀️",
@@ -129,18 +132,18 @@ export default function ProjectChat({
       setSending(false);
     }
   }
-  async function upload() {
-    const file = inputRef.current?.files?.[0];
-    if (!file || sending || role !== "client" || !projectId || !allowAttachments) return;
+  async function upload(chosen?: File) {
+    const file = chosen ?? inputRef.current?.files?.[0];
+    if (!file || sending || !allowAttachments) return;
     setSending(true);
     setError("");
     try {
       const form = new FormData();
-      form.set("file", file);
+      form.set("file", await prepareBrowserImage(file));
       form.set("chat", "true");
       form.set("chatMessage", text.trim());
       form.set("caption", "Inspiracja przesłana w czacie");
-      const response = await fetch(`/api/client/projects/${projectId}/images`, {
+      const response = await fetch(projectId ? `/api/${role === "admin" ? "admin" : "client"}/projects/${projectId}/images` : api, {
         method: "POST",
         body: form,
       });
@@ -231,7 +234,7 @@ export default function ProjectChat({
       </div>
       <div className="border-t border-ink-white/10 bg-ink-black/35 p-3 sm:p-4">
         {role === "admin" && templates.length > 0 && <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">{templates.map((template) => <button key={template.id} type="button" onClick={() => setText((value) => value.trim() ? `${value.trim()}\n\n${template.body}` : template.body)} className="shrink-0 rounded-full border border-ink-white/15 px-3 py-1.5 text-[10px] text-ink-grey hover:border-ink-gold hover:text-ink-gold">{template.label}</button>)}</div>}
-        {showEmoji && <div className="mb-2 grid max-w-sm grid-cols-8 gap-1 rounded-[14px] border border-ink-white/10 bg-ink-black/45 p-2">
+        {showEmoji && <div className="mb-2 grid max-h-48 overflow-y-auto max-w-sm grid-cols-8 gap-1 rounded-[14px] border border-ink-white/10 bg-ink-black/45 p-2">
           {EMOJI.map((emoji) => (
             <button
               key={emoji}
@@ -244,6 +247,7 @@ export default function ProjectChat({
             </button>
           ))}
         </div>}
+        {allowAttachments && <ChatStickers admin={role === "admin"} disabled={sending} onSend={upload} />}
         <label className="block">
           <span className="sr-only">Wiadomość</span>
           <textarea
@@ -259,7 +263,7 @@ export default function ProjectChat({
         {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
         <div className="mt-2 flex items-center gap-2">
           <button type="button" onClick={() => setShowEmoji((value) => !value)} aria-label="Emoji" aria-expanded={showEmoji} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Smile className="h-4 w-4" /></button>
-          {role === "client" && allowAttachments && projectId && (
+          {allowAttachments && (
             <>
               <input
                 ref={inputRef}
@@ -269,7 +273,7 @@ export default function ProjectChat({
                 className="sr-only"
               />
               <button type="button" disabled={sending} onClick={() => inputRef.current?.click()} aria-label="Dodaj zdjęcie" title="Dodaj zdjęcie" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Paperclip className="h-4 w-4" /></button>
-              {attachmentReady && <button type="button" disabled={sending} onClick={upload} className="rounded-full border border-ink-gold/50 px-3 py-2 text-[10px] text-ink-gold">WYŚLIJ ZDJĘCIE</button>}
+              {attachmentReady && <button type="button" disabled={sending} onClick={() => void upload()} className="rounded-full border border-ink-gold/50 px-3 py-2 text-[10px] text-ink-gold">WYŚLIJ ZDJĘCIE</button>}
             </>
           )}
           <button type="button" disabled={sending || !text.trim()} onClick={send} className="ml-auto flex h-9 items-center gap-2 rounded-full bg-ink-gold px-4 text-[10px] font-semibold text-ink-black disabled:opacity-40"><Send className="h-3.5 w-3.5" />{sending ? "WYSYŁANIE…" : "WYŚLIJ"}</button>

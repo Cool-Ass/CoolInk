@@ -1,4 +1,5 @@
 "use client";
+import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
 import { useRef, useState, type FormEvent } from "react";
 import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -129,7 +130,7 @@ export default function ProjectManager({
     if (!file || uploading) return;
     setUploading(true); setImageError("");
     try {
-      const form = new FormData(); form.set("file", file); form.set("caption", file.name.replace(/\.[^.]+$/, "").slice(0, 120));
+      const form = new FormData(); form.set("file", await prepareBrowserImage(file)); form.set("caption", file.name.replace(/\.[^.]+$/, "").slice(0, 120));
       const response = await fetch(`/api/admin/projects/${id}/images`, { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.image) throw new Error(data.error || "Nie udało się dodać inspiracji.");

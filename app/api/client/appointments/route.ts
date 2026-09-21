@@ -1,3 +1,4 @@
+import { parseDocumentFields, validateDocumentAnswers } from "@/lib/documentForms";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentClient } from "@/lib/clientAuth";
@@ -52,9 +53,15 @@ export async function POST(request: Request) {
     if (!lockedAvailability.ok) throw new Error(`BOOKING_CONFLICT:${lockedAvailability.error}`);
     const lockedSlot = await tx.availableSlot.findFirst({ where: { isPublic: true, startsAt: { lte: startsAt }, endsAt: { gte: endsAt } }, select: { title: true } });
     const lockedType = isConsultationSlot(lockedSlot ?? {}) ? "consultation" : "tattoo";
-    const lockedConsents = await tx.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, title: true, version: true } });
+    const lockedConsents = await tx.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, title: true, version: true, formFields: true, acceptances: { where: { clientId: client.id }, select: { version: true } } } });
     if (lockedConsents.some((document) => submittedConsentVersions.get(document.id) !== document.version)) throw new Error("CONSENT_CHANGED");
-    await Promise.all(lockedConsents.map((document) => tx.documentAcceptance.upsert({ where: { clientId_documentId_version: { clientId: client.id, documentId: document.id, version: document.version } }, create: { clientId: client.id, documentId: document.id, version: document.version }, update: {} })));
+    for (const document of lockedConsents) {
+      if (document.acceptances?.some((item) => item.version === document.version)) continue;
+      let answers: string;
+      try { answers = JSON.stringify(validateDocumentAnswers(parseDocumentFields(document.formFields), body.consents.find((item: { id: string }) => item.id === document.id)?.answers ?? {})); }
+      catch { throw new Error("CONSENT_CHANGED"); }
+      await tx.documentAcceptance.upsert({ where: { clientId_documentId_version: { clientId: client.id, documentId: document.id, version: document.version } }, create: { clientId: client.id, documentId: document.id, version: document.version, answers }, update: {} });
+    }
     const project = ownedProject ? await tx.tattooProject.update({ where: { id: ownedProject.id }, data: { status: "awaiting_confirmation", nextAction: "Potwierdź klientowi wybrany termin" } }) : await tx.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description, kind: lockedType, consultationMode: lockedType === "consultation" ? consultationMode : null, styles: lockedType === "tattoo" ? styles : "", placement: lockedType === "tattoo" ? placement : null, size: lockedType === "tattoo" ? size : null, leadSource: normalizeLeadSource(body?.leadSource), preferredDateNote: formatCoolinkDateTime(startsAt), status: "awaiting_confirmation", nextAction: lockedType === "consultation" ? "Potwierdź termin konsultacji" : "Przejrzyj zgłoszenie i potwierdź termin", activities: { create: { type: lockedType === "consultation" ? "consultation_created" : "project_created", message: lockedType === "consultation" ? "Klient poprosił o konsultację." : activityMessage("project_created"), visibility: "admin" } } } });
     if (lockedConsents.length) await tx.projectActivity.create({ data: { projectId: project.id, type: "consents_accepted", message: `Zaakceptowano: ${lockedConsents.map((document) => `${document.title} (wersja ${document.version})`).join(", ")}.`, visibility: "client" } });
     const appointment = await tx.appointment.create({ data: { projectId: project.id, startsAt, endsAt, status: "requested", notes: [notes, lockedType === "tattoo" && body.loyaltyRequested === true ? "Klient chce wykorzystać nagrodę lojalnościową (do weryfikacji przy rozliczeniu)." : ""].filter(Boolean).join("\n") || null, serviceType: lockedType, loyaltyRequested: lockedType === "tattoo" && body.loyaltyRequested === true } });

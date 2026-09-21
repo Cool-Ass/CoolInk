@@ -35,6 +35,25 @@ async function main() {
     const cookie = cookieOf(login.response);
     assert(cookie.includes("coolink_admin_session="), "admin login did not establish a session");
 
+    const layout = { order: ["actions", "today"], hidden: ["upcoming"], collapsed: ["today"] };
+    const layoutSave = await call("/api/admin/section-layout", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ scope: "dashboard", layout, adminId: "foreign" }) }, cookie);
+    assert(layoutSave.response.status === 200, "section layout save failed");
+    const savedLayout = await prisma.siteSetting.findUnique({ where: { key: `admin_layout:${admin.id}:dashboard` } });
+    assert(savedLayout && JSON.stringify(JSON.parse(savedLayout.value)) === JSON.stringify(layout), "section layout was not persisted for session owner");
+    await prisma.siteSetting.delete({ where: { key: savedLayout.key } });
+
+    const formFields = JSON.stringify([{ id: "question", label: "Czy rozumiesz zasady?", type: "single", required: true, options: ["Tak", "Nie"] }]);
+    const createdDocument = await call("/api/admin/documents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: tag, content: "<p>Test formularza</p>", category: "other", formFields, published: false }) }, cookie);
+    assert(createdDocument.response.status === 201, "document form creation failed");
+    const formDocument = JSON.parse(createdDocument.body).document;
+    try {
+      const revision = await prisma.studioDocumentVersion.findUnique({ where: { documentId_version: { documentId: formDocument.id, version: 1 } } });
+      assert(revision.formFields === formFields, "document revision lost form fields");
+      await prisma.documentAcceptance.create({ data: { clientId: client.id, documentId: formDocument.id, version: 1, answers: JSON.stringify({ question: "Tak" }) } });
+      const answers = await call(`/api/admin/documents/${formDocument.id}/responses`, {}, cookie);
+      assert(answers.response.status === 200 && JSON.parse(answers.body).responses[0].answers.question === "Tak", "document answers unavailable to admin");
+    } finally { await prisma.studioDocument.delete({ where: { id: formDocument.id } }); }
+
     for (const path of ["/admin", "/admin/clients", "/admin/calendar", "/admin/documents"]) {
       const page = await call(path, {}, cookie);
       assert(page.response.status === 200, `${path} returned ${page.response.status}`);

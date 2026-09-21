@@ -1,3 +1,5 @@
+import AdminSections from "@/components/admin/AdminSections";
+import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
 import { requireAdminPage } from "@/lib/adminPage";
 import ChangePasswordForm from "@/components/admin/ChangePasswordForm";
 import GoogleCalendarIntegration from "@/components/admin/GoogleCalendarIntegration";
@@ -23,21 +25,20 @@ export default async function SettingsPage() {
         <p className="mb-1 text-[11px] font-medium tracking-[0.22em] text-ink-gold">USTAWIENIA</p>
         <h1 className="font-display text-3xl text-ink-white">Konto</h1>
       </div>
-      <CompactDisclosure title="GOOGLE CALENDAR" summary="Automatyczny eksport wizyt i prywatne blokady zajętości" bodyClassName="[&>section]:border-0">
+      <AdminSections scope="settings" initial={await getAdminSectionLayout(admin.id, "settings")} sections={[{ id: "settings-0", title: "GOOGLE CALENDAR", content: (<CompactDisclosure title="GOOGLE CALENDAR" summary="Automatyczny eksport wizyt i prywatne blokady zajętości" bodyClassName="[&>section]:border-0">
         <GoogleCalendarIntegration />
-      </CompactDisclosure>
-      <AdminAppSettings />
-      <CompactDisclosure title="PROGRAM LOJALNOŚCIOWY" summary="Cena sesji, próg pieczątki i zasady rabatu">
+      </CompactDisclosure>) },
+{ id: "settings-1", title: "Aplikacja", content: (<AdminAppSettings />) },
+{ id: "settings-2", title: "PROGRAM LOJALNOŚCIOWY", content: (<CompactDisclosure title="PROGRAM LOJALNOŚCIOWY" summary="Cena sesji, próg pieczątki i zasady rabatu">
         <LoyaltySettings initial={await getLoyaltyRules()} />
-      </CompactDisclosure>
-      <CompactDisclosure title="BEZPIECZEŃSTWO LOGOWANIA" summary="MFA i jednorazowe kody awaryjne">
+      </CompactDisclosure>) },
+{ id: "settings-3", title: "BEZPIECZEŃSTWO LOGOWANIA", content: (<CompactDisclosure title="BEZPIECZEŃSTWO LOGOWANIA" summary="MFA i jednorazowe kody awaryjne">
         <AdminMfaSettings />
-      </CompactDisclosure>
-      <CompactDisclosure title="STYLE TATUAŻU" summary={`${tattooStyles.filter((style) => style.active).length} aktywnych opcji w formularzu klienta`} bodyClassName="[&>section]:border-0 [&>section]:p-0">
+      </CompactDisclosure>) },
+{ id: "settings-4", title: "STYLE TATUAŻU", content: (<CompactDisclosure title="STYLE TATUAŻU" summary={`${tattooStyles.filter((style) => style.active).length} aktywnych opcji w formularzu klienta`} bodyClassName="[&>section]:border-0 [&>section]:p-0">
         <TattooStylesSettings initialStyles={tattooStyles} />
-      </CompactDisclosure>
-
-      <CompactDisclosure title="KONTO ADMINISTRATORA" summary={`${ADMIN_ROLE_LABEL[normalizeAdminRole(admin.role)]} · ${admin.email}`}><div>
+      </CompactDisclosure>) },
+{ id: "settings-5", title: "KONTO ADMINISTRATORA", content: (<CompactDisclosure title="KONTO ADMINISTRATORA" summary={`${ADMIN_ROLE_LABEL[normalizeAdminRole(admin.role)]} · ${admin.email}`}><div>
         <p className="text-[12px] tracking-[0.1em] text-ink-grey">ZALOGOWANO JAKO</p>
         <p className="mt-2 text-[15px] text-ink-white">{admin?.email}</p>
         {admin?.name && <p className="mt-1 text-[13px] text-ink-grey">{admin.name}</p>}
@@ -47,13 +48,11 @@ export default async function SettingsPage() {
           uruchom <code className="text-ink-gold">npm run db:seed</code> po zaktualizowaniu
           ADMIN_EMAIL / ADMIN_PASSWORD w pliku .env.
         </p>
-      </div></CompactDisclosure>
-
-      <CompactDisclosure title="DZIENNIK BEZPIECZEŃSTWA" summary={`${auditLogs.length} ostatnich działań administratorów`}><section><p className="text-sm text-ink-grey">Najważniejsze zmiany danych i ustawień są zapisywane wraz z kontem wykonującym operację.</p><div className="mt-3 max-h-80 divide-y divide-ink-white/10 overflow-y-auto">{auditLogs.map((log) => <article key={log.id} className="grid gap-1.5 py-2.5 text-sm sm:grid-cols-[180px_1fr_auto]"><p className="text-ink-grey">{log.adminUser?.email || "Usunięte konto"}</p><p>{log.summary}</p><time className="text-xs text-ink-grey">{log.createdAt.toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" })}</time></article>)}{auditLogs.length === 0 && <p className="py-4 text-sm text-ink-grey">Dziennik zacznie się wypełniać po kolejnych zmianach.</p>}</div></section></CompactDisclosure>
-
-      <CompactDisclosure title="ZMIEŃ HASŁO" summary="Aktualizacja danych logowania">
+      </div></CompactDisclosure>) },
+{ id: "settings-6", title: "DZIENNIK BEZPIECZEŃSTWA", content: (<CompactDisclosure title="DZIENNIK BEZPIECZEŃSTWA" summary={`${auditLogs.length} ostatnich działań administratorów`}><section><p className="text-sm text-ink-grey">Najważniejsze zmiany danych i ustawień są zapisywane wraz z kontem wykonującym operację.</p><div className="mt-3 max-h-80 divide-y divide-ink-white/10 overflow-y-auto">{auditLogs.map((log) => <article key={log.id} className="grid gap-1.5 py-2.5 text-sm sm:grid-cols-[180px_1fr_auto]"><p className="text-ink-grey">{log.adminUser?.email || "Usunięte konto"}</p><p>{log.summary}</p><time className="text-xs text-ink-grey">{log.createdAt.toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" })}</time></article>)}{auditLogs.length === 0 && <p className="py-4 text-sm text-ink-grey">Dziennik zacznie się wypełniać po kolejnych zmianach.</p>}</div></section></CompactDisclosure>) },
+{ id: "settings-7", title: "ZMIEŃ HASŁO", content: (<CompactDisclosure title="ZMIEŃ HASŁO" summary="Aktualizacja danych logowania">
         <ChangePasswordForm />
-      </CompactDisclosure>
+      </CompactDisclosure>) }]} />
     </div>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
+import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import DocumentFields from "@/components/client/DocumentFields";
+import { parseDocumentFields, validateDocumentAnswers, type DocumentAnswers } from "@/lib/documentForms";
 import AppButton from "@/components/ui/AppButton";
 import AppModal from "@/components/ui/AppModal";
 import InspirationUpload from "@/components/client/InspirationUpload";
@@ -12,7 +15,7 @@ import { sanitizeRichText } from "@/lib/richText";
 const styles = ["Realizm", "Black & Grey", "Fine Line", "Lettering", "Neo Traditional", "Inny"];
 const placements = ["Ramię", "Przedramię", "Bark", "Klatka piersiowa", "Plecy", "Żebra", "Udo", "Łydka", "Dłoń", "Szyja", "Inne"];
 
-export type BookingConsent = { id: string; title: string; version: number; content: string; accepted: boolean };
+export type BookingConsent = { id: string; title: string; version: number; content: string; formFields?: string; answers?: DocumentAnswers; accepted: boolean };
 
 export default function BookingRequestForm({
   startsAt,
@@ -46,6 +49,7 @@ export default function BookingRequestForm({
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState(initialProjectId ?? "");
   const [inspirations, setInspirations] = useState<File[]>([]);
+  const [consentAnswers, setConsentAnswers] = useState<Record<string, DocumentAnswers>>(() => Object.fromEntries(consents.map((item) => [item.id, item.answers ?? {}])));
   const [acceptedConsentIds, setAcceptedConsentIds] = useState(() => new Set(consents.filter((item) => item.accepted).map((item) => item.id)));
   const [confirmationAcknowledged, setConfirmationAcknowledged] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -91,6 +95,7 @@ export default function BookingRequestForm({
     setError("");
     if (step === 1 && (!projectId || consultation) && data.description.trim().length < (consultation ? 5 : 12)) { setError(consultation ? "Napisz krótko, co chcesz omówić." : "Opisz swój pomysł w co najmniej 12 znakach."); return; }
     if (step === 3 && consents.some((item) => !acceptedConsentIds.has(item.id))) { setError("Zaakceptuj aktualne zgody wymagane do wysłania prośby."); return; }
+    if (step === 3) { try { for (const consent of consents.filter((item) => !item.accepted)) validateDocumentAnswers(parseDocumentFields(consent.formFields), consentAnswers[consent.id] ?? {}); } catch (error) { setError(error instanceof Error ? error.message : "Uzupełnij formularz."); return; } }
     setStep((current) => Math.min(4, current + 1) as 1 | 2 | 3 | 4);
   }
 
@@ -112,7 +117,7 @@ export default function BookingRequestForm({
       const response = await fetch("/api/client/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: consultation ? undefined : projectId || undefined, startsAt, endsAt, serviceType, consents: consents.map(({ id, version }) => ({ id, version })), confirmationAcknowledged, loyaltyRequested, ...data }),
+        body: JSON.stringify({ projectId: consultation ? undefined : projectId || undefined, startsAt, endsAt, serviceType, consents: consents.map(({ id, version }) => ({ id, version, answers: consentAnswers[id] ?? {} })), confirmationAcknowledged, loyaltyRequested, ...data }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Nie udało się wysłać prośby.");
@@ -120,7 +125,7 @@ export default function BookingRequestForm({
       if (nextProjectId && inspirations.length) {
         const uploads = await Promise.allSettled(inspirations.map(async (file) => {
           const upload = new FormData();
-          upload.set("file", file);
+          upload.set("file", await prepareBrowserImage(file));
           const uploaded = await fetch(`/api/client/projects/${nextProjectId}/images`, { method: "POST", body: upload });
           if (!uploaded.ok) throw new Error("upload_failed");
         }));
@@ -175,7 +180,7 @@ export default function BookingRequestForm({
 
       {step === 2 && <section className="border border-emerald-500/35 bg-emerald-500/5 p-4"><p className="text-sm tracking-[.12em] text-emerald-300">{consultation ? "WYBRANA KONSULTACJA" : "WYBRANY TERMIN"}</p><p className="mt-2 font-display text-2xl">{range}</p><p className="mt-2 text-sm text-ink-grey">{consultation ? "Po konsultacji notatki i zdjęcia można zachować jako projekt tatuażu." : "Studio sprawdzi zakres projektu i ostatecznie potwierdzi długość sesji."}</p></section>}
 
-      {step === 3 && (consents.length > 0 ? <fieldset className="border border-ink-white/15 p-4"><legend className="px-2 text-xs tracking-[.12em] text-ink-gold">WYMAGANE ZGODY</legend><div className="space-y-3">{consents.map((consent) => <div key={consent.id} className="border border-ink-white/10 p-3"><label className="flex cursor-pointer items-start gap-3 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={acceptedConsentIds.has(consent.id)} disabled={consent.accepted} onChange={(event) => setAcceptedConsentIds((current) => { const next = new Set(current); if (event.target.checked) next.add(consent.id); else next.delete(consent.id); return next; })} /><span>{consent.title} <span className="text-xs text-ink-grey">· wersja {consent.version}{consent.accepted ? " · zaakceptowana" : ""}</span></span></label><details className="mt-2 text-xs text-ink-grey"><summary className="cursor-pointer text-ink-gold">Pokaż treść</summary><div className="document-rich-text mt-3 max-h-48 overflow-y-auto pr-2" dangerouslySetInnerHTML={{ __html: sanitizeRichText(consent.content) }} /></details></div>)}</div></fieldset> : <p className="border border-ink-white/15 p-5 text-sm text-ink-grey">Studio nie wymaga obecnie dodatkowych zgód na tym etapie.</p>)}
+      {step === 3 && (consents.length > 0 ? <fieldset className="border border-ink-white/15 p-4"><legend className="px-2 text-xs tracking-[.12em] text-ink-gold">WYMAGANE ZGODY</legend><div className="space-y-3">{consents.map((consent) => <div key={consent.id} className="border border-ink-white/10 p-3"><label className="flex cursor-pointer items-start gap-3 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={acceptedConsentIds.has(consent.id)} disabled={consent.accepted} onChange={(event) => setAcceptedConsentIds((current) => { const next = new Set(current); if (event.target.checked) next.add(consent.id); else next.delete(consent.id); return next; })} /><span>{consent.title} <span className="text-xs text-ink-grey">· wersja {consent.version}{consent.accepted ? " · zaakceptowana" : ""}</span></span></label><details className="mt-2 text-xs text-ink-grey"><summary className="cursor-pointer text-ink-gold">Pokaż treść</summary><div className="document-rich-text mt-3 max-h-48 overflow-y-auto pr-2" dangerouslySetInnerHTML={{ __html: sanitizeRichText(consent.content) }} /></details><DocumentFields fields={consent.formFields ?? "[]"} answers={consentAnswers[consent.id] ?? {}} onChange={(answers) => setConsentAnswers({ ...consentAnswers, [consent.id]: answers })} disabled={consent.accepted} /></div>)}</div></fieldset> : <p className="border border-ink-white/15 p-5 text-sm text-ink-grey">Studio nie wymaga obecnie dodatkowych zgód na tym etapie.</p>)}
 
       {step === 4 && <div className="space-y-4"><section className="grid gap-3 border border-ink-white/15 p-4 sm:grid-cols-2"><div><p className="text-[10px] tracking-[.12em] text-ink-gold">PROJEKT</p><p className="mt-1 text-sm text-ink-white">{consultation ? data.title || "Konsultacja tatuażu" : projectId ? projects.find((project) => project.id === projectId)?.title : data.title || "Nowy projekt tatuażu"}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">TERMIN</p><p className="mt-1 text-sm text-ink-white">{range}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">ZGODY</p><p className="mt-1 text-sm text-ink-white">{consents.length ? `${consents.length} zaakceptowane` : "Brak wymaganych"}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">STATUS</p><p className="mt-1 text-sm text-ink-white">Oczekuje na potwierdzenie studia</p></div></section><label className="flex cursor-pointer items-start gap-3 border border-ink-gold/30 bg-ink-gold/5 p-4 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={confirmationAcknowledged} onChange={(event) => setConfirmationAcknowledged(event.target.checked)} /><span>Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.</span></label></div>}
 

@@ -93,7 +93,7 @@ async function main() {
     const markOwn = await call("/api/client/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: notificationA.id }) }, a.cookie);
     const markForeign = await call("/api/client/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: notificationB.id }) }, a.cookie);
     assert(markOwn.response.status === 200 && markForeign.response.status === 404, "notification ownership check failed");
-    const document = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST" }, a.cookie); assert(document.response.status === 200, `document acceptance returned ${document.response.status}`);
+    const document = await call(`/api/client/documents/${doc.id}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: doc.version, answers: {} }) }, a.cookie); assert(document.response.status === 200, `document acceptance returned ${document.response.status}`);
     const icsOwn = await call(`/api/client/appointments/${proposedA.id}/calendar`, {}, a.cookie); const icsForeign = await call(`/api/client/appointments/${proposedB.id}/calendar`, {}, a.cookie); const icsCancelled = await call(`/api/client/appointments/${cancelledA.id}/calendar`, {}, a.cookie);
     assert(icsOwn.response.status === 200 && icsOwn.response.headers.get("content-type")?.includes("text/calendar"), "own ICS failed");
     assert(icsForeign.response.status === 404, `foreign ICS returned ${icsForeign.response.status}`);

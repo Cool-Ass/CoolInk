@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Command = "bold" | "italic" | "underline" | "strikeThrough" | "insertUnorderedList" | "insertOrderedList" | "formatBlock" | "createLink" | "removeFormat" | "justifyLeft" | "justifyCenter" | "justifyRight" | "undo" | "redo" | "backColor" | "foreColor";
 
@@ -10,6 +10,7 @@ function textToHtml(value: string) {
 }
 
 export default function RichTextEditor({ value, onChange, label = "TREŚĆ" }: { value: string; onChange: (value: string) => void; label?: string }) {
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,9 +46,10 @@ export default function RichTextEditor({ value, onChange, label = "TREŚĆ" }: {
       <ToolbarButton label="→" title="Wyrównaj do prawej" onClick={() => run("justifyRight")} />
       <ToolbarButton label="↶" title="Cofnij" onClick={() => run("undo")} />
       <ToolbarButton label="↷" title="Ponów" onClick={() => run("redo")} />
-      <ToolbarButton label="☺" title="Dodaj emoji" onClick={() => { editorRef.current?.focus(); document.execCommand("insertText", false, "✨"); onChange(editorRef.current?.innerHTML ?? ""); }} />
+      <ToolbarButton label="☺" title="Wybierz emoji" onClick={() => setEmojiOpen(!emojiOpen)} />
       <ToolbarButton label="Wyczyść" title="Usuń formatowanie zaznaczenia" onClick={() => run("removeFormat")} />
     </div>
+    {emojiOpen && <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto p-2">{["😀","😊","😍","🤩","🥳","🫶","👍","👌","🙏","❤️","🖤","💛","🔥","✨","🎨","📸","✅","❌","⚠️","📅","💧","☀️","🌙","🧴","💪","🌹","🦋","💀","🤘","🎁","💬","📍"].map((emoji) => <ToolbarButton key={emoji} label={emoji} title={`Dodaj ${emoji}`} onClick={() => { editorRef.current?.focus(); document.execCommand("insertText", false, emoji); onChange(editorRef.current?.innerHTML ?? ""); }} />)}</div>}
     <p className="px-3 pt-3 text-[10px] tracking-[0.12em] text-ink-grey">{label} · zaznacz fragment tekstu, aby go sformatować</p>
     <div ref={editorRef} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label={label} onInput={() => onChange(editorRef.current?.innerHTML ?? "")} className="document-rich-text min-h-44 px-4 pb-4 pt-3 text-sm leading-relaxed text-ink-grey outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-ink-grey" data-placeholder="Wpisz treść dokumentu…" />
   </div>;

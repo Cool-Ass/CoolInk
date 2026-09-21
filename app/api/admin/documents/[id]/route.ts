@@ -1,3 +1,4 @@
+import { parseDocumentFields } from "@/lib/documentForms";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sanitizeRichText } from "@/lib/richText";
@@ -20,19 +21,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (!existing) return NextResponse.json({ error: "Nie znaleziono dokumentu." }, { status: 404 });
 
   const body = await request.json().catch(() => null);
+  let formFields: string;
+  try { formFields = JSON.stringify(parseDocumentFields(body?.formFields)); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Nieprawidłowy formularz." }, { status: 400 }); }
   const title = String(body?.title ?? "").trim();
   const content = sanitizeRichText(String(body?.content ?? "").trim());
   const category = String(body?.category ?? "other");
   if (!title || !content) return NextResponse.json({ error: "Tytuł i treść dokumentu są wymagane." }, { status: 400 });
   if (!CATEGORIES.has(category)) return NextResponse.json({ error: "Nieprawidłowa kategoria dokumentu." }, { status: 400 });
 
-  const contentChanged = title !== existing.title || content !== existing.content || category !== existing.category;
+  const contentChanged = title !== existing.title || content !== existing.content || category !== existing.category || formFields !== existing.formFields;
   const document = await prisma.$transaction(async (tx) => {
     const updated = await tx.studioDocument.update({
       where: { id },
       data: {
         title,
         content,
+        formFields,
         category,
         published: Boolean(body?.published),
         // Every material revision requires a fresh client acceptance. Publishing
@@ -40,7 +44,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         version: contentChanged ? { increment: 1 } : undefined,
       },
     });
-    if (contentChanged) await tx.studioDocumentVersion.create({ data: { documentId: updated.id, version: updated.version, title: updated.title, content: updated.content, category: updated.category } });
+    if (contentChanged) await tx.studioDocumentVersion.create({ data: { documentId: updated.id, version: updated.version, title: updated.title, content: updated.content, formFields: updated.formFields, category: updated.category } });
     await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: contentChanged ? "document.revise" : "document.publish", targetType: "StudioDocument", targetId: updated.id, summary: contentChanged ? `Utworzono wersję ${updated.version} dokumentu „${updated.title}”.` : `Zmieniono widoczność dokumentu „${updated.title}”.`, metadata: JSON.stringify({ version: updated.version, published: updated.published }) } });
     return updated;
   });

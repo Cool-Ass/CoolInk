@@ -13,9 +13,11 @@ export default async function ClientsPage() {
     prisma.accountDeletionRequest.findMany({ where: { status: "pending" }, include: { client: { select: { id: true, firstName: true, lastName: true, email: true } } }, orderBy: { requestedAt: "asc" } }),
     getCurrentAdmin(),
   ]);
+  const stampTotals = await prisma.loyaltyEntry.groupBy({ by: ["clientId"], where: { voidedAt: null }, _sum: { stamps: true } });
+  const stamps = new Map(stampTotals.map((item) => [item.clientId, Math.max(0, item._sum.stamps ?? 0)]));
   return <div className="studio-page">
     <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="studio-eyebrow">CRM · {clients.length} KLIENTÓW</p><h1 className="studio-page-title">Klienci i projekty</h1><p className="studio-page-description">Centralna baza klientów, projektów, wizyt, wpłat i historii kontaktu.</p></div><NewClientForm /></div>
     {deletionRequests.length > 0 && <section className="border border-red-400/50 bg-red-500/5 p-5"><p className="text-[10px] tracking-[.14em] text-red-300">WNIOSKI DOTYCZĄCE DANYCH · {deletionRequests.length}</p><h2 className="mt-2 font-display text-2xl">Prośby o usunięcie konta</h2><p className="mt-2 text-xs text-ink-grey">Zweryfikuj tożsamość i obowiązkowy okres przechowywania dokumentacji. Potwierdzone usunięcie kasuje dane aplikacji, konto logowania oraz prywatne pliki.</p><div className="mt-4 space-y-2">{deletionRequests.map((request) => <Link key={request.id} href={`/admin/clients/${request.client.id}`} className="flex flex-wrap justify-between gap-2 border border-red-400/25 p-3 text-sm"><span>{request.client.firstName} {request.client.lastName} · {request.client.email}</span><time className="text-xs text-ink-grey">{request.requestedAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}</time></Link>)}</div></section>}
-    <AdminClientList clients={clients.map((client) => ({ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, projectCount: client._count.projects }))} canDeleteClients={Boolean(admin && hasAdminPermission(admin.role, "clients.delete"))} />
+    <AdminClientList clients={clients.map((client) => ({ id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email, phone: client.phone, tags: client.tags, stamps: stamps.get(client.id) ?? 0, projectCount: client._count.projects }))} canDeleteClients={Boolean(admin && hasAdminPermission(admin.role, "clients.delete"))} />
   </div>;
 }
