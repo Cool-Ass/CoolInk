@@ -55,10 +55,22 @@ async function main() {
       assert(answers.response.status === 200 && JSON.parse(answers.body).responses[0].answers.question === "Tak", "document answers unavailable to admin");
     } finally { await prisma.studioDocument.delete({ where: { id: formDocument.id } }); }
 
-    for (const path of ["/admin", "/admin/clients", "/admin/calendar", "/admin/documents"]) {
+    for (const path of ["/admin", "/admin/clients", `/admin/clients/${client.id}`, "/admin/calendar", "/admin/documents", "/admin/statistics", "/admin/settings"]) {
       const page = await call(path, {}, cookie);
       assert(page.response.status === 200, `${path} returned ${page.response.status}`);
     }
+
+    const stickerData = await require("sharp")({ create: { width: 8, height: 8, channels: 4, background: { r: 201, g: 154, b: 74, alpha: 0.5 } } }).png().toBuffer();
+    const stickerForm = new FormData();
+    stickerForm.set("file", new File([stickerData], "smoke-sticker.png", { type: "image/png" }));
+    const stickerUpload = await call("/api/chat-stickers", { method: "POST", body: stickerForm }, cookie);
+    assert(stickerUpload.response.status === 201, `sticker upload returned ${stickerUpload.response.status}`);
+    const sticker = JSON.parse(stickerUpload.body).sticker;
+    try {
+      assert(sticker.url.startsWith("data:image/webp;base64,"), "sticker was not safely re-encoded");
+      const library = await call("/api/chat-stickers", {}, cookie);
+      assert(library.response.status === 200 && JSON.parse(library.body).stickers.some((item) => item.id === sticker.id), "sticker library lost uploaded image");
+    } finally { await prisma.siteSetting.deleteMany({ where: { key: sticker.id } }); }
 
     const settings = await call(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "scheduled", internalNotes: "Prywatna notatka testowa", estimatedPrice: 600, finalPrice: 750, depositStatus: "paid", depositAmount: 150, depositPaymentMethod: "BLIK" }) }, cookie);
     assert(settings.response.status === 200, `project edit returned ${settings.response.status}`);
