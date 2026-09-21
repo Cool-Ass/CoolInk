@@ -36,6 +36,24 @@ async function main() {
     const cookie = cookieOf(login.response);
     assert(cookie.includes("coolink_admin_session="), "admin login did not establish a session");
 
+    const newClientEmail = `calendar-${email}`;
+    try {
+      const booking = await call("/api/admin/appointments", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+        newClient: { firstName: "Calendar", lastName: "Smoke", email: newClientEmail },
+        projectTitle: "Direct calendar booking", projectDescription: "No published slot required",
+        startsAt: "2035-07-10T10:00:00.000Z", endsAt: "2035-07-10T11:00:00.000Z",
+      }) }, cookie);
+      assert(booking.response.status === 201, `direct booking returned ${booking.response.status}`);
+      const createdClient = await prisma.client.findUnique({ where: { email: newClientEmail } });
+      assert(createdClient, "inline client was not created");
+      const conflict = await call("/api/admin/appointments", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+        clientId: client.id, projectTitle: "Conflict", startsAt: "2035-07-10T10:00:00.000Z", endsAt: "2035-07-10T11:00:00.000Z",
+      }) }, cookie);
+      assert(conflict.response.status === 409, "direct booking allowed a collision");
+    } finally {
+      await prisma.client.deleteMany({ where: { email: newClientEmail } });
+    }
+
     const layout = { order: ["actions", "today"], hidden: ["upcoming"], collapsed: ["today"] };
     const layoutSave = await call("/api/admin/section-layout", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ scope: "dashboard", layout, adminId: "foreign" }) }, cookie);
     assert(layoutSave.response.status === 200, "section layout save failed");

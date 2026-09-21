@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gift, Check } from "lucide-react";
 import type { getLoyaltyCard } from "@/lib/loyalty";
+import { renderLoyaltyDescription } from "@/lib/loyaltyDescription";
 import { loyaltySettlement } from "@/lib/loyaltyRules";
 
 type Card = Awaited<ReturnType<typeof getLoyaltyCard>>;
@@ -45,7 +46,7 @@ export default function LoyaltyCard({ card, clientId, visits = [] }: { card: Car
       <ol aria-label={`${card.progress} z ${card.rules.stampsRequired} pieczątek w kolejnym cyklu`} className="flex flex-wrap gap-2">{Array.from({ length: card.rules.stampsRequired }, (_, index) => <li key={index} aria-label={`Pieczątka ${index + 1}: ${index < card.progress ? "zdobyta" : "do zdobycia"}`} className={`flex h-10 w-10 items-center justify-center rounded-full border ${index < card.progress ? "border-ink-gold bg-ink-gold/15 text-ink-gold" : "border-dashed border-ink-white/25 text-ink-grey"}`}>{index < card.progress ? <Check aria-hidden className="h-4 w-4" /> : <span aria-hidden>{index + 1}</span>}</li>)}</ol>
       <p className="text-sm">{card.rewards > 0 ? <><strong className="text-ink-gold">Dostępne nagrody: {card.rewards} × −{card.rules.discountPercent}%</strong><span className="block text-xs text-ink-grey">Do {money(card.rules.maxDiscountCents)} rabatu na każdą wybraną wizytę. Zgłoś wykorzystanie w studiu.</span></> : <>Jeszcze <strong>{card.rules.stampsRequired - card.progress}</strong> pieczątek do −{card.rules.discountPercent}%.</>}</p>
     </div>
-    <p className="text-xs leading-relaxed text-ink-grey">Jedna pieczątka za zrealizowaną i opłaconą wizytę z tatuażem powyżej {money(card.rules.thresholdCents)}, niezależnie od projektu. {card.rules.stampsRequired} pieczątek = {card.rules.discountPercent}% rabatu, maksymalnie {money(card.rules.maxDiscountCents)}. Wizyta z nagrodą i zadatek nie dają pieczątki.</p>
+    <p className="whitespace-pre-line text-xs leading-relaxed text-ink-grey">{renderLoyaltyDescription(card.description, card.rules)}</p>
     {clientId && <details className="border-t border-ink-white/10 pt-3"><summary className="cursor-pointer text-sm text-ink-gold">Zakończ i rozlicz wizytę</summary><form onSubmit={(event) => { event.preventDefault(); if (quote && paid && visitId) void save({ action: "settle", appointmentId: visitId, grossCents, redeem, paid, nextStep }); }} className="mt-3 space-y-3">
       <label className="block text-xs">Wizyta do zakończenia lub rozliczenia<select required value={visitId} disabled={busy} onChange={(event) => { setVisitId(event.target.value); setAmount(String(visits.find((visit) => visit.id === event.target.value)?.price ?? card.rules.sessionPriceCents / 100)); setPaid(false); }} className="mt-1 w-full border border-ink-white/20 bg-ink-black p-2 text-sm"><option value="">Wybierz wizytę…</option>{visits.map((visit) => <option key={visit.id} value={visit.id}>{visit.date} · {visit.title} · {visit.status === "completed" ? "DO ROZLICZENIA" : "DO ZAKOŃCZENIA"}{visit.loyaltyRequested ? " · PROŚBA O RABAT" : ""}</option>)}</select></label>
       {!visits.length && <p className="text-xs text-ink-grey">Brak wizyt do rozliczenia. Pojawią się tutaj potwierdzone wizyty, które już się rozpoczęły, oraz zakończone bez rozliczenia.</p>}

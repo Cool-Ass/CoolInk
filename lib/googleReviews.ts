@@ -1,3 +1,5 @@
+import { getGoogleReviewsApiKey } from "@/lib/googleReviewsSettings";
+
 export type GoogleReview = {
   rating: number;
   text: string;
@@ -30,7 +32,7 @@ type GooglePlaceResponse = {
 };
 
 export async function fetchGoogleReviews(placeId: string, mapsUrl: string): Promise<GoogleReviewsPayload> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+  const apiKey = await getGoogleReviewsApiKey();
   if (!apiKey || !placeId) return { configured: false, reviews: [] };
   const url = new URL(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`);
   url.searchParams.set("languageCode", "pl");
