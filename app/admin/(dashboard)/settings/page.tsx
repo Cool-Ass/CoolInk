@@ -1,4 +1,6 @@
 import AdminSections from "@/components/admin/AdminSections";
+import GoogleReviewsSettings from "@/components/admin/GoogleReviewsSettings";
+import { getGoogleReviewsSettings } from "@/lib/googleReviewsSettings";
 import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
 import { requireAdminPage } from "@/lib/adminPage";
 import ChangePasswordForm from "@/components/admin/ChangePasswordForm";
@@ -11,7 +13,7 @@ import { ADMIN_ROLE_LABEL, normalizeAdminRole } from "@/lib/adminPermissions";
 import CompactDisclosure from "@/components/ui/CompactDisclosure";
 import AdminMfaSettings from "@/components/admin/AdminMfaSettings";
 import LoyaltySettings from "@/components/admin/LoyaltySettings";
-import { getLoyaltyRules } from "@/lib/loyaltySettings";
+import { getLoyaltyRules, getLoyaltyDescription } from "@/lib/loyaltySettings";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +30,10 @@ export default async function SettingsPage() {
       <AdminSections scope="settings" initial={await getAdminSectionLayout(admin.id, "settings")} sections={[{ id: "settings-0", title: "GOOGLE CALENDAR", content: (<CompactDisclosure title="GOOGLE CALENDAR" summary="Automatyczny eksport wizyt i prywatne blokady zajętości" bodyClassName="[&>section]:border-0">
         <GoogleCalendarIntegration />
       </CompactDisclosure>) },
+{ id: "google-reviews", title: "OPINIE GOOGLE", content: (<CompactDisclosure title="OPINIE GOOGLE" summary="Klucz API i wizytówka studia"><GoogleReviewsSettings initial={await getGoogleReviewsSettings()} /></CompactDisclosure>) },
 { id: "settings-1", title: "Aplikacja", content: (<AdminAppSettings />) },
 { id: "settings-2", title: "PROGRAM LOJALNOŚCIOWY", content: (<CompactDisclosure title="PROGRAM LOJALNOŚCIOWY" summary="Cena sesji, próg pieczątki i zasady rabatu">
-        <LoyaltySettings initial={await getLoyaltyRules()} />
+        <LoyaltySettings initial={await getLoyaltyRules()} initialDescription={await getLoyaltyDescription()} />
       </CompactDisclosure>) },
 { id: "settings-3", title: "BEZPIECZEŃSTWO LOGOWANIA", content: (<CompactDisclosure title="BEZPIECZEŃSTWO LOGOWANIA" summary="MFA i jednorazowe kody awaryjne">
         <AdminMfaSettings />

@@ -9,6 +9,7 @@ import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalenda
 import { formatCoolinkDateTime, localDateTimeToIso } from "@/lib/dateTime";
 
 const durations = [30, 60, 90, 120, 180, 240, 300, 360, 480, 600, 720];
+const NEW_CLIENT = "__new_client__";
 const NEW_PROJECT = "__new_project__";
 const emptyValues = { projectChoice: "", clientId: "", projectTitle: "", projectDescription: "", startsAt: "", endsAt: "", notes: "", duration: 60, serviceType: "tattoo", workstation: "" };
 
@@ -19,18 +20,24 @@ export default function NewAppointmentForm({ projects, clients = [], fixedClient
   const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
+  const [newClient, setNewClient] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [saving, setSaving] = useState(false);
   const [values, setValues] = useState(() => ({ ...emptyValues, clientId: fixedClient?.id ?? "", projectChoice: fixedClient && projects.length === 0 ? NEW_PROJECT : "" }));
   const projectsForClient = fixedClient ? projects : projects.filter((project) => project.client.id === values.clientId);
   const creatingProject = values.projectChoice === NEW_PROJECT;
 
   useEffect(() => {
-    const openFromCalendar = () => setOpen(true);
+    const openFromCalendar = (event: Event) => {
+      const start = (event as CustomEvent<{ startsAt?: string }>).detail?.startsAt;
+      if (start) setValues((current) => ({ ...current, startsAt: start }));
+      setOpen(true);
+    };
     window.addEventListener("coolink:new-appointment", openFromCalendar);
     return () => window.removeEventListener("coolink:new-appointment", openFromCalendar);
   }, []);
 
   function selectStart(startsAt: string) {
+    if (!startsAt) { setValues((current) => ({ ...current, startsAt: "", endsAt: "" })); return; }
     const end = new Date(startsAt);
     end.setMinutes(end.getMinutes() + values.duration);
     const pad = (number: number) => String(number).padStart(2, "0");
@@ -40,6 +47,7 @@ export default function NewAppointmentForm({ projects, clients = [], fixedClient
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     try {
       const response = await fetch("/api/admin/appointments", {
@@ -47,11 +55,12 @@ export default function NewAppointmentForm({ projects, clients = [], fixedClient
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: creatingProject ? "" : values.projectChoice,
-          clientId: values.clientId,
+          clientId: values.clientId === NEW_CLIENT ? "" : values.clientId,
+          newClient: values.clientId === NEW_CLIENT ? newClient : undefined,
           projectTitle: creatingProject ? values.projectTitle : undefined,
           projectDescription: creatingProject ? values.projectDescription : undefined,
           startsAt: localDateTimeToIso(values.startsAt),
-          endsAt: localDateTimeToIso(values.endsAt),
+          endsAt: new Date(new Date(localDateTimeToIso(values.startsAt)).getTime() + values.duration * 60_000).toISOString(),
           notes: values.notes,
           serviceType: values.serviceType,
           workstation: values.workstation,
@@ -61,6 +70,7 @@ export default function NewAppointmentForm({ projects, clients = [], fixedClient
       if (!response.ok) throw new Error(data.error);
       showToast("Wizyta została zaplanowana.");
       setValues({ ...emptyValues, clientId: fixedClient?.id ?? "", projectChoice: fixedClient && projects.length === 0 ? NEW_PROJECT : "" });
+      setNewClient({ firstName: "", lastName: "", email: "", phone: "" });
       setOpen(false);
       router.refresh();
     } catch (error) {
@@ -72,14 +82,16 @@ export default function NewAppointmentForm({ projects, clients = [], fixedClient
 
   const validProject = creatingProject ? Boolean(values.clientId && values.projectTitle.trim() && values.projectDescription.trim()) : Boolean(values.projectChoice);
 
-  return <><button type="button" disabled={!fixedClient && !clients.length && !projects.length} onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 border border-ink-gold px-4 py-2 text-xs tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black disabled:opacity-40"><CalendarPlus className="h-4 w-4" />{label}</button>
+  return <><button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 border border-ink-gold px-4 py-2 text-xs tracking-[0.08em] text-ink-gold hover:bg-ink-gold hover:text-ink-black disabled:opacity-40"><CalendarPlus className="h-4 w-4" />{label}</button>
     {open && <AppModal title="Projekt i wizyta" subtitle="Wybierz istniejący projekt albo utwórz nowy i od razu zaplanuj jego pierwszą wizytę." size="xl" onClose={saving ? () => undefined : () => setOpen(false)} closeOnBackdrop={!saving}>
       <form onSubmit={submit} className="grid gap-4">
-        {!fixedClient && <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">KLIENT<select required value={values.clientId} onChange={(event) => { const clientId = event.target.value; const hasProjects = projects.some((project) => project.client.id === clientId); setValues({ ...values, clientId, projectChoice: hasProjects ? "" : clientId ? NEW_PROJECT : "", projectTitle: "", projectDescription: "", startsAt: "", endsAt: "" }); }} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"><option value="">Wybierz klienta</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.firstName} {client.lastName}</option>)}</select></label>}
+        {!fixedClient && <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">KLIENT<select required value={values.clientId} onChange={(event) => { const clientId = event.target.value; const hasProjects = projects.some((project) => project.client.id === clientId); setValues({ ...values, clientId, projectChoice: hasProjects ? "" : clientId ? NEW_PROJECT : "", projectTitle: "", projectDescription: "" }); }} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"><option value="">Wybierz klienta</option><option value={NEW_CLIENT}>+ Nowy klient</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.firstName} {client.lastName}</option>)}</select></label>}
+        {values.clientId === NEW_CLIENT && <fieldset disabled={saving} className="grid gap-3 sm:grid-cols-2"><legend className="mb-2 text-sm">Nowy klient</legend>{([["firstName", "Imię"], ["lastName", "Nazwisko"], ["email", "E-mail"], ["phone", "Telefon (opcjonalnie)"]] as const).map(([key, label]) => <label key={key} className="text-xs">{label}<input required={key !== "phone"} type={key === "email" ? "email" : key === "phone" ? "tel" : "text"} maxLength={key === "email" ? 254 : 80} value={newClient[key]} onChange={(event) => setNewClient({ ...newClient, [key]: event.target.value })} className="mt-1 w-full rounded border border-ink-white/20 bg-ink-black p-2" /></label>)}</fieldset>}
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">PROJEKT<select required disabled={!values.clientId} value={values.projectChoice} onChange={(event) => setValues({ ...values, projectChoice: event.target.value })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold disabled:opacity-40"><option value="">Wybierz projekt</option>{projectsForClient.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}<option value={NEW_PROJECT}>+ Utwórz nowy projekt</option></select></label>
         {creatingProject && <section className="grid gap-4 border-l-2 border-ink-gold bg-ink-gold/5 p-4"><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">NAZWA PROJEKTU<input required maxLength={160} value={values.projectTitle} onChange={(event) => setValues({ ...values, projectTitle: event.target.value })} placeholder="Np. ornament na przedramię" className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">OPIS PROJEKTU<textarea required maxLength={5000} rows={3} value={values.projectDescription} onChange={(event) => setValues({ ...values, projectDescription: event.target.value })} placeholder="Najważniejsze informacje o projekcie" className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label></section>}
-        <div className="grid gap-3 sm:grid-cols-3"><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">RODZAJ<select value={values.serviceType} onChange={(event) => setValues({ ...values, serviceType: event.target.value })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-white"><option value="tattoo">Tatuaż</option><option value="consultation">Konsultacja</option><option value="touchup">Poprawka</option></select></label><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">CZAS<select value={values.duration} onChange={(event) => setValues({ ...values, duration: Number(event.target.value), startsAt: "", endsAt: "" })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-white">{durations.map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}</option>)}</select></label><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">STANOWISKO<input value={values.workstation} onChange={(event) => setValues({ ...values, workstation: event.target.value })} placeholder="Opcjonalnie" className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-white" /></label></div>
-        <div><p className="mb-2 text-[11px] tracking-[0.1em] text-ink-grey">WOLNY TERMIN</p><div className="border border-ink-white/15 bg-ink-black/20 p-3"><AdminProposalCalendarPicker value={values.startsAt} durationMinutes={values.duration} onChange={selectStart} /></div></div>
+        <div className="grid gap-3 sm:grid-cols-3"><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">RODZAJ<select value={values.serviceType} onChange={(event) => setValues({ ...values, serviceType: event.target.value })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-white"><option value="tattoo">Tatuaż</option><option value="consultation">Konsultacja</option><option value="touchup">Poprawka</option></select></label><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">CZAS<select value={values.duration} onChange={(event) => setValues({ ...values, duration: Number(event.target.value) })} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-white">{durations.map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}</option>)}</select></label><label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">STANOWISKO<input value={values.workstation} onChange={(event) => setValues({ ...values, workstation: event.target.value })} placeholder="Opcjonalnie" className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-white" /></label></div>
+        <label className="text-xs">Data i godzina wizyty (czas Polski)<input required type="datetime-local" step={1800} value={values.startsAt} onChange={(event) => selectStart(event.target.value)} className="mt-1 block w-full rounded border border-ink-white/20 bg-ink-black p-2" /><span className="mt-1 block text-ink-grey">Nie trzeba wcześniej udostępniać wolnego terminu. Przy zapisie sprawdzimy wizyty, blokady i bufory.</span></label>
+        <div><p className="mb-2 text-[11px] tracking-[0.1em] text-ink-grey">LUB WYBIERZ UDOSTĘPNIONY TERMIN</p><div className="border border-ink-white/15 bg-ink-black/20 p-3"><AdminProposalCalendarPicker value={values.startsAt} durationMinutes={values.duration} onChange={selectStart} /></div></div>
         {values.startsAt && <p className="border border-emerald-400/30 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-200">Wybrano: {formatCoolinkDateTime(localDateTimeToIso(values.startsAt), { dateStyle: "full", timeStyle: "short" })} · {values.duration} min</p>}
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">NOTATKA (OPCJONALNIE)<textarea value={values.notes} onChange={(event) => setValues({ ...values, notes: event.target.value })} rows={3} className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
         <div className="flex gap-3"><button disabled={saving || !values.startsAt || !validProject} className="border border-ink-gold px-4 py-2.5 text-xs text-ink-gold disabled:opacity-40">{saving ? "ZAPISYWANIE…" : creatingProject ? "UTWÓRZ PROJEKT I WIZYTĘ" : "ZAPLANUJ WIZYTĘ"}</button><button type="button" onClick={() => setOpen(false)} className="text-xs text-ink-grey hover:text-ink-white">Anuluj</button></div>
