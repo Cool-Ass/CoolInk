@@ -40,8 +40,8 @@ export default function LoyaltyCard({ card, clientId, visits = [] }: { card: Car
     finally { setBusy(false); }
   }
 
-  return <details className="studio-panel space-y-4" aria-label="Karta lojalnościowa"><summary className="cursor-pointer text-sm text-ink-gold">KARTA LOJALNOŚCIOWA</summary>
-    <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="studio-eyebrow">COOLINK • LOJALNOŚĆ</p><h2 className="mt-1 text-lg font-semibold">Twoje tatuaże. Twoje nagrody.</h2></div><Gift aria-hidden className="h-6 w-6 text-ink-gold" /></header>
+  return <details className="studio-panel space-y-4" aria-label="Karta lojalnościowa"><summary className="cursor-pointer text-sm text-ink-gold">KARTA LOJALNOŚCIOWA</summary><Gift aria-hidden className="h-6 w-6 text-ink-gold" />
+    <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="studio-eyebrow">COOLINK • LOJALNOŚĆ</p><h2 className="mt-1 text-lg font-semibold">Twoje tatuaże. Twoje nagrody.</h2></div></header>
     <div className="flex flex-wrap items-center gap-4">
       <ol aria-label={`${card.progress} z ${card.rules.stampsRequired} pieczątek w kolejnym cyklu`} className="flex flex-wrap gap-2">{Array.from({ length: card.rules.stampsRequired }, (_, index) => <li key={index} aria-label={`Pieczątka ${index + 1}: ${index < card.progress ? "zdobyta" : "do zdobycia"}`} className={`flex h-10 w-10 items-center justify-center rounded-full border ${index < card.progress ? "border-ink-gold bg-ink-gold/15 text-ink-gold" : "border-dashed border-ink-white/25 text-ink-grey"}`}>{index < card.progress ? <Check aria-hidden className="h-4 w-4" /> : <span aria-hidden>{index + 1}</span>}</li>)}</ol>
       <p className="text-sm">{card.rewards > 0 ? <><strong className="text-ink-gold">Dostępne nagrody: {card.rewards} × −{card.rules.discountPercent}%</strong><span className="block text-xs text-ink-grey">Do {money(card.rules.maxDiscountCents)} rabatu na każdą wybraną wizytę. Zgłoś wykorzystanie w studiu.</span></> : <>Jeszcze <strong>{card.rules.stampsRequired - card.progress}</strong> pieczątek do −{card.rules.discountPercent}%.</>}</p>
