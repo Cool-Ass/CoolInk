@@ -53,7 +53,7 @@ export default function ClientManager({ client }: { client: Client }) {
         const body = await response.json().catch(() => ({}));
         throw Error(body.error || "Nie udało się usunąć konta.");
       }
-      showToast("Konto klienta usunięte.");
+      showToast("Zapisano wniosek usunięcia danych.");
       router.push("/admin/clients");
       router.refresh();
     } catch (error) {
@@ -118,16 +118,16 @@ export default function ClientManager({ client }: { client: Client }) {
           disabled={busy}
           onClick={() => setConfirmingDelete(true)}
         >
-          USUŃ KONTO
+          ZGŁOŚ USUNIĘCIE DANYCH
         </AppButton>
       </div>
       {confirmingDelete && (
         <ConfirmModal
-          message="Usunięcie konta jest nieodwracalne i obejmie dane klienta, projekty oraz wizyty. Czy na pewno chcesz kontynuować?"
+          message="Zarejestrować wniosek usunięcia danych? Historia pozostanie zachowana do czasu weryfikacji retencji i anonimizacji."
           onCancel={() => setConfirmingDelete(false)}
           onConfirm={remove}
           pending={busy}
-          pendingLabel="USUWANIE…"
+          pendingLabel="ZAPISYWANIE…"
         />
       )}
     </section>

@@ -1,4 +1,5 @@
 import AdminSections from "@/components/admin/AdminSections";
+import GoogleSyncRetry from "@/components/admin/GoogleSyncRetry";
 import GoogleReviewsSettings from "@/components/admin/GoogleReviewsSettings";
 import { getGoogleReviewsSettings } from "@/lib/googleReviewsSettings";
 import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
@@ -29,6 +30,7 @@ export default async function SettingsPage() {
       </div>
       <AdminSections scope="settings" initial={await getAdminSectionLayout(admin.id, "settings")} sections={[{ id: "settings-0", title: "GOOGLE CALENDAR", content: (<CompactDisclosure title="GOOGLE CALENDAR" summary="Automatyczny eksport wizyt i prywatne blokady zajętości" bodyClassName="[&>section]:border-0">
         <GoogleCalendarIntegration />
+        <GoogleSyncRetry />
       </CompactDisclosure>) },
 { id: "google-reviews", title: "OPINIE GOOGLE", content: (<CompactDisclosure title="OPINIE GOOGLE" summary="Klucz API i wizytówka studia"><GoogleReviewsSettings initial={await getGoogleReviewsSettings()} /></CompactDisclosure>) },
 { id: "settings-1", title: "Aplikacja", content: (<AdminAppSettings />) },

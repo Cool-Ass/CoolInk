@@ -257,6 +257,7 @@ model DocumentAcceptance {
 /// A tattoo brief is the central operational record. Appointments, deposits,
 /// client messages and documents will attach to this entity in later phases.
 model TattooProject {
+  clientArchivedAt     DateTime?
   id                   String            @id @default(cuid())
   clientId             String
   client               Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -293,6 +294,7 @@ model TattooProject {
   waitlistEntry        WaitlistEntry?
 
   @@index([kind, status, updatedAt])
+  @@index([clientId, clientArchivedAt])
   @@index([leadSource, createdAt])
   @@index([nextActionDueAt])
 }

@@ -143,8 +143,8 @@ async function main() {
     assert(count("appointment_cancelled") === 1, "cancellation activity is not exactly one");
     assert(count("appointment_updated") >= 3, "expected appointment update activities were not recorded");
     const deleted = await call(`/api/admin/projects/${project.id}`, { method: "DELETE" }, cookie);
-    assert(deleted.response.status === 200, `project deletion returned ${deleted.response.status}`);
-    assert(!await prisma.tattooProject.findUnique({ where: { id: project.id } }), "project was not fully deleted");
+    assert(deleted.response.status === 409, `unsafe project deletion returned ${deleted.response.status}`);
+    assert(await prisma.tattooProject.findUnique({ where: { id: project.id } }), "project history was lost");
     assert(await prisma.projectMessage.count({ where: { projectId: project.id } }) === 0, "project messages survived deletion");
     console.log("PASS: admin login, dashboard/pages, private project messages, project deletion cascade, pricing/deposit/note, proposal, multi-session, edit, completed, no-show, cancel, and activity-log cardinality.");
   } finally {

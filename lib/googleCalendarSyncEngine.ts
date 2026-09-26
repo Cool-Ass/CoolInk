@@ -33,7 +33,7 @@ async function createGoogleEvent(accessToken: string, calendarId: string, payloa
  * the selected Google calendar current without running the much heavier busy
  * calendar import on every booking action.
  */
-export async function syncAppointmentToGoogle(appointmentId: string) {
+async function exportAppointmentToGoogle(appointmentId: string) {
   const [appointment, connection] = await Promise.all([
     prisma.appointment.findUnique({ where: { id: appointmentId } }),
     prisma.googleCalendarConnection.findFirst({ where: { active: true }, include: { selections: true }, orderBy: { updatedAt: "desc" } }),
@@ -195,4 +195,28 @@ export async function syncGoogleCalendarForAdmin(adminId: string): Promise<SyncR
   }
   await prisma.googleCalendarConnection.update({ where: { id: connection.id }, data: { lastSyncedAt: new Date() } });
   return result;
+}
+
+// Durable retry marker precedes the external request. A newer mutation must not
+// be acknowledged by an older worker finishing later.
+export async function syncAppointmentToGoogle(appointmentId: string) {
+  const key = `google_retry:${appointmentId}`;
+  const value = JSON.stringify({ appointmentId, queuedAt: new Date().toISOString(), nonce: crypto.randomUUID() });
+  await prisma.siteSetting.upsert({ where: { key }, update: { value }, create: { key, value } });
+  try {
+    const result = await exportAppointmentToGoogle(appointmentId);
+    await prisma.siteSetting.deleteMany({ where: { key, value } });
+    return result;
+  } catch {
+    await prisma.googleCalendarEventSync.updateMany({ where: { appointmentId }, data: { syncStatus: "ERROR", syncError: "Eksport nie powiódł się. Oczekuje na ponowienie." } });
+    console.error("google_calendar_export_failed", { appointmentId });
+    return false;
+  }
+}
+
+export async function retryGoogleCalendarExports() {
+  const pending = await prisma.siteSetting.findMany({ where: { key: { startsWith: "google_retry:" } }, orderBy: { updatedAt: "asc" }, take: 25, select: { key: true } });
+  let synced = 0;
+  for (const item of pending) if (await syncAppointmentToGoogle(item.key.slice("google_retry:".length))) synced += 1;
+  return { checked: pending.length, synced };
 }

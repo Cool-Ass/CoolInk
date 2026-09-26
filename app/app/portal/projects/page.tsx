@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { privateImageUrl } from "@/lib/privateMedia";
 import { getCurrentClient } from "@/lib/clientAuth";
@@ -7,18 +8,18 @@ import ClientProjectCards from "@/components/client/ClientProjectCards";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ project?: string; appointment?: string }> }) {
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ project?: string; appointment?: string; archive?: string }> }) {
   const query = await searchParams;
   const current = await getCurrentClient();
   if (!current) redirect("/app");
 
   const projects = await prisma.tattooProject.findMany({
-    where: { clientId: current.id },
+    where: { clientId: current.id, clientArchivedAt: query.archive === "1" ? { not: null } : null },
     include: { appointments: { orderBy: { startsAt: "asc" } }, images: { orderBy: { createdAt: "asc" } }, activities: { where: { visibility: { in: ["client", "both"] } }, orderBy: { createdAt: "asc" }, take: 100 }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 100 } },
     orderBy: { updatedAt: "desc" },
   });
 
-  return <ClientProjectCards key={`${query.project || ""}:${query.appointment || ""}`} initialProjectId={query.project} initialAppointmentId={query.appointment} projects={projects.map((project) => ({
+  return <><nav className="mb-4 flex gap-4 text-sm" aria-label="Lista projektów"><Link href="/app/portal/projects" aria-current={query.archive !== "1" ? "page" : undefined}>Projekty</Link><Link href="/app/portal/projects?archive=1" aria-current={query.archive === "1" ? "page" : undefined}>Archiwum</Link></nav><ClientProjectCards key={`${query.archive || ""}:${query.project || ""}:${query.appointment || ""}`} archivedView={query.archive === "1"} initialProjectId={query.project} initialAppointmentId={query.appointment} projects={projects.map((project) => ({
     id: project.id,
     kind: project.kind,
     title: project.title,
@@ -37,5 +38,5 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     images: project.images.map((image) => ({ id: image.id, url: privateImageUrl(image.id, "client", current.id), caption: image.caption, createdAt: image.createdAt.toISOString() })),
     messages: project.messages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: message.attachment ? { id: message.attachment.id, caption: message.attachment.caption, url: privateImageUrl(message.attachment.id, "client", current.id) } : null })),
     activities: project.activities.map((activity) => ({ id: activity.id, type: activity.type, message: activity.message, createdAt: activity.createdAt.toISOString() })),
-  }))} />;
+  }))} /></>;
 }

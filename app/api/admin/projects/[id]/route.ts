@@ -1,7 +1,7 @@
 import { parseSessionEstimate } from "@/lib/sessionEstimate";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { deletePrivateProjectMedia } from "@/lib/privateMedia";
+
 import { requireAdminApi } from "@/lib/adminApi";
 import {
   activityMessage,
@@ -11,7 +11,7 @@ import {
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { hasAdminPermission } from "@/lib/adminPermissions";
 import { normalizeLeadSource } from "@/lib/leadSource";
-import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
+
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -122,28 +122,9 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
   const access = await requireAdminApi("projects.delete");
   if (!access.ok) return access.response;
-  if (!isSameOrigin(request))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
-  const project = await prisma.tattooProject.findUnique({
-    where: { id },
-    select: { id: true, appointments: { select: { id: true } }, images: { select: { url: true } } },
-  });
-  if (!project)
-    return NextResponse.json(
-      { error: "Projekt nie istnieje." },
-      { status: 404 },
-    );
-  const appointmentIds = project.appointments.map((appointment) => appointment.id);
-  if (appointmentIds.length) {
-    await prisma.appointment.updateMany({ where: { id: { in: appointmentIds } }, data: { status: "cancelled" } });
-    await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
-  }
-  const media = await deletePrivateProjectMedia(project.images.map((image) => image.url));
-  if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć prywatnych plików projektu. Projekt nie został usunięty." }, { status: 502 });
-  await prisma.$transaction(async (tx) => {
-    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "project.delete", targetType: "TattooProject", targetId: id, summary: "Usunięto projekt wraz z powiązaną historią." } });
-    await tx.tattooProject.delete({ where: { id } });
-  });
-  return NextResponse.json({ ok: true });
+  const exists = await prisma.tattooProject.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) return NextResponse.json({ error: "Nie znaleziono danych." }, { status: 404 });
+  return NextResponse.json({ error: "Trwałe kasowanie jest wyłączone, aby chronić historię i rozliczenia. Anuluj projekt bez usuwania historii." }, { status: 409 });
 }
