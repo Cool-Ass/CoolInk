@@ -67,7 +67,7 @@ jobs:
         env:
           PGPASSWORD: restore-test
         run: |
-          pg_restore --exit-on-error --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/production.dump
+          pg_restore --exit-on-error --clean --if-exists --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/production.dump
           psql --host=localhost --username=postgres --dbname=coolink_restore --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 --file=scripts/backupCounts.sql > restored-counts.txt
           diff --unified restored/expected-counts.txt restored-counts.txt
       - name: Verify restored media byte-for-byte
