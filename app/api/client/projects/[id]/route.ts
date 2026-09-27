@@ -3,8 +3,8 @@ import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { sendPushToAdmins } from "@/lib/webPush";
-import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
-import { deletePrivateProjectMedia } from "@/lib/privateMedia";
+import { lockBookingCalendar } from "@/lib/bookingRules";
+
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -14,6 +14,10 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
   const { id } = await params;
   const body = await request.json().catch(() => null);
+  if (body?.archived === false) {
+    const restored = await prisma.tattooProject.updateMany({ where: { id, clientId: client.id }, data: { clientArchivedAt: null } });
+    return restored.count ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Nie znaleziono projektu." }, { status: 404 });
+  }
   const title = String(body?.title ?? "").trim().slice(0, 160);
   const description = String(body?.description ?? "").trim().slice(0, 5_000);
   if (!title || description.length < 12) return NextResponse.json({ error: "Podaj tytuł i opis projektu (minimum 12 znaków)." }, { status: 400 });
@@ -33,27 +37,18 @@ export async function DELETE(request: Request, { params }: Params) {
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
   const { id } = await params;
-  const project = await prisma.tattooProject.findFirst({
-    where: { id, clientId: client.id },
-    select: { id: true, title: true, appointments: { select: { id: true } }, images: { select: { url: true } } },
+  const result = await prisma.$transaction(async (tx) => {
+    await lockBookingCalendar(tx);
+    const project = await tx.tattooProject.findFirst({ where: { id, clientId: client.id }, select: { clientArchivedAt: true, appointments: { select: { status: true } } } });
+    if (!project) return "missing";
+    if (project.appointments.some((visit) => !["completed", "cancelled", "no_show"].includes(visit.status))) return "active";
+    if (!project.clientArchivedAt) {
+      await tx.tattooProject.update({ where: { id }, data: { clientArchivedAt: new Date() } });
+      await tx.projectActivity.create({ data: { projectId: id, type: "client_archived", message: "Klient przeniósł projekt do archiwum. Historia pozostaje zachowana.", visibility: "both" } });
+    }
+    return "archived";
   });
-  if (!project) return NextResponse.json({ error: "Nie znaleziono projektu." }, { status: 404 });
-
-  const appointmentIds = project.appointments.map((appointment) => appointment.id);
-  if (appointmentIds.length) {
-    await prisma.appointment.updateMany({ where: { id: { in: appointmentIds } }, data: { status: "cancelled" } });
-    await Promise.all(appointmentIds.map((appointmentId) => syncAppointmentToGoogle(appointmentId).catch(() => undefined)));
-  }
-
-  const media = await deletePrivateProjectMedia(project.images.map((image) => image.url));
-  if (media.failures.length) return NextResponse.json({ error: "Nie udało się bezpiecznie usunąć prywatnych plików projektu. Projekt nie został usunięty." }, { status: 502 });
-  const deleted = await prisma.tattooProject.deleteMany({ where: { id, clientId: client.id } });
-  if (!deleted.count) return NextResponse.json({ error: "Projekt został już usunięty." }, { status: 404 });
-  await sendPushToAdmins({
-    title: "Klient usunął projekt",
-    body: `${client.firstName} ${client.lastName} usunął projekt „${project.title}”.`,
-    url: `/admin/clients/${client.id}`,
-    tag: `client-project-delete-${id}`,
-  }).catch(() => undefined);
-  return NextResponse.json({ ok: true });
+  if (result === "missing") return NextResponse.json({ error: "Nie znaleziono projektu." }, { status: 404 });
+  if (result === "active") return NextResponse.json({ error: "Projekt ma aktywne wizyty. Najpierw anuluj projekt lub poczekaj na zakończenie wizyt." }, { status: 409 });
+  return NextResponse.json({ ok: true, archived: true });
 }

@@ -23,7 +23,7 @@ type ClientListItem = {
 export default function AdminClientList({ clients, canDeleteClients }: { clients: ClientListItem[]; canDeleteClients: boolean }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [visibleClients, setVisibleClients] = useState(clients);
+  const [visibleClients] = useState(clients);
   const [clientToDelete, setClientToDelete] = useState<ClientListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [query, setQuery] = useState("");
@@ -38,8 +38,8 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
       const response = await fetch(`/api/admin/clients/${clientToDelete.id}`, { method: "DELETE" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Nie udało się usunąć klienta.");
-      setVisibleClients((items) => items.filter((item) => item.id !== clientToDelete.id));
-      showToast("Konto klienta zostało usunięte.");
+
+      showToast("Zapisano wniosek usunięcia danych. Historia pozostaje zachowana.");
       setClientToDelete(null);
       router.refresh();
     } catch (error) {
@@ -72,7 +72,7 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
           <div className="flex shrink-0 items-center gap-1.5">
             <ActionIcon icon={FolderKanban} label={`Otwórz projekty klienta ${fullName}`} href={`/admin/clients/${client.id}?view=projects`} />
             <ActionIcon icon={MessageSquare} label={`Wyślij wiadomość do ${fullName}`} tone="gold" href={`/admin/clients/${client.id}?view=messages`} />
-            {canDeleteClients && <ActionIcon icon={Trash2} label={`Usuń klienta ${fullName}`} tone="destructive" onClick={() => setClientToDelete(client)} />}
+            {canDeleteClients && <ActionIcon icon={Trash2} label={`Zgłoś usunięcie danych: ${fullName}`} tone="destructive" onClick={() => setClientToDelete(client)} />}
           </div>
         </article>;
       })}
@@ -82,6 +82,6 @@ export default function AdminClientList({ clients, canDeleteClients }: { clients
       <dl className="space-y-4 text-sm"><div><dt className="text-xs text-ink-grey">E-mail</dt><dd className="mt-1 break-all">{preview.email}</dd></div><div><dt className="text-xs text-ink-grey">Telefon</dt><dd className="mt-1">{preview.phone || "Nie podano"}</dd></div><div><dt className="text-xs text-ink-grey">Projekty</dt><dd className="mt-1">{preview.projectCount}</dd></div>{preview.tags && <div><dt className="text-xs text-ink-grey">Tagi</dt><dd className="mt-1">{preview.tags}</dd></div>}</dl>
       <div className="mt-6 flex flex-wrap gap-2"><Link className="studio-primary-link" href={`/admin/clients/${preview.id}`}>Otwórz kartę klienta →</Link><Link className="rounded-lg border border-ink-white/15 px-3 py-2 text-sm" href={`/admin/clients/${preview.id}?view=messages`}>Wiadomości</Link></div>
     </AppDrawer>}
-    {clientToDelete && <ConfirmModal message={`Usunąć konto ${clientToDelete.firstName} ${clientToDelete.lastName}? Operacja trwale usunie również projekty, wizyty i historię klienta.`} onCancel={() => !deleting && setClientToDelete(null)} onConfirm={removeClient} pending={deleting} pendingLabel="USUWANIE…" />}
+    {clientToDelete && <ConfirmModal message={`Zgłosić usunięcie danych klienta ${clientToDelete.firstName} ${clientToDelete.lastName}? Dane pozostaną do czasu weryfikacji retencji i anonimizacji.`} onCancel={() => !deleting && setClientToDelete(null)} onConfirm={removeClient} pending={deleting} pendingLabel="ZAPISYWANIE…" />}
   </div>;
 }

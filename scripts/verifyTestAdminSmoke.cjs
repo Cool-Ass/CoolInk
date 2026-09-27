@@ -142,11 +142,16 @@ async function main() {
     assert(count("appointment_proposed") === 1, "proposal activity is not exactly one");
     assert(count("appointment_cancelled") === 1, "cancellation activity is not exactly one");
     assert(count("appointment_updated") >= 3, "expected appointment update activities were not recorded");
+    const retainedMessages = await prisma.projectMessage.count({ where: { projectId: project.id } });
     const deleted = await call(`/api/admin/projects/${project.id}`, { method: "DELETE" }, cookie);
-    assert(deleted.response.status === 200, `project deletion returned ${deleted.response.status}`);
-    assert(!await prisma.tattooProject.findUnique({ where: { id: project.id } }), "project was not fully deleted");
-    assert(await prisma.projectMessage.count({ where: { projectId: project.id } }) === 0, "project messages survived deletion");
-    console.log("PASS: admin login, dashboard/pages, private project messages, project deletion cascade, pricing/deposit/note, proposal, multi-session, edit, completed, no-show, cancel, and activity-log cardinality.");
+    assert(deleted.response.status === 409, `unsafe project deletion returned ${deleted.response.status}`);
+    assert(await prisma.tattooProject.findUnique({ where: { id: project.id } }), "project history was lost");
+    assert(retainedMessages > 0 && await prisma.projectMessage.count({ where: { projectId: project.id } }) === retainedMessages, "project message history was lost");
+    const deletionRequest = await call(`/api/admin/clients/${client.id}`, { method: "DELETE" }, cookie);
+    assert(deletionRequest.response.status === 202, "client deletion did not create a review request");
+    assert(await prisma.client.findUnique({ where: { id: client.id } }), "client was destructively removed");
+    assert(await prisma.accountDeletionRequest.findUnique({ where: { clientId: client.id } }), "retention review request was not stored");
+    console.log("PASS: admin login, dashboard/pages, private project messages, retained project history, deletion review, pricing/deposit/note, proposal, multi-session, edit, completed, no-show, cancel, and activity-log cardinality.");
   } finally {
     if (availableSlotId) await prisma.availableSlot.delete({ where: { id: availableSlotId } }).catch(() => null);
     await prisma.adminUser.delete({ where: { id: admin.id } }).catch(() => null);

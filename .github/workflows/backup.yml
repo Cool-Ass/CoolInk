@@ -1,7 +1,7 @@
 name: Encrypted production backup
 on:
   schedule:
-    - cron: "23 3 * * 0"
+    - cron: "23 3 * * *"
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,6 +9,13 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate backup configuration
+        env:
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+          BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
+        run: |
+          test -n "$DATABASE_DIRECT_URL" || { echo "::error::Missing DATABASE_DIRECT_URL"; exit 1; }
+          test "${#BACKUP_ENCRYPTION_PASSWORD}" -ge 32 || { echo "::error::BACKUP_ENCRYPTION_PASSWORD must contain at least 32 characters"; exit 1; }
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }

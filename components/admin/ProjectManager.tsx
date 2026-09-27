@@ -362,10 +362,10 @@ export default function ProjectManager({
         </button>
         {canDeleteProject && <button
           type="button"
-          onClick={() => setDeleteOpen(true)}
+          disabled title="Trwałe kasowanie wyłączone. Anuluj projekt, aby zachować historię."
           className="inline-flex items-center gap-2 border border-red-500/60 px-4 py-2.5 text-xs tracking-[0.08em] text-red-300 hover:bg-red-500/10"
         >
-          <Trash2 className="h-3.5 w-3.5" />USUŃ PROJEKT
+          <Trash2 className="h-3.5 w-3.5" />USUWANIE WYŁĄCZONE
         </button>}
       </div>
       {proposalOpen && (

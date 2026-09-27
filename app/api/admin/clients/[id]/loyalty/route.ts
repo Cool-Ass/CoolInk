@@ -61,11 +61,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
       const completeVisit = async () => {
         if (visit.status !== "completed") await tx.appointment.update({ where: { id: appointmentId }, data: { status: "completed" } });
-        if (body.nextStep === "next" || body.nextStep === "finish") {
+        {
           const appointments = await tx.appointment.findMany({ where: { projectId: visit.projectId }, select: { status: true } });
-          const fallback = body.nextStep === "next" ? "awaiting_next_session" : "completed";
+          const fallback = body.nextStep === "finish" || visit.project.status === "completed" ? "completed" : "awaiting_next_session";
           const status = projectStatusAfterAppointmentChange(appointments, visit.project.depositStatus, fallback);
-          await tx.tattooProject.update({ where: { id: visit.projectId }, data: { status, nextAction: body.nextStep === "next" ? "Ustal termin kolejnej sesji" : null, nextActionDueAt: null } });
+          await tx.tattooProject.update({ where: { id: visit.projectId }, data: { status, nextAction: status === "awaiting_next_session" ? "Ustal termin kolejnej sesji lub zakończ projekt" : null, nextActionDueAt: null } });
         }
       };
       if (body.action === "complete") {

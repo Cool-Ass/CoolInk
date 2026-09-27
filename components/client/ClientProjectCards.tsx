@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { sessionEstimateLabel } from "@/lib/sessionEstimate";
 import { clientProjectStage } from "@/lib/projectWorkflow";
 import Link from "next/link";
-import { ImagePlus, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import { ImagePlus, LoaderCircle, Pencil, Archive, ArchiveRestore } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
 import StatusBadge from "@/components/ui/StatusBadge";
 import InspirationPreview from "@/components/client/InspirationPreview";
@@ -67,8 +67,10 @@ export default function ClientProjectCards({
   projects,
   initialProjectId,
   initialAppointmentId,
+  archivedView = false,
 }: {
   projects: Project[];
+  archivedView?: boolean;
   initialProjectId?: string;
   initialAppointmentId?: string;
 }) {
@@ -120,14 +122,14 @@ export default function ClientProjectCards({
     setDeleting(true);
     setDeleteError("");
     try {
-      const response = await fetch(`/api/client/projects/${deleteProject.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/client/projects/${deleteProject.id}`, archivedView ? { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archived: false }) } : { method: "DELETE" });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Nie udało się usunąć projektu.");
+      if (!response.ok) throw new Error(data.error || "Nie udało się zmienić archiwizacji projektu.");
       setVisibleProjects((items) => items.filter((item) => item.id !== deleteProject.id));
       if (selected?.id === deleteProject.id) setSelected(null);
       setDeleteProject(null);
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : "Nie udało się usunąć projektu.");
+      setDeleteError(error instanceof Error ? error.message : "Nie udało się zmienić archiwizacji projektu.");
     } finally {
       setDeleting(false);
     }
@@ -211,7 +213,7 @@ export default function ClientProjectCards({
                 {project.kind !== "consultation" && <p className="mt-1 line-clamp-1 text-[11px] text-ink-grey">{sessionEstimateLabel(project) || (project.finalPrice ? `Cena końcowa: ${project.finalPrice} zł` : project.estimatedPrice && project.estimatedPriceMax ? `Wycena: ${project.estimatedPrice}–${project.estimatedPriceMax} zł` : project.estimatedPrice ? `Wycena od ${project.estimatedPrice} zł` : project.estimatedPriceMax ? `Wycena do ${project.estimatedPriceMax} zł` : "Wycena w trakcie ustalania")}</p>}
               </div>
               </button>
-              <ActionIcon icon={Trash2} label={`Usuń projekt ${project.title}`} tone="destructive" className="absolute right-2 top-2 z-10" onClick={() => setDeleteProject(project)} />
+              <ActionIcon icon={archivedView ? ArchiveRestore : Archive} label={`${archivedView ? "Przywróć" : "Archiwizuj"} projekt ${project.title}`} tone="destructive" className="absolute right-2 top-2 z-10" onClick={() => setDeleteProject(project)} />
             </article>;
           })}
         </div>
@@ -272,7 +274,7 @@ export default function ClientProjectCards({
         </AppModal>
       )}
       {cancelProject && <ConfirmModal message="Anulować projekt? Aktywne terminy zostaną anulowane. Historia, dokumenty i inspiracje pozostaną zachowane." onConfirm={() => { void cancelSelectedProject(); }} onCancel={() => { if (!cancelling) setCancelProject(null); }} pending={cancelling} pendingLabel="ANULOWANIE…" />}
-      {deleteProject && <ConfirmModal message={`Usunąć projekt „${deleteProject.title}” na stałe? Znikną także jego wizyty, rozmowa i inspiracje.`} onConfirm={() => { void deleteSelectedProject(); }} onCancel={() => { if (!deleting) setDeleteProject(null); }} pending={deleting} pendingLabel="USUWANIE…" />}
+      {deleteProject && <ConfirmModal message={archivedView ? `Przywrócić projekt „${deleteProject.title}”?` : `Przenieść projekt „${deleteProject.title}” do archiwum? Wizyty, rozliczenia, rozmowa i inspiracje pozostaną zachowane.`} onConfirm={() => { void deleteSelectedProject(); }} onCancel={() => { if (!deleting) setDeleteProject(null); }} pending={deleting} pendingLabel="ZAPISYWANIE…" />}
       {appointment && (
         <ClientAppointmentModal
           appointment={appointment.item}

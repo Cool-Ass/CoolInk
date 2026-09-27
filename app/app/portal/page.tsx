@@ -20,7 +20,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
   const [client, projects] = await Promise.all([
     prisma.client.findUniqueOrThrow({ where: { id: current.id }, select: { firstName: true } }),
     prisma.tattooProject.findMany({
-      where: { clientId: current.id, status: { not: "cancelled" } },
+      where: { clientId: current.id, clientArchivedAt: null, status: { not: "cancelled" } },
       select: { id: true, title: true, kind: true, status: true, updatedAt: true, appointments: { where: { startsAt: { gte: now }, status: { notIn: ["cancelled", "no_show"] } }, orderBy: { startsAt: "asc" }, take: 1 } },
       orderBy: { updatedAt: "desc" },
       take: 30,

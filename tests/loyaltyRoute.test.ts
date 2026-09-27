@@ -21,6 +21,7 @@ beforeEach(() => {
   mock.admin.mockResolvedValue({ id: "admin", role: "owner" });
   mock.origin.mockReturnValue(true); mock.limit.mockResolvedValue({ allowed: true });
   mock.balance.mockResolvedValue(4); mock.tx.$queryRaw.mockResolvedValue([{ id: "client" }]);
+  mock.tx.appointment.findMany.mockResolvedValue([{ status: "completed" }]);
   mock.tx.appointment.findFirst.mockResolvedValue({ id: "visit", projectId: "project", status: "completed", serviceType: "tattoo", startsAt: new Date("2025-01-01"), project: { kind: "tattoo", title: "Tatuaż" } });
 });
 
@@ -38,6 +39,7 @@ describe("loyalty route security and lifecycle", () => {
     expect((await call(settle)).status).toBe(200);
     expect(mock.tx.appointment.update).toHaveBeenCalled();
     expect(mock.tx.loyaltyEntry.create).toHaveBeenCalled();
+    expect(mock.tx.tattooProject.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "awaiting_next_session" }) }));
   });
   it("does not settle against a stale displayed quote", async () => { expect((await call({ ...settle, rules: { thresholdCents: 60000 } })).status).toBe(409); expect(mock.tx.loyaltyEntry.create).not.toHaveBeenCalled(); });
   it("rejects foreign origins", async () => { mock.origin.mockReturnValue(false); expect((await call(settle)).status).toBe(403); expect(mock.admin).not.toHaveBeenCalled(); });
