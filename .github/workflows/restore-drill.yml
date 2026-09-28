@@ -69,6 +69,9 @@ jobs:
         run: |
           pg_restore --exit-on-error --clean --if-exists --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/production.dump
           psql --host=localhost --username=postgres --dbname=coolink_restore --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 --file=scripts/backupCounts.sql > restored-counts.txt
-          diff --unified restored/expected-counts.txt restored-counts.txt
+          # Source and restore servers can use different database collations.
+          LC_ALL=C sort restored/expected-counts.txt > expected-counts.sorted.txt
+          LC_ALL=C sort restored-counts.txt > restored-counts.sorted.txt
+          diff --unified expected-counts.sorted.txt restored-counts.sorted.txt
       - name: Verify restored media byte-for-byte
         run: node scripts/verifyMediaBackup.mjs restored/media-backup
