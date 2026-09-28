@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: restore-test
           POSTGRES_DB: coolink_restore
@@ -26,6 +26,15 @@ jobs:
           test -n "$DATABASE_DIRECT_URL" || { echo "::error::Missing DATABASE_DIRECT_URL"; exit 1; }
           test "${#BACKUP_ENCRYPTION_PASSWORD}" -ge 32 || { echo "::error::BACKUP_ENCRYPTION_PASSWORD must contain at least 32 characters"; exit 1; }
       - uses: actions/checkout@v4
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/coolink-pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
@@ -58,7 +67,7 @@ jobs:
         env:
           PGPASSWORD: restore-test
         run: |
-          pg_restore --exit-on-error --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/production.dump
+          pg_restore --exit-on-error --clean --if-exists --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/production.dump
           psql --host=localhost --username=postgres --dbname=coolink_restore --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 --file=scripts/backupCounts.sql > restored-counts.txt
           diff --unified restored/expected-counts.txt restored-counts.txt
       - name: Verify restored media byte-for-byte

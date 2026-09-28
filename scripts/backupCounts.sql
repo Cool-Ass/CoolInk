@@ -1,3 +1,14 @@
+-- Fail closed when a valid credential points at a different/empty project.
+DO $$
+BEGIN
+  IF to_regclass('public."Client"') IS NULL
+     OR to_regclass('public."TattooProject"') IS NULL
+     OR to_regclass('public."Appointment"') IS NULL THEN
+    RAISE EXCEPTION 'Backup source is missing required CoolInk tables. Verify the production database connection.';
+  END IF;
+END
+$$;
+
 CREATE TEMP TABLE backup_table_counts (
   table_name text PRIMARY KEY,
   row_count bigint NOT NULL
