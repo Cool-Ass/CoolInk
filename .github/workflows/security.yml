@@ -20,6 +20,16 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Require isolated integration credentials
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DRY_RUN_DIRECT_URL }}
+          TEST_SUPABASE_URL: ${{ secrets.DRY_RUN_SUPABASE_URL }}
+          TEST_SUPABASE_KEY: ${{ secrets.DRY_RUN_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$TEST_DATABASE_URL" ] || [ -z "$TEST_SUPABASE_URL" ] || [ -z "$TEST_SUPABASE_KEY" ]; then
+            echo "::error::Required isolated integration credentials are missing. Integration verification has NOT passed."
+            exit 1
+          fi
       - run: npm run build
         env:
           DATABASE_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
@@ -40,8 +50,8 @@ jobs:
           DIRECT_URL: "${{ secrets.DRY_RUN_DIRECT_URL }}&connection_limit=2&pool_timeout=30"
         run: |
           if [ -z "$DRY_RUN_SUPABASE_URL" ] || [ -z "$DRY_RUN_DIRECT_URL" ]; then
-            echo "::warning::Pominięto test bazy: dodaj sekrety dedykowanego projektu testowego."
-            exit 0
+            echo "::error::Brak konfiguracji testów bazy."
+            exit 1
           fi
           npm run db:test:prepare
           node scripts/verifyLoyaltyMigration.cjs
@@ -63,8 +73,8 @@ jobs:
           SMOKE_BASE_URL: http://127.0.0.1:3120
         run: |
           if [ -z "$DRY_RUN_SUPABASE_URL" ] || [ -z "$DRY_RUN_SUPABASE_PUBLISHABLE_KEY" ] || [ -z "$DRY_RUN_DIRECT_URL" ]; then
-            echo "::warning::Pominięto test HTTP: dodaj sekrety dedykowanego projektu testowego."
-            exit 0
+            echo "::error::Brak konfiguracji testów HTTP."
+            exit 1
           fi
           npm start -- --hostname 127.0.0.1 --port 3120 > /tmp/coolink-app.log 2>&1 &
           APP_PID=$!

@@ -49,6 +49,12 @@ export async function POST(request: Request) {
   const consultationMode = ["studio", "phone", "video"].includes(String(body?.consultationMode)) ? String(body.consultationMode) : "studio";
   const result = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
+    // Re-read under the same lock as archiving: an earlier ownership check
+    // alone cannot protect against a concurrent archive request.
+    if (projectId) {
+      const currentProject = await tx.tattooProject.findFirst({ where: { id: projectId, clientId: client.id }, select: { clientArchivedAt: true } });
+      if (!currentProject || currentProject.clientArchivedAt) throw new Error("PROJECT_ARCHIVED");
+    }
     const lockedAvailability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, tx, { serviceType });
     if (!lockedAvailability.ok) throw new Error(`BOOKING_CONFLICT:${lockedAvailability.error}`);
     const lockedSlot = await tx.availableSlot.findFirst({ where: { isPublic: true, startsAt: { lte: startsAt }, endsAt: { gte: endsAt } }, select: { title: true } });
@@ -69,11 +75,12 @@ export async function POST(request: Request) {
     await tx.clientNotification.create({ data: { clientId: client.id, type: lockedType === "consultation" ? "consultation_requested" : "appointment_requested", title: lockedType === "consultation" ? "Prośba o konsultację wysłana" : "Prośba o wizytę wysłana", body: lockedType === "consultation" ? "Studio potwierdzi termin konsultacji i wróci z odpowiedzią." : "Studio sprawdzi szczegóły oraz wybrany termin i wróci z odpowiedzią.", href: `/app/portal/projects?project=${project.id}&appointment=${appointment.id}`, projectId: project.id, appointmentId: appointment.id } });
     return { appointment, projectId: project.id, serviceType: lockedType };
   }).catch((error: unknown) => {
+    if (error instanceof Error && error.message === "PROJECT_ARCHIVED") return { failure: "archive" as const };
     if (error instanceof Error && error.message.startsWith("BOOKING_CONFLICT:")) return { failure: "booking" as const };
     if (error instanceof Error && error.message === "CONSENT_CHANGED") return { failure: "consent" as const };
     throw error;
   });
-  if ("failure" in result) return NextResponse.json({ error: result.failure === "consent" ? "Treść wymaganej zgody właśnie się zmieniła. Otwórz formularz ponownie i zaakceptuj nową wersję." : "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
+  if ("failure" in result) return NextResponse.json({ error: result.failure === "archive" ? "Projekt jest w archiwum lub jest niedostępny. Przywróć go przed rezerwacją." : result.failure === "consent" ? "Treść wymaganej zgody właśnie się zmieniła. Otwórz formularz ponownie i zaakceptuj nową wersję." : "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
   await sendPushToAdmins({ title: result.serviceType === "consultation" ? "Nowa konsultacja" : "Nowa prośba o wizytę", body: `${client.firstName} ${client.lastName}: ${formatCoolinkDateTime(startsAt)}`, url: `/admin/clients/${client.id}`, tag: `client-appointment-${result.appointment.id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(result.appointment.id).catch(() => undefined);
   return NextResponse.json(result, { status: 201 });

@@ -17,7 +17,7 @@ export default async function PortalCalendarPage({ searchParams }: { searchParam
   if (!current) redirect("/app");
   const { booking, reschedule } = await searchParams;
   const [projects, calendar, tattooStyles, rescheduledAppointment, waitlistEntries, consents, content] = await Promise.all([
-    prisma.tattooProject.findMany({ where: { clientId: current.id, status: { not: "cancelled" } }, select: { id: true, title: true, kind: true, status: true }, orderBy: { updatedAt: "desc" }, take: 30 }),
+    prisma.tattooProject.findMany({ where: { clientId: current.id, clientArchivedAt: null, status: { not: "cancelled" } }, select: { id: true, title: true, kind: true, status: true }, orderBy: { updatedAt: "desc" }, take: 30 }),
     getPublicCalendarData(true),
     getActiveTattooStyleLabels(),
     reschedule ? prisma.appointment.findFirst({ where: { id: reschedule, project: { clientId: current.id }, status: { in: ["requested", "proposed", "confirmed"] } }, select: { id: true, project: { select: { kind: true, title: true } } } }) : Promise.resolve(null),

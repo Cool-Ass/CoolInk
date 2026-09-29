@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/adminApi";
 import { decryptGoogleRefreshToken } from "@/lib/googleCalendarCrypto";
 import { googleCalendarRequest, refreshGoogleCalendarAccessToken, type GoogleCalendarSummary } from "@/lib/googleCalendar";
 import { prisma } from "@/lib/prisma";
@@ -9,8 +9,9 @@ import { syncGoogleCalendarForAdmin } from "@/lib/googleCalendarSyncEngine";
 type CalendarListResponse = { items?: GoogleCalendarSummary[] };
 
 async function connectedAdmin() {
-  const admin = await getCurrentAdmin();
-  if (!admin) return { error: NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 }) };
+  const auth = await requireAdminApi("settings.manage");
+  if (!auth.ok) return { error: auth.response };
+  const admin = auth.admin;
   const connection = await prisma.googleCalendarConnection.findUnique({ where: { adminUserId: admin.id } });
   if (!connection?.active || connection.encryptedRefreshToken === "REVOKED") return { error: NextResponse.json({ error: "Najpierw połącz Google Calendar." }, { status: 409 }) };
   return { admin, connection };
