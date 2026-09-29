@@ -32,6 +32,7 @@ export async function POST(request: Request) {
 
       let project = requestedProjectId ? await tx.tattooProject.findUnique({ where: { id: requestedProjectId } }) : null;
       if (requestedProjectId && !project) throw new Error("PROJECT_NOT_FOUND");
+      if (project?.clientArchivedAt) throw new BookingConflictError("Projekt jest w archiwum. Przywróć go przed dodaniem wizyty.");
       if (!project) {
         let clientId = requestedClientId;
         if (clientId) {
