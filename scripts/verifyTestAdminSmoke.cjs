@@ -105,6 +105,15 @@ async function main() {
     assert(readAck.response.status === 200 && (await prisma.projectMessage.findUniqueOrThrow({ where: { id: unreadClientMessage.id } })).readAt, "Admin message acknowledgement failed.");
     const messageNotification = await prisma.clientNotification.count({ where: { clientId: client.id, projectId: project.id, type: "NEW_STUDIO_MESSAGE" } });
     assert(messageNotification === 1, `message notification duplicated or missing (${messageNotification})`);
+    const hidden = await call(`/api/admin/projects/${project.id}/messages?messageId=${unreadClientMessage.id}`, { method: "DELETE" }, cookie);
+    assert(hidden.response.status === 200, "Message hide failed");
+    const retainedMessage = await prisma.projectMessage.findUniqueOrThrow({ where: { id: unreadClientMessage.id } });
+    assert(retainedMessage.body === "Nieprzeczytana odpowiedź klienta" && retainedMessage.hiddenFor.length === 1, "Hide erased history or failed to record recipient");
+    assert(retainedMessage.hiddenFor[0].startsWith("admin:"), "Hide affected client visibility");
+    const afterHide = await call(`/api/admin/projects/${project.id}/messages`, {}, cookie);
+    assert(!JSON.parse(afterHide.body).messages.some(item => item.id === unreadClientMessage.id), "Hidden message returned to admin history");
+    const repeatHide = await call(`/api/admin/projects/${project.id}/messages?messageId=${unreadClientMessage.id}`, { method: "DELETE" }, cookie);
+    assert(repeatHide.response.status === 200, "Repeated hide is not idempotent");
 
     const availableSlot = await prisma.availableSlot.create({ data: { startsAt: new Date("2034-01-10T09:00:00.000Z"), endsAt: new Date("2034-01-10T13:00:00.000Z"), title: "Admin smoke", isPublic: true } });
     availableSlotId = availableSlot.id;

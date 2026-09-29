@@ -672,6 +672,7 @@ model ProjectImage {
 /// Private conversation connected to one tattoo project. Messages are served
 /// only by authenticated Next.js endpoints, never through the public Data API.
 model ProjectMessage {
+  hiddenFor    String[]      @default([])
   id           String        @id @default(cuid())
   projectId    String
   project      TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -690,6 +691,7 @@ model ProjectMessage {
 /// tattoo project: the studio may start it at any time, while a client may
 /// reply only after the studio has opened the conversation.
 model DirectMessage {
+  hiddenFor String[] @default([])
   id        String   @id @default(cuid())
   clientId  String
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)

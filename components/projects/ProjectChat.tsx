@@ -85,7 +85,7 @@ export default function ProjectChat({
 
   const add = (message: Message) => setMessages((items) => [...items, message]);
   async function removeMessage(messageId: string) {
-    if (role !== "admin" || deleting || !window.confirm("Usunąć tę wiadomość na stałe?")) return;
+    if (role !== "admin" || deleting || !window.confirm("Ukryć tę wiadomość tylko w Twoim widoku? Historia i załączniki pozostaną dostępne pozostałym uczestnikom.")) return;
     setDeleting(messageId); setError("");
     try {
       const response = await fetch(`${api}?messageId=${encodeURIComponent(messageId)}`, { method: "DELETE" });
@@ -96,7 +96,7 @@ export default function ProjectChat({
     finally { setDeleting(null); }
   }
   async function removeConversation() {
-    if (role !== "admin" || deleting || !messages.length || !window.confirm("Usunąć całą historię tej rozmowy na stałe?")) return;
+    if (role !== "admin" || deleting || !messages.length || !window.confirm("Ukryć dotychczasową rozmowę tylko w Twoim widoku? Nie usunie to historii ani zdjęć innych uczestników.")) return;
     setDeleting("all"); setError("");
     try {
       const response = await fetch(`${api}?all=true`, { method: "DELETE" });
@@ -176,7 +176,7 @@ export default function ProjectChat({
         </div>
         <div className="flex items-center gap-2"><span className="flex items-center gap-1.5 text-[10px] text-emerald-300">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{role === "client" ? "STUDIO" : "KLIENT"}
-        </span>{role === "admin" && messages.length > 0 && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeConversation()} title="Usuń całą rozmowę" aria-label="Usuń całą rozmowę" className="flex h-8 w-8 items-center justify-center border border-red-400/40 text-red-300 hover:bg-red-400/10 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>}</div>
+        </span>{role === "admin" && messages.length > 0 && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeConversation()} title="Ukryj rozmowę u mnie" aria-label="Ukryj rozmowę u mnie" className="flex h-8 w-8 items-center justify-center border border-red-400/40 text-red-300 hover:bg-red-400/10 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>}</div>
       </div>
       <div
         ref={streamRef}
@@ -196,7 +196,7 @@ export default function ProjectChat({
               key={message.id}
               className={`group relative w-fit max-w-[88%] rounded-[16px] px-3 py-2.5 text-sm shadow-[0_8px_24px_rgba(0,0,0,.16)] sm:max-w-[72%] ${message.author === role ? "ml-auto rounded-br-[4px] bg-ink-gold text-ink-black" : "rounded-bl-[4px] bg-ink-white/[.09] text-ink-white"}`}
             >
-              {role === "admin" && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeMessage(message.id)} aria-label="Usuń wiadomość" title="Usuń wiadomość" className={`absolute -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-red-400/50 bg-ink-black text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 ${message.author === role ? "-left-8" : "-right-8"}`}><Trash2 className="h-3 w-3" /></button>}
+              {role === "admin" && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeMessage(message.id)} aria-label="Ukryj wiadomość u mnie" title="Ukryj wiadomość u mnie" className={`absolute -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-red-400/50 bg-ink-black text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 ${message.author === role ? "-left-8" : "-right-8"}`}><Trash2 className="h-3 w-3" /></button>}
               <p className={`text-[9px] font-semibold tracking-wider ${message.author === role ? "text-ink-black/65" : "text-ink-gold"}`}>
                 {message.author === role ? "TY" : message.author === "admin" ? "STUDIO" : "KLIENT"}
               </p>

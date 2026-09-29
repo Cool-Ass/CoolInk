@@ -1,3 +1,4 @@
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -12,10 +13,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const query = await searchParams;
   const current = await getCurrentClient();
   if (!current) redirect("/app");
+  const visible = visibleMessages(messageRecipient("client", current.id));
 
   const projects = await prisma.tattooProject.findMany({
     where: { clientId: current.id, clientArchivedAt: query.archive === "1" ? { not: null } : null },
-    include: { appointments: { orderBy: { startsAt: "asc" } }, images: { orderBy: { createdAt: "asc" } }, activities: { where: { visibility: { in: ["client", "both"] } }, orderBy: { createdAt: "asc" }, take: 100 }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 100 } },
+    include: { appointments: { orderBy: { startsAt: "asc" } }, images: { orderBy: { createdAt: "asc" } }, activities: { where: { visibility: { in: ["client", "both"] } }, orderBy: { createdAt: "asc" }, take: 100 }, messages: { where: visible, include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 100 } },
     orderBy: { updatedAt: "desc" },
   });
 

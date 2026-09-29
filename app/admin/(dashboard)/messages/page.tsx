@@ -1,3 +1,4 @@
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { prisma } from "@/lib/prisma";
 import { privateImageUrl } from "@/lib/privateMedia";
 import { getMessageTemplates } from "@/lib/messageTemplates";
@@ -11,8 +12,8 @@ export default async function MessagesPage() {
   const admin = await requireAdminPage("operations.manage");
   const [messages, conversations, directConversations, templates] = await Promise.all([
     prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
-    prisma.tattooProject.findMany({ where: { messages: { some: {} } }, include: { client: { select: { id: true, firstName: true, lastName: true } }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
-    prisma.client.findMany({ where: { directMessages: { some: {} } }, select: { id: true, firstName: true, lastName: true, directMessages: { orderBy: { createdAt: "asc" }, take: 200 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
+    prisma.tattooProject.findMany({ where: { messages: { some: visibleMessages(messageRecipient("admin", admin.id)) } }, include: { client: { select: { id: true, firstName: true, lastName: true } }, messages: { where: visibleMessages(messageRecipient("admin", admin.id)), include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
+    prisma.client.findMany({ where: { directMessages: { some: visibleMessages(messageRecipient("admin", admin.id)) } }, select: { id: true, firstName: true, lastName: true, directMessages: { where: visibleMessages(messageRecipient("admin", admin.id)), orderBy: { createdAt: "asc" }, take: 200 } }, orderBy: { updatedAt: "desc" }, take: 100 }),
     getMessageTemplates(),
   ]);
   return <div className="flex flex-col gap-4">

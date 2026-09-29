@@ -1,3 +1,4 @@
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
@@ -59,7 +60,7 @@ export async function GET(
       { status: 404 },
     );
   const messages = await prisma.projectMessage.findMany({
-    where: { projectId: id },
+    where: { projectId: id, ...visibleMessages(messageRecipient("client", client.id)) },
     include: { attachment: { select: { id: true, caption: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
