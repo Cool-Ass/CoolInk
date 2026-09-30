@@ -11,6 +11,8 @@ const password = `Browser!${randomUUID()}A1`;
 let adminId;
 let projectTitle;
 const blockIds = [];
+let slot;
+let consent;
 
 test.beforeAll(async ({ request }) => {
   const admin = await prisma.adminUser.create({ data: { email: `admin-${email}`, name: "Browser fixture", role: "owner", passwordHash: await bcrypt.hash(password, 12) } });
@@ -25,6 +27,9 @@ test.beforeAll(async ({ request }) => {
     const block = await prisma.availabilityBlock.create({ data: { startsAt, endsAt, reason } });
     blockIds.push(block.id);
   }
+  const startsAt = new Date(); startsAt.setUTCDate(startsAt.getUTCDate() + 3); startsAt.setUTCHours(10, 0, 0, 0);
+  slot = await prisma.availableSlot.create({ data: { startsAt, endsAt: new Date(startsAt.getTime() + 60 * 60_000), isPublic: true, title: "Browser free slot" } });
+  consent = await prisma.studioDocument.create({ data: { title: `Browser consent ${email}`, slug: `browser-${randomUUID()}`, content: "<p>Isolated consent fixture.</p>", category: "consent", published: true, version: 1 } });
 });
 
 test.afterAll(async () => {
@@ -32,6 +37,8 @@ test.afterAll(async () => {
   await prisma.client.deleteMany({ where: { email } });
   await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = $1", email);
   await prisma.contactMessage.deleteMany({ where: { email } });
+  if (slot) await prisma.availableSlot.delete({ where: { id: slot.id } });
+  if (consent) await prisma.studioDocument.delete({ where: { id: consent.id } });
   if (adminId) await prisma.adminUser.delete({ where: { id: adminId } });
   await prisma.$disconnect();
 });
@@ -53,6 +60,25 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page.getByText("ZAJĘTY", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("NIEDOSTĘPNY", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("private-browser-note", { exact: false })).toHaveCount(0);
+  // Exercise all four reservation steps through the actual responsive UI.
+  await page.goto(`/app/portal/calendar?booking=${encodeURIComponent(slot.startsAt.toISOString())}`);
+  await page.getByLabel("NAZWA / KRÓTKI TEMAT (OPCJONALNIE)", { exact: true }).fill("Browser booked project");
+  await page.getByLabel("OPIS / POMYSŁ", { exact: true }).fill("A complete isolated browser booking scenario.");
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  await page.getByRole("checkbox", { name: new RegExp(consent.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).check();
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.", exact: true }).check();
+  const bookedResponse = page.waitForResponse((response) => response.url().endsWith("/api/client/appointments") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click();
+  const booked = await bookedResponse;
+  expect(booked.status()).toBe(201);
+  const booking = await booked.json();
+  await page.goto(`/app/portal/projects?project=${booking.projectId}&appointment=${booking.appointment.id}`);
+  await page.getByRole("button", { name: "ANULUJ TĘ WIZYTĘ", exact: true }).click();
+  await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+  await expect.poll(async () => (await prisma.appointment.findUniqueOrThrow({ where: { id: booking.appointment.id } })).status).toBe("cancelled");
+  await page.goto("/app/portal/projects");
   if (test.info().project.name === "mobile") await page.getByRole("button", { name: "WIĘCEJ", exact: true }).click();
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/app$/);
