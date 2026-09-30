@@ -25,3 +25,10 @@ Każdy wpis: ID, data UTC, autor/właściciel, problem, warianty, decyzja,
 uzasadnienie, ryzyko, zakres/branch/commit, link do jawnej zgody, warunki,
 plan rollback, skutki i decyzja zastępująca. Statusy: PROPOSED, ACCEPTED,
 REJECTED, SUPERSEDED. Nie twórz fikcyjnych linków ani zgód z milczenia.
+
+## AUDIT-20260930 — zgoda na poprawki audytu
+
+- Źródło: właściciel w bieżącym czacie „Przeprowadź audyt UI UX aplikacji”, odpowiedź „tak” na prośbę o upoważnienie do przygotowania, testowania i wdrażania kolejnych poprawek audytu bez dodatkowych potwierdzeń.
+- Zakres: poprawki audytu technicznego z 2026-09-29, kolejno według priorytetu; zgoda zastępuje wymaganie każdorazowej akceptacji commitu dla tego zakresu, nie znosi testów ani kontroli wdrożeń.
+- Wyłączenia: usuwanie danych produkcyjnych i przywracanie produkcyjnej bazy pozostają niedozwolone bez odrębnej zgody.
+- Pierwszy pakiet: A01 (częściowo) zapisany artefakt jako źródło drill; A02 wspólny snapshot dumpa i liczników. Brak migracji i zmian danych źródłowych. Rollback: revert workflow/skryptu; żadnego restore produkcji.

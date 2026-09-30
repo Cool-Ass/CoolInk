@@ -33,9 +33,7 @@ jobs:
         env:
           DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
         run: |
-          pg_dump "$DATABASE_DIRECT_URL" --format=custom --schema=public --no-owner --no-privileges --file=production.dump
-          pg_restore --list production.dump > /dev/null
-          psql "$DATABASE_DIRECT_URL" --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 --file=scripts/backupCounts.sql > expected-counts.txt
+          node scripts/backupDatabase.mjs
       - name: Private media backup
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
@@ -53,7 +51,7 @@ jobs:
         env:
           BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
         run: |
-          tar -czf backup.tar.gz production.dump expected-counts.txt media-backup
+          tar -czf backup.tar.gz production.dump expected-counts.txt database-backup.json media-backup
           openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.tar.gz -out coolink-backup.enc -pass env:BACKUP_ENCRYPTION_PASSWORD
           sha256sum coolink-backup.enc > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
