@@ -6,10 +6,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | IDLE |
-| Aktywne zadanie / run / lease | Brak; bootstrap dokumentacji |
-| Zbadana baza main | `56fe9a3151b2a339f76b94cae85dd66dc15a4ac6` |
-| Następny krok | AP-001: potwierdzić bramki promocji i E2E przed pierwszym auto-deploy |
+| Status | WORKING |
+| Aktywne zadanie / run / lease | AP-001/A13, główny czat audytu; pozostałe Workery idle przy kontroli. Branch `ai/audit-browser-gate`; checkpoint 2026-09-30 22:24 UTC, lease do 23:24 UTC |
+| Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
+| Następny krok | Zweryfikować nowe testy przeglądarkowe w izolowanym CI; potem uzupełnić scenariusze rezerwacji/CMS/mediów i potwierdzić hosting gate. PR 19–21 mają CI success, ale pozostają niewdrożone |
 | Auto-deploy gotowy | Niepotwierdzony; zablokowany do spełnienia AP-001 |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 

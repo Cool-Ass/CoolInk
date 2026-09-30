@@ -93,6 +93,16 @@ jobs:
           npm run test:smoke:rls
           npm run test:smoke:admin
           node scripts/verifyLoyaltySmoke.cjs
+          node node_modules/playwright/cli.js install --with-deps chromium
+          npm run test:browser
+      - name: Browser test report (no traces or credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
   backup-snapshot:
     runs-on: ubuntu-latest
     services:
