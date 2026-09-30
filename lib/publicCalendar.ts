@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { normalizeCalendarBlockRange } from "@/lib/dateTime";
+import { publicCalendarBlock } from "@/lib/publicCalendarBlock";
 import { normalizeEventImageUrls } from "@/lib/calendarEventMedia";
 
 /** Calendar data safe to expose to visitors: never client or appointment details. */
@@ -7,7 +7,7 @@ export async function getPublicCalendarData(includeLoggedInPromotions = false) {
   const now = new Date();
   const [appointments, blocks, hours, overrides, availableSlots, promotions, events, settings] = await Promise.all([
     prisma.appointment.findMany({ where: { status: { notIn: ["cancelled", "no_show"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: now } } } }, endsAt: { gte: now } }, select: { startsAt: true, endsAt: true } }),
-    prisma.availabilityBlock.findMany({ where: { endsAt: { gte: now } }, select: { startsAt: true, endsAt: true } }),
+    prisma.availabilityBlock.findMany({ where: { endsAt: { gte: now } }, select: { startsAt: true, endsAt: true, reason: true } }),
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" }, select: { weekday: true, enabled: true, startsAt: true, endsAt: true } }),
     prisma.workingHoursOverride.findMany({ where: { date: { gte: now } }, select: { date: true, enabled: true, startsAt: true, endsAt: true } }),
     prisma.availableSlot.findMany({ where: { isPublic: true, endsAt: { gte: now } }, select: { startsAt: true, endsAt: true, title: true, description: true, color: true, isPublic: true } }),
@@ -18,7 +18,7 @@ export async function getPublicCalendarData(includeLoggedInPromotions = false) {
   const setting = new Map(settings.map((item) => [item.key, item.value]));
   return {
     busy: appointments.map((item) => ({ startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
-    blocks: blocks.map((item) => { const range = normalizeCalendarBlockRange(item); return { startsAt: range.startsAt.toISOString(), endsAt: range.endsAt.toISOString() }; }),
+    blocks: blocks.map(publicCalendarBlock),
     hours,
     overrides: overrides.map((item) => ({ ...item, date: item.date.toISOString() })),
     availableSlots: availableSlots.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),

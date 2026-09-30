@@ -29,6 +29,14 @@
 
 ## Nadal otwarte
 
+Aktualizacja: pierwsze CI browser `36785496471` potwierdziło oba scenariusze desktop.
+Mobile dotarł do wylogowania, lecz test nie otwierał menu „WIĘCEJ” — poprawiono
+interakcję zgodnie z istniejącym UI, bez omijania wylogowania.
+Dodatkowo zgłoszenie właściciela ze screenów: zachowanie statusu ręcznego
+„ZAJĘTY” w publicznym payloadzie jako enum, bez ujawniania powodu/notatek.
+Wspólny serializer obejmuje stronę publiczną, portal i starszy ekran /app/terminy.
+Siedem testów jednostkowych statusów przeszło; dodano sprawdzenie etykiet w browser E2E.
+
 A01 pełne DR/Auth/konfiguracja; A09 outbox/idempotencja; A10 obsługa wniosków i retencja;
 A12 korekty płatności; A13 pełne E2E; A14 monitoring; A16 dokumentacja/aktualizacje;
 A17 polling. A06–A08 i A11 mają przygotowane poprawki, lecz nie status produkcyjnie zamknięte.

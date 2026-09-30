@@ -10,6 +10,7 @@ const email = `browser-${randomUUID()}@example.com`;
 const password = `Browser!${randomUUID()}A1`;
 let adminId;
 let projectTitle;
+const blockIds = [];
 
 test.beforeAll(async ({ request }) => {
   const admin = await prisma.adminUser.create({ data: { email: `admin-${email}`, name: "Browser fixture", role: "owner", passwordHash: await bcrypt.hash(password, 12) } });
@@ -18,9 +19,16 @@ test.beforeAll(async ({ request }) => {
   expect(registration.status()).toBe(200);
   // Confirm only this freshly generated fixture, exclusively in the allowlisted test DB.
   await prisma.$executeRawUnsafe("UPDATE auth.users SET email_confirmed_at = now() WHERE email = $1", email);
+  for (const [index, reason] of ["ZAJĘTY · private-browser-note", "Niedostępny"].entries()) {
+    const startsAt = new Date(Date.now() + index * 60_000);
+    const endsAt = new Date(startsAt.getTime() + 2 * 60 * 60_000);
+    const block = await prisma.availabilityBlock.create({ data: { startsAt, endsAt, reason } });
+    blockIds.push(block.id);
+  }
 });
 
 test.afterAll(async () => {
+  await prisma.availabilityBlock.deleteMany({ where: { id: { in: blockIds } } });
   await prisma.client.deleteMany({ where: { email } });
   await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = $1", email);
   await prisma.contactMessage.deleteMany({ where: { email } });
@@ -41,6 +49,11 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page.getByText(projectTitle, { exact: true }).first()).toBeVisible();
   const denied = await page.request.get("/api/admin/google-calendar/calendars");
   expect([401, 403]).toContain(denied.status());
+  await page.goto("/app/portal/calendar");
+  await expect(page.getByText("ZAJĘTY", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("NIEDOSTĘPNY", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("private-browser-note", { exact: false })).toHaveCount(0);
+  if (test.info().project.name === "mobile") await page.getByRole("button", { name: "WIĘCEJ", exact: true }).click();
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto("/app/portal/projects");
