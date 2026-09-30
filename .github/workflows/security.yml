@@ -116,7 +116,7 @@ jobs:
           # Use the container's matching PostgreSQL 17 tools, not the runner client.
           mkdir -p /tmp/pg17-tools
           for tool in pg_dump pg_restore; do
-            printf '#!/bin/sh\nexec docker exec -i -e PGDATABASE -e PGPASSWORD %s %s "$@"\n' "${{ job.services.postgres.id }}" "$tool" > "/tmp/pg17-tools/$tool"
+            printf '#!/bin/sh\nexec docker exec -i -e PGDATABASE -e PGPASSWORD -e PGHOST -e PGPORT -e PGUSER -e PGSSLMODE %s %s "$@"\n' "${{ job.services.postgres.id }}" "$tool" > "/tmp/pg17-tools/$tool"
             chmod +x "/tmp/pg17-tools/$tool"
           done
           export PATH="/tmp/pg17-tools:$PATH"
