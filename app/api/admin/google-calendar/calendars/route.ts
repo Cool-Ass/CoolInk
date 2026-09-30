@@ -44,6 +44,7 @@ export async function PUT(request: Request) {
     const primary = allowed.get(primaryCalendarId);
     if (!primary || !["owner", "writer"].includes(primary.accessRole) || busyCalendarIds.some((id) => !allowed.has(id))) return NextResponse.json({ error: "Primary calendar musi mieć uprawnienia zapisu, a wszystkie kalendarze muszą należeć do autoryzowanego konta Google." }, { status: 400 });
     await prisma.$transaction(async (tx) => {
+      await tx.googleCalendarEventSync.updateMany({ where: { connectionId: result.connection.id, appointmentId: null, googleCalendarId: { notIn: [primaryCalendarId, ...busyCalendarIds] } }, data: { syncStatus: "INACTIVE" } });
       await tx.googleCalendarConnection.update({ where: { id: result.connection.id }, data: { primaryCalendarId, accountEmail: primaryCalendarId.includes("@") ? primaryCalendarId : null } });
       await tx.googleCalendarSelection.deleteMany({ where: { connectionId: result.connection.id } });
       await tx.googleCalendarSelection.createMany({ data: [

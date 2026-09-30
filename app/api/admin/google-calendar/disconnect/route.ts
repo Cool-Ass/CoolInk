@@ -20,6 +20,7 @@ export async function POST(request: Request) {
     } catch { revokedRemotely = false; }
   }
   await prisma.$transaction([
+    prisma.googleCalendarEventSync.updateMany({ where: { connectionId: connection.id, appointmentId: null }, data: { syncStatus: "INACTIVE" } }),
     prisma.googleCalendarConnection.update({ where: { id: connection.id }, data: { active: false, encryptedRefreshToken: "REVOKED", syncToken: null } }),
     prisma.adminAuditLog.create({ data: { adminUserId: admin.id, action: "google-calendar.disconnect", targetType: "GoogleCalendarConnection", targetId: connection.id, summary: revokedRemotely ? "Odwołano dostęp Google Calendar i usunięto lokalny token." : "Usunięto lokalny token Google Calendar; zdalne odwołanie nie zostało potwierdzone.", metadata: JSON.stringify({ revokedRemotely }) } }),
   ]);
