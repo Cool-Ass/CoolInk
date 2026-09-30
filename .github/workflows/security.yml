@@ -9,6 +9,7 @@ concurrency:
   # All branches share one isolated test database: never reset it concurrently.
   group: coolink-isolated-integration-database
   cancel-in-progress: false
+  queue: max
 permissions:
   contents: read
 jobs:
@@ -92,6 +93,46 @@ jobs:
           npm run test:smoke:rls
           npm run test:smoke:admin
           node scripts/verifyLoyaltySmoke.cjs
+  backup-snapshot:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: snapshot-test
+          POSTGRES_DB: source
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Verify backup during concurrent writes
+        env:
+          DATABASE_DIRECT_URL: postgresql://postgres:snapshot-test@localhost:5432/source
+          PGPASSWORD: snapshot-test
+        run: |
+          # Use the container's matching PostgreSQL 17 tools, not the runner client.
+          mkdir -p /tmp/pg17-tools
+          for tool in pg_dump pg_restore; do
+            printf '#!/bin/sh\nexec docker exec -i -e PGDATABASE -e PGPASSWORD -e PGHOST -e PGPORT -e PGUSER -e PGSSLMODE %s %s "$@"\n' "${{ job.services.postgres.id }}" "$tool" > "/tmp/pg17-tools/$tool"
+            chmod +x "/tmp/pg17-tools/$tool"
+          done
+          export PATH="/tmp/pg17-tools:$PATH"
+          psql "$DATABASE_DIRECT_URL" -v ON_ERROR_STOP=1 -c 'CREATE TABLE "Client" (id int); CREATE TABLE "TattooProject" (id int); CREATE TABLE "Appointment" (id int);'
+          (for i in $(seq 1 80); do psql "$DATABASE_DIRECT_URL" -q -c 'INSERT INTO "Client" VALUES (1)' >/dev/null; sleep 0.05; done) &
+          WRITER=$!
+          node scripts/backupDatabase.mjs
+          wait "$WRITER"
+          docker cp "${{ job.services.postgres.id }}:production.dump" production.dump
+          psql "$DATABASE_DIRECT_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE restored'
+          docker exec -e PGPASSWORD "${{ job.services.postgres.id }}" pg_restore --exit-on-error --clean --if-exists -h localhost -U postgres -d restored --no-owner --no-privileges production.dump
+          psql postgresql://postgres@localhost:5432/restored -XqAt -v ON_ERROR_STOP=1 -f scripts/backupCounts.sql > actual.txt
+          LC_ALL=C sort expected-counts.txt > expected.sorted
+          LC_ALL=C sort actual.txt > actual.sorted
+          diff expected.sorted actual.sorted
   codeql:
     runs-on: ubuntu-latest
     permissions:
