@@ -46,7 +46,7 @@ export async function linkAuthenticatedClient(user: SupabaseUser) {
   return prisma.$transaction(async (tx) => {
     const registeredNow = !existing?.supabaseUserId;
     const client = existing
-      ? await tx.client.update({ where: { id: existing.id }, data: { supabaseUserId: user.id, firstName: firstName || existing.firstName, lastName: lastName || existing.lastName } })
+      ? await tx.client.update({ where: { id: existing.id, email, AND: { supabaseUserId: existing.supabaseUserId } }, data: { supabaseUserId: user.id, firstName: firstName || existing.firstName, lastName: lastName || existing.lastName } })
       : await tx.client.create({ data: { email, supabaseUserId: user.id, firstName, lastName } });
     if (registeredNow) {
       const displayName = [client.firstName, client.lastName].filter(Boolean).join(" ") || client.email;
