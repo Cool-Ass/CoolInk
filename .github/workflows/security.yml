@@ -127,7 +127,7 @@ jobs:
           wait "$WRITER"
           docker cp "${{ job.services.postgres.id }}:production.dump" production.dump
           psql "$DATABASE_DIRECT_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE restored'
-          docker exec -e PGPASSWORD "${{ job.services.postgres.id }}" pg_restore --exit-on-error -h localhost -U postgres -d restored --no-owner --no-privileges production.dump
+          docker exec -e PGPASSWORD "${{ job.services.postgres.id }}" pg_restore --exit-on-error --clean --if-exists -h localhost -U postgres -d restored --no-owner --no-privileges production.dump
           psql postgresql://postgres@localhost:5432/restored -XqAt -v ON_ERROR_STOP=1 -f scripts/backupCounts.sql > actual.txt
           LC_ALL=C sort expected-counts.txt > expected.sorted
           LC_ALL=C sort actual.txt > actual.sorted
