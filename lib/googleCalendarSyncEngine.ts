@@ -175,7 +175,7 @@ export async function retryGoogleCalendarExports() {
   return { checked: pending.length, synced };
 }
 
-type SelectedConnection = Awaited<ReturnType<typeof unambiguousExportConnection>> & {};
+type SelectedConnection = NonNullable<Awaited<ReturnType<typeof unambiguousExportConnection>>>;
 
 async function importBusyCalendars(connection: SelectedConnection, accessToken: string, result: SyncResult) {
   // The primary calendar is both the CoolInk export target and a read source.
@@ -245,11 +245,16 @@ async function importBusyCalendars(connection: SelectedConnection, accessToken: 
       const calendarEventId = missing.calendarEventId;
       if (seenRemoteIds.has(missing.googleEventId) || !calendarEventId) continue;
       await prisma.$transaction(async (tx) => {
-        await tx.googleCalendarEventSync.update({ where: { id: missing.id }, data: { calendarEventId: null, syncStatus: "DELETED_REMOTE", remoteDeletedAt: new Date(), lastSyncedAt: new Date() } });
+        await tx.googleCalendarEventSync.update({ where: { id: missing.id }, data: { syncStatus: "DELETED_REMOTE", remoteDeletedAt: new Date(), lastSyncedAt: new Date() } });
       });
       result.remoteDeletes += 1;
     }
   }
+  // A disconnect or selection change may race the network import. Re-read the
+  // live selection after import and deactivate only derived busy records.
+  const current = await prisma.googleCalendarConnection.findUnique({ where: { id: connection.id }, include: { selections: true } });
+  const enabled = current?.active ? current.selections.filter(s => s.enabled).map(s => s.calendarId) : [];
+  await prisma.googleCalendarEventSync.updateMany({ where: { connectionId: connection.id, appointmentId: null, googleCalendarId: { notIn: enabled } }, data: { syncStatus: "INACTIVE" } });
 }
 
 export async function refreshGoogleBusyCalendars() {
