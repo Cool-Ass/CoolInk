@@ -1,3 +1,4 @@
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/adminApi";
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
       take: 8,
     }),
     prisma.projectMessage.findMany({
-      where: { body: text },
+      where: { body: text, ...visibleMessages(messageRecipient("admin", access.admin.id)) },
       select: { id: true, body: true, project: { select: { title: true, client: { select: { id: true, firstName: true, lastName: true } } } } },
       orderBy: { createdAt: "desc" },
       take: 5,

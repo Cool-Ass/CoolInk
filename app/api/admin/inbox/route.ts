@@ -1,4 +1,4 @@
-import { deleteDirectMessagesWithMedia } from "@/lib/chatImage";
+import { hideDirectMessages, hideProjectMessages, messageRecipient } from "@/lib/messageVisibility";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/auth";
@@ -7,13 +7,14 @@ import { isSameOrigin } from "@/lib/requestSecurity";
 type InboxKind = "messages" | "notifications";
 
 async function input(request: Request) {
-  if (!(await getCurrentAdmin())) return { error: NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 }) };
+  const admin = await getCurrentAdmin();
+  if (!admin) return { error: NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 }) };
   if (!isSameOrigin(request)) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   const body = await request.json().catch(() => null);
   const kind = String(body?.kind ?? "") as InboxKind;
   const id = String(body?.id ?? "");
   if (!(["messages", "notifications"] as string[]).includes(kind) || !id) return { error: NextResponse.json({ error: "Nieprawidłowe dane." }, { status: 400 }) };
-  return { kind, id };
+  return { kind, id, admin };
 }
 
 export async function PATCH(request: Request) {
@@ -38,8 +39,8 @@ export async function DELETE(request: Request) {
   if (parsed.kind === "messages") {
     const directId = parsed.id.startsWith("direct:") ? parsed.id.slice(7) : null;
     const [projectResult, directResult] = await Promise.all([
-      directId ? Promise.resolve({ count: 0 }) : prisma.projectMessage.deleteMany({ where: { ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "client" } }),
-      parsed.id === "all" || directId ? deleteDirectMessagesWithMedia({ ...(parsed.id === "all" ? {} : { id: directId! }), author: "client" }) : Promise.resolve({ count: 0 }),
+      directId ? Promise.resolve({ count: 0 }) : hideProjectMessages({ ...(parsed.id === "all" ? {} : { id: parsed.id }), author: "client" }, messageRecipient("admin", parsed.admin.id)),
+      parsed.id === "all" || directId ? hideDirectMessages({ ...(parsed.id === "all" ? {} : { id: directId! }), author: "client" }, messageRecipient("admin", parsed.admin.id)) : Promise.resolve({ count: 0 }),
     ]);
     return NextResponse.json({ ok: true, deleted: projectResult.count + directResult.count });
   }

@@ -1,3 +1,4 @@
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
@@ -13,7 +14,7 @@ export async function GET() {
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
   const opened = await prisma.directMessage.findFirst({ where: { clientId: client.id, author: "admin" }, select: { id: true } });
   if (!opened) return NextResponse.json({ messages: [], canReply: false });
-  const messages = await prisma.directMessage.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "asc" }, take: 200 });
+  const messages = await prisma.directMessage.findMany({ where: { clientId: client.id, ...visibleMessages(messageRecipient("client", client.id)) }, orderBy: { createdAt: "asc" }, take: 200 });
   return NextResponse.json({ messages: messages.map((message) => serializeDirectMessage(message, "client", client.id)), canReply: true });
 }
 

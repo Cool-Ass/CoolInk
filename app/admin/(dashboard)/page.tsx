@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import AdminSections from "@/components/admin/AdminSections";
 import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
 import Link from "next/link";
@@ -21,6 +23,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const soon = new Date(now); soon.setDate(soon.getDate() + 14);
   const staleMessage = new Date(now.getTime() - 12 * 60 * 60 * 1000);
   const admin = await getCurrentAdmin();
+  if (!admin) redirect("/admin/login");
+  const visible = visibleMessages(messageRecipient("admin", admin.id));
   const sectionLayout = await getAdminSectionLayout(admin?.id ?? "", "dashboard");
   const unpaid = admin && hasAdminPermission(admin.role, "finance.manage") ? await prisma.appointment.findMany({ where: { status: "completed", loyaltyEntry: null, project: { kind: "tattoo" }, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" }, take: 50 }) : [];
 
@@ -29,8 +33,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     prisma.tattooProject.findMany({ where: { status: { in: ["inquiry", "reviewing"] } }, include: { client: true }, orderBy: { createdAt: "asc" }, take: 12 }),
     prisma.tattooProject.findMany({ where: { OR: [{ nextAction: { not: null } }, { status: { in: ["awaiting_client", "awaiting_confirmation", "awaiting_deposit", "confirmed", "awaiting_next_session"] } }] }, include: { client: true }, orderBy: [{ nextActionDueAt: "asc" }, { updatedAt: "asc" }], take: 20 }),
     prisma.appointment.findMany({ where: { startsAt: { gte: end, lte: soon }, status: { in: ["confirmed", "proposed", "requested"] } }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" }, take: 8 }),
-    prisma.projectMessage.findMany({ where: { author: "client", readAt: null }, include: { project: { include: { client: true } } }, orderBy: { createdAt: "asc" }, take: 30 }),
-    prisma.directMessage.findMany({ where: { author: "client", readAt: null }, include: { client: true }, orderBy: { createdAt: "asc" }, take: 30 }),
+    prisma.projectMessage.findMany({ where: { ...visible, author: "client", readAt: null }, include: { project: { include: { client: true } } }, orderBy: { createdAt: "asc" }, take: 30 }),
+    prisma.directMessage.findMany({ where: { ...visible, author: "client", readAt: null }, include: { client: true }, orderBy: { createdAt: "asc" }, take: 30 }),
     prisma.googleCalendarEventSync.count({ where: { syncStatus: { in: ["ERROR", "CONFLICT"] } } }),
     prisma.waitlistEntry.findMany({ where: { status: { in: ["active", "offered"] } }, include: { client: true, project: { select: { title: true } } }, orderBy: { createdAt: "asc" }, take: 20 }),
   ]);

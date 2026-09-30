@@ -1,6 +1,7 @@
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/auth";
 import { hasAdminPermission } from "@/lib/adminPermissions";
@@ -15,9 +16,11 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [client, admin, messageTemplates] = await Promise.all([
-    prisma.client.findUnique({ where: { id }, include: { directMessages: { orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, images: { orderBy: { createdAt: "asc" } }, messages: { include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
-    getCurrentAdmin(),
+  const admin = await getCurrentAdmin();
+  if (!admin) redirect("/admin/login");
+  const visible = visibleMessages(messageRecipient("admin", admin.id));
+  const [client, messageTemplates] = await Promise.all([
+    prisma.client.findUnique({ where: { id }, include: { directMessages: { where: visible, orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, images: { orderBy: { createdAt: "asc" } }, messages: { where: visible, include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
     getMessageTemplates(),
   ]);
   if (!client) notFound();

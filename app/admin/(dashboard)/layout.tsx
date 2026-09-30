@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { getCurrentAdmin } from "@/lib/auth";
 import { getSiteContent } from "@/lib/content";
 import Sidebar from "@/components/admin/Sidebar";
@@ -13,7 +15,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [admin, content, unreadProjectMessages, unreadDirectMessages, unreadNotifications, inbox, directInbox, notifications] = await Promise.all([getCurrentAdmin(), getSiteContent(), prisma.projectMessage.count({ where: { author: "client", readAt: null } }), prisma.directMessage.count({ where: { author: "client", readAt: null } }), prisma.contactMessage.count({ where: { isRead: false } }), prisma.projectMessage.findMany({ where: { author: "client" }, include: { project: { include: { client: { select: { id: true, firstName: true, lastName: true } } } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.directMessage.findMany({ where: { author: "client" }, include: { client: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 8 })]);
+  const admin = await getCurrentAdmin();
+  if (!admin) redirect("/admin/login");
+  const visible = visibleMessages(messageRecipient("admin", admin.id));
+  const [content, unreadProjectMessages, unreadDirectMessages, unreadNotifications, inbox, directInbox, notifications] = await Promise.all([getSiteContent(), prisma.projectMessage.count({ where: { ...visible, author: "client", readAt: null } }), prisma.directMessage.count({ where: { ...visible, author: "client", readAt: null } }), prisma.contactMessage.count({ where: { isRead: false } }), prisma.projectMessage.findMany({ where: { ...visible, author: "client" }, include: { project: { include: { client: { select: { id: true, firstName: true, lastName: true } } } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.directMessage.findMany({ where: { ...visible, author: "client" }, include: { client: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 8 })]);
   const conversations = Array.from(new Map(inbox.map((item) => [item.projectId, item])).values()).slice(0, 8);
   const directConversations = Array.from(new Map(directInbox.map((item) => [item.clientId, item])).values());
   const messageItems = [

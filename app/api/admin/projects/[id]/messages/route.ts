@@ -1,3 +1,4 @@
+import { hideProjectMessages, messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -52,7 +53,7 @@ export async function GET(
       { status: 404 },
     );
   const messages = await prisma.projectMessage.findMany({
-    where: { projectId: id },
+    where: { projectId: id, ...visibleMessages(messageRecipient("admin", admin.id)) },
     include: { attachment: { select: { id: true, caption: true } } },
     orderBy: { createdAt: "asc" },
     take: 200,
@@ -147,7 +148,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const removeAll = url.searchParams.get("all") === "true";
   const messageId = url.searchParams.get("messageId");
   if (!removeAll && !messageId) return NextResponse.json({ error: "Wybierz wiadomość lub całą rozmowę." }, { status: 400 });
-  const result = await prisma.projectMessage.deleteMany({ where: removeAll ? { projectId: id } : { id: messageId!, projectId: id } });
-  if (!removeAll && result.count === 0) return NextResponse.json({ error: "Wiadomość nie istnieje." }, { status: 404 });
+  const result = await hideProjectMessages(removeAll ? { projectId: id } : { id: messageId!, projectId: id }, messageRecipient("admin", admin.id));
+
   return NextResponse.json({ ok: true, removed: result.count });
 }

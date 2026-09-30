@@ -1,4 +1,4 @@
-import { deletePrivateProjectMedia } from "@/lib/privateMedia";
+import { hideDirectMessages, messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
@@ -14,7 +14,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (!admin) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params;
   if (!(await prisma.client.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
-  const messages = await prisma.directMessage.findMany({ where: { clientId: id }, orderBy: { createdAt: "asc" }, take: 200 });
+  const messages = await prisma.directMessage.findMany({ where: { clientId: id, ...visibleMessages(messageRecipient("admin", admin.id)) }, orderBy: { createdAt: "asc" }, take: 200 });
   return NextResponse.json({ messages: messages.map((message) => serializeDirectMessage(message, "admin", admin.id)) });
 }
 
@@ -59,10 +59,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const removeAll = url.searchParams.get("all") === "true";
   const messageId = url.searchParams.get("messageId");
   if (!removeAll && !messageId) return NextResponse.json({ error: "Wybierz wiadomość lub całą rozmowę." }, { status: 400 });
-  const attachments = await prisma.directMessage.findMany({ where: removeAll ? { clientId: id } : { id: messageId!, clientId: id }, select: { imageUrl: true } });
-  const media = await deletePrivateProjectMedia(attachments.flatMap((item) => item.imageUrl ? [item.imageUrl] : []));
-  if (media.failures.length) return NextResponse.json({ error: "Nie udało się usunąć zdjęć. Spróbuj ponownie." }, { status: 502 });
-  const result = await prisma.directMessage.deleteMany({ where: removeAll ? { clientId: id } : { id: messageId!, clientId: id } });
-  if (!removeAll && result.count === 0) return NextResponse.json({ error: "Wiadomość nie istnieje." }, { status: 404 });
+  const result = await hideDirectMessages(removeAll ? { clientId: id } : { id: messageId!, clientId: id }, messageRecipient("admin", admin.id));
+
   return NextResponse.json({ ok: true, removed: result.count });
 }

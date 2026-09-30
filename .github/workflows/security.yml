@@ -5,6 +5,10 @@ on:
   pull_request:
   schedule:
     - cron: "17 4 * * 1"
+concurrency:
+  # All branches share one isolated test database: never reset it concurrently.
+  group: coolink-isolated-integration-database
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -55,6 +59,7 @@ jobs:
           fi
           npm run db:test:prepare
           node scripts/verifyLoyaltyMigration.cjs
+          node scripts/verifyMessageVisibilityMigration.cjs
           npm run db:security:audit
           npm run db:security:verify
           npm run db:security:http-verify
