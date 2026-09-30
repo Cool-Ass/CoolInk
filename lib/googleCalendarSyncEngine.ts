@@ -53,7 +53,10 @@ async function exportAppointmentToGoogle(appointmentId: string) {
   const connection = sync
     ? await prisma.googleCalendarConnection.findUnique({ where: { id: sync.connectionId }, include: { selections: true } })
     : await unambiguousExportConnection();
-  if (!connection) return false;
+  if (!connection) {
+    if (sync) throw new Error("Brak połączenia przypisanego do wizyty.");
+    return false;
+  }
   if (!connection.active || connection.encryptedRefreshToken === "REVOKED") throw new Error("Połączenie przypisane do wizyty jest nieaktywne.");
   const primary = connection.selections.find((selection) => selection.role === "primary" && selection.enabled);
   if (!primary) return false;
