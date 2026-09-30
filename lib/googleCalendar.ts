@@ -6,7 +6,7 @@ export const GOOGLE_CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar
 export const GOOGLE_CALENDAR_TIME_ZONE = "Europe/Warsaw";
 
 export type GoogleCalendarSummary = { id: string; summary: string; primary?: boolean; accessRole?: string };
-export type GoogleEvent = { id: string; status?: string; summary?: string; description?: string; location?: string; updated?: string; colorId?: string; recurringEventId?: string; originalStartTime?: { dateTime?: string; date?: string }; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } };
+export type GoogleEvent = { id: string; etag?: string; status?: string; summary?: string; description?: string; location?: string; updated?: string; colorId?: string; recurringEventId?: string; originalStartTime?: { dateTime?: string; date?: string }; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } };
 
 export class GoogleCalendarApiError extends Error {
   constructor(
