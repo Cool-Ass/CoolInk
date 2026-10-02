@@ -58,3 +58,13 @@ odczyt właściciela i odmowa anonimowego odczytu. Sprzątanie usuwa dokładne p
 jednorazowego właściciela z testowego Storage przez API, przed usunięciem Auth;
 chwilowa polityka DELETE ograniczona do jego UUID jest usuwana w finally.
 Wynik browser dla tego rozszerzenia nadal oczekuje na CI.
+
+## Pakiet A12 — wycofane rozliczenia
+
+Branch `ai/audit-payment-corrections`, bazuje na PR 24. Brak migracji.
+Wpisy visit z voidedAt, bez audytowanego wyjaśnienia, trafiają do pilnych zadań
+admina z finance.manage. Karta klienta pokazuje oddzielną kolejkę, niezależnie
+od limitu 30 wpisów historii. Zapis wyjaśnienia wymaga powodu, poprawnego klienta
+i wycofanego wpisu; działa pod istniejącą blokadą transakcyjną i zapisuje audyt.
+Nie zmienia kwot, pieczątek ani wycofanych zapisów. Replay nie tworzy duplikatu.
+21 testów route, TypeScript i lint przeszły. Rollback: revert kodu; audyt zachować.

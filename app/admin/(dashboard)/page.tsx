@@ -9,6 +9,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { getCurrentAdmin } from "@/lib/auth";
 import { hasAdminPermission } from "@/lib/adminPermissions";
 import { coolinkDayRange, formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
+import { pendingLoyaltyCorrections } from "@/lib/loyaltyCorrections";
 
 export const dynamic = "force-dynamic";
 const fmt = (value: Date) => formatCoolinkDateTime(value, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -27,6 +28,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const visible = visibleMessages(messageRecipient("admin", admin.id));
   const sectionLayout = await getAdminSectionLayout(admin?.id ?? "", "dashboard");
   const unpaid = admin && hasAdminPermission(admin.role, "finance.manage") ? await prisma.appointment.findMany({ where: { status: "completed", loyaltyEntry: null, project: { kind: "tattoo" }, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" }, take: 50 }) : [];
+  const corrections = hasAdminPermission(admin.role, "finance.manage") ? await pendingLoyaltyCorrections() : [];
 
   const [today, newProjects, actionProjects, upcoming, unreadMessages, unreadDirectMessages, syncIssues, waitlistEntries] = await Promise.all([
     prisma.appointment.findMany({ where: { startsAt: { gte: start, lt: end }, status: { notIn: ["cancelled", "no_show"] } }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" } }),
@@ -55,6 +57,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     actions.push({ key: `waitlist-${entry.id}`, priority: expired ? 1 : 3, label: expired ? "OFERTA WYGASŁA" : entry.status === "offered" ? "LISTA · OCZEKUJE NA ODPOWIEDŹ" : "LISTA REZERWOWA", title: `${entry.client.firstName} ${entry.client.lastName} · ${entry.project.title}`, detail: expired ? "Zwolnij propozycję i zaoferuj kolejny termin." : entry.status === "offered" ? "Termin jest tymczasowo zablokowany dla klienta." : "Klient czeka na pasujący zwolniony termin.", href: "/admin/waitlist", dueAt: entry.offerExpiresAt ?? entry.createdAt });
   }
   if (syncIssues > 0) actions.push({ key: "calendar-sync", priority: 1, label: "KALENDARZ", title: `${syncIssues} ${syncIssues === 1 ? "problem synchronizacji" : "problemy synchronizacji"}`, detail: "Sprawdź połączenie z Kalendarzem Google, aby uniknąć rozbieżności terminów.", href: "/admin/calendar" });
+  for (const entry of corrections) actions.push({ key: `correction-${entry.id}`, priority: 1, label: "KOREKTA ROZLICZENIA", title: `${entry.firstName} ${entry.lastName} · ${entry.note}`, detail: "Wycofana płatność wymaga wyjaśnienia. Zapisz wynik w historii karty lojalnościowej.", href: `/admin/clients/${entry.clientId}`, dueAt: entry.voidedAt });
   actions.sort((a, b) => a.priority - b.priority || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER));
 
   return <div className="studio-page w-full min-w-0">
