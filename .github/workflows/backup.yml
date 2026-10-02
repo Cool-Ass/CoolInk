@@ -32,6 +32,7 @@ jobs:
       - name: Database backup
         env:
           DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+          BACKUP_REQUIRE_AUTH: "1"
         run: |
           node scripts/backupDatabase.mjs
       - name: Private media backup
@@ -51,7 +52,7 @@ jobs:
         env:
           BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
         run: |
-          tar -czf backup.tar.gz production.dump expected-counts.txt database-backup.json media-backup
+          tar -czf backup.tar.gz production.dump protected.dump expected-counts.txt protected-counts.txt database-backup.json media-backup
           openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.tar.gz -out coolink-backup.enc -pass env:BACKUP_ENCRYPTION_PASSWORD
           sha256sum coolink-backup.enc > SHA256SUMS.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

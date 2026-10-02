@@ -20,7 +20,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: restore-test
           POSTGRES_DB: coolink_restore
-        ports: ["5432:5432"]
+        ports: ["127.0.0.1:5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
@@ -89,5 +89,27 @@ jobs:
           LC_ALL=C sort restored/expected-counts.txt > expected-counts.sorted.txt
           LC_ALL=C sort restored-counts.txt > restored-counts.sorted.txt
           diff --unified expected-counts.sorted.txt restored-counts.sorted.txt
+      - name: Restore protected schemas in disposable offline database only
+        env:
+          PGPASSWORD: restore-test
+          PGOPTIONS: "-c session_replication_role=replica"
+        run: |
+          if [ ! -f restored/protected.dump ]; then
+            echo "::error::Legacy public-only artifact: Auth recovery NOT verified."
+            exit 1
+          fi
+          umask 077
+          if ! pg_restore --exit-on-error --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/protected.dump > protected-restore.private.log 2>&1; then
+            echo "::error::Protected schema restore failed; private diagnostics withheld."
+            exit 1
+          fi
+          psql --host=localhost --username=postgres --dbname=coolink_restore -XqAt -v ON_ERROR_STOP=1 -f scripts/backupProtectedCounts.sql > protected-restored-counts.txt
+          LC_ALL=C sort restored/protected-counts.txt > protected-expected.sorted
+          LC_ALL=C sort protected-restored-counts.txt > protected-actual.sorted
+          if ! cmp -s protected-expected.sorted protected-actual.sorted; then
+            echo "::error::Protected schema counts differ."
+            exit 1
+          fi
+          echo "PASS protected schema record counts in disposable local PostgreSQL; Auth login/config not yet verified."
       - name: Verify restored media byte-for-byte
         run: node scripts/verifyMediaBackup.mjs restored/media-backup
