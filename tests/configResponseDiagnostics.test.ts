@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 // @ts-expect-error Standalone recovery CLI deliberately independent of app runtime.
 import { boundedJson, identityClaimMatches } from "../scripts/backupRuntimeConfiguration.mjs";
 describe("private configuration response diagnostics", () => {
+  it("matches the repository's verified immutable default subject, not recycled namespace identities", () => {
+    const makeToken = (sub: string) => `header.${Buffer.from(JSON.stringify({ sub })).toString("base64url")}.signature`;
+    expect(identityClaimMatches(makeToken("repo:Cool-Ass@319302461/CoolInk@1341372006:ref:refs/heads/main"), "aud").subject).toBe(true);
+    for (const sub of ["repo:Cool-Ass/CoolInk:ref:refs/heads/main", "repo:Cool-Ass@1/CoolInk@1341372006:ref:refs/heads/main", "repo:Cool-Ass@319302461/CoolInk@1341372006:ref:refs/heads/other"]) expect(identityClaimMatches(makeToken(sub), "aud").subject).toBe(false);
+  });
   it("emits only booleans for identity context, not arbitrary token claims", () => {
     const token = `header.${Buffer.from(JSON.stringify({ aud: "expected", private: "do-not-expose" })).toString("base64url")}.signature`;
     const matches = identityClaimMatches(token, "expected");
