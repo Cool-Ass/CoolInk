@@ -29,7 +29,7 @@ jobs:
           BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
         run: |
           test "${#BACKUP_ENCRYPTION_PASSWORD}" -ge 32 || { echo "::error::BACKUP_ENCRYPTION_PASSWORD must contain at least 32 characters"; exit 1; }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install PostgreSQL 17 client
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -39,12 +39,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - name: Select saved backup artifact
         id: backup
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           REQUESTED_RUN: ${{ inputs.backup_run_id }}
         with:
@@ -66,7 +66,7 @@ jobs:
             core.setOutput("run_id", String(run.id));
             core.setOutput("name", name);
             await core.summary.addHeading("Saved backup restore drill").addLink("Source backup", run.html_url).addRaw("\\nNo production database connection used.").write();
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ steps.backup.outputs.name }}
           run-id: ${{ steps.backup.outputs.run_id }}
