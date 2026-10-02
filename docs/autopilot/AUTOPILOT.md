@@ -7,9 +7,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Pole | Stan |
 |---|---|
 | Status | VERIFYING — A01 sealed configuration and record decryption |
-| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-02 13:12 UTC, lease do 13:23 UTC. |
+| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-02 13:23 UTC, lease do 13:53 UTC. |
 | Zbadana baza main | `9413bcda03ebfb865e634020f71dfa0a09ba5770` (PR #27–30 merged po exact-SHA checks); staged cool-7iw8k5th0-cool-ass.vercel.app Ready, bez promocji domeny |
-| Następny krok | Auth runtime 37007741248 / 43163bf SUCCESS: 32 users / 22 linked / password grant. CI 37009816111 / 4a0adb4 SUCCESS; proxy teraz weryfikuje kluczowo powiązany podpis main backup przed browser CSRF, bez generic Bearer/cron exemption. Vercel OIDC Trusted Source production-only, immutable repo/owner, dokładny main backup workflow. Capture uruchomiony z nowego staged main, wynik jeszcze nieznany. Przygotowany record-level MFA/Google/reviews i session/media-signing drill z odzyskanym sealed config; 9 testów i typy/lint PASS. Nie zastępuje full app HTTP/private-media serving. A01/A10/A14 otwarte. Pakiet UI 71ea9a1 CI/E2E 37008760964 SUCCESS. |
+| Następny krok | Capture 37011439814 z main 9413bcd FAIL: sealed-envelope HTTP 401, bez artefaktu. Źródło odmowy edge/handler jeszcze nieustalone; brak staged POST w logach runtime. CI 37010644287 / 4e32ac1 SUCCESS. Auth runtime 37007741248 SUCCESS: 32 users / 22 linked / password grant. Record-level MFA/Google/reviews i session/media drill przygotowany, nie zastępuje full app HTTP/private-media serving. Sprawdzić również proxy dla Google worker. A01/A10/A14 otwarte, żadnej promocji domen. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Bez rotacji kluczy, restore/usuwania produkcji lub promocji nowej aplikacji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
