@@ -7,7 +7,7 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Pole | Stan |
 |---|---|
 | Status | VERIFYING — A01 backup-only bootstrap |
-| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-protected-backup-bootstrap; 2026-10-02 02:18 UTC, lease do 03:11 UTC. Pakiet aplikacji pozostaje na ai/audit-sync-outbox / d634663. |
+| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-protected-backup-bootstrap / PR #27; 2026-10-02 11:26 UTC, lease do 12:26 UTC. Pakiet aplikacji pozostaje na ai/audit-sync-outbox / d634663. |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
 | Następny krok | Samodzielny PR narzędzi backupu bez zmian aplikacji/migracji; po checks zaufany backup main i lokalny restore. Nie promować aplikacji. Pełny A01 runtime/config/login, A10/A14 pozostają otwarte. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Vercel wyłączone za zgodą właściciela i potwierdzone UI. Sam merge nadal może uruchomić build; ten bootstrap nie zawiera migracji ani zmian aplikacji. |
