@@ -549,8 +549,8 @@ select:disabled {
 .studio-workspace > :first-child { animation: studio-enter var(--studio-motion-enter) var(--studio-motion-ease); }
 
 @keyframes studio-enter {
-  from { opacity: .65; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: .65; }
+  to { opacity: 1; }
 }
 
 .studio-dialog { animation: studio-dialog-enter 140ms ease; }
@@ -573,6 +573,7 @@ button.calendar-entry:hover { filter: brightness(1.2); }
 @media (pointer: coarse) {
   .calendar-nav, .calendar-date, button.calendar-entry { min-height: 44px; }
   .calendar-nav { min-width: 44px; }
+  .studio-topbar :where(button[aria-label], a[aria-label]) { min-width: 44px; min-height: 44px; }
 }
 
 .studio-eyebrow {

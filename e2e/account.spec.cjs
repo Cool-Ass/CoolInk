@@ -208,6 +208,7 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await page.goto("/admin");
   await prisma.adminUser.update({ where: { id: adminId }, data: { role: "artist" } });
   expect(await page.evaluate(async () => (await fetch("/api/admin/google-calendar/calendars")).status)).toBe(403);
+  if (test.info().project.name === "mobile") await page.getByRole("button", { name: "Otwórz nawigację administratora", exact: true }).click();
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
 });
