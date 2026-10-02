@@ -32,7 +32,20 @@ try {
       counts.push(`${tablename}=${count}`);
     }
     await writeFile("expected-counts.txt", counts.join("\n") + "\n", { mode: 0o600 });
-    await writeFile("database-backup.json", JSON.stringify({ version: 2, scope: "public", snapshot, createdAt: new Date().toISOString(), commit: process.env.GITHUB_SHA || null }), { mode: 0o600 });
+    stage = "auth-source-discovery";
+    let authSource = null;
+    const [{ available }] = await tx.$queryRawUnsafe("SELECT to_regclass('auth.users') IS NOT NULL AS available");
+    if (available) {
+      const [coverage] = await tx.$queryRawUnsafe(`SELECT
+        (SELECT count(*)::int FROM auth.users) AS "authUsers",
+        count(*)::int AS "linkedClients",
+        count(*) FILTER (WHERE EXISTS (SELECT 1 FROM auth.users u WHERE u.id::text = c."supabaseUserId"))::int AS "matchingClients"
+        FROM public."Client" c WHERE c."supabaseUserId" IS NOT NULL`);
+      authSource = { ...coverage, confirmed: coverage.linkedClients > 0 && coverage.linkedClients === coverage.matchingClients };
+      console.log("Auth source coverage (aggregate only)", authSource);
+    }
+    // This discovers identity coverage, not a claim that public-only dumps recover Auth.
+    await writeFile("database-backup.json", JSON.stringify({ version: 2, scope: "public", authSource, snapshot, createdAt: new Date().toISOString(), commit: process.env.GITHUB_SHA || null }), { mode: 0o600 });
   }, { isolationLevel: "RepeatableRead", timeout: 900000, maxWait: 30000 });
   stage = "archive-validation";
   await run("pg_restore", ["--list", "production.dump"], { env, timeout: 30000 });
