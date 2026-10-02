@@ -6,11 +6,11 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | IDLE |
-| Aktywne zadanie / run / lease | Brak; bootstrap dokumentacji |
-| Zbadana baza main | `56fe9a3151b2a339f76b94cae85dd66dc15a4ac6` |
-| Następny krok | AP-001: potwierdzić bramki promocji i E2E przed pierwszym auto-deploy |
-| Auto-deploy gotowy | Niepotwierdzony; zablokowany do spełnienia AP-001 |
+| Status | VERIFYING — A01 backup-only bootstrap |
+| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-protected-backup-bootstrap / PR #27; 2026-10-02 11:26 UTC, lease do 12:26 UTC. Pakiet aplikacji pozostaje na ai/audit-sync-outbox / d634663. |
+| Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
+| Następny krok | Samodzielny PR narzędzi backupu bez zmian aplikacji/migracji; po checks zaufany backup main i lokalny restore. Nie promować aplikacji. Pełny A01 runtime/config/login, A10/A14 pozostają otwarte. |
+| Auto-deploy gotowy | Auto-assign Custom Production Domains Vercel wyłączone za zgodą właściciela i potwierdzone UI. Sam merge nadal może uruchomić build; ten bootstrap nie zawiera migracji ani zmian aplikacji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
 Repo zawiera Next.js/React, Prisma/PostgreSQL, panel admina, PWA klienta,
