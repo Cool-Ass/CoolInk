@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/adminApi";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { retryGoogleCalendarExports } from "@/lib/googleCalendarSyncEngine";
-import { prisma } from "@/lib/prisma";
+import { googleExportQueueStatus } from "@/lib/googleExportOutbox";
 
 export async function GET() {
   const auth = await requireAdminApi("settings.manage");
   if (!auth.ok) return auth.response;
-  return NextResponse.json({ pending: await prisma.siteSetting.count({ where: { key: { startsWith: "google_retry:" } } }) });
+  return NextResponse.json(await googleExportQueueStatus(), { headers: { "Cache-Control": "no-store" } });
 }
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });

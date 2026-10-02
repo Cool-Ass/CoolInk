@@ -7,9 +7,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Pole | Stan |
 |---|---|
 | Status | WORKING |
-| Aktywne zadanie / run / lease | A09 oraz oczekiwanie CI A13/A12/A17, główny czat audytu; pozostałe Workery idle przy kontroli 2026-10-02. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 00:50 UTC, lease do 01:50 UTC. Poprzednie godziny lokalne omyłkowo oznaczono UTC; obowiązuje ten wpis |
+| Aktywne zadanie / run / lease | Wznowienie poprzedniego modelu: A09, jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 01:02 UTC, lease do 02:02 UTC. |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
-| Następny krok | Zweryfikować nowe testy przeglądarkowe w izolowanym CI; potem uzupełnić scenariusze rezerwacji/CMS/mediów i potwierdzić hosting gate. PR 19–21 mają CI success, ale pozostają niewdrożone |
+| Następny krok | PR #24: CI 36946880354 success (media E2E). PR #26: 36948037464 failure przez nieaktualne mocki testu retry, poprawione lokalnie; 249 testów oraz typy PASS. Uzupełniono backoff i widoczność kolejki A09. Push aktualnego pakietu i weryfikacja nowego SHA, potem A01/A10/A14/A16/A17. Hosting gate nadal wymaga decyzji; brak nowego wdrożenia. |
 | Auto-deploy gotowy | Niepotwierdzony; zablokowany do spełnienia AP-001 |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 

@@ -132,10 +132,10 @@ export async function syncAppointmentToGoogle(appointmentId: string, cachedToken
   if (!claim) return false;
   try {
     const result = await exportAppointmentToGoogle(appointmentId, cachedToken);
-    await releaseGoogleExport(claim, result);
+    await releaseGoogleExport(claim, result, "CONFIGURATION_REQUIRED");
     return result;
   } catch (error) {
-    await releaseGoogleExport(claim, false);
+    await releaseGoogleExport(claim, false, error instanceof GoogleSyncConflict ? "REMOTE_CONFLICT" : "EXPORT_FAILED");
     await prisma.googleCalendarEventSync.updateMany({ where: { appointmentId }, data: { syncStatus: error instanceof GoogleSyncConflict ? "CONFLICT" : "ERROR", syncError: error instanceof GoogleSyncConflict ? error.message : "Eksport nie powiódł się. Oczekuje na ponowienie." } });
     console.error("google_calendar_export_failed", { appointmentId });
     return false;
@@ -143,7 +143,13 @@ export async function syncAppointmentToGoogle(appointmentId: string, cachedToken
 }
 
 export async function retryGoogleCalendarExports() {
-  const pending = await prisma.siteSetting.findMany({ where: { key: { startsWith: "google_retry:" } }, orderBy: { updatedAt: "asc" }, take: 25, select: { key: true } });
+  // Filter before LIMIT so leased/backed-off records cannot starve later work.
+  const pending = await prisma.$queryRaw<Array<{ key: string }>>`
+    SELECT "key" FROM "SiteSetting" WHERE "key" LIKE 'google_retry:%'
+      AND COALESCE(("value"::jsonb->>'leaseUntil')::timestamptz, '-infinity'::timestamptz) < now()
+      AND COALESCE(("value"::jsonb->>'nextAttemptAt')::timestamptz, '-infinity'::timestamptz) <= now()
+    ORDER BY "updatedAt" ASC LIMIT 25
+  `;
   let synced = 0;
   for (const item of pending) if (await syncAppointmentToGoogle(item.key.slice("google_retry:".length))) synced += 1;
   return { checked: pending.length, synced };

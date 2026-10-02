@@ -39,11 +39,17 @@ async function main() {
     const reclaimed = await claimGoogleExport(visitId);
     assert(reclaimed, "Expired lease must be recoverable");
     await releaseGoogleExport(reclaimed, false);
+    const deferred = JSON.parse((await prisma.siteSetting.findUniqueOrThrow({ where: { key: original.key } })).value);
+    assert.equal(deferred.attempts, 1);
+    assert.equal(deferred.lastError, "EXPORT_FAILED");
+    assert(new Date(deferred.nextAttemptAt) > new Date());
+    assert.equal(await claimGoogleExport(visitId), null, "Backoff must prevent immediate repeated calls");
+    await prisma.$executeRaw`UPDATE "SiteSetting" SET "value" = ("value"::jsonb || jsonb_build_object('nextAttemptAt', now() - interval '1 minute'))::text WHERE "key" = ${original.key}`;
     const retry = await claimGoogleExport(visitId);
     assert.equal(retry.nonce, reclaimed.nonce, "Retries must retain the generation for remote idempotency");
     await releaseGoogleExport(retry, true);
     assert.equal(await prisma.siteSetting.findUnique({ where: { key: original.key } }), null);
-    console.log("PASS: transactional Google outbox, exclusive claims, stale completion and lease recovery.");
+    console.log("PASS: transactional Google outbox, exclusive claims, stale completion, backoff and lease recovery.");
   } finally {
     await prisma.client.deleteMany({ where: { id } });
     await prisma.siteSetting.deleteMany({ where: { key: { in: [marker(visitId), marker(rolledBackId)] } } });
