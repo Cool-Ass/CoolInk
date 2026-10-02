@@ -6,11 +6,11 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | VERIFYING — A01 runtime recovery, A10/A14 oraz pakiet UI |
-| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-02 12:48 UTC, lease do 13:23 UTC. PR #29 merged po exact-SHA checks. |
-| Zbadana baza main | `e3d569aeaf84a2f26dfebd35bd72a996598be5ca` (PR #27–29); bez promocji domeny |
-| Następny krok | Auth runtime drill 37007741248 / 43163bf SUCCESS: 32 użytkowników, 22 powiązania CRM i izolowane logowanie. CI 37007719612 SUCCESS. Vercel trusted source zapisane i sprawdzone: issuer GitHub, audience https://github.com/Cool-Ass, sub main tego repo, workflow_ref backup.yml main, immutable repo/owner ID, wyłącznie production. Brak static bypass lub public exception. Capture z nowego staged main nadal wymaga sukcesu; A01 full app/MFA/Google/media, A10/A14 otwarte. |
-| Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Publiczna aplikacja bez zmian; bez rotacji sekretów i restore/usuwania produkcji. |
+| Status | VERIFYING — A01 sealed configuration and record decryption |
+| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-02 13:12 UTC, lease do 13:23 UTC. |
+| Zbadana baza main | `9413bcda03ebfb865e634020f71dfa0a09ba5770` (PR #27–30 merged po exact-SHA checks); staged cool-7iw8k5th0-cool-ass.vercel.app Ready, bez promocji domeny |
+| Następny krok | Auth runtime 37007741248 / 43163bf SUCCESS: 32 users / 22 linked / password grant. CI 37009816111 / 4a0adb4 SUCCESS; proxy teraz weryfikuje kluczowo powiązany podpis main backup przed browser CSRF, bez generic Bearer/cron exemption. Vercel OIDC Trusted Source production-only, immutable repo/owner, dokładny main backup workflow. Capture uruchomiony z nowego staged main, wynik jeszcze nieznany. Przygotowany record-level MFA/Google/reviews i session/media-signing drill z odzyskanym sealed config; 9 testów i typy/lint PASS. Nie zastępuje full app HTTP/private-media serving. A01/A10/A14 otwarte. Pakiet UI 71ea9a1 CI/E2E 37008760964 SUCCESS. |
+| Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Bez rotacji kluczy, restore/usuwania produkcji lub promocji nowej aplikacji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
 ## Kontynuacja 2026-10-02 01:11 UTC

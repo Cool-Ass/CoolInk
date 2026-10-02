@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const endpoint = "https://www.coolinktattoo.pl/api/cron/config-escrow";
+let captureStage = "guard";
 const allowed = new Set(["SESSION_SECRET", "MFA_ENCRYPTION_KEY", "PRIVATE_MEDIA_SIGNING_KEY", "GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS", "GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY", "GOOGLE_CALENDAR_CLIENT_ID", "GOOGLE_CALENDAR_CLIENT_SECRET", "GOOGLE_CALENDAR_REDIRECT_URI", "VAPID_PRIVATE_KEY", "NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_SUBJECT"]);
 
 export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun, verifyValues = () => {}) {
@@ -30,7 +31,7 @@ export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun, v
 }
 
 async function boundedJson(response) {
-  if (!response.ok || !response.body) throw new Error("Configuration service unavailable");
+  if (!response.ok || !response.body) throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status });
   const reader = response.body.getReader(); const chunks = []; let size = 0;
   try {
     for (;;) {
@@ -68,16 +69,22 @@ async function capture(directory) {
   const recipient = createHash("sha256").update(der).digest("hex");
   // Edge protection has a fixed scoped audience; application authorization
   // independently binds its token to this ephemeral recipient.
+  captureStage = "recipient-identity";
   const recipientIdentity = await workflowIdentity(`${endpoint}?recipient=${recipient}`);
+  captureStage = "edge-identity";
   const edgeIdentity = await workflowIdentity("https://github.com/Cool-Ass");
+  captureStage = "sealed-envelope";
   const envelope = await boundedJson(await fetch(new URL("/api/cron/config-escrow", deployment), {
     method: "POST", headers: configurationRequestHeaders(recipientIdentity, edgeIdentity),
     body: JSON.stringify({ publicKey: der.toString("base64") }), signal: AbortSignal.timeout(30000), redirect: "error",
   }));
+  captureStage = "recipient-revision";
   if (envelope.context?.recipient !== recipient || !/^[a-f0-9]{40}$/.test(envelope.context?.deploymentSha ?? "")
     || (deployment.hostname !== "www.coolinktattoo.pl" && envelope.context.deploymentSha !== expectedSha)) throw new Error("Configuration recipient or revision mismatch");
   const privateKey = pair.privateKey.export({ format: "pem", type: "pkcs8" });
+  captureStage = "envelope-verification";
   const manifest = verifyConfigurationEnvelope(envelope, privateKey, run);
+  captureStage = "private-archive-write";
   await mkdir(directory, { recursive: true, mode: 0o700 });
   // These files may only be uploaded inside the password-encrypted backup archive.
   await writeFile(resolve(directory, "recipient-private.pem"), privateKey, { mode: 0o600 });
@@ -106,5 +113,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const [mode, directory] = process.argv.slice(2);
   const operation = mode === "capture" ? capture : mode === "verify" ? verify : null;
   if (!operation || !directory) { console.error("Configuration backup requires capture/verify and a private directory"); process.exitCode = 1; }
-  else await operation(resolve(directory)).catch(() => { console.error("Configuration backup failed (private details suppressed)"); process.exitCode = 1; });
+  else await operation(resolve(directory)).catch(error => {
+    // Only fixed stage names and numeric HTTP status; never body, URL, token,
+    // decrypted values or untrusted exception messages.
+    console.error("Configuration backup failed (private details suppressed)", { stage: mode === "capture" ? captureStage : "offline-verification", ...(Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? { httpStatus: error.httpStatus } : {}) });
+    process.exitCode = 1;
+  });
 }
