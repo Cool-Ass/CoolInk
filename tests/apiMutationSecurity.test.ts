@@ -22,6 +22,13 @@ describe("API mutation protection", () => {
       if (!/export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b/.test(source)) return [];
 
       const name = routeName(path);
+      if (name === "app/api/cron/config-escrow/route.ts") {
+        // Machine-only recovery: never cookie authority. Its signed OIDC audience
+        // binds the recipient; route tests cover browser refusal and replay.
+        return source.includes("backupWorkflowIdentity") && source.includes("reserveWebhook")
+          && source.includes('request.headers.has("cookie")') && source.includes('request.headers.has("origin")')
+          && source.includes("escrowRecipient(publicKey).audience") ? [] : [name];
+      }
       if (name === "app/api/webhooks/automation/route.ts") {
         return source.includes("verifyWebhookSignature") && source.includes("reserveWebhook") ? [] : [name];
       }
