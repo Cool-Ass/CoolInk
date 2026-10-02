@@ -85,10 +85,9 @@ test("client login, own project navigation and logout", async ({ page }) => {
   const upload = await uploaded;
   expect(upload.status()).toBe(201);
   const image = (await upload.json()).image;
-  const ownerRead = await page.request.get(image.url);
-  expect(ownerRead.status()).toBe(200);
-  expect(ownerRead.headers()["content-type"]).toContain("image/");
-  await expect(page.locator(`img[src="${image.url}"]`).first()).toBeVisible();
+  const renderedImage = page.locator(`img[src="${image.url}"]`).first();
+  await expect(renderedImage).toBeVisible();
+  await expect.poll(async () => renderedImage.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
   const outsider = await page.context().browser().newContext();
   try { expect((await outsider.request.get(`http://127.0.0.1:3120${image.url}`)).status()).toBe(401); }
   finally { await outsider.close(); }
