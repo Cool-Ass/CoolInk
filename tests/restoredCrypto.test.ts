@@ -1,0 +1,27 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMfaSecret, encryptMfaSecret } from "../lib/adminMfa";
+import { encryptGoogleRefreshToken } from "../lib/googleCalendarCrypto";
+import { verifyEncryptedRecords } from "../scripts/verifyRestoredCrypto";
+beforeEach(() => {
+  vi.stubEnv("SESSION_SECRET", "offline-only-session-material-at-least-32-characters");
+  vi.stubEnv("MFA_ENCRYPTION_KEY", "offline-only-mfa-material-at-least-32-characters");
+  vi.stubEnv("GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS", Buffer.alloc(32, 7).toString("base64"));
+});
+afterEach(() => vi.unstubAllEnvs());
+describe("restored encrypted records", () => {
+  it("uses actual application crypto and reports only aggregate coverage", () => {
+    const secret = createMfaSecret();
+    expect(verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: encryptMfaSecret(secret) }], google: [{ encryptedRefreshToken: encryptGoogleRefreshToken("fixture-not-a-production-token") }], reviews: encryptGoogleRefreshToken("fixture-reviews") })).toEqual({ mfaSecrets: 1, googleTokens: 1, reviewsCredentials: 1, mediaSignatureOwnership: true });
+  });
+  it("fails on wrong recovered keys and enabled MFA without its secret", () => {
+    const mfa = encryptMfaSecret(createMfaSecret()); const google = encryptGoogleRefreshToken("fixture-token");
+    vi.stubEnv("MFA_ENCRYPTION_KEY", "wrong-offline-mfa-material-at-least-32-characters");
+    expect(() => verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: mfa }], google: [], reviews: null })).toThrow();
+    vi.stubEnv("GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS", Buffer.alloc(32, 8).toString("base64"));
+    expect(() => verifyEncryptedRecords({ mfa: [], google: [{ encryptedRefreshToken: google }], reviews: null })).toThrow();
+    expect(() => verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: null }], google: [], reviews: null })).toThrow();
+  });
+  it("explicitly reports zero existing encrypted records, without pretending MFA or OAuth is configured", () => {
+    expect(verifyEncryptedRecords({ mfa: [], google: [], reviews: null })).toEqual({ mfaSecrets: 0, googleTokens: 0, reviewsCredentials: 0, mediaSignatureOwnership: true });
+  });
+});

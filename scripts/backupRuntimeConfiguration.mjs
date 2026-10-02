@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const endpoint = "https://www.coolinktattoo.pl/api/cron/config-escrow";
 const allowed = new Set(["SESSION_SECRET", "MFA_ENCRYPTION_KEY", "PRIVATE_MEDIA_SIGNING_KEY", "GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS", "GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY", "GOOGLE_CALENDAR_CLIENT_ID", "GOOGLE_CALENDAR_CLIENT_SECRET", "GOOGLE_CALENDAR_REDIRECT_URI", "VAPID_PRIVATE_KEY", "NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_SUBJECT"]);
 
-export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun) {
+export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun, verifyValues = () => {}) {
   const context = envelope?.context;
   if (!context || context.version !== 1 || context.purpose !== "coolink-runtime-key-recovery" || context.run !== expectedRun || envelope.algorithm !== "RSA-OAEP-SHA256+A256GCM") throw new Error("Invalid configuration archive");
   const key = privateDecrypt({ key: privateKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" }, Buffer.from(envelope.wrappedKey, "base64"));
@@ -22,7 +22,9 @@ export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun) {
     for (const name of ["MFA_ENCRYPTION_KEY", "PRIVATE_MEDIA_SIGNING_KEY"]) if (values[name] && values[name].length < 32) throw new Error("Invalid recovery key");
     const google = values.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS || values.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY;
     if (google && google.split(",").map(value => value.trim()).filter(Boolean).some(value => Buffer.from(value, "base64").length !== 32)) throw new Error("Invalid recovery keyring");
-    // Metadata only: decrypted values never leave this verifier or reach stdout.
+    // A trusted offline drill may check current encrypted records in-memory.
+    // Its return value is ignored; this API still returns metadata only.
+    verifyValues(values);
     return { version: 1, run: context.run, createdAt: context.createdAt, deploymentSha: context.deploymentSha, keys: Object.keys(values).sort(), verified: true };
   } finally { key.fill(0); plaintext?.fill(0); }
 }

@@ -133,6 +133,7 @@ jobs:
         run: |
           if [ -d restored/runtime-config ]; then
             node scripts/backupRuntimeConfiguration.mjs verify restored/runtime-config
+            npx tsx scripts/verifyRestoredCrypto.ts
           else
             echo "::warning::Runtime configuration not captured; full Auth/application recovery remains unverified."
           fi
