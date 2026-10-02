@@ -44,6 +44,7 @@ async function startupDiagnostics(container) {
     ["MIGRATION", /migrat/i], ["PERMISSION", /permission denied/i], ["MISSING_RELATION", /relation .* does not exist/i],
     ["MISSING_COLUMN", /column .* does not exist/i], ["CONFIG_REQUIRED", /required|missing configuration/i],
     ["ROLE", /role .* does not exist/i], ["NETWORK", /connection refused|dial tcp/i],
+    ["TLS", /SSL|TLS/i],
   ]) if (pattern.test(text)) classes.push(label);
   const sqlState = text.match(/SQLSTATE ([A-Z0-9]{5})/)?.[1];
   const key = text.match(/required key (GOTRUE_[A-Z0-9_]+|API_EXTERNAL_URL)/)?.[1];
@@ -72,7 +73,7 @@ async function main() {
       GOTRUE_JWT_SECRET: secret, GOTRUE_JWT_ADMIN_ROLES: "service_role", GOTRUE_JWT_AUD: "authenticated",
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true", GOTRUE_MAILER_AUTOCONFIRM: "true", GOTRUE_LOG_LEVEL: "error",
     }).map(([key, value]) => `${key}=${value}`).join("\n"), { mode: 0o600 });
-    await exec("docker", ["run", "--detach", "--rm", "--name", container, "--network", "host", "--env-file", environment, image], { timeout: 180000, maxBuffer: 1024 * 1024 });
+    await exec("docker", ["run", "--detach", "--name", container, "--label", `coolink.drill=${process.env.GITHUB_RUN_ID}`, "--network", "host", "--env-file", environment, image], { timeout: 180000, maxBuffer: 1024 * 1024 });
     containerStarted = true;
     stage = "local-auth-health";
     let healthy = false;
@@ -103,7 +104,13 @@ async function main() {
     console.log(JSON.stringify({ verified: "restored-auth-runtime", restoredUsers: users.length, linkedClients: linked.length, isolatedPasswordFlow: true, durationMs: Date.now() - started }));
   } catch { console.error(`Restored Auth runtime failed at ${stage}; private diagnostics withheld`); process.exitCode = 1; }
   finally {
-    if (containerStarted) await exec("docker", ["stop", "--time", "5", container], { timeout: 15000 }).catch(() => { process.exitCode = 1; });
+    if (containerStarted) {
+      const label = await exec("docker", ["inspect", "--format", '{{ index .Config.Labels "coolink.drill" }}', container], { timeout: 5000 }).catch(() => null);
+      if (label?.stdout.trim() === process.env.GITHUB_RUN_ID) {
+        await exec("docker", ["stop", "--time", "5", container], { timeout: 15000 }).catch(() => { process.exitCode = 1; });
+        await exec("docker", ["rm", container], { timeout: 5000 }).catch(() => { process.exitCode = 1; });
+      } else process.exitCode = 1;
+    }
     await prisma.$disconnect();
   }
 }
