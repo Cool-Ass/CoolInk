@@ -39,7 +39,9 @@ export async function DELETE(request: Request) {
 
   await prisma.accountDeletionRequest.upsert({
     where: { clientId: client.id },
-    update: { status: "pending", requestedAt: new Date(), resolvedAt: null },
+    // A retry must not reset the original receipt date, response deadline or
+    // review state. Reopening a resolved case requires a separate audited flow.
+    update: {},
     create: { clientId: client.id },
   });
   const response = NextResponse.json({ ok: true });
