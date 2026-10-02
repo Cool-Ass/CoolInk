@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   // The signed workflow identity is the only authority; no cookies or static
   // shared secret are accepted. Preview deployments must not consume production work.
   if (process.env.VERCEL_ENV !== "production") return NextResponse.json({ error: "Unavailable" }, { status: 503 });
+  if (request.headers.has("cookie") || request.headers.has("origin")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const eventId = await googleWorkerIdentity(request);
   if (!eventId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const reserved = await reserveWebhook("github-google-export", eventId, request.headers.get("authorization") ?? "");
