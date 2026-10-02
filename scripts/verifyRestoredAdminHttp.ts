@@ -11,7 +11,7 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
   if (process.env.GITHUB_ACTIONS !== "true" || !/^\d{1,30}$/.test(process.env.GITHUB_RUN_ID ?? "")) throw new Error("Disposable runner required");
   const [{ name }] = await prisma.$queryRawUnsafe<Array<{ name: string }>>("SELECT current_database() AS name");
   if (name !== "coolink_restore") throw new Error("Wrong restore target");
-  const material = await prisma.adminUser.findFirst({ where: { mfaEnabled: true, mfaSecretEncrypted: { not: null } }, select: { mfaSecretEncrypted: true } });
+  const material = await prisma.adminUser.findFirst({ where: { mfaSecretEncrypted: { not: null } }, select: { mfaSecretEncrypted: true, mfaEnabled: true } });
   const encrypted = material?.mfaSecretEncrypted || encryptMfaSecret(createMfaSecret());
   const seed = decryptMfaSecret(encrypted);
   const password = randomBytes(32).toString("base64url");
@@ -51,7 +51,7 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
     stage = "session-revocation";
     await prisma.adminUser.update({ where: { id: fixture.id }, data: { sessionVersion: { increment: 1 } } });
     if ((await call("/api/admin/mfa", { headers: { cookie } })).status !== 401) throw new Error("Restored session revocation failed");
-    return { productionHttpLogin: true, mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
+    return { productionHttpLogin: true, mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
   } catch {
     console.error("RESTORED_ADMIN_HTTP_FAILED_STAGE", stage);
     throw new Error("Restored admin HTTP verification failed");

@@ -2,6 +2,28 @@
 
 ## Recovery update — 2026-10-02 16:44 UTC
 
+Follow-up 16:56 UTC: **37037086568 SUCCESS** / `99013ac` restores saved main
+backup 37035132250. Actual production Next HTTP: MFA challenge, wrong-code
+rejection, successful login, authenticated MFA settings GET and revocation
+all PASS with a synthetic fixture MFA seed encrypted using the recovered key.
+Source has one stored MFA ciphertext but no enabled MFA account matched by
+the first HTTP selector. This is not proof of enabled MFA on the source admin.
+The revised selector also clones pending setup ciphertext into the disposable
+fixture, and reports original mfaEnabled separately without altering it.
+One original Google token decrypts; recovered session and media signing keys
+PASS. Database/protected counts, 10 media bytes and isolated GoTrue password
+flow also PASS. No original account password changed, no provider calls,
+no customer bodies/logs/artifacts exposed. Earlier HTTP test 37036521558 FAIL
+used an endpoint without a GET handler; corrected to actual MFA GET.
+
+Exact final app CI 37037022125 / `99013ac` pending behind existing running
+isolated database worker; no running job cancelled. A01 still requires
+client application login/private-media HTTP serving proof, A14 production
+monitor execution/delivery evidence. A10 needs owner retention/execution
+decision: asynchronous question submitted, not answered yet. No source DB
+deletion, migration or public-domain promotion. Next worker must preserve
+this gate rather than interpreting a staged Ready build as public deployment.
+
 Follow-up 16:49 UTC: restore **37036011914 SUCCESS** / `c076cb4`, same
 trusted saved main artifact. Actual restored crypto records: 1 MFA secret,
 1 Google token, 0 revoked connections, 0 reviews credentials; media ownership
