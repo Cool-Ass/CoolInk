@@ -7,9 +7,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Pole | Stan |
 |---|---|
 | Status | VERIFYING — A01 runtime configuration bootstrap |
-| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-runtime-key-bootstrap / PR #28; checkpoint 2026-10-02 11:49 UTC, lease do 12:26 UTC. Pakiet UI i aplikacji zachowany w PR #26 / 6e8587c. |
-| Zbadana baza main | `f310ca146435685d5c6d412e3c38527c608318d1`, tooling-only PR #27 merged po 37001049836 SUCCESS; main CI 37001930588 SUCCESS |
-| Następny krok | Świeży main backup 37001930017 i offline restore 37002286826 SUCCESS (public/auth/storage/media). PR #28: domyślnie wyłączony endpoint OIDC key-bound + capture/verify CLI i opcjonalny workflow. 13 testów granic PASS; 52a30a9 CI SUCCESS, najnowszy SHA wymaga własnych checks. Następnie staged production capture i nowy drill; A01 runtime/login, A10/A14 pozostają otwarte. |
+| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-restored-auth-runtime / PR #29; checkpoint 2026-10-02 12:23 UTC, lease do 13:23 UTC. Pakiet UI i aplikacji zachowany w PR #26 / 6e8587c (CI 37002171463 SUCCESS). |
+| Zbadana baza main | `1aa766a6e89f8d7161949b0b0e58fb854c767cb5`: PR #27 i #28 merged po exact-SHA checks; endpoint recovery tylko w staged production, domeny nie promowano |
+| Następny krok | Main backup 37001930017 i offline restore 37002286826 SUCCESS (public/auth/storage/media). Staged 1aa766a / cool-cggmp5o46-cool-ass.vercel.app Ready. Capture 37006009585 FAIL w Seal approved runtime configuration, bez artefaktu/rotacji. Auth drill 37005437660 FAIL startup: MIGRATION/MISSING_COLUMN, SQLSTATE 42703; prywatnych logów nie ujawniono. Diagnozować przyczyny, nie dopisywać fikcyjnej kompletności. A01 runtime/login, A10/A14 pozostają otwarte. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled ponownie potwierdzone UI. Produkcyjna flaga BACKUP_CONFIG_ESCROW_ENABLED=1 zapisana dla przyszłego buildu; obecna strona nie ma endpointu. Bez rotacji kluczy, migracji ani promocji domeny w bootstrapie. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 

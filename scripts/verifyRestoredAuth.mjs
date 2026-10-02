@@ -48,7 +48,9 @@ async function startupDiagnostics(container) {
   ]) if (pattern.test(text)) classes.push(label);
   const sqlState = text.match(/SQLSTATE ([A-Z0-9]{5})/)?.[1];
   const key = text.match(/required key (GOTRUE_[A-Z0-9_]+|API_EXTERNAL_URL)/)?.[1];
-  console.error("RESTORED_AUTH_STARTUP", { exitCode: /^\d{1,3}\s*$/.test(state?.stdout ?? "") ? Number(state.stdout) : null, classes, ...(sqlState ? { sqlState } : {}), ...(key ? { requiredEnvironmentName: key } : {}) });
+  const column = text.match(/column\s+"?([a-z_][a-z0-9_.]{0,80})"?\s+(?:of relation\s+"[a-z_]+"\s+)?does not exist/i)?.[1];
+  const migration = text.match(/\b(\d{14}_[a-z0-9_]{1,100}\.up\.sql)\b/)?.[1];
+  console.error("RESTORED_AUTH_STARTUP", { exitCode: /^\d{1,3}\s*$/.test(state?.stdout ?? "") ? Number(state.stdout) : null, classes, ...(sqlState ? { sqlState } : {}), ...(key ? { requiredEnvironmentName: key } : {}), ...(column ? { missingSchemaColumn: column } : {}), ...(migration ? { vendorMigration: migration } : {}) });
 }
 
 async function main() {
