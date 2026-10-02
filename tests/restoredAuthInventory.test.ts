@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error Executable recovery module is deliberately independent of the app runtime.
-import { assertRestoredAuthInventory } from "../scripts/verifyRestoredAuth.mjs";
+import { assertRestoredAuthInventory, authDatabase } from "../scripts/verifyRestoredAuth.mjs";
 describe("restored Auth inventory", () => {
+  it("uses the restored Auth migration ledger only in the disposable local database", () => {
+    const url = new URL(authDatabase);
+    expect(url.hostname).toBe("127.0.0.1");
+    expect(url.pathname).toBe("/coolink_restore");
+    expect(url.searchParams.get("options")).toBe("-c search_path=auth,extensions,public");
+  });
   it("matches every saved identity and linked client without depending on row order", () => {
     expect(() => assertRestoredAuthInventory(["a", "b"], ["b", "a"], ["b"])).not.toThrow();
   });

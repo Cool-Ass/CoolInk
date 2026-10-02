@@ -11,6 +11,11 @@ const exec = promisify(execFile);
 const origin = "http://127.0.0.1:9999";
 // No supplied DATABASE_URL or Supabase endpoint is accepted by this drill.
 const database = "postgresql://postgres:restore-test@127.0.0.1:5432/coolink_restore";
+// GoTrue's unqualified migration ledger must resolve to the restored auth
+// schema, matching the hosted supabase_auth_admin role's search_path. The
+// disposable restore owner is postgres; its default public path would replay
+// already-applied managed migrations against a newer Auth schema.
+export const authDatabase = database + "?options=-c%20search_path%3Dauth%2Cextensions%2Cpublic";
 const image = "supabase/gotrue:v2.196.0"; // Official self-hosted compose, verified 2026-10-02.
 
 export function assertRestoredAuthInventory(expected, actual, linked) {
@@ -70,7 +75,7 @@ async function main() {
     const environment = join(directory, "auth.private.env");
     await writeFile(environment, Object.entries({
       GOTRUE_API_HOST: "127.0.0.1", GOTRUE_API_PORT: "9999", API_EXTERNAL_URL: origin,
-      GOTRUE_DB_DRIVER: "postgres", GOTRUE_DB_DATABASE_URL: database,
+      GOTRUE_DB_DRIVER: "postgres", GOTRUE_DB_DATABASE_URL: authDatabase,
       GOTRUE_SITE_URL: "http://127.0.0.1:3120", GOTRUE_DISABLE_SIGNUP: "true",
       GOTRUE_JWT_SECRET: secret, GOTRUE_JWT_ADMIN_ROLES: "service_role", GOTRUE_JWT_AUD: "authenticated",
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true", GOTRUE_MAILER_AUTOCONFIRM: "true", GOTRUE_LOG_LEVEL: "error",
