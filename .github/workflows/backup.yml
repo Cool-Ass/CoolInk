@@ -16,7 +16,7 @@ jobs:
         run: |
           test -n "$DATABASE_DIRECT_URL" || { echo "::error::Missing DATABASE_DIRECT_URL"; exit 1; }
           test "${#BACKUP_ENCRYPTION_PASSWORD}" -ge 32 || { echo "::error::BACKUP_ENCRYPTION_PASSWORD must contain at least 32 characters"; exit 1; }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install PostgreSQL 17 client
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -26,12 +26,13 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - name: Database backup
         env:
           DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+          BACKUP_REQUIRE_AUTH: "1"
         run: |
           node scripts/backupDatabase.mjs
       - name: Private media backup
@@ -51,10 +52,10 @@ jobs:
         env:
           BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
         run: |
-          tar -czf backup.tar.gz production.dump expected-counts.txt database-backup.json media-backup
+          tar -czf backup.tar.gz production.dump protected.dump expected-counts.txt protected-counts.txt database-backup.json media-backup
           openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.tar.gz -out coolink-backup.enc -pass env:BACKUP_ENCRYPTION_PASSWORD
           sha256sum coolink-backup.enc > SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coolink-encrypted-backup-${{ github.run_id }}
           path: |
