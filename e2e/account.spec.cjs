@@ -78,6 +78,22 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await page.goto("/app/portal/projects");
   await expect(page.getByText(projectTitle, { exact: true }).first()).toBeVisible();
   await page.goto(`/app/portal/projects?project=${project.id}`);
+  // Measure authenticated chat reads without persisting bodies, IDs or sessions.
+  // This is an isolated CI baseline, not a claim about production latency.
+  const chatLatency = await page.evaluate(async (projectId) => {
+    const samples = [];
+    for (let index = 0; index < 20; index += 1) {
+      const started = performance.now();
+      const response = await fetch(`/api/client/projects/${projectId}/messages`, { signal: AbortSignal.timeout(10_000) });
+      if (!response.ok) throw new Error("Chat read measurement failed");
+      await response.arrayBuffer();
+      samples.push(performance.now() - started);
+    }
+    samples.sort((a, b) => a - b);
+    return { samples: samples.length, p95Ms: Math.round(samples[Math.ceil(samples.length * 0.95) - 1]) };
+  }, project.id);
+  test.info().annotations.push({ type: "chat-p95-isolated", description: JSON.stringify(chatLatency) });
+  console.log("Isolated chat read baseline", { device: test.info().project.name, ...chatLatency });
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "DODAJ INSPIRACJĘ", exact: true }).click();
   const uploaded = page.waitForResponse((response) => response.url().endsWith(`/api/client/projects/${project.id}/images`) && response.request().method() === "POST");

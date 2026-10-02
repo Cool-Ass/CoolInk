@@ -5,10 +5,15 @@ import { sendPushToAdmins, sendPushToClient } from "@/lib/webPush";
 import { offerReleasedRange } from "@/lib/waitlistAutomation";
 import { applyOperationalDataRetention } from "@/lib/dataRetention";
 import { retryGoogleCalendarExports, refreshGoogleBusyCalendars } from "@/lib/googleCalendarSyncEngine";
+import { operationalJob } from "@/lib/operationalJob";
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
   if (!expected || request.headers.get("authorization") !== `Bearer ${expected}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return operationalJob(runReminders);
+}
+
+async function runReminders() {
   const now = new Date();
   const googleRetry = await retryGoogleCalendarExports();
   const googleBusy = await refreshGoogleBusyCalendars();
@@ -39,6 +44,7 @@ export async function GET(request: Request) {
   ];
   let delivered = 0;
   let checked = 0;
+  let failed = 0;
   for (const plan of reminderPlans) {
     const windowStart = new Date(now.getTime() + (plan.offsetHours - 4) * 60 * 60 * 1000);
     const windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000);
@@ -75,11 +81,13 @@ export async function GET(request: Request) {
       await sendPushToClient(appointment.project.clientId, { title: plan.pushTitle, body, url: "/app/portal/projects", tag: `appointment-${appointment.id}-${plan.offsetHours}` });
       await prisma.reminderDelivery.update({ where: { id: delivery.id }, data: { sentAt: new Date(), error: null } });
       delivered += 1;
-    } catch (error) {
-      await prisma.reminderDelivery.update({ where: { id: delivery.id }, data: { error: (error instanceof Error ? error.message : "Nieznany błąd").slice(0, 1_000) } });
+    } catch {
+      failed += 1;
+      await prisma.reminderDelivery.update({ where: { id: delivery.id }, data: { error: "REMINDER_DELIVERY_FAILED" } });
     }
   }
   }
-  const retention = await applyOperationalDataRetention().catch(() => null);
+  const retention = await applyOperationalDataRetention();
+  if (failed || googleBusy.failed) throw new Error("OPERATIONAL_PARTIAL_FAILURE");
   return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired, retention, googleRetry, googleBusy });
 }

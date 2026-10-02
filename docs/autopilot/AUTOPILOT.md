@@ -10,8 +10,16 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Aktywne zadanie / run / lease | Wznowienie poprzedniego modelu: A09, jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 01:02 UTC, lease do 02:02 UTC. |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
 | Następny krok | PR #24: CI 36946880354 success (media E2E). PR #26: 36948037464 failure przez nieaktualne mocki testu retry, poprawione lokalnie; 249 testów oraz typy PASS. Uzupełniono backoff i widoczność kolejki A09. Push aktualnego pakietu i weryfikacja nowego SHA, potem A01/A10/A14/A16/A17. Hosting gate nadal wymaga decyzji; brak nowego wdrożenia. |
-| Auto-deploy gotowy | Niepotwierdzony; zablokowany do spełnienia AP-001 |
+| Auto-deploy gotowy | Automatyczne przypisywanie domen Vercel wyłączono za zgodą HOSTING-GATE-20261002 i potwierdzono po odświeżeniu. Promocja ręczna dopiero po wszystkich bramkach; sam merge nadal może uruchomić migracje. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
+
+## Kontynuacja 2026-10-02 01:11 UTC
+
+- PR #26 integruje niewdrożone PR #19–25. Dodano backoff (attempts/nextAttemptAt/lastError), widoczność wieku kolejki i typów błędów, przypięcie Actions do zweryfikowanych SHA.
+- CI `36949088616`: typy, unit tests, build, secret scan, CodeQL i backup-snapshot PASS; izolowany test outbox nie wystartował przez brak wymaganego description w fixture. Poprawka `1edfb07`; CI `36949449852` trwa, bez anulowania pracy izolowanej bazy.
+- A14 częściowo: błędy cron/retencji nie są już fałszywym sukcesem; 503 + eventId, alarm admin push i jawna informacja, jeśli alarmu nie doręczono. Test kontrolowanego błędu lokalnie PASS; rzeczywiste doręczenie produkcyjne niezweryfikowane.
+- A17: pomiar 20 odczytów czatu i p95 dodany do desktop/mobile E2E; wynik nie jest jeszcze dostępny i nie stanowi pomiaru produkcji.
+- Nadal otwarte: A01 pełny DR Auth/config/private media i faktyczne logowanie; A09 częstszy konsument kolejki; A10 pełna obsługa wniosków prywatności; A14 alarm wieku backup/restore/kolejki i dowód doręczenia. Brak nowego wdrożenia produkcyjnego.
 
 Repo zawiera Next.js/React, Prisma/PostgreSQL, panel admina, PWA klienta,
 rezerwacje, prywatne media i integrację Google Calendar. Źródła:
