@@ -6,10 +6,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | WORKING |
+| Status | WAITING_APPROVAL (pełny backup konfiguracji); CI pakietu trwa |
 | Aktywne zadanie / run / lease | Wznowienie poprzedniego modelu: A09, jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 01:02 UTC, lease do 02:02 UTC. |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
-| Następny krok | PR #24: CI 36946880354 success (media E2E). PR #26: 36948037464 failure przez nieaktualne mocki testu retry, poprawione lokalnie; 249 testów oraz typy PASS. Uzupełniono backoff i widoczność kolejki A09. Push aktualnego pakietu i weryfikacja nowego SHA, potem A01/A10/A14/A16/A17. Hosting gate nadal wymaga decyzji; brak nowego wdrożenia. |
+| Następny krok | PR #26: pełne CI 36949449852 SUCCESS dla 1edfb07, w tym outbox SQL i media E2E. Aktualny pakiet po kolejnych zmianach wymaga CI dokładnego SHA. Lokalnie 261 testów PASS, typy/lint zmian PASS. A01: uzyskać zgodę na bezpieczne zaszyfrowane escrow konfiguracji/kluczy MFA i Google, bez rotacji; potem pełny Auth/config/storage/login DR. A10/A14 pozostają niezamknięte. Hosting gate ustawiony; brak nowego wdrożenia. |
 | Auto-deploy gotowy | Automatyczne przypisywanie domen Vercel wyłączono za zgodą HOSTING-GATE-20261002 i potwierdzono po odświeżeniu. Promocja ręczna dopiero po wszystkich bramkach; sam merge nadal może uruchomić migracje. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
@@ -21,6 +21,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 - A17: pomiar 20 odczytów czatu i p95 dodany do desktop/mobile E2E; wynik nie jest jeszcze dostępny i nie stanowi pomiaru produkcji.
 - A09: przygotowano workflow konsumenta co 10 min, ograniczony czas/batch, bez stałego sekretu. Weryfikacja GitHub OIDC issuer/audience/RS256/age, niezmiennych ID repo/właściciela, main i dokładnego workflow; jeden zapis WebhookReceipt na run attempt chroni replay. Preview odrzucane. Repo potwierdzone publiczne; Fluid Compute Vercel włączone. Testy nowych granic dostępu PASS; faktyczne wywołanie produkcyjne dopiero po promocji.
 - Nadal otwarte: A01 pełny DR Auth/config/private media i faktyczne logowanie; A10 pełna obsługa wniosków prywatności; A14 alarm wieku backup/restore/kolejki i dowód doręczenia. Brak nowego wdrożenia produkcyjnego.
+- A01 preflight: odczyt Supabase potwierdził brak Auth users w `jqjwdpasbvdopvxvgnwq`; `kqqqhasawqodikpzjemy` niedostępny w aktualnej organizacji UI. Przygotowano `2e8319a`: readonly backup z istniejącym DATABASE_DIRECT_URL oraz wyłącznie zagregowanym sprawdzeniem zgodności UUID klientów i auth.users w tym samym snapshot. Planowany workflow_dispatch backup.yml na `ai/audit-sync-outbox`, bez mutacji/restore produkcji, na podstawie AUDIT-20260930. Ten branchowy artefakt nie zastępuje zaufanego backupu main wymaganego przed migracją.
+- Wynik preflight: [backup 36950568443 SUCCESS](https://github.com/Cool-Ass/CoolInk/actions/runs/36950568443), 2026-10-02 01:23 UTC, `2e8319a`. W bazie źródłowej 32 Auth users; wszystkie 22 powiązane profile CRM mają zgodny UUID w auth.users. Zweryfikowano 10 obiektów mediów. Artefakt `11204301306`, sha256 zip `303524c3217751cde293a568c6d1e3e73e32e361b451552bb99022304c230148`. Dump nadal public-only, nie jest pełnym odtworzeniem Auth/config.
+- Nowa granica uprawnień: klucze MFA/Google zapisane jako nieodczytywalne Secret Vercel, brak ich w obecnym backupie. Pełne A01 wymaga uzgodnionego zaszyfrowanego escrow bieżących wartości (bez rotacji), nie dodano endpointu eksportującego sekrety ani nie ujawniono wartości. Prośba o zgodę na ten rozszerzony mechanizm w bieżącym czacie.
 
 Repo zawiera Next.js/React, Prisma/PostgreSQL, panel admina, PWA klienta,
 rezerwacje, prywatne media i integrację Google Calendar. Źródła:
