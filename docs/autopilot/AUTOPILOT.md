@@ -6,10 +6,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | VERIFYING — A01 runtime configuration bootstrap |
-| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-restored-auth-runtime / PR #29; checkpoint 2026-10-02 12:23 UTC, lease do 13:23 UTC. Pakiet UI i aplikacji zachowany w PR #26 / 6e8587c (CI 37002171463 SUCCESS). |
-| Zbadana baza main | `1aa766a6e89f8d7161949b0b0e58fb854c767cb5`: PR #27 i #28 merged po exact-SHA checks; endpoint recovery tylko w staged production, domeny nie promowano |
-| Następny krok | Main backup 37001930017 i offline restore 37002286826 SUCCESS (public/auth/storage/media). Staged 1aa766a / cool-cggmp5o46-cool-ass.vercel.app Ready. Capture 37006009585 FAIL w Seal approved runtime configuration, bez artefaktu/rotacji. Auth drill 37005437660 FAIL startup: MIGRATION/MISSING_COLUMN, SQLSTATE 42703; prywatnych logów nie ujawniono. Diagnozować przyczyny, nie dopisywać fikcyjnej kompletności. A01 runtime/login, A10/A14 pozostają otwarte. |
+| Status | VERIFYING — A01 proxy boundary integration |
+| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-escrow-proxy-auth; checkpoint 2026-10-02 12:56 UTC, lease do 13:23 UTC. Pakiet UI i aplikacji w PR #26 / 71ea9a1, zawiera już main z PR #27–29. |
+| Zbadana baza main | `e3d569aeaf84a2f26dfebd35bd72a996598be5ca`: PR #27–29 merged po exact-SHA checks; staged cool-51f1grp2s-cool-ass.vercel.app Ready; brak promocji domeny |
+| Następny krok | Auth runtime 37007741248 i CI 37007719612 SUCCESS na 43163bf: 32 users / 22 linked / izolowany password flow. Vercel Trusted Sources zapisane i sprawdzone: GitHub issuer, aud https://github.com/Cool-Ass, main sub, backup.yml workflow_ref, immutable repo/owner IDs, production only. Capture 37008814608 FAIL, bez artefaktu/rotacji. Przyczyna w kodzie: proxy odrzucał machine POST przez globalny browser CSRF przed route handlerem. Przygotowana wąska autoryzacja podpisu/key-bound recipient w proxy, bez namespace/Bearer bypass; 11 nowych/powiązanych testów PASS. A01 full app, A10/A14 otwarte. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled ponownie potwierdzone UI. Produkcyjna flaga BACKUP_CONFIG_ESCROW_ENABLED=1 zapisana dla przyszłego buildu; obecna strona nie ma endpointu. Bez rotacji kluczy, migracji ani promocji domeny w bootstrapie. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
