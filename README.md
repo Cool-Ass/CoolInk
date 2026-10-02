@@ -27,7 +27,7 @@ W pliku `.env` ustaw:
 Następnie utwórz i zasil bazę danych:
 
 ```bash
-npm run db:push    # tworzy prisma/dev.db i strukturę bazy
+npm run db:push    # synchronizuje schemat z PostgreSQL wskazanym przez DATABASE_URL; tylko środowisko developerskie
 npm run db:seed    # tworzy konto administratora + stronę główną z domyślnymi modułami + portfolio
 npm run dev
 ```
@@ -186,7 +186,7 @@ wysyłane e-mailem — integrację z pocztą lub CRM można dodać osobno.
    `BACKUP_ENCRYPTION_PASSWORD`, dane używanego magazynu (`BLOB_READ_WRITE_TOKEN`,
    `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` lub `S3_*`) oraz sekrety odizolowanego projektu
    testowego `DRY_RUN_SUPABASE_URL`, `DRY_RUN_SUPABASE_PUBLISHABLE_KEY` i
-   `DRY_RUN_DIRECT_URL`. Workflow wykonuje testy ról/IDOR, cotygodniowy szyfrowany backup
+   `DRY_RUN_DIRECT_URL`. Workflow wykonuje testy ról/IDOR, codzienny szyfrowany backup (03:23 UTC)
    danych aplikacji z publicznego schematu PostgreSQL i wszystkich skonfigurowanych magazynów
    mediów oraz kwartalną próbę odtworzenia z porównaniem liczby rekordów i sum plików.
 5. **CSP**: rozpocznij z `CSP_MODE=report-only`; po usunięciu raportowanych naruszeń zmień na

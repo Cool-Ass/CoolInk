@@ -51,3 +51,10 @@ Odświeżanie po zakończeniu poprzedniego zapytania, co 10 sekund; zatrzymanie
 w ukrytej karcie/offline, natychmiastowe wznowienie, backoff błędów do 60 sekund,
 deadline 20 sekund i abort po opuszczeniu widoku. Wysyłanie nadal aktualizuje UI od razu.
 Trzy testy granic cyklu zapytań przeszły. Rollback: revert pakietu bez zmian danych.
+
+Pakiet obejmuje również A16 (opis PostgreSQL i codziennego backupu w README)
+oraz ostatni scenariusz A13: upload inspiracji przez rzeczywisty formularz,
+odczyt właściciela i odmowa anonimowego odczytu. Sprzątanie usuwa dokładne pliki
+jednorazowego właściciela z testowego Storage przez API, przed usunięciem Auth;
+chwilowa polityka DELETE ograniczona do jego UUID jest usuwana w finally.
+Wynik browser dla tego rozszerzenia nadal oczekuje na CI.

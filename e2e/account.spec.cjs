@@ -34,6 +34,27 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.afterAll(async () => {
+  // Delete actual storage bytes before removing the exact disposable Auth owner.
+  // A temporary DELETE policy applies only to this test UUID in the allowlisted DB.
+  const fixture = await prisma.client.findUnique({ where: { email }, include: { projects: { include: { images: true } } } });
+  const objects = fixture?.projects.flatMap((project) => project.images.map((image) => image.url)) ?? [];
+  if (objects.length) {
+    const owner = fixture.supabaseUserId;
+    if (!/^[a-f0-9-]{36}$/.test(owner) || objects.some((path) => !path.startsWith(`${owner}/`))) throw new Error("Unsafe browser media cleanup target");
+    const policy = `browser_cleanup_${randomUUID().replaceAll("-", "")}`;
+    const url = requireTestProject(env);
+    const key = env.DRY_RUN_SUPABASE_PUBLISHABLE_KEY;
+    const login = await fetch(`${url}/auth/v1/token?grant_type=password`, { method: "POST", headers: { apikey: key, "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+    const session = await login.json();
+    if (!login.ok || !session.access_token) throw new Error("Could not authenticate disposable media cleanup owner");
+    await prisma.$executeRawUnsafe(`CREATE POLICY "${policy}" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'project-inspirations' AND auth.uid() = '${owner}'::uuid)`);
+    try {
+      const removed = await fetch(`${url}/storage/v1/object/project-inspirations`, { method: "DELETE", headers: { apikey: key, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ prefixes: objects }) });
+      expect(removed.ok).toBe(true);
+      const remaining = await prisma.$queryRawUnsafe("SELECT count(*)::int AS count FROM storage.objects WHERE bucket_id = 'project-inspirations' AND name = ANY($1::text[])", objects);
+      expect(remaining[0].count).toBe(0);
+    } finally { await prisma.$executeRawUnsafe(`DROP POLICY "${policy}" ON storage.objects`); }
+  }
   await prisma.availabilityBlock.deleteMany({ where: { id: { in: blockIds } } });
   await prisma.client.deleteMany({ where: { email } });
   await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = $1", email);
@@ -53,9 +74,24 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/portal/);
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   projectTitle = `Browser project ${randomUUID().slice(0, 8)}`;
-  await prisma.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description: "Isolated browser fixture" } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description: "Isolated browser fixture" } });
   await page.goto("/app/portal/projects");
   await expect(page.getByText(projectTitle, { exact: true }).first()).toBeVisible();
+  await page.goto(`/app/portal/projects?project=${project.id}`);
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "DODAJ INSPIRACJĘ", exact: true }).click();
+  const uploaded = page.waitForResponse((response) => response.url().endsWith(`/api/client/projects/${project.id}/images`) && response.request().method() === "POST");
+  await (await chooser).setFiles({ name: "browser-inspiration.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") });
+  const upload = await uploaded;
+  expect(upload.status()).toBe(201);
+  const image = (await upload.json()).image;
+  const ownerRead = await page.request.get(image.url);
+  expect(ownerRead.status()).toBe(200);
+  expect(ownerRead.headers()["content-type"]).toContain("image/");
+  await expect(page.locator(`img[src="${image.url}"]`).first()).toBeVisible();
+  const outsider = await page.context().browser().newContext();
+  try { expect((await outsider.request.get(`http://127.0.0.1:3120${image.url}`)).status()).toBe(401); }
+  finally { await outsider.close(); }
   const denied = await page.request.get("/api/admin/google-calendar/calendars");
   expect([401, 403]).toContain(denied.status());
   await page.goto("/app/portal/calendar");
