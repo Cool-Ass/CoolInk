@@ -15,6 +15,26 @@ let slot;
 let consent;
 let cmsPage;
 
+async function verifyCalendarPresentation(page) {
+  const day = page.locator('[data-calendar-day="0"]').first();
+  await expect(day).toBeVisible();
+  await day.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('[data-calendar-day="1"]').first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator('[data-calendar-day="8"]').first()).toBeFocused();
+  const fits = await day.evaluate((element) => {
+    const grid = element.closest(".grid");
+    return grid.scrollWidth <= grid.clientWidth + 1 && grid.getBoundingClientRect().right <= innerWidth + 1;
+  });
+  expect(fits).toBe(true);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const durations = await page.locator(".studio-workspace > :first-child").evaluateAll((elements) => elements.map((element) => parseFloat(getComputedStyle(element).animationDuration)));
+  expect(durations.length).toBeGreaterThan(0);
+  expect(durations.every((duration) => duration < .01)).toBe(true);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+}
+
 test.beforeAll(async ({ request }) => {
   const admin = await prisma.adminUser.create({ data: { email: `admin-${email}`, name: "Browser fixture", role: "owner", passwordHash: await bcrypt.hash(password, 12) } });
   adminId = admin.id;
@@ -113,6 +133,7 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page.getByText("ZAJĘTY", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("NIEDOSTĘPNY", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("private-browser-note", { exact: false })).toHaveCount(0);
+  await verifyCalendarPresentation(page);
   // Exercise all four reservation steps through the actual responsive UI.
   await page.goto(`/app/portal/calendar?booking=${encodeURIComponent(slot.startsAt.toISOString())}`);
   await page.getByLabel("NAZWA / KRÓTKI TEMAT (OPCJONALNIE)", { exact: true }).fill("Browser booked project");
@@ -153,6 +174,8 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await page.getByLabel("HASŁO", { exact: true }).fill(password);
   await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/admin/calendar");
+  await verifyCalendarPresentation(page);
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   await page.goto(`/admin/clients/${client.id}`);
   await expect(page.getByText(email, { exact: true }).first()).toBeVisible();
@@ -165,10 +188,13 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   try {
     expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(404);
     await page.goto(`/admin/pages/${cmsPage.id}`);
+    await page.getByRole("button", { name: /Hero · swobodny/ }).click();
+    await expect(page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "OPUBLIKUJ", exact: true }).click();
     await expect.poll(async () => (await prisma.page.findUniqueOrThrow({ where: { id: cmsPage.id } })).status).toBe("published");
     expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(200);
     await expect(publicPage).toHaveTitle(/Browser CMS fixture/);
+    await expect(publicPage.getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
     page.once("dialog", async (dialog) => { expect(dialog.message()).toContain("Cofnąć publikację?"); await dialog.accept(); });
     await page.getByRole("button", { name: "COFNIJ PUBLIKACJĘ", exact: true }).click();
     await expect.poll(async () => (await prisma.page.findUniqueOrThrow({ where: { id: cmsPage.id } })).status).toBe("unpublished");

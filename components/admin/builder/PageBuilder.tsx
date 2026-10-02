@@ -13,7 +13,7 @@ import PageSettingsModal, {
   type PageSettingsValues,
 } from "@/components/admin/builder/PageSettingsModal";
 import { useToast } from "@/components/admin/ToastProvider";
-import { cloneBuilderModule, cloneColumnWidget, createModule, isColumnWidgetType, MODULE_LABELS, withDefaults, type ColumnsModuleData, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
+import { cloneBuilderModule, cloneColumnWidget, createHeroStarter, createModule, isColumnWidgetType, MODULE_LABELS, withDefaults, type ColumnsModuleData, type ColumnWidget, type Module, type ModuleStyle, type ModuleType } from "@/lib/modules";
 import { PALETTE_WIDGET_MIME } from "@/lib/builderDnd";
 import { moveBuilderWidget, type BuilderColumnTarget } from "@/lib/builderTree";
 import type { PortfolioWork } from "@/lib/portfolio";
@@ -155,7 +155,7 @@ export default function PageBuilder({
   const [reusableBlocks, setReusableBlocks] = useState<ReusableBlock[]>([]);
   const [selectedReusableBlock, setSelectedReusableBlock] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarWidth, setSidebarWidth] = useState(304);
+  const [sidebarWidth, setSidebarWidth] = useState(288);
   const [sidebarPrefsLoaded, setSidebarPrefsLoaded] = useState(false);
   const isSystemPage = isSystemPageSlug(page.slug);
   const dirty = JSON.stringify(modules) !== lastSavedSignature;
@@ -483,8 +483,8 @@ export default function PageBuilder({
     setModules((prev) => prev.map((m) => (m.id === id ? { ...m, hidden: !m.hidden } : m)));
   }
 
-  function addModule(type: ModuleType) {
-    const { module: newModule, widgetId } = createBuilderEntry(type);
+  function addModule(type: ModuleType, starter?: Module) {
+    const { module: newModule, widgetId } = starter ? { module: starter, widgetId: null } : createBuilderEntry(type);
     setModules((prev) => {
       const index = prev.findIndex((m) => m.id === selectedId);
       if (index === -1) return [...prev, newModule];
@@ -854,7 +854,7 @@ export default function PageBuilder({
                 portfolioItems={portfolioItems}
                 globalContact={globals.contact}
               />
-            ) : <AddModulePicker onAdd={addModule} />}
+            ) : <AddModulePicker onAdd={addModule} onAddHero={() => addModule("columns", createHeroStarter())} />}
           </aside>
           {sidebarOpen && <div role="separator" aria-label="Zmień szerokość panelu" aria-orientation="vertical" aria-valuemin={264} aria-valuemax={460} aria-valuenow={Math.round(sidebarWidth)} tabIndex={0} title="Przeciągnij, aby zmienić szerokość panelu" onPointerDown={startSidebarResize} onKeyDown={(event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; event.preventDefault(); setSidebarWidth((width) => Math.min(460, Math.max(264, width + (event.key === "ArrowRight" ? 16 : -16)))); }} className="group absolute inset-y-0 right-[-4px] z-[71] w-2 cursor-col-resize touch-none outline-none focus-visible:bg-ink-gold/35"><span className="absolute inset-y-0 left-1/2 w-px bg-transparent transition-colors group-hover:bg-ink-gold/60 group-focus-visible:bg-ink-gold" /><GripVertical aria-hidden className="absolute left-1/2 top-[calc(50%+2.5rem)] h-5 w-3 -translate-x-1/2 text-transparent transition-colors group-hover:text-ink-gold group-focus-visible:text-ink-gold" /></div>}
           <button type="button" aria-controls="builder-sidebar-panel" aria-expanded={sidebarOpen} aria-label={sidebarOpen ? "Ukryj panel narzędzi" : "Pokaż panel narzędzi"} title={`${sidebarOpen ? "Ukryj" : "Pokaż"} panel (Ctrl+P)`} onClick={() => setSidebarOpen((open) => !open)} className="absolute left-full top-1/2 z-[72] flex h-11 w-6 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-white/15 bg-[#1d1f22] text-white/55 shadow-xl transition-colors hover:border-ink-gold/60 hover:text-ink-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-gold">{sidebarOpen ? <ChevronLeft aria-hidden className="h-3.5 w-3.5" /> : <ChevronRight aria-hidden className="h-3.5 w-3.5" />}</button>

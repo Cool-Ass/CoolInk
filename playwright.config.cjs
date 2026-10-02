@@ -13,6 +13,6 @@ module.exports = defineConfig({
   use: { baseURL, actionTimeout: 20_000, trace: "off", video: "off", screenshot: "off" },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", grepInvert: /admin login/, use: { ...devices["Pixel 7"] } },
+    { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
 });

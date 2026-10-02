@@ -1,5 +1,12 @@
 # Decyzje i ADR
 
+## CONFIG-ESCROW-20261002 / UX-20261002
+
+- Status: ACCEPTED, źródło: właściciel w bieżącym czacie, „Tak. Dodatkowo przed wdrożeniem…”.
+- Zgoda obejmuje zaszyfrowane escrow bieżącej konfiguracji i kluczy MFA/Google, bez rotacji i bez ujawniania wartości w logach, repo ani czacie. Nie obejmuje odtworzenia ani usuwania produkcyjnych danych.
+- Dodatkowy zakres MEDIUM: wspólny przegląd UI/UX admina i klienta, spójny kalendarz, subtelny ruch z reduced-motion, kompaktowy builder oraz swobodnie komponowany hero. Nie zmienia cen, uprawnień ani zasad rezerwacji.
+- Walidacja: regresja obu paneli i buildera, klawiatura/mobile/reduced-motion; pełne bramki audytu nadal obowiązują przed produkcją. Rollback UI: revert zmian prezentacji bez restore bazy.
+
 ## ADR-001 — repo jako pamięć operacyjna
 
 - Data: 2026-09-30. Status: przyjęte na jawne zlecenie właściciela w zadaniu

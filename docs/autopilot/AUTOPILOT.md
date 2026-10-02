@@ -6,8 +6,8 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | WAITING_APPROVAL (pełny backup konfiguracji); CI pakietu trwa |
-| Aktywne zadanie / run / lease | Wznowienie poprzedniego modelu: A09, jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 01:02 UTC, lease do 02:02 UTC. |
+| Status | WORKING (UX-20261002; zgoda CONFIG-ESCROW-20261002 otrzymana) |
+| Aktywne zadanie / run / lease | Jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 01:42 UTC, lease do 02:42 UTC. |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
 | Następny krok | PR #26: pełne CI 36949449852 SUCCESS dla 1edfb07, w tym outbox SQL i media E2E. Aktualny pakiet po kolejnych zmianach wymaga CI dokładnego SHA. Lokalnie 261 testów PASS, typy/lint zmian PASS. A01: uzyskać zgodę na bezpieczne zaszyfrowane escrow konfiguracji/kluczy MFA i Google, bez rotacji; potem pełny Auth/config/storage/login DR. A10/A14 pozostają niezamknięte. Hosting gate ustawiony; brak nowego wdrożenia. |
 | Auto-deploy gotowy | Automatyczne przypisywanie domen Vercel wyłączono za zgodą HOSTING-GATE-20261002 i potwierdzono po odświeżeniu. Promocja ręczna dopiero po wszystkich bramkach; sam merge nadal może uruchomić migracje. |

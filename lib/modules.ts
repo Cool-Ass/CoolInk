@@ -966,6 +966,22 @@ function homepageSection(columns: ColumnWidget[][], options: { padding?: "sm" | 
   }, style: options.style };
 }
 
+/** A hero is a normal editable tree, not a locked template or a new persistence format. */
+export function createHeroStarter(): Module {
+  const actions = homepageWidget("innerSection", {
+    layout: "two", columns: [
+      [homepageWidget("button", { label: "Umów wizytę", href: "#kalendarz", size: "sm", radius: "sm" })],
+      [homepageWidget("button", { label: "Zobacz portfolio", href: "#portfolio", style: "outline", size: "sm", radius: "sm" })],
+    ], gap: 8, padding: "none", mobileLayout: "stack",
+  });
+  return homepageSection([
+    [homepageWidget("text", { text: "TWOJA HISTORIA ZACZYNA SIĘ TUTAJ" }, { fontSize: 12, color: "#c99a4a" }),
+      homepageWidget("heading", { text: "Twój pomysł. Twój styl.", level: "h1" }, { responsiveFontSize: { desktop: 56, tablet: 40, mobile: 30 }, lineHeight: 1.1 }),
+      homepageWidget("text", { text: "Dodaj własny opis, zdjęcie i przyciski. Każdy element możesz przenieść, zmienić lub usunąć." }), actions],
+    [homepageWidget("image", { image: "", alt: "", aspect: "portrait", fit: "cover" })],
+  ], { gap: 24, padding: "md", widths: [55, 45], style: { minHeight: 420, anchorId: "hero" } });
+}
+
 /** Builder-native public site: every visible part is an independently editable widget. */
 export function defaultHomepageModules(): Module[] {
   const booking = defaultModuleData("booking");

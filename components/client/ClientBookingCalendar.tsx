@@ -253,6 +253,7 @@ export default function ClientBookingCalendar({
           selectedKeys={selectedKeys}
           onPrevious={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))}
           onNext={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))}
+          onToday={() => setCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
           previousDisabled={previousDisabled}
           nextDisabled={nextDisabled}
           appearanceFor={(date) => dayFor(date).appearance}
