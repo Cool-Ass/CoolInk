@@ -40,6 +40,19 @@ async function boundedJson(response) {
   } finally { reader.releaseLock(); }
 }
 
+async function workflowIdentity(audience) {
+  const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+  tokenUrl.searchParams.set("audience", audience);
+  const identity = await boundedJson(await fetch(tokenUrl, { headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }, signal: AbortSignal.timeout(15000), redirect: "error" }));
+  if (typeof identity.value !== "string" || identity.value.length > 10000) throw new Error("Backup identity unavailable");
+  console.log("::add-mask::" + identity.value);
+  return identity.value;
+}
+
+export function configurationRequestHeaders(recipientIdentity, edgeIdentity) {
+  return { authorization: `Bearer ${recipientIdentity}`, "x-vercel-trusted-oidc-idp-token": edgeIdentity, "content-type": "application/json" };
+}
+
 async function capture(directory) {
   const run = `${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
   if (process.env.GITHUB_REPOSITORY !== "Cool-Ass/CoolInk" || process.env.GITHUB_REF !== "refs/heads/main" || !/^\d{1,30}:\d{1,10}$/.test(run)) throw new Error("Untrusted backup context");
@@ -51,13 +64,12 @@ async function capture(directory) {
   const pair = generateKeyPairSync("rsa", { modulusLength: 3072 });
   const der = pair.publicKey.export({ format: "der", type: "spki" });
   const recipient = createHash("sha256").update(der).digest("hex");
-  const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
-  tokenUrl.searchParams.set("audience", `${endpoint}?recipient=${recipient}`);
-  const identity = await boundedJson(await fetch(tokenUrl, { headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }, signal: AbortSignal.timeout(15000), redirect: "error" }));
-  if (typeof identity.value !== "string" || identity.value.length > 10000) throw new Error("Backup identity unavailable");
-  console.log("::add-mask::" + identity.value);
+  // Edge protection has a fixed scoped audience; application authorization
+  // independently binds its token to this ephemeral recipient.
+  const recipientIdentity = await workflowIdentity(`${endpoint}?recipient=${recipient}`);
+  const edgeIdentity = await workflowIdentity("https://github.com/Cool-Ass");
   const envelope = await boundedJson(await fetch(new URL("/api/cron/config-escrow", deployment), {
-    method: "POST", headers: { authorization: `Bearer ${identity.value}`, "content-type": "application/json" },
+    method: "POST", headers: configurationRequestHeaders(recipientIdentity, edgeIdentity),
     body: JSON.stringify({ publicKey: der.toString("base64") }), signal: AbortSignal.timeout(30000), redirect: "error",
   }));
   if (envelope.context?.recipient !== recipient || !/^[a-f0-9]{40}$/.test(envelope.context?.deploymentSha ?? "")

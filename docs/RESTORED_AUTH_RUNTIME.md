@@ -20,9 +20,10 @@ at managed migration `20250731150234_add_oauth_clients_table.up.sql` (SQLSTATE
 42703). GoTrue resolves its unqualified `schema_migrations` ledger using the
 connection search path; the restored owner is postgres, not the hosted Auth
 role. The drill now explicitly uses `auth,extensions,public` only on its local
-Auth connection. No source schema or migration markers are changed. Actual
-GoTrue startup and restored inventory require a diagnostic workflow run before
-this can be considered successful. This is not full application DR: MFA/Google
+Auth connection. No source schema or migration markers are changed. Diagnostic
+37007317998 / 94168e5 SUCCESS: restored users 32, linked clients 22, isolated
+password grant and /user verification PASS in 6005 ms. This is not full
+application DR: MFA/Google
 decryption, private-media serving, complete application login and approved
 RPO/RTO remain separate checks. No production-domain promotion.
 
