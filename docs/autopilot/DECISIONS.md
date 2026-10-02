@@ -8,6 +8,13 @@
 - Walidacja: regresja obu paneli i buildera, klawiatura/mobile/reduced-motion; pełne bramki audytu nadal obowiązują przed produkcją. Rollback UI: revert zmian prezentacji bez restore bazy.
 - Diagnostyka A01: backup readonly 36953435073 / 255564a z tej zgody może być odtworzony wyłącznie w tymczasowym PostgreSQL runnera. Tryb audit_preflight jest przypięty do tego run/SHA i brancha; nie zastępuje wymaganego backupu main ani nie zmienia bramki publikacji. Zapis konfiguracji runtime pozostaje osobnym nieukończonym krokiem.
 
+## A01-BOOTSTRAP-20261002 — narzędzia odzyskiwania przed wydaniem aplikacji
+
+- Zakres istniejącej zgody AUDIT-20260930 i zgody właściciela w bieżącym czacie „Tak” na zaszyfrowany backup bieżącej konfiguracji bez rotacji. Nie dotyczy usuwania ani odtwarzania produkcji.
+- Oddzielny branch ai/audit-protected-backup-bootstrap: tylko backup/restore, test snapshot i checkpoint. Brak kodu runtime, migracji i promocji domeny; istniejąca aplikacja pozostaje niezmieniona.
+- Cel: zaufany backup z main przed migracjami pakietu PR #26. Aktualny branchowy backup 36953435073 / 255564a i offline restore 36954184397 / 2fdc9e6 potwierdzają public/auth/storage counts, lecz nie zastępują main gate ani pełnego runtime/config/login DR.
+- Rollback: revert narzędzi, bez restore źródłowej bazy. Secrets i dumpy tylko wewnątrz szyfrowanego artefaktu; role testowe NOLOGIN/NOSUPERUSER tworzone wyłącznie w tymczasowym coolink_restore.
+
 ## ADR-001 — repo jako pamięć operacyjna
 
 - Data: 2026-09-30. Status: przyjęte na jawne zlecenie właściciela w zadaniu

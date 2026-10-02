@@ -6,11 +6,11 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | WORKING (UX-20261002; zgoda CONFIG-ESCROW-20261002 otrzymana) |
-| Aktywne zadanie / run / lease | Jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 02:11 UTC, lease do 03:11 UTC. |
-| Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
-| Następny krok | PR #26: pełne CI 36950973155 SUCCESS dla c83eb29. UI c64bceb ma CI 36953049714 w toku; nowy hero, wspólny kalendarz i mobilna regresja admina. A01: zgoda escrow otrzymana; trwa rozszerzanie szyfrowanego backupu o auth/storage w tym samym snapshot. Nadal konieczne escrow konfiguracji, runtime/login DR oraz zamknięcie A10/A14. Hosting gate ustawiony; brak nowego wdrożenia. |
-| Auto-deploy gotowy | Automatyczne przypisywanie domen Vercel wyłączono za zgodą HOSTING-GATE-20261002 i potwierdzono po odświeżeniu. Promocja ręczna dopiero po wszystkich bramkach; sam merge nadal może uruchomić migracje. |
+| Status | VERIFYING — UX oraz A01 konfiguracja runtime |
+| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-sync-outbox / PR #26 oraz osobny PR #28 runtime-only; 2026-10-02 11:38 UTC, lease do 12:26 UTC. |
+| Zbadana baza main | `f310ca146435685d5c6d412e3c38527c608318d1` (PR #27 merged po checks) |
+| Następny krok | UI d634663 ma pełne CI/E2E desktop/mobile success 36954828298. Main backup 37001930017 w toku, następnie domyślny offline restore. Escrow: przygotowany endpoint domyślnie wyłączony i CLI; 11 nowych testów PASS. Capture workflow, aktywacja i runtime/login DR nadal wymagane; A10/A14 otwarte. |
+| Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled ponownie potwierdzone UI 11:36 UTC. Nie promowano nowej aplikacji. Merge PR #27 nie zmienił runtime ani migracji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
 ## Kontynuacja 2026-10-02 01:11 UTC
