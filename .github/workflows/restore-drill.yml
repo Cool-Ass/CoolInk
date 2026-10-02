@@ -8,6 +8,11 @@ on:
         description: "Successful saved backup run ID (empty = latest successful main backup)"
         required: false
         type: string
+      audit_preflight:
+        description: "Diagnostic only: restore the explicitly approved 2026-10-02 branch backup; never a production publication gate"
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
   actions: read
@@ -47,6 +52,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           REQUESTED_RUN: ${{ inputs.backup_run_id }}
+          AUDIT_PREFLIGHT: ${{ inputs.audit_preflight }}
         with:
           script: |
             const requested = process.env.REQUESTED_RUN;
@@ -58,14 +64,20 @@ jobs:
               const runs = await github.rest.actions.listWorkflowRuns({ ...context.repo, workflow_id: "backup.yml", branch: "main", status: "success", per_page: 1 });
               run = runs.data.workflow_runs[0];
             }
-            if (!run || run.conclusion !== "success" || run.head_branch !== "main" || run.path !== ".github/workflows/backup.yml") throw new Error("No trusted successful main backup");
+            const preflight = process.env.AUDIT_PREFLIGHT === "true";
+            const approvedPreflight = preflight && context.eventName === "workflow_dispatch"
+              && context.ref === "refs/heads/ai/audit-sync-outbox" && requested === "36953435073"
+              && run?.head_branch === "ai/audit-sync-outbox"
+              && run?.head_sha === "255564a10a1f06b302a07b1500d1d215674bcd2e";
+            if (preflight && !approvedPreflight) throw new Error("Unapproved diagnostic backup");
+            if (!run || run.conclusion !== "success" || (!approvedPreflight && run.head_branch !== "main") || run.path !== ".github/workflows/backup.yml") throw new Error("No trusted successful backup");
             if (Date.now() - Date.parse(run.created_at) > 90 * 86400000) throw new Error("Backup is older than retention");
             const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { ...context.repo, run_id: run.id });
             const name = "coolink-encrypted-backup-" + run.id;
             if (!artifacts.some(a => a.name === name && !a.expired)) throw new Error("Saved backup artifact is missing/expired");
             core.setOutput("run_id", String(run.id));
             core.setOutput("name", name);
-            await core.summary.addHeading("Saved backup restore drill").addLink("Source backup", run.html_url).addRaw("\\nNo production database connection used.").write();
+            await core.summary.addHeading(preflight ? "AUDIT PREFLIGHT — not a production publication gate" : "Saved backup restore drill").addLink("Source backup", run.html_url).addRaw("\\nNo production database connection used.").write();
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ steps.backup.outputs.name }}

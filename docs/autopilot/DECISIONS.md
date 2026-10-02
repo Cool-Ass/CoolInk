@@ -6,6 +6,7 @@
 - Zgoda obejmuje zaszyfrowane escrow bieżącej konfiguracji i kluczy MFA/Google, bez rotacji i bez ujawniania wartości w logach, repo ani czacie. Nie obejmuje odtworzenia ani usuwania produkcyjnych danych.
 - Dodatkowy zakres MEDIUM: wspólny przegląd UI/UX admina i klienta, spójny kalendarz, subtelny ruch z reduced-motion, kompaktowy builder oraz swobodnie komponowany hero. Nie zmienia cen, uprawnień ani zasad rezerwacji.
 - Walidacja: regresja obu paneli i buildera, klawiatura/mobile/reduced-motion; pełne bramki audytu nadal obowiązują przed produkcją. Rollback UI: revert zmian prezentacji bez restore bazy.
+- Diagnostyka A01: backup readonly 36953435073 / 255564a z tej zgody może być odtworzony wyłącznie w tymczasowym PostgreSQL runnera. Tryb audit_preflight jest przypięty do tego run/SHA i brancha; nie zastępuje wymaganego backupu main ani nie zmienia bramki publikacji. Zapis konfiguracji runtime pozostaje osobnym nieukończonym krokiem.
 
 ## ADR-001 — repo jako pamięć operacyjna
 

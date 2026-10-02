@@ -15,6 +15,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 ## Kontynuacja 2026-10-02 01:11 UTC
 
+- 02:00 UTC: readonly preflight `backup.yml` na `ai/audit-sync-outbox` / `255564a`, zakres AUDIT-20260930 i CONFIG-ESCROW-20261002: osobny zaszyfrowany dump auth/storage + liczniki w tym samym snapshot. Nie jest escrow kluczy runtime i nie zamyka A01; żadnego restore produkcji. Planowane wywołanie workflow_dispatch; wynik zostanie zapisany po zakończeniu.
+- Wynik: backup 36953435073 SUCCESS, artefakt 11205131031, sha256 zip 3ac696716677d83ad278128f50adbee53d2447adb8a9cb9ecbce62bfce98ac76, 2026-10-02 02:00:15 UTC. Planowane audit_preflight offline tego dokładnego run/SHA, bez produkcyjnych połączeń i bez osłabienia publikacji.
+
 - PR #26 integruje niewdrożone PR #19–25. Dodano backoff (attempts/nextAttemptAt/lastError), widoczność wieku kolejki i typów błędów, przypięcie Actions do zweryfikowanych SHA.
 - CI `36949088616`: typy, unit tests, build, secret scan, CodeQL i backup-snapshot PASS; izolowany test outbox nie wystartował przez brak wymaganego description w fixture. Poprawka `1edfb07`; CI `36949449852` trwa, bez anulowania pracy izolowanej bazy.
 - A14 częściowo: błędy cron/retencji nie są już fałszywym sukcesem; 503 + eventId, alarm admin push i jawna informacja, jeśli alarmu nie doręczono. Test kontrolowanego błędu lokalnie PASS; rzeczywiste doręczenie produkcyjne niezweryfikowane.
