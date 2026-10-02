@@ -1,0 +1,46 @@
+name: Recovery evidence health
+on:
+  schedule:
+    - cron: "11 * * * *"
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Encrypted production backup", "Quarterly restore drill"]
+    types: [completed]
+concurrency:
+  group: coolink-recovery-evidence-health
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+  issues: write
+jobs:
+  monitor:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Never checkout the triggering run's code; this workflow is trusted main only.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { ref: main, persist-credentials: false }
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const { recoveryAgeHealth } = await import(process.env.GITHUB_WORKSPACE + "/scripts/recoveryAgeHealth.mjs");
+            const latest = async workflow_id => (await github.rest.actions.listWorkflowRuns({ ...context.repo, workflow_id, branch: "main", status: "success", per_page: 1 })).data.workflow_runs[0];
+            const backup = await latest("backup.yml");
+            const drill = await latest("restore-drill.yml");
+            const artifacts = backup ? await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { ...context.repo, run_id: backup.id }) : [];
+            const artifact = artifacts.find(a => a.name === "coolink-encrypted-backup-" + backup.id);
+            const health = recoveryAgeHealth({ backup, drill, artifact });
+            if (context.eventName === "workflow_run" && context.payload.workflow_run.conclusion !== "success") {
+              health.reasons.push("LATEST_RECOVERY_RUN_FAILED"); health.healthy = false;
+            }
+            await core.summary.addHeading("Recovery evidence health").addRaw(health.healthy ? "PASS: metadata age and saved-artifact availability. Not a full application recovery certificate." : health.reasons.join("\n")).write();
+            if (health.healthy) return;
+            const marker = "<!-- coolink-recovery-health:v1 -->";
+            const issues = await github.paginate(github.rest.issues.listForRepo, { ...context.repo, state: "open", creator: "github-actions[bot]", per_page: 100 });
+            if (!issues.some(issue => !issue.pull_request && issue.user?.login === "github-actions[bot]" && issue.body?.startsWith(marker))) {
+              const result = await github.rest.issues.create({ ...context.repo, title: "Recovery: backup / restore evidence needs attention", body: marker + "\n\n" + health.reasons.join("\n") + "\n\n" + `Evidence: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}` + "\n\nBackup limit: 36 hours. Restore drill limit: 100 days. Review before any production data migration. This issue is not automatically closed; actual recovery and notification receipt must be verified by the owner." });
+              if (!result.data.number) throw new Error("Recovery alert persistence failed");
+            }
+            core.setFailed("Recovery evidence unhealthy; durable repository alert exists. Owner reading/email delivery not verified.");

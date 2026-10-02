@@ -1,5 +1,28 @@
 # Audyt — checkpoint 2026-10-01 (Europe/Warsaw)
 
+## Recovery update — 2026-10-02 16:44 UTC
+
+- PR #32 exact `a4fcc11` CI 37016684344 and all checks/status SUCCESS;
+  recovery-only merge `eb6ff76`. Staged production deployment
+  `cool-m49mvi8je-cool-ass.vercel.app` Ready, domains assignment Skipped.
+- Trusted main backup **37035132250 SUCCESS**: approved current runtime keys
+  sealed without rotation, immutable repository-ID subject matched. Artifact
+  `11239885068`, zip SHA256
+  `13fdaec470590aa7658e83d49fb19053a8a7e75a847b40f847acb893b1d23d4b`.
+- Restore **37035385350** from this saved artifact: database counts, protected
+  Auth/storage counts, media bytes, actual GoTrue password flow and offline
+  configuration envelope all PASS. Additional TypeScript crypto entry failed
+  before execution: esbuild TransformError, top-level await emitted as CJS at
+  `verifyRestoredCrypto.ts:81`. No evidence of a broken key or database change.
+  Fix removes top-level await and asynchronously imports the independent ESM
+  CLI; real tsx guard regression + existing crypto and age tests: 7 PASS.
+- Prepared hourly recovery metadata monitor with deduplicated durable issue,
+  backup 36h / quarterly drill 100d limits, missing artifact and failed run
+  alarms. Not deployed and no owner delivery/read receipt claimed.
+- A01 full application HTTP/MFA/private-media-serving recovery, A10 complete
+  privacy handling/retention and A14 actual notification receipt remain open.
+  Public domains remain on the earlier release; no migration/promotion.
+
 ## Dowody
 
 - PR 18 wdrożony do main `ed85fb8`: wspólny snapshot dumpa i liczników,

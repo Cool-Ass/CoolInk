@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 import { createMfaSecret, encryptMfaSecret } from "../lib/adminMfa";
 import { encryptGoogleRefreshToken } from "../lib/googleCalendarCrypto";
 import { verifyEncryptedRecords } from "../scripts/verifyRestoredCrypto";
@@ -9,6 +11,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("restored encrypted records", () => {
+  it("executes the real tsx CLI without CommonJS/top-level-await transform errors", () => {
+    const result = spawnSync(process.execPath, [resolve("node_modules/tsx/dist/cli.mjs"), resolve("scripts/verifyRestoredCrypto.ts")], { env: { ...process.env, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "invalid" }, encoding: "utf8", timeout: 10000 });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr.trim()).toBe("Restored crypto drill guard failed");
+  });
   it("uses actual application crypto and reports only aggregate coverage", () => {
     const secret = createMfaSecret();
     expect(verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: encryptMfaSecret(secret) }], google: [{ encryptedRefreshToken: encryptGoogleRefreshToken("fixture-not-a-production-token") }], reviews: encryptGoogleRefreshToken("fixture-reviews") })).toEqual({ mfaSecrets: 1, googleTokens: 1, revokedGoogleConnections: 0, reviewsCredentials: 1, mediaSignatureOwnership: true });

@@ -6,8 +6,6 @@ import { decryptMfaSecret, totpCode, verifyTotp } from "../lib/adminMfa";
 import { decryptGoogleRefreshToken } from "../lib/googleCalendarCrypto";
 import { privateImageUrl, verifyPrivateImageToken } from "../lib/privateMedia";
 import { createSessionToken, verifySessionToken } from "../lib/session";
-// @ts-expect-error Private recovery CLI is independent of the application runtime.
-import { verifyConfigurationEnvelope } from "./backupRuntimeConfiguration.mjs";
 
 type Records = { mfa: Array<{ mfaEnabled: boolean; mfaSecretEncrypted: string | null }>; google: Array<{ encryptedRefreshToken: string }>; reviews: string | null };
 export function verifyEncryptedRecords(records: Records) {
@@ -38,6 +36,10 @@ export function verifyEncryptedRecords(records: Records) {
 
 async function main() {
   if (process.env.GITHUB_ACTIONS !== "true" || !/^\d{1,30}$/.test(process.env.GITHUB_RUN_ID ?? "")) throw new Error("Disposable runner required");
+  // tsx emits this .ts entry as CommonJS. Load the independently executable
+  // ESM recovery CLI asynchronously instead of requiring a top-level-await module.
+  // @ts-expect-error Private recovery CLI is independent of the application runtime.
+  const { verifyConfigurationEnvelope } = await import("./backupRuntimeConfiguration.mjs");
   // Not configurable: even a production DATABASE_URL in the runner is ignored.
   const prisma = new PrismaClient({ datasources: { db: { url: "postgresql://postgres:restore-test@127.0.0.1:5432/coolink_restore" } }, log: [] });
   const previous = new Map<string, string | undefined>();
@@ -78,4 +80,4 @@ async function main() {
     await prisma.$disconnect();
   }
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main().catch(() => { console.error("Restored crypto drill guard failed"); process.exitCode = 1; });
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) void main().catch(() => { console.error("Restored crypto drill guard failed"); process.exitCode = 1; });
