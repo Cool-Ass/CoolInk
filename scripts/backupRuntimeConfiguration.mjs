@@ -47,9 +47,7 @@ async function capture(directory) {
   if (!/^[a-f0-9]{40}$/.test(expectedSha ?? "")) throw new Error("Untrusted deployment revision");
   // A staged production build can supply current keys without promoting public
   // domains. Only this project's observed Vercel naming scope is permitted.
-  const deployment = new URL(process.env.CONFIG_ESCROW_DEPLOYMENT_URL || "https://www.coolinktattoo.pl");
-  if (deployment.protocol !== "https:" || deployment.username || deployment.password || deployment.port || deployment.pathname !== "/" || deployment.search || deployment.hash
-    || !(deployment.hostname === "www.coolinktattoo.pl" || /^cool-ink-[a-z0-9-]+-cool-ass\.vercel\.app$/.test(deployment.hostname))) throw new Error("Untrusted deployment URL");
+  const deployment = configurationDeploymentUrl(process.env.CONFIG_ESCROW_DEPLOYMENT_URL);
   const pair = generateKeyPairSync("rsa", { modulusLength: 3072 });
   const der = pair.publicKey.export({ format: "der", type: "spki" });
   const recipient = createHash("sha256").update(der).digest("hex");
@@ -72,6 +70,13 @@ async function capture(directory) {
   await writeFile(resolve(directory, "sealed.json"), JSON.stringify(envelope), { mode: 0o600 });
   await writeFile(resolve(directory, "manifest.json"), JSON.stringify(manifest), { mode: 0o600 });
   console.log("Runtime configuration sealed and locally verified; no rotation performed");
+}
+
+export function configurationDeploymentUrl(value) {
+  const deployment = new URL(value || "https://www.coolinktattoo.pl");
+  if (deployment.protocol !== "https:" || deployment.username || deployment.password || deployment.port || deployment.pathname !== "/" || deployment.search || deployment.hash
+    || !(deployment.hostname === "www.coolinktattoo.pl" || /^cool(?:-ink)?-[a-z0-9]{9}-cool-ass\.vercel\.app$/.test(deployment.hostname))) throw new Error("Untrusted deployment URL");
+  return deployment;
 }
 
 async function verify(directory) {
