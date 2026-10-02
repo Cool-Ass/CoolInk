@@ -7,6 +7,12 @@
 - Dodatkowy zakres MEDIUM: wspólny przegląd UI/UX admina i klienta, spójny kalendarz, subtelny ruch z reduced-motion, kompaktowy builder oraz swobodnie komponowany hero. Nie zmienia cen, uprawnień ani zasad rezerwacji.
 - Walidacja: regresja obu paneli i buildera, klawiatura/mobile/reduced-motion; pełne bramki audytu nadal obowiązują przed produkcją. Rollback UI: revert zmian prezentacji bez restore bazy.
 - Diagnostyka A01: backup readonly 36953435073 / 255564a z tej zgody może być odtworzony wyłącznie w tymczasowym PostgreSQL runnera. Tryb audit_preflight jest przypięty do tego run/SHA i brancha; nie zastępuje wymaganego backupu main ani nie zmienia bramki publikacji. Zapis konfiguracji runtime pozostaje osobnym nieukończonym krokiem.
+## CONFIG-ESCROW-20261002 — bieżące klucze, bez rotacji
+
+- ACCEPTED: właściciel w tym czacie odpowiedział „Tak” na escrow kluczy, a następnie zlecił wspólny przegląd UI/UX przed produkcją. Zakres nie obejmuje usuwania ani odtwarzania produkcji.
+- PR #28 tylko runtime-key recovery bootstrap: endpoint domyślnie wyłączony, podpisany OIDC dokładnego main backup.yml, audience powiązany z RSA recipient, stała allowlista, jednorazowy run attempt, szyfrowanie hybrydowe. Testy potwierdzają brak cookie/browser authority i ujawniania wyjątków.
+- Zapisano produkcyjną flagę BACKUP_CONFIG_ESCROW_ENABLED=1 do następnego buildu. Capture może wskazać zweryfikowany staged production URL tego projektu z dokładnym SHA, bez przypisywania domen. Nie wymieniać wartości istniejących sekretów.
+- Rollback: flaga 0 i znany dobry redeploy albo revert endpointu. Dowody w RUNTIME_CONFIG_RECOVERY.md; pełny A01 nadal wymaga runtime/login drill. Zgoda nie zastępuje exact-SHA CI ani bramki publikacji.
 
 ## A01-BOOTSTRAP-20261002 — narzędzia odzyskiwania przed wydaniem aplikacji
 

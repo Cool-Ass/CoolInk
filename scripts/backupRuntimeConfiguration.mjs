@@ -19,8 +19,11 @@ export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun) {
     const { values } = JSON.parse(plaintext.toString());
     if (!values || typeof values.SESSION_SECRET !== "string" || values.SESSION_SECRET.length < 32) throw new Error("Incomplete configuration archive");
     for (const [name, value] of Object.entries(values)) if (!allowed.has(name) || typeof value !== "string" || Buffer.byteLength(value) > 8192) throw new Error("Invalid configuration archive");
+    for (const name of ["MFA_ENCRYPTION_KEY", "PRIVATE_MEDIA_SIGNING_KEY"]) if (values[name] && values[name].length < 32) throw new Error("Invalid recovery key");
+    const google = values.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS || values.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY;
+    if (google && google.split(",").map(value => value.trim()).filter(Boolean).some(value => Buffer.from(value, "base64").length !== 32)) throw new Error("Invalid recovery keyring");
     // Metadata only: decrypted values never leave this verifier or reach stdout.
-    return { version: 1, run: context.run, createdAt: context.createdAt, keys: Object.keys(values).sort(), verified: true };
+    return { version: 1, run: context.run, createdAt: context.createdAt, deploymentSha: context.deploymentSha, keys: Object.keys(values).sort(), verified: true };
   } finally { key.fill(0); plaintext?.fill(0); }
 }
 
@@ -37,22 +40,40 @@ async function boundedJson(response) {
   } finally { reader.releaseLock(); }
 }
 
-async function capture(directory) {
-  const run = `${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
-  if (process.env.GITHUB_REPOSITORY !== "Cool-Ass/CoolInk" || process.env.GITHUB_REF !== "refs/heads/main" || !/^\d{1,30}:\d{1,10}$/.test(run)) throw new Error("Untrusted backup context");
-  const pair = generateKeyPairSync("rsa", { modulusLength: 3072 });
-  const der = pair.publicKey.export({ format: "der", type: "spki" });
-  const recipient = createHash("sha256").update(der).digest("hex");
+async function workflowIdentity(audience) {
   const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
-  tokenUrl.searchParams.set("audience", `${endpoint}?recipient=${recipient}`);
+  tokenUrl.searchParams.set("audience", audience);
   const identity = await boundedJson(await fetch(tokenUrl, { headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }, signal: AbortSignal.timeout(15000), redirect: "error" }));
   if (typeof identity.value !== "string" || identity.value.length > 10000) throw new Error("Backup identity unavailable");
   console.log("::add-mask::" + identity.value);
-  const envelope = await boundedJson(await fetch(endpoint, {
-    method: "POST", headers: { authorization: `Bearer ${identity.value}`, "content-type": "application/json" },
+  return identity.value;
+}
+
+export function configurationRequestHeaders(recipientIdentity, edgeIdentity) {
+  return { authorization: `Bearer ${recipientIdentity}`, "x-vercel-trusted-oidc-idp-token": edgeIdentity, "content-type": "application/json" };
+}
+
+async function capture(directory) {
+  const run = `${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
+  if (process.env.GITHUB_REPOSITORY !== "Cool-Ass/CoolInk" || process.env.GITHUB_REF !== "refs/heads/main" || !/^\d{1,30}:\d{1,10}$/.test(run)) throw new Error("Untrusted backup context");
+  const expectedSha = process.env.GITHUB_SHA;
+  if (!/^[a-f0-9]{40}$/.test(expectedSha ?? "")) throw new Error("Untrusted deployment revision");
+  // A staged production build can supply current keys without promoting public
+  // domains. Only this project's observed Vercel naming scope is permitted.
+  const deployment = configurationDeploymentUrl(process.env.CONFIG_ESCROW_DEPLOYMENT_URL);
+  const pair = generateKeyPairSync("rsa", { modulusLength: 3072 });
+  const der = pair.publicKey.export({ format: "der", type: "spki" });
+  const recipient = createHash("sha256").update(der).digest("hex");
+  // Edge protection has a fixed scoped audience; application authorization
+  // independently binds its token to this ephemeral recipient.
+  const recipientIdentity = await workflowIdentity(`${endpoint}?recipient=${recipient}`);
+  const edgeIdentity = await workflowIdentity("https://github.com/Cool-Ass");
+  const envelope = await boundedJson(await fetch(new URL("/api/cron/config-escrow", deployment), {
+    method: "POST", headers: configurationRequestHeaders(recipientIdentity, edgeIdentity),
     body: JSON.stringify({ publicKey: der.toString("base64") }), signal: AbortSignal.timeout(30000), redirect: "error",
   }));
-  if (envelope.context?.recipient !== recipient) throw new Error("Configuration recipient mismatch");
+  if (envelope.context?.recipient !== recipient || !/^[a-f0-9]{40}$/.test(envelope.context?.deploymentSha ?? "")
+    || (deployment.hostname !== "www.coolinktattoo.pl" && envelope.context.deploymentSha !== expectedSha)) throw new Error("Configuration recipient or revision mismatch");
   const privateKey = pair.privateKey.export({ format: "pem", type: "pkcs8" });
   const manifest = verifyConfigurationEnvelope(envelope, privateKey, run);
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -61,6 +82,13 @@ async function capture(directory) {
   await writeFile(resolve(directory, "sealed.json"), JSON.stringify(envelope), { mode: 0o600 });
   await writeFile(resolve(directory, "manifest.json"), JSON.stringify(manifest), { mode: 0o600 });
   console.log("Runtime configuration sealed and locally verified; no rotation performed");
+}
+
+export function configurationDeploymentUrl(value) {
+  const deployment = new URL(value || "https://www.coolinktattoo.pl");
+  if (deployment.protocol !== "https:" || deployment.username || deployment.password || deployment.port || deployment.pathname !== "/" || deployment.search || deployment.hash
+    || !(deployment.hostname === "www.coolinktattoo.pl" || /^cool(?:-ink)?-[a-z0-9]{9}-cool-ass\.vercel\.app$/.test(deployment.hostname))) throw new Error("Untrusted deployment URL");
+  return deployment;
 }
 
 async function verify(directory) {

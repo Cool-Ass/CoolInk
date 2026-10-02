@@ -2,7 +2,7 @@ import { constants, createDecipheriv, generateKeyPairSync, privateDecrypt } from
 import { describe, expect, it } from "vitest";
 import { escrowRecipient, ESCROW_ENDPOINT, sealRuntimeConfiguration } from "../lib/configEscrow";
 // @ts-expect-error Recovery CLI is an executable ES module, deliberately independent of the app runtime.
-import { verifyConfigurationEnvelope } from "../scripts/backupRuntimeConfiguration.mjs";
+import { verifyConfigurationEnvelope, configurationDeploymentUrl, configurationRequestHeaders } from "../scripts/backupRuntimeConfiguration.mjs";
 
 const pair = generateKeyPairSync("rsa", { modulusLength: 3072 });
 const publicKey = pair.publicKey.export({ format: "der", type: "spki" }).toString("base64");
@@ -15,6 +15,18 @@ function decrypt(envelope: ReturnType<typeof sealRuntimeConfiguration>) {
   return JSON.parse(Buffer.concat([decipher.update(Buffer.from(envelope.ciphertext, "base64")), decipher.final()]).toString());
 }
 describe("runtime configuration escrow", () => {
+  it("keeps recipient-bound application authority separate from Vercel edge authority", () => {
+    expect(configurationRequestHeaders("recipient-test-identity", "edge-test-identity")).toEqual({
+      authorization: "Bearer recipient-test-identity",
+      "x-vercel-trusted-oidc-idp-token": "edge-test-identity",
+      "content-type": "application/json",
+    });
+  });
+  it("restricts staged capture to the verified project hostname scope, without redirects or arbitrary URLs", () => {
+    expect(configurationDeploymentUrl(undefined).origin).toBe("https://www.coolinktattoo.pl");
+    expect(configurationDeploymentUrl("https://cool-fkcpob97r-cool-ass.vercel.app").origin).toBe("https://cool-fkcpob97r-cool-ass.vercel.app");
+    for (const url of ["http://www.coolinktattoo.pl", "https://www.coolinktattoo.pl.evil.test", "https://cool-fkcpob97r-other.vercel.app", "https://cool-ink-git-main-cool-ass.vercel.app", "https://user:pass@www.coolinktattoo.pl", "https://www.coolinktattoo.pl:444", "https://www.coolinktattoo.pl/other", "https://www.coolinktattoo.pl?x=1"]) expect(() => configurationDeploymentUrl(url)).toThrow();
+  });
   it("binds verified workflow audience to the canonical recipient", () => {
     const recipient = escrowRecipient(publicKey);
     expect(recipient.audience).toBe(`${ESCROW_ENDPOINT}?recipient=${recipient.hash}`);

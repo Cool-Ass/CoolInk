@@ -6,11 +6,11 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | VERIFYING — UX oraz A01 konfiguracja runtime |
-| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-sync-outbox / PR #26 oraz osobny PR #28 runtime-only; 2026-10-02 11:38 UTC, lease do 12:26 UTC. |
-| Zbadana baza main | `f310ca146435685d5c6d412e3c38527c608318d1` (PR #27 merged po checks) |
-| Następny krok | UI d634663 ma pełne CI/E2E desktop/mobile success 36954828298. Main backup 37001930017 w toku, następnie domyślny offline restore. Escrow: przygotowany endpoint domyślnie wyłączony i CLI; 11 nowych testów PASS. Capture workflow, aktywacja i runtime/login DR nadal wymagane; A10/A14 otwarte. |
-| Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled ponownie potwierdzone UI 11:36 UTC. Nie promowano nowej aplikacji. Merge PR #27 nie zmienił runtime ani migracji. |
+| Status | VERIFYING — A01 runtime recovery, A10/A14 oraz pakiet UI |
+| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-02 12:48 UTC, lease do 13:23 UTC. PR #29 merged po exact-SHA checks. |
+| Zbadana baza main | `e3d569aeaf84a2f26dfebd35bd72a996598be5ca` (PR #27–29); bez promocji domeny |
+| Następny krok | Auth runtime drill 37007741248 / 43163bf SUCCESS: 32 użytkowników, 22 powiązania CRM i izolowane logowanie. CI 37007719612 SUCCESS. Vercel trusted source zapisane i sprawdzone: issuer GitHub, audience https://github.com/Cool-Ass, sub main tego repo, workflow_ref backup.yml main, immutable repo/owner ID, wyłącznie production. Brak static bypass lub public exception. Capture z nowego staged main nadal wymaga sukcesu; A01 full app/MFA/Google/media, A10/A14 otwarte. |
+| Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Publiczna aplikacja bez zmian; bez rotacji sekretów i restore/usuwania produkcji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
 ## Kontynuacja 2026-10-02 01:11 UTC

@@ -3,8 +3,18 @@ on:
   schedule:
     - cron: "23 3 * * *"
   workflow_dispatch:
+    inputs:
+      runtime_config:
+        description: "Capture approved current runtime keys from the exact main production build"
+        default: false
+        type: boolean
+      runtime_deployment_url:
+        description: "Optional verified staged production URL of cool-ink; public domain stays unpromoted"
+        required: false
+        type: string
 permissions:
   contents: read
+  id-token: write
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -48,11 +58,18 @@ jobs:
         run: |
           node scripts/backupMedia.mjs media-backup
           node scripts/verifyMediaBackup.mjs media-backup
+      - name: Seal approved runtime configuration
+        if: github.ref == 'refs/heads/main' && (inputs.runtime_config == true || vars.BACKUP_RUNTIME_CONFIG == 'true')
+        env:
+          CONFIG_ESCROW_DEPLOYMENT_URL: ${{ inputs.runtime_deployment_url || vars.CONFIG_ESCROW_DEPLOYMENT_URL }}
+        run: node scripts/backupRuntimeConfiguration.mjs capture runtime-config
       - name: Encrypt archive
         env:
           BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
         run: |
-          tar -czf backup.tar.gz production.dump protected.dump expected-counts.txt protected-counts.txt database-backup.json media-backup
+          extra=()
+          if [ -d runtime-config ]; then extra+=(runtime-config); fi
+          tar -czf backup.tar.gz production.dump protected.dump expected-counts.txt protected-counts.txt database-backup.json media-backup "${extra[@]}"
           openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.tar.gz -out coolink-backup.enc -pass env:BACKUP_ENCRYPTION_PASSWORD
           sha256sum coolink-backup.enc > SHA256SUMS.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
