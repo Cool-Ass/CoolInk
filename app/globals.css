@@ -553,6 +553,10 @@ select:disabled {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.studio-dialog { animation: studio-dialog-enter 140ms ease; }
+@keyframes studio-dialog-enter { from { opacity: .5; } to { opacity: 1; } }
+@media (max-width: 639px) { .studio-dialog { border-radius: 0; } }
+
 .studio-nav-link, .studio-primary-link, .studio-icon-action {
   transition: color var(--studio-motion-fast) ease, background-color var(--studio-motion-fast) ease, border-color var(--studio-motion-fast) ease;
 }

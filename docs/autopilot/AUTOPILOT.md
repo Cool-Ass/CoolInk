@@ -7,7 +7,7 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Pole | Stan |
 |---|---|
 | Status | WORKING (UX-20261002; zgoda CONFIG-ESCROW-20261002 otrzymana) |
-| Aktywne zadanie / run / lease | Jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 01:42 UTC, lease do 02:42 UTC. |
+| Aktywne zadanie / run / lease | Jeden aktywny Worker potwierdzony listą czatów. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 02:11 UTC, lease do 03:11 UTC. |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
 | Następny krok | PR #26: pełne CI 36950973155 SUCCESS dla c83eb29. UI c64bceb ma CI 36953049714 w toku; nowy hero, wspólny kalendarz i mobilna regresja admina. A01: zgoda escrow otrzymana; trwa rozszerzanie szyfrowanego backupu o auth/storage w tym samym snapshot. Nadal konieczne escrow konfiguracji, runtime/login DR oraz zamknięcie A10/A14. Hosting gate ustawiony; brak nowego wdrożenia. |
 | Auto-deploy gotowy | Automatyczne przypisywanie domen Vercel wyłączono za zgodą HOSTING-GATE-20261002 i potwierdzono po odświeżeniu. Promocja ręczna dopiero po wszystkich bramkach; sam merge nadal może uruchomić migracje. |
@@ -17,6 +17,8 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 - 02:00 UTC: readonly preflight `backup.yml` na `ai/audit-sync-outbox` / `255564a`, zakres AUDIT-20260930 i CONFIG-ESCROW-20261002: osobny zaszyfrowany dump auth/storage + liczniki w tym samym snapshot. Nie jest escrow kluczy runtime i nie zamyka A01; żadnego restore produkcji. Planowane wywołanie workflow_dispatch; wynik zostanie zapisany po zakończeniu.
 - Wynik: backup 36953435073 SUCCESS, artefakt 11205131031, sha256 zip 3ac696716677d83ad278128f50adbee53d2447adb8a9cb9ecbce62bfce98ac76, 2026-10-02 02:00:15 UTC. Planowane audit_preflight offline tego dokładnego run/SHA, bez produkcyjnych połączeń i bez osłabienia publikacji.
+- Preflight restore 36953847856 FAIL (brak kompatybilnych ról/platformowych rozszerzeń w pustym PostgreSQL). Naprawa tworzy NOLOGIN/NOSUPERUSER role i standardowe rozszerzenia tylko w coolink_restore. [Restore 36954184397 SUCCESS](https://github.com/Cool-Ass/CoolInk/actions/runs/36954184397), 2fdc9e6: odczyt zapisanego zaszyfrowanego artefaktu, public + auth/storage i zgodność wszystkich liczników. To nie dowodzi logowania Auth, odzyskania konfiguracji runtime/kluczy ani uruchomienia aplikacji po DR; A01 pozostaje otwarte.
+- UI 36953049714: desktop klient/admin i mobile klient PASS; mobile admin FAIL — Nawigator domyślnie otwarty zasłaniał bibliotekę. Naprawiono start zamknięty w 18e238c, dodano regresję braku overlay. Wspólny modal: poprawiony Shift+Tab i współdzielona blokada scrolla; lokalnie testy mechanizmu i hero PASS. Najnowszy dokładny SHA nadal wymaga pełnego CI/E2E; żadnej promocji.
 
 - PR #26 integruje niewdrożone PR #19–25. Dodano backoff (attempts/nextAttemptAt/lastError), widoczność wieku kolejki i typów błędów, przypięcie Actions do zweryfikowanych SHA.
 - CI `36949088616`: typy, unit tests, build, secret scan, CodeQL i backup-snapshot PASS; izolowany test outbox nie wystartował przez brak wymaganego description w fixture. Poprawka `1edfb07`; CI `36949449852` trwa, bez anulowania pracy izolowanej bazy.

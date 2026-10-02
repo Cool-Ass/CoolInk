@@ -136,6 +136,10 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await verifyCalendarPresentation(page);
   // Exercise all four reservation steps through the actual responsive UI.
   await page.goto(`/app/portal/calendar?booking=${encodeURIComponent(slot.startsAt.toISOString())}`);
+  const bookingDialog = page.getByRole("dialog").last();
+  await bookingDialog.focus();
+  await page.keyboard.press("Shift+Tab");
+  expect(await bookingDialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await page.getByLabel("NAZWA / KRÓTKI TEMAT (OPCJONALNIE)", { exact: true }).fill("Browser booked project");
   await page.getByLabel("OPIS / POMYSŁ", { exact: true }).fill("A complete isolated browser booking scenario.");
   await page.getByRole("button", { name: "DALEJ", exact: true }).click();
