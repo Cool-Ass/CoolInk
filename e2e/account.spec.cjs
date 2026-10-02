@@ -13,6 +13,7 @@ let projectTitle;
 const blockIds = [];
 let slot;
 let consent;
+let cmsPage;
 
 test.beforeAll(async ({ request }) => {
   const admin = await prisma.adminUser.create({ data: { email: `admin-${email}`, name: "Browser fixture", role: "owner", passwordHash: await bcrypt.hash(password, 12) } });
@@ -39,6 +40,7 @@ test.afterAll(async () => {
   await prisma.contactMessage.deleteMany({ where: { email } });
   if (slot) await prisma.availableSlot.delete({ where: { id: slot.id } });
   if (consent) await prisma.studioDocument.delete({ where: { id: consent.id } });
+  if (cmsPage) await prisma.page.delete({ where: { id: cmsPage.id } });
   if (adminId) await prisma.adminUser.delete({ where: { id: adminId } });
   await prisma.$disconnect();
 });
@@ -78,7 +80,15 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await page.getByRole("button", { name: "ANULUJ TĘ WIZYTĘ", exact: true }).click();
   await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
   await expect.poll(async () => (await prisma.appointment.findUniqueOrThrow({ where: { id: booking.appointment.id } })).status).toBe("cancelled");
+  await prisma.tattooProject.update({ where: { id: booking.projectId }, data: { clientArchivedAt: new Date() } });
+  const archivedBooking = await page.request.post("/api/client/appointments", {
+    headers: { origin: "http://127.0.0.1:3120", "sec-fetch-site": "same-origin" },
+    data: { projectId: booking.projectId, startsAt: slot.startsAt.toISOString(), endsAt: slot.endsAt.toISOString(), confirmationAcknowledged: true, consents: [{ id: consent.id, version: 1 }] },
+  });
+  expect(archivedBooking.status()).toBe(409);
+  expect((await archivedBooking.json()).error).toContain("archiwum");
   await page.goto("/app/portal/projects");
+  await expect(page.getByText("Browser booked project", { exact: true })).toHaveCount(0);
   if (test.info().project.name === "mobile") await page.getByRole("button", { name: "WIĘCEJ", exact: true }).click();
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/app$/);
@@ -98,6 +108,24 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await page.getByRole("button", { name: "EDYTUJ DANE", exact: true }).click();
   await expect(page.getByLabel("E-MAIL", { exact: false })).toHaveAttribute("readonly", "");
   await page.getByRole("button", { name: "ANULUJ", exact: true }).click();
+  cmsPage = await prisma.page.create({ data: { title: "Browser CMS fixture", slug: `browser-cms-${randomUUID()}`, status: "draft", showInNav: false } });
+  const visitor = await page.context().browser().newContext();
+  const publicPage = await visitor.newPage();
+  try {
+    expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(404);
+    await page.goto(`/admin/pages/${cmsPage.id}`);
+    await page.getByRole("button", { name: "OPUBLIKUJ", exact: true }).click();
+    await expect.poll(async () => (await prisma.page.findUniqueOrThrow({ where: { id: cmsPage.id } })).status).toBe("published");
+    expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(200);
+    await expect(publicPage).toHaveTitle(/Browser CMS fixture/);
+    page.once("dialog", async (dialog) => { expect(dialog.message()).toContain("Cofnąć publikację?"); await dialog.accept(); });
+    await page.getByRole("button", { name: "COFNIJ PUBLIKACJĘ", exact: true }).click();
+    await expect.poll(async () => (await prisma.page.findUniqueOrThrow({ where: { id: cmsPage.id } })).status).toBe("unpublished");
+    expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(404);
+  } finally { await visitor.close(); }
+  await page.goto("/admin");
+  await prisma.adminUser.update({ where: { id: adminId }, data: { role: "artist" } });
+  expect((await page.request.get("/api/admin/google-calendar/calendars")).status()).toBe(403);
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
 });

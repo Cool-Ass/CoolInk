@@ -23,7 +23,10 @@
 - Kryterium odbioru: faktyczny success przeglądarki w izolowanym CI, bez skipów/retry;
   lokalne testy granic izolacji oraz lint/typy.
 - Rollback: revert pakietu testowego, bez restore i kasowania danych produkcyjnych.
-- To dopiero część A13: rezerwacja/anulowanie, CMS i media nadal wymagają testów UI.
+- CI `36792333972`, SHA `89c8046`: success. Rezerwacja z wersjonowaną zgodą,
+  anulowanie i etykiety ZAJĘTY/NIEDOSTĘPNY przeszły na desktop i mobile.
+- Kolejny pakiet dodaje draft/publikację/cofnięcie CMS, odmowę dla roli artist
+  oraz próbę rezerwacji archiwalnego projektu. Media nadal wymagają testu UI.
 - API ochrony main zwróciło 404: nie potwierdzono ochrony ani bramki hostingu.
   Nie traktować zielonych HTTP smoke jako pełnego browser E2E lub zgody na ominięcie bramek.
 
