@@ -1,5 +1,12 @@
 # Decyzje i ADR
 
+## CONFIG-ESCROW-20261002 — bieżące klucze, bez rotacji
+
+- ACCEPTED: właściciel w tym czacie odpowiedział „Tak” na escrow kluczy, a następnie zlecił wspólny przegląd UI/UX przed produkcją. Zakres nie obejmuje usuwania ani odtwarzania produkcji.
+- PR #28 tylko runtime-key recovery bootstrap: endpoint domyślnie wyłączony, podpisany OIDC dokładnego main backup.yml, audience powiązany z RSA recipient, stała allowlista, jednorazowy run attempt, szyfrowanie hybrydowe. Testy potwierdzają brak cookie/browser authority i ujawniania wyjątków.
+- Zapisano produkcyjną flagę BACKUP_CONFIG_ESCROW_ENABLED=1 do następnego buildu. Capture może wskazać zweryfikowany staged production URL tego projektu z dokładnym SHA, bez przypisywania domen. Nie wymieniać wartości istniejących sekretów.
+- Rollback: flaga 0 i znany dobry redeploy albo revert endpointu. Dowody w RUNTIME_CONFIG_RECOVERY.md; pełny A01 nadal wymaga runtime/login drill. Zgoda nie zastępuje exact-SHA CI ani bramki publikacji.
+
 ## A01-BOOTSTRAP-20261002 — narzędzia odzyskiwania przed wydaniem aplikacji
 
 - Zakres istniejącej zgody AUDIT-20260930 i zgody właściciela w bieżącym czacie „Tak” na zaszyfrowany backup bieżącej konfiguracji bez rotacji. Nie dotyczy usuwania ani odtwarzania produkcji.

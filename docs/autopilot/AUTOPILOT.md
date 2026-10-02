@@ -6,11 +6,11 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | VERIFYING — A01 backup-only bootstrap |
-| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-protected-backup-bootstrap / PR #27; 2026-10-02 11:26 UTC, lease do 12:26 UTC. Pakiet aplikacji pozostaje na ai/audit-sync-outbox / d634663. |
-| Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
-| Następny krok | Samodzielny PR narzędzi backupu bez zmian aplikacji/migracji; po checks zaufany backup main i lokalny restore. Nie promować aplikacji. Pełny A01 runtime/config/login, A10/A14 pozostają otwarte. |
-| Auto-deploy gotowy | Auto-assign Custom Production Domains Vercel wyłączone za zgodą właściciela i potwierdzone UI. Sam merge nadal może uruchomić build; ten bootstrap nie zawiera migracji ani zmian aplikacji. |
+| Status | VERIFYING — A01 runtime configuration bootstrap |
+| Aktywne zadanie / run / lease | Jeden Worker potwierdzony list_threads; ai/audit-runtime-key-bootstrap / PR #28; checkpoint 2026-10-02 11:49 UTC, lease do 12:26 UTC. Pakiet UI i aplikacji zachowany w PR #26 / 6e8587c. |
+| Zbadana baza main | `f310ca146435685d5c6d412e3c38527c608318d1`, tooling-only PR #27 merged po 37001049836 SUCCESS; main CI 37001930588 SUCCESS |
+| Następny krok | Świeży main backup 37001930017 i offline restore 37002286826 SUCCESS (public/auth/storage/media). PR #28: domyślnie wyłączony endpoint OIDC key-bound + capture/verify CLI i opcjonalny workflow. 13 testów granic PASS; 52a30a9 CI SUCCESS, najnowszy SHA wymaga własnych checks. Następnie staged production capture i nowy drill; A01 runtime/login, A10/A14 pozostają otwarte. |
+| Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled ponownie potwierdzone UI. Produkcyjna flaga BACKUP_CONFIG_ESCROW_ENABLED=1 zapisana dla przyszłego buildu; obecna strona nie ma endpointu. Bez rotacji kluczy, migracji ani promocji domeny w bootstrapie. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 
 Repo zawiera Next.js/React, Prisma/PostgreSQL, panel admina, PWA klienta,
