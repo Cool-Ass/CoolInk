@@ -34,6 +34,22 @@ async function json(path, init = {}) {
   return response.json();
 }
 
+async function startupDiagnostics(container) {
+  // Never dump server logs: they may contain restored customer data or secrets.
+  const state = await exec("docker", ["inspect", "--format", "{{.State.ExitCode}}", container], { timeout: 5000 }).catch(() => null);
+  const logs = await exec("docker", ["logs", container], { timeout: 5000, maxBuffer: 1024 * 1024 }).catch(() => null);
+  const text = (logs?.stdout ?? "") + (logs?.stderr ?? "");
+  const classes = [];
+  for (const [label, pattern] of [
+    ["MIGRATION", /migrat/i], ["PERMISSION", /permission denied/i], ["MISSING_RELATION", /relation .* does not exist/i],
+    ["MISSING_COLUMN", /column .* does not exist/i], ["CONFIG_REQUIRED", /required|missing configuration/i],
+    ["ROLE", /role .* does not exist/i], ["NETWORK", /connection refused|dial tcp/i],
+  ]) if (pattern.test(text)) classes.push(label);
+  const sqlState = text.match(/SQLSTATE ([A-Z0-9]{5})/)?.[1];
+  const key = text.match(/required key (GOTRUE_[A-Z0-9_]+|API_EXTERNAL_URL)/)?.[1];
+  console.error("RESTORED_AUTH_STARTUP", { exitCode: /^\d{1,3}\s*$/.test(state?.stdout ?? "") ? Number(state.stdout) : null, classes, ...(sqlState ? { sqlState } : {}), ...(key ? { requiredEnvironmentName: key } : {}) });
+}
+
 async function main() {
   if (process.env.GITHUB_ACTIONS !== "true" || !/^\d{1,30}$/.test(process.env.GITHUB_RUN_ID ?? "")) throw new Error("Drill requires disposable GitHub runner");
   const started = Date.now(); const prisma = new PrismaClient({ datasources: { db: { url: database } }, log: [] });
@@ -63,7 +79,7 @@ async function main() {
     for (let attempt = 0; attempt < 60; attempt++) {
       try { await json("/health"); healthy = true; break; } catch { await new Promise(done => setTimeout(done, 500)); }
     }
-    if (!healthy) throw new Error("Restored Auth did not start");
+    if (!healthy) { await startupDiagnostics(container); throw new Error("Restored Auth did not start"); }
     stage = "restored-user-inventory";
     const token = serviceToken(secret); const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
     const actual = [];
