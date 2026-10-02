@@ -85,10 +85,9 @@ test("client login, own project navigation and logout", async ({ page }) => {
   const upload = await uploaded;
   expect(upload.status()).toBe(201);
   const image = (await upload.json()).image;
-  const ownerRead = await page.request.get(image.url);
-  expect(ownerRead.status()).toBe(200);
-  expect(ownerRead.headers()["content-type"]).toContain("image/");
-  await expect(page.locator(`img[src="${image.url}"]`).first()).toBeVisible();
+  const renderedImage = page.locator(`img[src="${image.url}"]`).first();
+  await expect(renderedImage).toBeVisible();
+  await expect.poll(async () => renderedImage.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
   const outsider = await page.context().browser().newContext();
   try { expect((await outsider.request.get(`http://127.0.0.1:3120${image.url}`)).status()).toBe(401); }
   finally { await outsider.close(); }
@@ -117,12 +116,12 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
   await expect.poll(async () => (await prisma.appointment.findUniqueOrThrow({ where: { id: booking.appointment.id } })).status).toBe("cancelled");
   await prisma.tattooProject.update({ where: { id: booking.projectId }, data: { clientArchivedAt: new Date() } });
-  const archivedBooking = await page.request.post("/api/client/appointments", {
-    headers: { origin: "http://127.0.0.1:3120", "sec-fetch-site": "same-origin" },
-    data: { projectId: booking.projectId, startsAt: slot.startsAt.toISOString(), endsAt: slot.endsAt.toISOString(), confirmationAcknowledged: true, consents: [{ id: consent.id, version: 1 }] },
-  });
-  expect(archivedBooking.status()).toBe(409);
-  expect((await archivedBooking.json()).error).toContain("archiwum");
+  const archivedBooking = await page.evaluate(async (body) => {
+    const response = await fetch("/api/client/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return { status: response.status, body: await response.json() };
+  }, { projectId: booking.projectId, startsAt: slot.startsAt.toISOString(), endsAt: slot.endsAt.toISOString(), confirmationAcknowledged: true, consents: [{ id: consent.id, version: 1 }] });
+  expect(archivedBooking.status).toBe(409);
+  expect(archivedBooking.body.error).toContain("archiwum");
   await page.goto("/app/portal/projects");
   await expect(page.getByText("Browser booked project", { exact: true })).toHaveCount(0);
   if (test.info().project.name === "mobile") await page.getByRole("button", { name: "WIĘCEJ", exact: true }).click();
@@ -161,7 +160,7 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   } finally { await visitor.close(); }
   await page.goto("/admin");
   await prisma.adminUser.update({ where: { id: adminId }, data: { role: "artist" } });
-  expect((await page.request.get("/api/admin/google-calendar/calendars")).status()).toBe(403);
+  expect(await page.evaluate(async () => (await fetch("/api/admin/google-calendar/calendars")).status)).toBe(403);
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
 });
