@@ -188,6 +188,7 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   try {
     expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(404);
     await page.goto(`/admin/pages/${cmsPage.id}`);
+    await expect(page.getByRole("complementary", { name: "Nawigator struktury strony" })).toHaveCount(0);
     await page.getByRole("button", { name: /Hero · swobodny/ }).click();
     await expect(page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "OPUBLIKUJ", exact: true }).click();

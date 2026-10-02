@@ -140,7 +140,7 @@ export default function PageBuilder({
   const [previewOpen, setPreviewOpen] = useState(false);
   const previewExitRef = useRef<HTMLButtonElement>(null);
   const [lastSavedSignature, setLastSavedSignature] = useState(() => JSON.stringify(initialPage.modules ?? []));
-  const [navigatorOpen, setNavigatorOpen] = useState(true);
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [autosaveError, setAutosaveError] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
