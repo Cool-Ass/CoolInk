@@ -127,6 +127,8 @@ jobs:
           echo "PASS protected schema record counts in disposable local PostgreSQL; Auth login/config not yet verified."
       - name: Verify restored media byte-for-byte
         run: node scripts/verifyMediaBackup.mjs restored/media-backup
+      - name: Verify restored Auth inventory and isolated password login
+        run: node scripts/verifyRestoredAuth.mjs
       - name: Verify sealed runtime configuration when captured
         run: |
           if [ -d restored/runtime-config ]; then
