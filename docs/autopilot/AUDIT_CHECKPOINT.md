@@ -43,3 +43,11 @@ Siedem testów jednostkowych statusów przeszło; dodano sprawdzenie etykiet w b
 A01 pełne DR/Auth/konfiguracja; A09 outbox/idempotencja; A10 obsługa wniosków i retencja;
 A12 korekty płatności; A13 pełne E2E; A14 monitoring; A16 dokumentacja/aktualizacje;
 A17 polling. A06–A08 i A11 mają przygotowane poprawki, lecz nie status produkcyjnie zamknięte.
+
+## Pakiet A17 — czat
+
+Branch `ai/audit-chat-polling`, bazuje na PR 22. Brak migracji; ryzyko MEDIUM.
+Odświeżanie po zakończeniu poprzedniego zapytania, co 10 sekund; zatrzymanie
+w ukrytej karcie/offline, natychmiastowe wznowienie, backoff błędów do 60 sekund,
+deadline 20 sekund i abort po opuszczeniu widoku. Wysyłanie nadal aktualizuje UI od razu.
+Trzy testy granic cyklu zapytań przeszły. Rollback: revert pakietu bez zmian danych.
