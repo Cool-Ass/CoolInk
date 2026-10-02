@@ -6,6 +6,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: {
   googleCalendarEventSync: { findUnique: m.sync, updateMany: m.errors },
   siteSetting: { upsert: m.upsert, deleteMany: m.remove },
 } }));
+vi.mock("@/lib/googleExportOutbox", () => ({ claimGoogleExport: async () => ({ key: "google_retry:visit", value: "claim", nonce: "generation" }), releaseGoogleExport: async (_claim: unknown, completed: boolean) => { if (completed) await m.remove(); } }));
 import { syncAppointmentToGoogle, unambiguousExportConnection } from "../lib/googleCalendarSyncEngine";
 beforeEach(() => { vi.resetAllMocks(); m.connections.mockResolvedValue([]); });
 describe("Google connection ownership", () => {

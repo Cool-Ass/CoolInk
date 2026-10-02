@@ -61,6 +61,7 @@ jobs:
           npm run db:test:prepare
           node scripts/verifyLoyaltyMigration.cjs
           node scripts/verifyMessageVisibilityMigration.cjs
+          node scripts/verifyGoogleOutbox.cjs
           npm run db:security:audit
           npm run db:security:verify
           npm run db:security:http-verify

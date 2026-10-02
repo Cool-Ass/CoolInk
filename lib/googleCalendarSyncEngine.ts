@@ -3,9 +3,12 @@ import { decryptGoogleRefreshToken } from "@/lib/googleCalendarCrypto";
 import { eventRange, googleCalendarRequest, isGoogleCalendarResourceGone, refreshGoogleCalendarAccessToken, type GoogleEvent } from "@/lib/googleCalendar";
 import { externalGoogleTitle, googleEventPayload } from "@/lib/googleCalendarSync";
 import { prisma } from "@/lib/prisma";
+import { claimGoogleExport, releaseGoogleExport } from "@/lib/googleExportOutbox";
+import { createIdempotentGoogleEvent } from "@/lib/googleCalendarCreate";
 
 type GoogleEventsResponse = { items?: GoogleEvent[]; nextPageToken?: string };
 type SyncResult = { exported: number; imported: number; conflicts: number; remoteDeletes: number; recovered: number };
+type ExportToken = { connectionId: string; accessToken: string };
 
 // Existing appointments retain their original connection. Never route by updatedAt,
 // which changes during a sync and used to silently switch Google accounts.
@@ -34,19 +37,12 @@ async function removeGoogleEvent(accessToken: string, calendarId: string, eventI
   }
 }
 
-async function createGoogleEvent(accessToken: string, calendarId: string, payload: ReturnType<typeof googleEventPayload>) {
-  return googleCalendarRequest<GoogleEvent>(accessToken, eventPath(calendarId), {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
 /**
  * Fast, best-effort export used after a single appointment mutation. It keeps
  * the selected Google calendar current without running the much heavier busy
  * calendar import on every booking action.
  */
-async function exportAppointmentToGoogle(appointmentId: string) {
+async function exportAppointmentToGoogle(appointmentId: string, generation: string, cachedToken?: ExportToken) {
   const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
   if (!appointment) return false;
   const sync = await prisma.googleCalendarEventSync.findUnique({ where: { appointmentId } });
@@ -60,10 +56,11 @@ async function exportAppointmentToGoogle(appointmentId: string) {
   if (!connection.active || connection.encryptedRefreshToken === "REVOKED") throw new Error("Połączenie przypisane do wizyty jest nieaktywne.");
   const primary = connection.selections.find((selection) => selection.role === "primary" && selection.enabled);
   if (!primary) return false;
-  const token = await refreshGoogleCalendarAccessToken(decryptGoogleRefreshToken(connection.encryptedRefreshToken));
+  const accessToken = cachedToken?.connectionId === connection.id ? cachedToken.accessToken
+    : (await refreshGoogleCalendarAccessToken(decryptGoogleRefreshToken(connection.encryptedRefreshToken))).access_token;
 
   if (appointment.status === "cancelled") {
-    if (sync?.googleEventId && !sync.remoteDeletedAt) await removeGoogleEvent(token.access_token, sync.googleCalendarId, sync.googleEventId);
+    if (sync?.googleEventId && !sync.remoteDeletedAt) await removeGoogleEvent(accessToken, sync.googleCalendarId, sync.googleEventId);
     if (sync) await prisma.googleCalendarEventSync.update({ where: { id: sync.id }, data: { syncStatus: "DELETED_REMOTE", remoteDeletedAt: new Date(), lastSyncedAt: new Date(), syncError: null } });
     await prisma.googleCalendarConnection.update({ where: { id: connection.id }, data: { lastSyncedAt: new Date() } });
     return true;
@@ -73,14 +70,14 @@ async function exportAppointmentToGoogle(appointmentId: string) {
   let remote: GoogleEvent;
   if (sync?.googleEventId && sync.googleCalendarId === primary.calendarId) {
     try {
-      remote = await patchLinkedGoogleEvent(token.access_token, sync, payload);
+      remote = await patchLinkedGoogleEvent(accessToken, sync, payload);
     } catch (error) {
       if (!isGoogleCalendarResourceGone(error)) throw error;
-      remote = await createGoogleEvent(token.access_token, primary.calendarId, payload);
+      remote = await createIdempotentGoogleEvent(accessToken, primary.calendarId, appointmentId, generation, payload);
     }
   } else {
-    if (sync?.googleEventId) await removeGoogleEvent(token.access_token, sync.googleCalendarId, sync.googleEventId);
-    remote = await createGoogleEvent(token.access_token, primary.calendarId, payload);
+    if (sync?.googleEventId) await removeGoogleEvent(accessToken, sync.googleCalendarId, sync.googleEventId);
+    remote = await createIdempotentGoogleEvent(accessToken, primary.calendarId, appointmentId, generation, payload);
   }
   if (!remote.id) throw new Error("Google Calendar nie zwrócił ID wydarzenia.");
   await prisma.googleCalendarEventSync.upsert({
@@ -110,39 +107,13 @@ export async function syncGoogleCalendarForAdmin(adminId: string): Promise<SyncR
     const sync = await prisma.googleCalendarEventSync.findUnique({ where: { appointmentId: appointment.id } });
     if (sync && sync.connectionId !== connection.id) continue;
     if (!sync && (await unambiguousExportConnection())?.id !== connection.id) continue;
-    if (appointment.status === "cancelled") {
-      if (sync?.googleEventId && !sync.remoteDeletedAt) await removeGoogleEvent(token.access_token, sync.googleCalendarId, sync.googleEventId);
-      if (sync) await prisma.googleCalendarEventSync.update({ where: { id: sync.id }, data: { syncStatus: "DELETED_REMOTE", remoteDeletedAt: new Date(), lastSyncedAt: new Date() } });
-      continue;
-    }
-    const payload = googleEventPayload({ startsAt: appointment.startsAt, endsAt: appointment.endsAt });
-    let remote: GoogleEvent;
-    if (sync?.googleEventId && sync.googleCalendarId === primary.calendarId) {
-      try {
-        remote = await patchLinkedGoogleEvent(token.access_token, sync, payload);
-      } catch (error) {
-        if (error instanceof GoogleSyncConflict) {
-          await prisma.googleCalendarEventSync.update({ where: { id: sync.id }, data: { syncStatus: "CONFLICT", syncError: error.message } });
-          result.conflicts += 1;
-          continue;
-        }
-        if (!isGoogleCalendarResourceGone(error)) throw error;
-        remote = await createGoogleEvent(token.access_token, primary.calendarId, payload);
-        result.recovered += 1;
-      }
-    } else {
-      // A changed primary calendar makes the previous event id invalid in the
-      // new calendar. Remove the old copy first, then create a correctly linked
-      // event instead of persisting a mismatched calendar/event pair.
-      if (sync?.googleEventId) {
-        await removeGoogleEvent(token.access_token, sync.googleCalendarId, sync.googleEventId);
-        result.recovered += 1;
-      }
-      remote = await createGoogleEvent(token.access_token, primary.calendarId, payload);
-    }
-    if (!remote.id) throw new Error("Google Calendar nie zwrócił ID wydarzenia.");
-    await prisma.googleCalendarEventSync.upsert({ where: { appointmentId: appointment.id }, update: { googleCalendarId: primary.calendarId, googleEventId: remote.id, googleUpdatedAt: remote.updated ? new Date(remote.updated) : null, localFingerprint: `${appointment.startsAt.toISOString()}|${appointment.endsAt.toISOString()}|${appointment.status}`, lastSyncedAt: new Date(), syncStatus: "SYNCED", syncError: null, remoteDeletedAt: null }, create: { connectionId: connection.id, appointmentId: appointment.id, googleCalendarId: primary.calendarId, googleEventId: remote.id, googleUpdatedAt: remote.updated ? new Date(remote.updated) : null, localFingerprint: `${appointment.startsAt.toISOString()}|${appointment.endsAt.toISOString()}|${appointment.status}`, lastSyncedAt: new Date() } });
-    result.exported += 1;
+    const exported = await syncAppointmentToGoogle(appointment.id, { connectionId: connection.id, accessToken: token.access_token });
+    const latest = await prisma.googleCalendarEventSync.findUnique({ where: { appointmentId: appointment.id } });
+    if (exported) {
+      if (appointment.status === "cancelled") result.remoteDeletes += 1;
+      else result.exported += 1;
+      if (sync && latest?.googleEventId !== sync.googleEventId) result.recovered += 1;
+    } else if (latest?.syncStatus === "CONFLICT") result.conflicts += 1;
   }
 
   await importBusyCalendars(connection, token.access_token, result);
@@ -153,15 +124,15 @@ export async function syncGoogleCalendarForAdmin(adminId: string): Promise<SyncR
 
 // Durable retry marker precedes the external request. A newer mutation must not
 // be acknowledged by an older worker finishing later.
-export async function syncAppointmentToGoogle(appointmentId: string) {
-  const key = `google_retry:${appointmentId}`;
-  const value = JSON.stringify({ appointmentId, queuedAt: new Date().toISOString(), nonce: crypto.randomUUID() });
-  await prisma.siteSetting.upsert({ where: { key }, update: { value }, create: { key, value } });
+export async function syncAppointmentToGoogle(appointmentId: string, cachedToken?: ExportToken) {
+  const claim = await claimGoogleExport(appointmentId);
+  if (!claim) return false;
   try {
-    const result = await exportAppointmentToGoogle(appointmentId);
-    await prisma.siteSetting.deleteMany({ where: { key, value } });
+    const result = await exportAppointmentToGoogle(appointmentId, claim.nonce, cachedToken);
+    await releaseGoogleExport(claim, result);
     return result;
   } catch (error) {
+    await releaseGoogleExport(claim, false);
     await prisma.googleCalendarEventSync.updateMany({ where: { appointmentId }, data: { syncStatus: error instanceof GoogleSyncConflict ? "CONFLICT" : "ERROR", syncError: error instanceof GoogleSyncConflict ? error.message : "Eksport nie powiódł się. Oczekuje na ponowienie." } });
     console.error("google_calendar_export_failed", { appointmentId });
     return false;

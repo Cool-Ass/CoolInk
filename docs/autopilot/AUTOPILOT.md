@@ -7,7 +7,7 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 | Pole | Stan |
 |---|---|
 | Status | WORKING |
-| Aktywne zadanie / run / lease | A12 oraz oczekiwanie CI A13/A17, główny czat audytu; pozostałe Workery idle przy kontroli 2026-10-02. Branch `ai/audit-payment-corrections`; checkpoint 2026-10-02 02:35 UTC, lease do 03:35 UTC |
+| Aktywne zadanie / run / lease | A09 oraz oczekiwanie CI A13/A12/A17, główny czat audytu; pozostałe Workery idle przy kontroli 2026-10-02. Branch `ai/audit-sync-outbox`; checkpoint 2026-10-02 00:50 UTC, lease do 01:50 UTC. Poprzednie godziny lokalne omyłkowo oznaczono UTC; obowiązuje ten wpis |
 | Zbadana baza main | `ed85fb8570fb9626ba6972e1c21e33a4f9996fa8` |
 | Następny krok | Zweryfikować nowe testy przeglądarkowe w izolowanym CI; potem uzupełnić scenariusze rezerwacji/CMS/mediów i potwierdzić hosting gate. PR 19–21 mają CI success, ale pozostają niewdrożone |
 | Auto-deploy gotowy | Niepotwierdzony; zablokowany do spełnienia AP-001 |

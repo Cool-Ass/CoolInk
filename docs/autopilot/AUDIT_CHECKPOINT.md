@@ -68,3 +68,20 @@ od limitu 30 wpisów historii. Zapis wyjaśnienia wymaga powodu, poprawnego klie
 i wycofanego wpisu; działa pod istniejącą blokadą transakcyjną i zapisuje audyt.
 Nie zmienia kwot, pieczątek ani wycofanych zapisów. Replay nie tworzy duplikatu.
 21 testów route, TypeScript i lint przeszły. Rollback: revert kodu; audyt zachować.
+
+## Pakiet A09 — transakcyjny eksport Google
+
+Branch `ai/audit-sync-outbox` integruje PR 19–25. Migracja HIGH RISK dodaje
+trigger Appointment, zapisujący marker w istniejącym prywatnym SiteSetting
+w tej samej transakcji. Claim SQL jest wyłączny, lease wygasa po 2 minutach;
+nowa mutacja zachowuje aktywny lease, a stary worker nie usuwa nowego zadania.
+Retry zachowuje nonce generacji; SHA-256 daje stały Google event ID.
+HTTP 409 odzyskuje istniejący obiekt dopiero po sprawdzeniu zakresu czasu;
+zmiana/usunięcie po stronie Google pozostaje konfliktem. Manual sync używa
+tego samego claim zamiast równoległego eksportu. Wywołania Google mają limit 15 s.
+14 testów jednostkowych integracji, TypeScript i lint przeszły.
+CI zawiera nowy izolowany test rollbacku triggera, równoległych claims,
+starego potwierdzenia i odzyskania lease; jego wynik jeszcze niepotwierdzony.
+Produkcja: przed migracją obowiązuje świeży backup gate. Rollback kodu nie wymaga
+kasowania kolejki; trigger/markery można zachować do ponowienia eksportu.
+Specyfikacja ID: https://developers.google.com/workspace/calendar/api/v3/reference/events/insert
