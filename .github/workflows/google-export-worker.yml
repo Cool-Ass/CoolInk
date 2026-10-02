@@ -1,0 +1,44 @@
+name: Google export worker
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: coolink-google-export-worker
+  cancel-in-progress: false
+jobs:
+  export:
+    if: github.repository == 'Cool-Ass/CoolInk' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Consume due export jobs with short-lived GitHub identity
+        shell: bash
+        run: |
+          node <<'JS'
+          const endpoint = 'https://www.coolinktattoo.pl/api/cron/google-exports';
+          async function main() {
+            const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+            tokenUrl.searchParams.set('audience', endpoint);
+            const identity = await fetch(tokenUrl, {
+              headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
+              signal: AbortSignal.timeout(15000),
+            });
+            if (!identity.ok) throw new Error('Unable to obtain worker identity');
+            const token = (await identity.json()).value;
+            if (!token) throw new Error('Missing worker identity');
+            console.log('::add-mask::' + token);
+            const response = await fetch(endpoint, {
+              method: 'POST', headers: { Authorization: `Bearer ${token}` },
+              signal: AbortSignal.timeout(290000),
+            });
+            if (!response.ok) throw new Error(`Export worker HTTP ${response.status}`);
+            const result = await response.json();
+            if (result.ok !== true) throw new Error('Export worker did not confirm execution');
+            console.log(JSON.stringify({ checked: result.checked, synced: result.synced }));
+          }
+          main().catch(error => { console.error(error.message); process.exitCode = 1; });
+          JS

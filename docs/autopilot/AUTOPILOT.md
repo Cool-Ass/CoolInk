@@ -19,7 +19,8 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 - CI `36949088616`: typy, unit tests, build, secret scan, CodeQL i backup-snapshot PASS; izolowany test outbox nie wystartował przez brak wymaganego description w fixture. Poprawka `1edfb07`; CI `36949449852` trwa, bez anulowania pracy izolowanej bazy.
 - A14 częściowo: błędy cron/retencji nie są już fałszywym sukcesem; 503 + eventId, alarm admin push i jawna informacja, jeśli alarmu nie doręczono. Test kontrolowanego błędu lokalnie PASS; rzeczywiste doręczenie produkcyjne niezweryfikowane.
 - A17: pomiar 20 odczytów czatu i p95 dodany do desktop/mobile E2E; wynik nie jest jeszcze dostępny i nie stanowi pomiaru produkcji.
-- Nadal otwarte: A01 pełny DR Auth/config/private media i faktyczne logowanie; A09 częstszy konsument kolejki; A10 pełna obsługa wniosków prywatności; A14 alarm wieku backup/restore/kolejki i dowód doręczenia. Brak nowego wdrożenia produkcyjnego.
+- A09: przygotowano workflow konsumenta co 10 min, ograniczony czas/batch, bez stałego sekretu. Weryfikacja GitHub OIDC issuer/audience/RS256/age, niezmiennych ID repo/właściciela, main i dokładnego workflow; jeden zapis WebhookReceipt na run attempt chroni replay. Preview odrzucane. Repo potwierdzone publiczne; Fluid Compute Vercel włączone. Testy nowych granic dostępu PASS; faktyczne wywołanie produkcyjne dopiero po promocji.
+- Nadal otwarte: A01 pełny DR Auth/config/private media i faktyczne logowanie; A10 pełna obsługa wniosków prywatności; A14 alarm wieku backup/restore/kolejki i dowód doręczenia. Brak nowego wdrożenia produkcyjnego.
 
 Repo zawiera Next.js/React, Prisma/PostgreSQL, panel admina, PWA klienta,
 rezerwacje, prywatne media i integrację Google Calendar. Źródła:

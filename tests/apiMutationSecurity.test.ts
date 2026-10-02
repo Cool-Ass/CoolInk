@@ -25,6 +25,12 @@ describe("API mutation protection", () => {
       if (name === "app/api/webhooks/automation/route.ts") {
         return source.includes("verifyWebhookSignature") && source.includes("reserveWebhook") ? [] : [name];
       }
+      if (name === "app/api/cron/google-exports/route.ts") {
+        // Machine-to-machine OIDC, no browser cookies. Boundary and replay
+        // rejection are exercised by githubWorkerAuth/googleExportWorker tests.
+        return source.includes("await googleWorkerIdentity(request)") && source.includes("reserveWebhook")
+          && source.includes('process.env.VERCEL_ENV !== "production"') ? [] : [name];
+      }
       if (name === "app/api/security/csp-report/route.ts") {
         return source.includes("MAX_REPORT_BYTES") && source.includes("CONTENT_TYPES") ? [] : [name];
       }

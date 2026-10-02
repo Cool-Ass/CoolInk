@@ -143,6 +143,7 @@ export async function syncAppointmentToGoogle(appointmentId: string, cachedToken
 }
 
 export async function retryGoogleCalendarExports() {
+  const deadline = Date.now() + 180_000;
   // Filter before LIMIT so leased/backed-off records cannot starve later work.
   const pending = await prisma.$queryRaw<Array<{ key: string }>>`
     SELECT "key" FROM "SiteSetting" WHERE "key" LIKE 'google_retry:%'
@@ -151,8 +152,13 @@ export async function retryGoogleCalendarExports() {
     ORDER BY "updatedAt" ASC LIMIT 25
   `;
   let synced = 0;
-  for (const item of pending) if (await syncAppointmentToGoogle(item.key.slice("google_retry:".length))) synced += 1;
-  return { checked: pending.length, synced };
+  let checked = 0;
+  for (const item of pending) {
+    if (Date.now() >= deadline) break;
+    checked += 1;
+    if (await syncAppointmentToGoogle(item.key.slice("google_retry:".length))) synced += 1;
+  }
+  return { checked, synced };
 }
 
 type SelectedConnection = NonNullable<Awaited<ReturnType<typeof unambiguousExportConnection>>>;
