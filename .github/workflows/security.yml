@@ -9,6 +9,7 @@ concurrency:
   # All branches share one isolated test database: never reset it concurrently.
   group: coolink-isolated-integration-database
   cancel-in-progress: false
+  queue: max
 permissions:
   contents: read
 jobs:
