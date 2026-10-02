@@ -33,7 +33,7 @@ export function sealRuntimeConfiguration(publicKey: unknown, run: string, env: R
       values[key] = value;
     }
   }
-  const context = { version: 1, purpose: "coolink-runtime-key-recovery", run, recipient: recipient.hash, createdAt: new Date().toISOString() };
+  const context = { version: 1, purpose: "coolink-runtime-key-recovery", run, recipient: recipient.hash, deploymentSha: env.VERCEL_GIT_COMMIT_SHA ?? null, createdAt: new Date().toISOString() };
   const aad = Buffer.from(JSON.stringify(context));
   const plaintext = Buffer.from(JSON.stringify({ values }));
   const symmetricKey = randomBytes(32);

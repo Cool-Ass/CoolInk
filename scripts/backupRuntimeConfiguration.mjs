@@ -19,8 +19,11 @@ export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun) {
     const { values } = JSON.parse(plaintext.toString());
     if (!values || typeof values.SESSION_SECRET !== "string" || values.SESSION_SECRET.length < 32) throw new Error("Incomplete configuration archive");
     for (const [name, value] of Object.entries(values)) if (!allowed.has(name) || typeof value !== "string" || Buffer.byteLength(value) > 8192) throw new Error("Invalid configuration archive");
+    for (const name of ["MFA_ENCRYPTION_KEY", "PRIVATE_MEDIA_SIGNING_KEY"]) if (values[name] && values[name].length < 32) throw new Error("Invalid recovery key");
+    const google = values.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS || values.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY;
+    if (google && google.split(",").map(value => value.trim()).filter(Boolean).some(value => Buffer.from(value, "base64").length !== 32)) throw new Error("Invalid recovery keyring");
     // Metadata only: decrypted values never leave this verifier or reach stdout.
-    return { version: 1, run: context.run, createdAt: context.createdAt, keys: Object.keys(values).sort(), verified: true };
+    return { version: 1, run: context.run, createdAt: context.createdAt, deploymentSha: context.deploymentSha, keys: Object.keys(values).sort(), verified: true };
   } finally { key.fill(0); plaintext?.fill(0); }
 }
 
@@ -40,6 +43,13 @@ async function boundedJson(response) {
 async function capture(directory) {
   const run = `${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
   if (process.env.GITHUB_REPOSITORY !== "Cool-Ass/CoolInk" || process.env.GITHUB_REF !== "refs/heads/main" || !/^\d{1,30}:\d{1,10}$/.test(run)) throw new Error("Untrusted backup context");
+  const expectedSha = process.env.GITHUB_SHA;
+  if (!/^[a-f0-9]{40}$/.test(expectedSha ?? "")) throw new Error("Untrusted deployment revision");
+  // A staged production build can supply current keys without promoting public
+  // domains. Only this project's observed Vercel naming scope is permitted.
+  const deployment = new URL(process.env.CONFIG_ESCROW_DEPLOYMENT_URL || "https://www.coolinktattoo.pl");
+  if (deployment.protocol !== "https:" || deployment.username || deployment.password || deployment.port || deployment.pathname !== "/" || deployment.search || deployment.hash
+    || !(deployment.hostname === "www.coolinktattoo.pl" || /^cool-ink-[a-z0-9-]+-cool-ass\.vercel\.app$/.test(deployment.hostname))) throw new Error("Untrusted deployment URL");
   const pair = generateKeyPairSync("rsa", { modulusLength: 3072 });
   const der = pair.publicKey.export({ format: "der", type: "spki" });
   const recipient = createHash("sha256").update(der).digest("hex");
@@ -48,11 +58,12 @@ async function capture(directory) {
   const identity = await boundedJson(await fetch(tokenUrl, { headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }, signal: AbortSignal.timeout(15000), redirect: "error" }));
   if (typeof identity.value !== "string" || identity.value.length > 10000) throw new Error("Backup identity unavailable");
   console.log("::add-mask::" + identity.value);
-  const envelope = await boundedJson(await fetch(endpoint, {
+  const envelope = await boundedJson(await fetch(new URL("/api/cron/config-escrow", deployment), {
     method: "POST", headers: { authorization: `Bearer ${identity.value}`, "content-type": "application/json" },
     body: JSON.stringify({ publicKey: der.toString("base64") }), signal: AbortSignal.timeout(30000), redirect: "error",
   }));
-  if (envelope.context?.recipient !== recipient) throw new Error("Configuration recipient mismatch");
+  if (envelope.context?.recipient !== recipient || !/^[a-f0-9]{40}$/.test(envelope.context?.deploymentSha ?? "")
+    || (deployment.hostname !== "www.coolinktattoo.pl" && envelope.context.deploymentSha !== expectedSha)) throw new Error("Configuration recipient or revision mismatch");
   const privateKey = pair.privateKey.export({ format: "pem", type: "pkcs8" });
   const manifest = verifyConfigurationEnvelope(envelope, privateKey, run);
   await mkdir(directory, { recursive: true, mode: 0o700 });
