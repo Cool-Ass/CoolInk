@@ -55,7 +55,28 @@ async function workflowIdentity(audience) {
   const identity = await boundedJson(await fetch(tokenUrl, { headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }, signal: AbortSignal.timeout(15000), redirect: "error" }));
   if (typeof identity.value !== "string" || identity.value.length > 10000) throw new Error("Backup identity unavailable");
   console.log("::add-mask::" + identity.value);
+  // Inspect only expected-claim equality, never claim values or the JWT. This
+  // is diagnostic, not signature verification or authorization authority.
+  const matches = identityClaimMatches(identity.value, audience);
+  console.log("Backup identity expected-claim matches", matches);
+  if (Object.values(matches).some(value => !value)) throw new Error("Backup identity context mismatch");
   return identity.value;
+}
+
+export function identityClaimMatches(token, audience) {
+  let claims;
+  try { claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()); }
+  catch { claims = {}; }
+  return {
+    issuer: claims.iss === "https://token.actions.githubusercontent.com",
+    audience: claims.aud === audience,
+    repository: claims.repository === "Cool-Ass/CoolInk",
+    repositoryId: claims.repository_id === "1341372006",
+    ownerId: claims.repository_owner_id === "319302461",
+    branch: claims.ref === "refs/heads/main",
+    workflow: claims.workflow_ref === "Cool-Ass/CoolInk/.github/workflows/backup.yml@refs/heads/main",
+    subject: claims.sub === "repo:Cool-Ass/CoolInk:ref:refs/heads/main",
+  };
 }
 
 export function configurationRequestHeaders(recipientIdentity, edgeIdentity) {

@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error Standalone recovery CLI deliberately independent of app runtime.
-import { boundedJson } from "../scripts/backupRuntimeConfiguration.mjs";
+import { boundedJson, identityClaimMatches } from "../scripts/backupRuntimeConfiguration.mjs";
 describe("private configuration response diagnostics", () => {
+  it("emits only booleans for identity context, not arbitrary token claims", () => {
+    const token = `header.${Buffer.from(JSON.stringify({ aud: "expected", private: "do-not-expose" })).toString("base64url")}.signature`;
+    const matches = identityClaimMatches(token, "expected");
+    expect(matches.audience).toBe(true);
+    expect(matches.subject).toBe(false);
+    expect(Object.values(matches).every(value => typeof value === "boolean")).toBe(true);
+    expect(JSON.stringify(matches)).not.toContain("do-not-expose");
+    expect(Object.values(identityClaimMatches("invalid", "expected")).every(value => value === false)).toBe(true);
+  });
   it("classifies hosting denial without exposing callback nonce or provider details", async () => {
     const response = Response.json({ protection: { vercel_auth_enabled: true, vercel_auth_callback: "private-nonce" }, error: { message: "untrusted-private-details" } }, { status: 401 });
     const error = await boundedJson(response).catch((e: unknown) => e);
