@@ -11,7 +11,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe("restored encrypted records", () => {
   it("uses actual application crypto and reports only aggregate coverage", () => {
     const secret = createMfaSecret();
-    expect(verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: encryptMfaSecret(secret) }], google: [{ encryptedRefreshToken: encryptGoogleRefreshToken("fixture-not-a-production-token") }], reviews: encryptGoogleRefreshToken("fixture-reviews") })).toEqual({ mfaSecrets: 1, googleTokens: 1, reviewsCredentials: 1, mediaSignatureOwnership: true });
+    expect(verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: encryptMfaSecret(secret) }], google: [{ encryptedRefreshToken: encryptGoogleRefreshToken("fixture-not-a-production-token") }], reviews: encryptGoogleRefreshToken("fixture-reviews") })).toEqual({ mfaSecrets: 1, googleTokens: 1, revokedGoogleConnections: 0, reviewsCredentials: 1, mediaSignatureOwnership: true });
   });
   it("fails on wrong recovered keys and enabled MFA without its secret", () => {
     const mfa = encryptMfaSecret(createMfaSecret()); const google = encryptGoogleRefreshToken("fixture-token");
@@ -22,6 +22,10 @@ describe("restored encrypted records", () => {
     expect(() => verifyEncryptedRecords({ mfa: [{ mfaEnabled: true, mfaSecretEncrypted: null }], google: [], reviews: null })).toThrow();
   });
   it("explicitly reports zero existing encrypted records, without pretending MFA or OAuth is configured", () => {
-    expect(verifyEncryptedRecords({ mfa: [], google: [], reviews: null })).toEqual({ mfaSecrets: 0, googleTokens: 0, reviewsCredentials: 0, mediaSignatureOwnership: true });
+    expect(verifyEncryptedRecords({ mfa: [], google: [], reviews: null })).toEqual({ mfaSecrets: 0, googleTokens: 0, revokedGoogleConnections: 0, reviewsCredentials: 0, mediaSignatureOwnership: true });
+  });
+  it("counts revoked connections separately and rejects all other invalid ciphertext", () => {
+    expect(verifyEncryptedRecords({ mfa: [], google: [{ encryptedRefreshToken: "REVOKED" }], reviews: null })).toMatchObject({ googleTokens: 0, revokedGoogleConnections: 1 });
+    expect(() => verifyEncryptedRecords({ mfa: [], google: [{ encryptedRefreshToken: "REVOKED-with-extra-data" }], reviews: null })).toThrow();
   });
 });

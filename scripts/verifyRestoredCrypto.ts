@@ -19,14 +19,21 @@ export function verifyEncryptedRecords(records: Records) {
     if (!/^[A-Z2-7]{16,128}$/.test(secret) || !verifyTotp(secret, totpCode(secret))) throw new Error("Invalid restored MFA material");
     mfaSecrets++;
   }
-  for (const row of records.google) if (!decryptGoogleRefreshToken(row.encryptedRefreshToken)) throw new Error("Empty restored Google token");
+  let googleTokens = 0; let revokedGoogleConnections = 0;
+  for (const row of records.google) {
+    // The disconnect handler intentionally removes ciphertext and stores this
+    // exact tombstone. Do not mistake a revoked credential for broken recovery.
+    if (row.encryptedRefreshToken === "REVOKED") { revokedGoogleConnections++; continue; }
+    if (!decryptGoogleRefreshToken(row.encryptedRefreshToken)) throw new Error("Empty restored Google token");
+    googleTokens++;
+  }
   if (records.reviews && !decryptGoogleRefreshToken(records.reviews)) throw new Error("Empty restored reviews credential");
   const url = privateImageUrl("offline-recovery-probe", "client", "offline-client");
   const request = new Request("http://127.0.0.1" + url);
   if (!verifyPrivateImageToken(request, "offline-recovery-probe", "client", "offline-client")
     || verifyPrivateImageToken(request, "offline-recovery-probe", "client", "another-client")
     || verifyPrivateImageToken(request, "offline-recovery-probe", "admin", "offline-client")) throw new Error("Restored media signing failed");
-  return { mfaSecrets, googleTokens: records.google.length, reviewsCredentials: records.reviews ? 1 : 0, mediaSignatureOwnership: true };
+  return { mfaSecrets, googleTokens, revokedGoogleConnections, reviewsCredentials: records.reviews ? 1 : 0, mediaSignatureOwnership: true };
 }
 
 async function main() {
