@@ -111,8 +111,10 @@ jobs:
             exit 1
           fi
           umask 077
+          psql --host=localhost --username=postgres --dbname=coolink_restore -Xq -v ON_ERROR_STOP=1 -f scripts/offlineSupabaseRoles.sql
           if ! pg_restore --exit-on-error --host=localhost --username=postgres --dbname=coolink_restore --no-owner --no-privileges restored/protected.dump > protected-restore.private.log 2>&1; then
             echo "::error::Protected schema restore failed; private diagnostics withheld."
+            node -e 'const fs=require("fs"); const text=fs.readFileSync("protected-restore.private.log","utf8"); const role=text.match(/role "(anon|authenticated|service_role|supabase_auth_admin|supabase_storage_admin|supabase_admin|dashboard_user)" does not exist/); if(role) console.error("OFFLINE_ROLE_MISSING", role[1]); else console.error("OFFLINE_PROTECTED_RESTORE_FAILED");'
             exit 1
           fi
           psql --host=localhost --username=postgres --dbname=coolink_restore -XqAt -v ON_ERROR_STOP=1 -f scripts/backupProtectedCounts.sql > protected-restored-counts.txt
