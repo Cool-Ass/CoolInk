@@ -28,8 +28,8 @@ export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun) {
   } finally { key.fill(0); plaintext?.fill(0); }
 }
 
-async function boundedJson(response) {
-  if (!response.ok || !response.body) throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status });
+export async function boundedJson(response) {
+  if (!response.body) throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status });
   const reader = response.body.getReader(); const chunks = []; let size = 0;
   try {
     for (;;) {
@@ -37,7 +37,15 @@ async function boundedJson(response) {
       size += value.byteLength; if (size > 262144) { await reader.cancel(); throw new Error("Invalid configuration response"); }
       chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString());
+    const body = JSON.parse(Buffer.concat(chunks).toString());
+    if (!response.ok) {
+      // Classify only fixed public denial shapes. Never retain or print the
+      // provider callback URL, nonce, arbitrary error text or response body.
+      const denial = body?.protection?.vercel_auth_enabled === true ? "hosting-protection"
+        : body?.error === "Unauthorized" ? "application-identity" : "unclassified";
+      throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status, denial });
+    }
+    return body;
   } finally { reader.releaseLock(); }
 }
 
@@ -114,7 +122,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else await operation(resolve(directory)).catch(error => {
     // Only fixed stage names and numeric HTTP status; never body, URL, token,
     // decrypted values or untrusted exception messages.
-    console.error("Configuration backup failed (private details suppressed)", { stage: mode === "capture" ? captureStage : "offline-verification", ...(Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? { httpStatus: error.httpStatus } : {}) });
+    console.error("Configuration backup failed (private details suppressed)", { stage: mode === "capture" ? captureStage : "offline-verification", ...(Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? { httpStatus: error.httpStatus } : {}), ...(["hosting-protection", "application-identity", "unclassified"].includes(error?.denial) ? { denial: error.denial } : {}) });
     process.exitCode = 1;
   });
 }
