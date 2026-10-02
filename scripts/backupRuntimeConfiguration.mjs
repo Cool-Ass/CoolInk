@@ -30,8 +30,8 @@ export function verifyConfigurationEnvelope(envelope, privateKey, expectedRun, v
   } finally { key.fill(0); plaintext?.fill(0); }
 }
 
-async function boundedJson(response) {
-  if (!response.ok || !response.body) throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status });
+export async function boundedJson(response) {
+  if (!response.body) throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status });
   const reader = response.body.getReader(); const chunks = []; let size = 0;
   try {
     for (;;) {
@@ -39,7 +39,15 @@ async function boundedJson(response) {
       size += value.byteLength; if (size > 262144) { await reader.cancel(); throw new Error("Invalid configuration response"); }
       chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString());
+    const body = JSON.parse(Buffer.concat(chunks).toString());
+    if (!response.ok) {
+      // Classify only fixed public denial shapes. Never retain or print the
+      // provider callback URL, nonce, arbitrary error text or response body.
+      const denial = body?.protection?.vercel_auth_enabled === true ? "hosting-protection"
+        : body?.error === "Unauthorized" ? "application-identity" : "unclassified";
+      throw Object.assign(new Error("Configuration service unavailable"), { httpStatus: response.status, denial });
+    }
+    return body;
   } finally { reader.releaseLock(); }
 }
 
@@ -49,7 +57,28 @@ async function workflowIdentity(audience) {
   const identity = await boundedJson(await fetch(tokenUrl, { headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }, signal: AbortSignal.timeout(15000), redirect: "error" }));
   if (typeof identity.value !== "string" || identity.value.length > 10000) throw new Error("Backup identity unavailable");
   console.log("::add-mask::" + identity.value);
+  // Inspect only expected-claim equality, never claim values or the JWT. This
+  // is diagnostic, not signature verification or authorization authority.
+  const matches = identityClaimMatches(identity.value, audience);
+  console.log("Backup identity expected-claim matches", matches);
+  if (Object.values(matches).some(value => !value)) throw new Error("Backup identity context mismatch");
   return identity.value;
+}
+
+export function identityClaimMatches(token, audience) {
+  let claims;
+  try { claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()); }
+  catch { claims = {}; }
+  return {
+    issuer: claims.iss === "https://token.actions.githubusercontent.com",
+    audience: claims.aud === audience,
+    repository: claims.repository === "Cool-Ass/CoolInk",
+    repositoryId: claims.repository_id === "1341372006",
+    ownerId: claims.repository_owner_id === "319302461",
+    branch: claims.ref === "refs/heads/main",
+    workflow: claims.workflow_ref === "Cool-Ass/CoolInk/.github/workflows/backup.yml@refs/heads/main",
+    subject: claims.sub === "repo:Cool-Ass/CoolInk:ref:refs/heads/main",
+  };
 }
 
 export function configurationRequestHeaders(recipientIdentity, edgeIdentity) {
@@ -116,7 +145,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else await operation(resolve(directory)).catch(error => {
     // Only fixed stage names and numeric HTTP status; never body, URL, token,
     // decrypted values or untrusted exception messages.
-    console.error("Configuration backup failed (private details suppressed)", { stage: mode === "capture" ? captureStage : "offline-verification", ...(Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? { httpStatus: error.httpStatus } : {}) });
+    console.error("Configuration backup failed (private details suppressed)", { stage: mode === "capture" ? captureStage : "offline-verification", ...(Number.isInteger(error?.httpStatus) && error.httpStatus >= 100 && error.httpStatus <= 599 ? { httpStatus: error.httpStatus } : {}), ...(["hosting-protection", "application-identity", "unclassified"].includes(error?.denial) ? { denial: error.denial } : {}) });
     process.exitCode = 1;
   });
 }
