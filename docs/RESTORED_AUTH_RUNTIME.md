@@ -15,7 +15,12 @@ identities; then a freshly generated fixture in that **offline database** proves
 password login and `/user` verification. No customer's password is requested or
 tested. Inventory IDs, emails, JWTs and server diagnostics are never logged.
 
-Two local inventory tests, syntax, changed-file lint and typecheck PASS. Actual
+Three local inventory/search-path tests PASS. Diagnostic run 37006653072 failed
+at managed migration `20250731150234_add_oauth_clients_table.up.sql` (SQLSTATE
+42703). GoTrue resolves its unqualified `schema_migrations` ledger using the
+connection search path; the restored owner is postgres, not the hosted Auth
+role. The drill now explicitly uses `auth,extensions,public` only on its local
+Auth connection. No source schema or migration markers are changed. Actual
 GoTrue startup and restored inventory require a diagnostic workflow run before
 this can be considered successful. This is not full application DR: MFA/Google
 decryption, private-media serving, complete application login and approved
@@ -24,3 +29,9 @@ RPO/RTO remain separate checks. No production-domain promotion.
 Rollback: remove this additional offline check if incompatible, keeping failure
 explicit and A01 open; never change the source DB or rotate production keys to
 make a drill pass.
+
+The staged runtime-key capture is blocked by Vercel Deployment Protection, not
+missing source credentials. Recovery will use a short-lived GitHub OIDC trusted
+source scoped to Cool-Ass/CoolInk, main, backup.yml, production only, audience
+https://github.com/Cool-Ass. A separate key-bound token remains required by the
+escrow application. No static bypass secret or public exception is necessary.
