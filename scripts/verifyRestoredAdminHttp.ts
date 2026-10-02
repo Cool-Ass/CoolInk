@@ -24,28 +24,37 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
   for (const key of Object.keys(env)) if (/^(GOOGLE_|VAPID_|S3_|BLOB_|SUPABASE_SERVICE_ROLE_KEY|BACKUP_ENCRYPTION_PASSWORD|VERCEL_|CRON_SECRET)/.test(key)) delete env[key as keyof typeof env];
   const next = resolve("node_modules/next/dist/bin/next");
   let server: ReturnType<typeof spawn> | undefined;
+  let stage = "offline-build";
   try {
     const build = spawnSync(process.execPath, [next, "build"], { env, stdio: "ignore", timeout: 240000 });
     if (build.status !== 0) throw new Error("Offline application build failed");
+    stage = "offline-server-start";
     const runningServer = spawn(process.execPath, [next, "start", "--hostname", "127.0.0.1", "--port", "3217"], { env, stdio: "ignore" });
     server = runningServer;
     const call = (path: string, init: RequestInit = {}) => fetch(origin + path, { ...init, redirect: "manual", signal: AbortSignal.timeout(10000) });
     let ready = false;
     for (let attempt = 0; attempt < 60; attempt++) {
       if (runningServer.exitCode !== null) throw new Error("Offline server exited");
-      try { if ((await call("/api/admin/clients")).status === 401) { ready = true; break; } } catch { /* bounded startup */ }
+      try { if ((await call("/api/admin/mfa")).status === 401) { ready = true; break; } } catch { /* bounded startup */ }
       await new Promise(done => setTimeout(done, 500));
     }
     if (!ready) throw new Error("Offline server did not start");
     const login = (mfaCode?: string, requestOrigin = origin) => call("/api/admin/login", { method: "POST", headers: { origin: requestOrigin, "content-type": "application/json" }, body: JSON.stringify({ email: fixture.email, password, mfaCode }) });
+    stage = "mfa-boundary";
     if ((await login(undefined, "https://example.invalid")).status !== 403 || (await login()).status !== 428 || (await login("invalid-code")).status !== 401) throw new Error("Restored MFA boundary failed");
+    stage = "mfa-login";
     const authenticated = await login(totpCode(seed));
     const cookie = authenticated.headers.get("set-cookie")?.match(/coolink_admin_session=([^;]+)/)?.[0];
     if (authenticated.status !== 200 || !cookie) throw new Error("Restored MFA login failed");
-    if ((await call("/api/admin/clients", { headers: { cookie } })).status !== 200) throw new Error("Restored session not usable");
+    stage = "authenticated-session";
+    if ((await call("/api/admin/mfa", { headers: { cookie } })).status !== 200) throw new Error("Restored session not usable");
+    stage = "session-revocation";
     await prisma.adminUser.update({ where: { id: fixture.id }, data: { sessionVersion: { increment: 1 } } });
-    if ((await call("/api/admin/clients", { headers: { cookie } })).status !== 401) throw new Error("Restored session revocation failed");
+    if ((await call("/api/admin/mfa", { headers: { cookie } })).status !== 401) throw new Error("Restored session revocation failed");
     return { productionHttpLogin: true, mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
+  } catch {
+    console.error("RESTORED_ADMIN_HTTP_FAILED_STAGE", stage);
+    throw new Error("Restored admin HTTP verification failed");
   } finally {
     if (server && server.exitCode === null) {
       server.kill("SIGTERM");
