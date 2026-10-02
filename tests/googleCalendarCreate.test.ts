@@ -23,6 +23,13 @@ test("a lost POST response is recovered by reading the same matching event", asy
   expect(request.mock.calls[1][1]).toBe(`/calendars/calendar/events/${id}`);
   expect(request).toHaveBeenCalledTimes(2);
 });
+test("a local change after a lost link cannot create a second remote event", async () => {
+  request.mockResolvedValueOnce({ id: "created" }).mockRejectedValueOnce(new GoogleCalendarApiError("Exists", 409)).mockResolvedValueOnce({ id: "created", start: payload.start, end: payload.end });
+  await createIdempotentGoogleEvent("token", "calendar", "appointment", "initial|", payload);
+  const changed = googleEventPayload({ startsAt: new Date("2026-10-10T12:00:00Z"), endsAt: new Date("2026-10-10T13:00:00Z") });
+  await expect(createIdempotentGoogleEvent("token", "calendar", "appointment", "initial|", changed)).rejects.toThrow("ręcznego wyjaśnienia");
+  expect(JSON.parse(request.mock.calls[0][2].body).id).toBe(JSON.parse(request.mock.calls[1][2].body).id);
+});
 test.each([{ status: "cancelled" }, { start: { dateTime: "2026-10-10T12:00:00Z" }, end: { dateTime: "2026-10-10T13:00:00Z" } }])("does not adopt deleted or remotely changed events", async (event) => {
   request.mockRejectedValueOnce(new GoogleCalendarApiError("Exists", 409)).mockResolvedValueOnce(event);
   await expect(createIdempotentGoogleEvent("token", "calendar", "appointment", "generation", payload)).rejects.toThrow("ręcznego wyjaśnienia");

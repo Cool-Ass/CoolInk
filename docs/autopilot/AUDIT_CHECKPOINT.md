@@ -75,7 +75,9 @@ Branch `ai/audit-sync-outbox` integruje PR 19–25. Migracja HIGH RISK dodaje
 trigger Appointment, zapisujący marker w istniejącym prywatnym SiteSetting
 w tej samej transakcji. Claim SQL jest wyłączny, lease wygasa po 2 minutach;
 nowa mutacja zachowuje aktywny lease, a stary worker nie usuwa nowego zadania.
-Retry zachowuje nonce generacji; SHA-256 daje stały Google event ID.
+Retry zachowuje nonce kolejki; Google event ID opiera się na trwałej poprzedniej
+tożsamości zdalnego wpisu, nie na zmieniającym się nonce mutacji. Zapobiega to
+duplikacji także przy zmianie wizyty po utracie zapisu powiązania w bazie.
 HTTP 409 odzyskuje istniejący obiekt dopiero po sprawdzeniu zakresu czasu;
 zmiana/usunięcie po stronie Google pozostaje konfliktem. Manual sync używa
 tego samego claim zamiast równoległego eksportu. Wywołania Google mają limit 15 s.

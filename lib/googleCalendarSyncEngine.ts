@@ -42,10 +42,13 @@ async function removeGoogleEvent(accessToken: string, calendarId: string, eventI
  * the selected Google calendar current without running the much heavier busy
  * calendar import on every booking action.
  */
-async function exportAppointmentToGoogle(appointmentId: string, generation: string, cachedToken?: ExportToken) {
+async function exportAppointmentToGoogle(appointmentId: string, cachedToken?: ExportToken) {
   const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
   if (!appointment) return false;
   const sync = await prisma.googleCalendarEventSync.findUnique({ where: { appointmentId } });
+  // Persisted remote identity is stable across local revisions and failed DB writes.
+  // Queue nonces change on each mutation and cannot be used as remote event IDs.
+  const generation = `${sync?.googleEventId ?? "initial"}|${sync?.remoteDeletedAt?.toISOString() ?? ""}`;
   const connection = sync
     ? await prisma.googleCalendarConnection.findUnique({ where: { id: sync.connectionId }, include: { selections: true } })
     : await unambiguousExportConnection();
@@ -128,7 +131,7 @@ export async function syncAppointmentToGoogle(appointmentId: string, cachedToken
   const claim = await claimGoogleExport(appointmentId);
   if (!claim) return false;
   try {
-    const result = await exportAppointmentToGoogle(appointmentId, claim.nonce, cachedToken);
+    const result = await exportAppointmentToGoogle(appointmentId, cachedToken);
     await releaseGoogleExport(claim, result);
     return result;
   } catch (error) {
