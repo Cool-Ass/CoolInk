@@ -2,6 +2,17 @@
 
 ## Recovery update — 2026-10-02 16:44 UTC
 
+Follow-up 16:49 UTC: restore **37036011914 SUCCESS** / `c076cb4`, same
+trusted saved main artifact. Actual restored crypto records: 1 MFA secret,
+1 Google token, 0 revoked connections, 0 reviews credentials; media ownership
+signatures and sessions PASS with recovered keys. This does not yet prove
+full application HTTP/private-media serving. Prepared additional real Next
+production HTTP admin login/MFA/session-revocation drill: disposable local DB
+only, cloned ciphertext in a new ephemeral fixture, no original account
+password changes, suppressed application logs, local-fetch-only child.
+Obsolete pending CI 37036016375 cancelled before startup; never cancelled a
+running isolated database worker. Public domain not promoted.
+
 - PR #32 exact `a4fcc11` CI 37016684344 and all checks/status SUCCESS;
   recovery-only merge `eb6ff76`. Staged production deployment
   `cool-m49mvi8je-cool-ass.vercel.app` Ready, domains assignment Skipped.

@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 import { createMfaSecret, encryptMfaSecret } from "../lib/adminMfa";
 import { encryptGoogleRefreshToken } from "../lib/googleCalendarCrypto";
 import { verifyEncryptedRecords } from "../scripts/verifyRestoredCrypto";
+import { verifyRestoredAdminHttp } from "../scripts/verifyRestoredAdminHttp";
+import type { PrismaClient } from "@prisma/client";
 beforeEach(() => {
   vi.stubEnv("SESSION_SECRET", "offline-only-session-material-at-least-32-characters");
   vi.stubEnv("MFA_ENCRYPTION_KEY", "offline-only-mfa-material-at-least-32-characters");
@@ -11,6 +13,17 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("restored encrypted records", () => {
+  it("refuses the HTTP drill outside a disposable runner before querying any database", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "false");
+    const query = vi.fn();
+    await expect(verifyRestoredAdminHttp({ $queryRawUnsafe: query } as unknown as PrismaClient)).rejects.toThrow("Disposable runner required");
+    expect(query).not.toHaveBeenCalled();
+  });
+  it("blocks provider fetches in the recovery application child before network access", () => {
+    const result = spawnSync(process.execPath, ["--require", resolve("scripts/recoveryLocalFetch.cjs"), "-e", 'try { fetch("https://example.invalid/private"); process.exitCode = 2; } catch { process.stdout.write("blocked"); }'], { encoding: "utf8", timeout: 10000 });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("blocked");
+  });
   it("executes the real tsx CLI without CommonJS/top-level-await transform errors", () => {
     const result = spawnSync(process.execPath, [resolve("node_modules/tsx/dist/cli.mjs"), resolve("scripts/verifyRestoredCrypto.ts")], { env: { ...process.env, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "invalid" }, encoding: "utf8", timeout: 10000 });
     expect(result.status).toBe(1);

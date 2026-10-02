@@ -6,6 +6,7 @@ import { decryptMfaSecret, totpCode, verifyTotp } from "../lib/adminMfa";
 import { decryptGoogleRefreshToken } from "../lib/googleCalendarCrypto";
 import { privateImageUrl, verifyPrivateImageToken } from "../lib/privateMedia";
 import { createSessionToken, verifySessionToken } from "../lib/session";
+import { verifyRestoredAdminHttp } from "./verifyRestoredAdminHttp";
 
 type Records = { mfa: Array<{ mfaEnabled: boolean; mfaSecretEncrypted: string | null }>; google: Array<{ encryptedRefreshToken: string }>; reviews: string | null };
 export function verifyEncryptedRecords(records: Records) {
@@ -73,7 +74,9 @@ async function main() {
     stage = "restored-session-signing";
     const token = await createSessionToken({ sub: "offline-admin", email: "drill@example.invalid", version: 1 });
     if ((await verifySessionToken(token))?.sub !== "offline-admin" || await verifySessionToken(token + "tampered")) throw new Error("Restored session signing failed");
-    console.log(JSON.stringify({ verified: "restored-cryptographic-records", ...coverage, sessionSigning: true, deploymentSha: actual.deploymentSha }));
+    stage = "restored-admin-http";
+    const http = await verifyRestoredAdminHttp(prisma);
+    console.log(JSON.stringify({ verified: "restored-cryptographic-records", ...coverage, ...http, sessionSigning: true, deploymentSha: actual.deploymentSha }));
   } catch { console.error(`Restored cryptographic verification failed at ${stage}; private diagnostics withheld`); process.exitCode = 1; }
   finally {
     for (const [key, value] of previous) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
