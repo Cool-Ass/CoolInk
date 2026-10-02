@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ identity: vi.fn(), reserve: vi.fn(), retry: vi.fn(), update: vi.fn() }));
+const mocks = vi.hoisted(() => ({ identity: vi.fn(), reserve: vi.fn(), retry: vi.fn(), update: vi.fn(), health: vi.fn() }));
+vi.mock("@/lib/googleQueueHealth", () => ({ monitorGoogleQueue: mocks.health }));
 vi.mock("@/lib/githubWorkerAuth", () => ({ googleWorkerIdentity: mocks.identity }));
 vi.mock("@/lib/webhookSecurity", () => ({ reserveWebhook: mocks.reserve }));
 vi.mock("@/lib/googleCalendarSyncEngine", () => ({ retryGoogleCalendarExports: mocks.retry }));
@@ -11,6 +12,7 @@ beforeEach(() => {
   mocks.identity.mockResolvedValue("token-id");
   mocks.reserve.mockResolvedValue({ duplicate: false, receipt: { id: "receipt" } });
   mocks.retry.mockResolvedValue({ checked: 1, synced: 1 });
+  mocks.health.mockResolvedValue({ healthy: true });
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 describe("Google worker endpoint", () => {
@@ -39,5 +41,12 @@ describe("Google worker endpoint", () => {
     const response = await POST(request());
     expect(response.status).toBe(503);
     expect(JSON.stringify([await response.json(), mocks.update.mock.calls, log.mock.calls])).not.toContain("private token");
+  });
+  it("does not report a successful batch when remaining queue age exceeds its budget", async () => {
+    mocks.health.mockResolvedValue({ healthy: false, alertAttempted: true, pushAccepted: false });
+    const response = await POST(request());
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ ok: false, error: "GOOGLE_EXPORT_QUEUE_STALE", pushAccepted: false });
+    expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "failed", error: "GOOGLE_EXPORT_QUEUE_STALE" }) }));
   });
 });

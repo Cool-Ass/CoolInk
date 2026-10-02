@@ -3,6 +3,7 @@ import { googleWorkerIdentity } from "@/lib/githubWorkerAuth";
 import { reserveWebhook } from "@/lib/webhookSecurity";
 import { retryGoogleCalendarExports } from "@/lib/googleCalendarSyncEngine";
 import { prisma } from "@/lib/prisma";
+import { monitorGoogleQueue } from "@/lib/googleQueueHealth";
 
 export const maxDuration = 300;
 
@@ -17,6 +18,11 @@ export async function POST(request: Request) {
   if (reserved.duplicate) return NextResponse.json({ error: "Replay rejected" }, { status: 409 });
   try {
     const result = await retryGoogleCalendarExports();
+    const health = await monitorGoogleQueue();
+    if (!health.healthy) {
+      await prisma.webhookReceipt.update({ where: { id: reserved.receipt.id }, data: { status: "failed", error: "GOOGLE_EXPORT_QUEUE_STALE", processedAt: new Date() } });
+      return NextResponse.json({ ok: false, error: "GOOGLE_EXPORT_QUEUE_STALE", eventId, ...health }, { status: 503 });
+    }
     await prisma.webhookReceipt.update({ where: { id: reserved.receipt.id }, data: { status: "processed", processedAt: new Date() } });
     return NextResponse.json({ ok: true, ...result });
   } catch {
