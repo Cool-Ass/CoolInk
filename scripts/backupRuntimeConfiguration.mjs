@@ -77,7 +77,7 @@ export function identityClaimMatches(token, audience) {
     ownerId: claims.repository_owner_id === "319302461",
     branch: claims.ref === "refs/heads/main",
     workflow: claims.workflow_ref === "Cool-Ass/CoolInk/.github/workflows/backup.yml@refs/heads/main",
-    subject: claims.sub === "repo:Cool-Ass/CoolInk:ref:refs/heads/main",
+    subject: claims.sub === "repo:Cool-Ass@319302461/CoolInk@1341372006:ref:refs/heads/main",
   };
 }
 
