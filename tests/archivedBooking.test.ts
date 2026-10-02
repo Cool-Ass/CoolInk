@@ -10,7 +10,7 @@ vi.mock("@/lib/googleCalendarSyncEngine", () => ({ syncAppointmentToGoogle: vi.f
 vi.mock("@/lib/prisma", () => ({ prisma: {
   studioDocument: { findMany: async () => [] },
   availableSlot: { findFirst: async () => ({ title: "Tatuaż" }) },
-  tattooProject: { findFirst: async () => ({ id: "project" }) },
+  tattooProject: { findFirst: async () => ({ id: "project" }), findUnique: async () => ({ id: "project" }) },
   $transaction: (run: (tx: unknown) => unknown) => run({
     tattooProject: { findFirst: m.lockedFind, findUnique: m.adminFind },
     appointment: { create: m.create },
@@ -18,9 +18,15 @@ vi.mock("@/lib/prisma", () => ({ prisma: {
 } }));
 import { POST as clientBooking } from "../app/api/client/appointments/route";
 import { POST as adminBooking } from "../app/api/admin/appointments/route";
+import { POST as proposeBooking } from "../app/api/admin/projects/[id]/proposed-appointment/route";
 const request = () => new Request("https://coolink.test/api/appointments", { method: "POST", body: JSON.stringify({ projectId: "project", confirmationAcknowledged: true, startsAt: "2027-01-01T10:00:00Z", endsAt: "2027-01-01T11:00:00Z" }) });
 beforeEach(() => { vi.clearAllMocks(); m.lockedFind.mockResolvedValue({ clientArchivedAt: new Date() }); m.adminFind.mockResolvedValue({ id: "project", clientArchivedAt: new Date() }); });
 describe("archive and booking serialization", () => {
+  it("also rejects proposals for an archived project after acquiring the lock", async () => {
+    expect((await proposeBooking(request(), { params: Promise.resolve({ id: "project" }) })).status).toBe(409);
+    expect(m.lock.mock.invocationCallOrder[0]).toBeLessThan(m.adminFind.mock.invocationCallOrder[0]);
+    expect(m.create).not.toHaveBeenCalled();
+  });
   it("rechecks archive after the calendar lock even when the earlier lookup succeeded", async () => {
     expect((await clientBooking(request())).status).toBe(409);
     expect(m.lock.mock.invocationCallOrder[0]).toBeLessThan(m.lockedFind.mock.invocationCallOrder[0]);

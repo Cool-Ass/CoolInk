@@ -4,13 +4,14 @@ import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { sendPushToAdmins, sendPushToClient } from "@/lib/webPush";
 import { offerReleasedRange } from "@/lib/waitlistAutomation";
 import { applyOperationalDataRetention } from "@/lib/dataRetention";
-import { retryGoogleCalendarExports } from "@/lib/googleCalendarSyncEngine";
+import { retryGoogleCalendarExports, refreshGoogleBusyCalendars } from "@/lib/googleCalendarSyncEngine";
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
   if (!expected || request.headers.get("authorization") !== `Bearer ${expected}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const now = new Date();
   const googleRetry = await retryGoogleCalendarExports();
+  const googleBusy = await refreshGoogleBusyCalendars();
   const expiredOffers = await prisma.waitlistEntry.findMany({ where: { status: "offered", offerExpiresAt: { lte: now } }, include: { offeredAppointment: { select: { id: true, startsAt: true, endsAt: true } }, project: { select: { id: true, clientId: true, title: true } } } });
   let expired = 0;
   for (const entry of expiredOffers) {
@@ -80,5 +81,5 @@ export async function GET(request: Request) {
   }
   }
   const retention = await applyOperationalDataRetention().catch(() => null);
-  return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired, retention, googleRetry });
+  return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired, retention, googleRetry, googleBusy });
 }

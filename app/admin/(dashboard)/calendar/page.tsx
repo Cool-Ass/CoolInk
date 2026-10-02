@@ -18,7 +18,7 @@ export default async function CalendarPage() {
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
     prisma.availableSlot.findMany({ where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
     prisma.promotion.findMany({ where: { endsAt: { gte: from } }, orderBy: { startsAt: "asc" } }),
-    prisma.calendarEvent.findMany({ where: { endsAt: { gte: from } }, include: { googleCalendarSync: { select: { syncStatus: true } } }, orderBy: { startsAt: "asc" } }),
+    prisma.calendarEvent.findMany({ where: { endsAt: { gte: from }, OR: [{ googleCalendarSync: { is: null } }, { googleCalendarSync: { is: { syncStatus: { notIn: ["INACTIVE", "DELETED_REMOTE"] }, connection: { active: true } } } }] }, include: { googleCalendarSync: { select: { syncStatus: true } } }, orderBy: { startsAt: "asc" } }),
     prisma.client.findMany({ include: { projects: { select: { id: true, title: true }, orderBy: { updatedAt: "desc" } } }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
     prisma.siteSetting.findMany({ where: { key: { in: ["booking_buffer_minutes", "booking_buffer_rules", "calendar_visible_months", "calendar_default_free_start", "calendar_default_free_end"] } }, select: { key: true, value: true } }),
   ]);

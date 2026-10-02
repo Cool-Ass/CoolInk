@@ -84,7 +84,7 @@ export async function bookingConflict(startsAt: Date, endsAt: Date, excludeAppoi
   const [appointmentCandidates, blockCandidates, externalBusy] = await Promise.all([
     db.appointment.findMany({ where: { ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}), status: { notIn: ["cancelled", "no_show"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: new Date() } } } }, startsAt: { lt: searchEnd }, endsAt: { gt: searchStart } }, orderBy: { startsAt: "asc" }, select: { id: true, startsAt: true, endsAt: true, serviceType: true, workstation: true, project: { select: { title: true } } } }),
     db.availabilityBlock.findMany({ where: { startsAt: { lt: new Date(endsAt.getTime() + 3 * 60 * 60 * 1000) }, endsAt: { gt: new Date(startsAt.getTime() - 3 * 60 * 60 * 1000) } } }),
-    db.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", calendarEvent: { startsAt: { lt: new Date(endsAt.getTime() + requestedBuffer * 60_000) }, endsAt: { gt: new Date(startsAt.getTime() - requestedBuffer * 60_000) } } }, select: { id: true } }),
+    db.googleCalendarEventSync.findFirst({ where: { appointmentId: null, remoteDeletedAt: null, syncStatus: "SYNCED", connection: { active: true }, calendarEvent: { startsAt: { lt: new Date(endsAt.getTime() + requestedBuffer * 60_000) }, endsAt: { gt: new Date(startsAt.getTime() - requestedBuffer * 60_000) } } }, select: { id: true } }),
   ]);
   const matches = appointmentCandidates.map((candidate) => {
     const existingDuration = Math.round((candidate.endsAt.getTime() - candidate.startsAt.getTime()) / 60_000);
