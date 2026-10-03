@@ -1,3 +1,4 @@
+BEGIN;
 -- Server-only quarantine: serialize client writes with an approved erasure.
 -- A transaction-local request ID is used only by the executor. No public role
 -- receives SQL access or a new policy. Retained evidence is never cascaded.
@@ -6,6 +7,14 @@ RETURNS text LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 DECLARE owner_id text;
 BEGIN
   IF table_name = 'Client' THEN RETURN row_data->>'id'; END IF;
+  IF table_name = 'SiteSetting' THEN
+    IF left(row_data->>'key', 13) = 'google_retry:' THEN
+      SELECT p."clientId" INTO owner_id FROM public."Appointment" a
+        JOIN public."TattooProject" p ON p.id = a."projectId"
+        WHERE a.id = substring(row_data->>'key' FROM 14);
+    END IF;
+    RETURN owner_id;
+  END IF;
   IF row_data ? 'clientId' THEN RETURN row_data->>'clientId'; END IF;
   IF row_data ? 'projectId' THEN
     SELECT "clientId" INTO owner_id FROM public."TattooProject" WHERE id = row_data->>'projectId';
@@ -40,8 +49,9 @@ BEGIN
   FOREACH table_name IN ARRAY ARRAY['Client', 'AccountDeletionRequest', 'TattooProject',
     'Appointment', 'ProjectImage', 'ProjectMessage', 'ProjectActivity', 'DirectMessage',
     'DocumentAcceptance', 'LoyaltyEntry', 'ClientNotification', 'PushSubscription',
-    'WaitlistEntry', 'ReminderDelivery', 'GoogleCalendarEventSync']
+    'WaitlistEntry', 'ReminderDelivery', 'GoogleCalendarEventSync', 'SiteSetting']
   LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS coolink_privacy_guard ON public.%I', table_name);
     EXECUTE format('CREATE TRIGGER coolink_privacy_guard BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.coolink_privacy_write_guard()', table_name);
   END LOOP;
 END $$;
@@ -49,14 +59,16 @@ REVOKE ALL ON FUNCTION public.coolink_privacy_owner(text, jsonb) FROM PUBLIC, an
 REVOKE ALL ON FUNCTION public.coolink_privacy_write_guard() FROM PUBLIC, anon, authenticated;
 
 -- Existing JWTs can outlive an Auth deletion or ban. Deny direct Storage
--- access for quarantined or unlinked identities, independent of token expiry.
+-- access for quarantined, banned or deleted identities, independent of token expiry.
 CREATE OR REPLACE FUNCTION public.coolink_storage_identity_active()
 RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public."Client" c
+    SELECT 1 FROM auth.users u WHERE u.id = auth.uid()
+      AND (u.banned_until IS NULL OR u.banned_until <= now())
+  ) AND NOT EXISTS (
+    SELECT 1 FROM public."Client" c JOIN public."AccountDeletionRequest" r ON r."clientId" = c.id
     WHERE c."supabaseUserId" = auth.uid()::text
-      AND NOT EXISTS (SELECT 1 FROM public."AccountDeletionRequest" r
-        WHERE r."clientId" = c.id AND r.status IN ('executing', 'execution_failed', 'completed', 'completed_retained', 'retention_review', 'awaiting_retention_execution', 'retention_retained'))
+      AND r.status IN ('executing', 'execution_failed', 'completed', 'completed_retained', 'retention_review', 'awaiting_retention_execution', 'retention_retained')
   );
 $$;
 REVOKE ALL ON FUNCTION public.coolink_storage_identity_active() FROM PUBLIC, anon;
@@ -70,3 +82,4 @@ BEGIN
       WITH CHECK (bucket_id <> ''project-inspirations'' OR public.coolink_storage_identity_active())';
   END IF;
 END $$;
+COMMIT;

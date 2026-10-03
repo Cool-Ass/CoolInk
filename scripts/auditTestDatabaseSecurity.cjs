@@ -53,7 +53,7 @@ async function main() {
   // One individually reviewed boolean Storage guard. No arguments, personal
   // data, dynamic SQL or public/anon execute; pin the actual function body to
   // the reviewed migration. Every other definer remains a failing audit.
-  const guardMigration = readFileSync("prisma/migrations/20261003050000_privacy_execution_guard/migration.sql", "utf8");
+  const guardMigration = readFileSync("prisma/migrations/20261003081000_privacy_guard_correction/migration.sql", "utf8");
   const guardBody = guardMigration.match(/CREATE OR REPLACE FUNCTION public\.coolink_storage_identity_active\(\)[\s\S]*?AS \$\$([\s\S]*?)\$\$/)?.[1];
   const normalized = text => String(text).replace(/\s+/g, " ").trim();
   let reviewedGuard = false;
