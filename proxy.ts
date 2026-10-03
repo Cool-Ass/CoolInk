@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 import { signedBackupMutation } from "@/lib/backupProxyAuth";
 import { signedGoogleExportMutation } from "@/lib/googleWorkerProxyAuth";
+import { signedRecoveryMutation } from "@/lib/recoveryWorkerProxyAuth";
 
 // Paths that must stay reachable without a session (the login page itself,
 // and the API route that issues one).
@@ -129,7 +130,8 @@ export async function proxy(request: NextRequest) {
     const browserSecurityReport = pathname === "/api/security/csp-report";
     if (!signedWebhook && !browserSecurityReport && !sameOriginMutation(request)
       && !await signedBackupMutation(request)
-      && !await signedGoogleExportMutation(request)) return secureResponse(NextResponse.json({ error: "Forbidden" }, { status: 403 }), nonce, false);
+      && !await signedGoogleExportMutation(request)
+      && !await signedRecoveryMutation(request)) return secureResponse(NextResponse.json({ error: "Forbidden" }, { status: 403 }), nonce, false);
     const length = Number(request.headers.get("content-length") ?? "0");
     const uploadRequest = /\/api\/(admin\/(?:media|images|portfolio|projects\/[^/]+\/images)|client\/(?:images|projects\/[^/]+\/images))(?:\/|$)/.test(pathname);
     const configuredUploadLimit = Number(process.env.MAX_UPLOAD_MB ?? "8");
