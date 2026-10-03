@@ -29,17 +29,20 @@ async function persist(provider, sourcePath, data, contentType = null) {
   manifest.push({ provider, pathname: sourcePath, backupPath, size: data.length, sha256: createHash("sha256").update(data).digest("hex"), contentType });
 }
 
-async function backupVercelBlob() {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return false;
+async function backupVercelBlob(token, provider = "vercel-blob", privateOnly = false) {
+  if (!token) return false;
+  if (privateOnly && token.split("_")[3] === process.env.BLOB_READ_WRITE_TOKEN?.split("_")[3]) throw new Error("Public and private media stores must be separate.");
   let cursor;
   do {
-    const page = await list({ cursor, limit: 1000 });
+    const page = await list({ cursor, limit: 1000, token });
     for (const blob of page.blobs) {
-      const response = await get(blob.url, { access: "private", useCache: false }).catch(() => get(blob.url, { access: "public", useCache: false }).catch(() => null));
+      const response = privateOnly
+        ? await get(blob.url, { access: "private", useCache: false, token })
+        : await get(blob.url, { access: "private", useCache: false, token }).catch(() => get(blob.url, { access: "public", useCache: false, token }).catch(() => null));
       if (!response?.stream) throw new Error(`Nie udało się pobrać obiektu Vercel Blob: ${blob.pathname}`);
       const chunks = [];
       for await (const chunk of response.stream) chunks.push(Buffer.from(chunk));
-      await persist("vercel-blob", blob.pathname, Buffer.concat(chunks), blob.contentType || null);
+      await persist(provider, blob.pathname, Buffer.concat(chunks), blob.contentType || null);
     }
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
@@ -156,7 +159,7 @@ async function backupS3() {
 }
 
 const providers = [];
-for (const backup of [backupVercelBlob, backupSupabaseStorage, backupS3]) providers.push(await backup());
+for (const backup of [() => backupVercelBlob(process.env.BLOB_READ_WRITE_TOKEN), () => backupVercelBlob(process.env.PRIVATE_BLOB_READ_WRITE_TOKEN, "vercel-blob-private", true), backupSupabaseStorage, backupS3]) providers.push(await backup());
 if (!providers.some(Boolean)) throw new Error("Brak skonfigurowanego magazynu mediów do wykonania kopii.");
 await writeFile(path.join(output, "manifest.json"), JSON.stringify({ createdAt: new Date().toISOString(), objects: manifest }, null, 2));
 console.log(`Zapisano ${manifest.length} obiektów z ${providers.filter(Boolean).length} magazynów.`);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { put as putBlob } from "@vercel/blob";
+import { privateBlobToken } from "@/lib/privateBlob";
 import {
   getClientAccessToken,
   getCurrentClient,
@@ -43,9 +44,11 @@ export async function POST(
   catch (error) { return NextResponse.json({ error: error instanceof PrivateImageUploadError ? error.message : "Nie udało się odczytać obrazu." }, { status: 422 }); }
   const objectPath = `${client.supabaseUserId}/${randomUUID()}.${prepared.extension}`;
   let storedLocation = objectPath;
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobToken = privateBlobToken();
+  if (blobToken) {
     const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, {
       access: "private",
+      token: blobToken,
       addRandomSuffix: false,
       contentType: prepared.contentType,
     }).catch(() => null);

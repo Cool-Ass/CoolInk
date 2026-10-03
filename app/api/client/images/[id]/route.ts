@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { get as getBlob, put as putBlob } from "@vercel/blob";
+import { put as putBlob } from "@vercel/blob";
+import { privateBlobToken, readPrivateBlob } from "@/lib/privateBlob";
 import { getClientAccessToken, getCurrentClient, getSupabaseConfig } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { verifyPrivateImageToken } from "@/lib/privateMedia";
@@ -24,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!image) return NextResponse.json({ error: "Nie znaleziono pliku." }, { status: 404 });
 
   if (isBlobLocation(image.url)) {
-    const source = await getBlob(image.url, { access: "private", useCache: false }).catch(() => null);
+    const source = await readPrivateBlob(image.url).catch(() => null);
     if (!source || source.statusCode !== 200 || !source.stream)
       return NextResponse.json({ error: "Plik nie jest obecnie dostępny." }, { status: 502 });
     return new NextResponse(source.stream, {
@@ -43,12 +44,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // Existing Supabase objects are migrated on a legitimate owner read. This
   // gives both the client and authenticated studio staff access through the
   // application without ever making an inspiration publicly addressable.
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobToken = privateBlobToken();
+  if (blobToken) {
     const data = Buffer.from(await source.arrayBuffer());
     const contentType = source.headers.get("Content-Type") ?? "application/octet-stream";
     const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
     const migrated = await putBlob(`project-inspirations/migrated/${image.id}.${extension}`, data, {
       access: "private",
+      token: blobToken,
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType,

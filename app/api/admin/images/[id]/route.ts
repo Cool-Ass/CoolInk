@@ -1,4 +1,4 @@
-import { get as getBlob } from "@vercel/blob";
+import { readPrivateBlob } from "@/lib/privateBlob";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { getSupabaseConfig } from "@/lib/clientAuth";
@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!image) return NextResponse.json({ error: "Nie znaleziono pliku." }, { status: 404 });
 
   if (isBlobLocation(image.url)) {
-    const source = await getBlob(image.url, { access: "private", useCache: false }).catch(() => null);
+    const source = await readPrivateBlob(image.url).catch(() => null);
     if (!source || source.statusCode !== 200 || !source.stream)
       return NextResponse.json({ error: "Plik nie jest obecnie dostępny." }, { status: 502 });
     return new NextResponse(source.stream, {

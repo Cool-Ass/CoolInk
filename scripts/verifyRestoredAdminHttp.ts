@@ -24,29 +24,40 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient, clientFixtur
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "production", DATABASE_URL: database, DATABASE_DIRECT_URL: database, NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:9998", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "offline-unused", NEXT_TELEMETRY_DISABLED: "1", NODE_OPTIONS: `--require=${resolve("scripts/recoveryLocalFetch.cjs")}` };
   // Restored provider credentials are checked cryptographically elsewhere;
   // the HTTP drill must never send notifications or call their real providers.
-  for (const key of Object.keys(env)) if (/^(GOOGLE_|VAPID_|S3_|BLOB_|SUPABASE_SERVICE_ROLE_KEY|BACKUP_ENCRYPTION_PASSWORD|VERCEL_|CRON_SECRET)/.test(key)) delete env[key as keyof typeof env];
+  for (const key of Object.keys(env)) if (/^(GOOGLE_|VAPID_|S3_|BLOB_|PRIVATE_BLOB_|SUPABASE_SERVICE_ROLE_KEY|BACKUP_ENCRYPTION_PASSWORD|VERCEL_|CRON_SECRET)/.test(key)) delete env[key as keyof typeof env];
   const next = resolve("node_modules/next/dist/bin/next");
   let server: ReturnType<typeof spawn> | undefined;
   let stopGateway: (() => Promise<void>) | undefined;
   let media: Awaited<ReturnType<typeof restorePrivateMedia>> | undefined;
   let otherClientId: string | undefined;
   let remappedImages = 0;
+  let remappedChatImages = 0;
   let stage = "offline-build";
   try {
     if (process.env.DRILL_MEDIA_RESTORE === "1") {
       stage = "private-media-restore";
       media = await restorePrivateMedia();
-      env.BLOB_READ_WRITE_TOKEN = process.env.DRILL_BLOB_READ_WRITE_TOKEN;
+      env.PRIVATE_BLOB_READ_WRITE_TOKEN = process.env.DRILL_BLOB_READ_WRITE_TOKEN;
       // Repoint only the disposable restored DB, never the source DB/store.
       const images = await prisma.projectImage.findMany({ select: { id: true, url: true } });
       for (const image of images) {
         const source = media.restored.find(object => {
-          if (object.provider === "vercel-blob") { try { return decodeURIComponent(new URL(image.url).pathname.slice(1)) === object.pathname; } catch { return false; } }
+          if (object.provider.startsWith("vercel-blob")) { try { return decodeURIComponent(new URL(image.url).pathname.slice(1)) === object.pathname; } catch { return false; } }
           return image.url === object.pathname;
         });
         if (!source) throw new Error("Restored media reference has no saved bytes");
         await prisma.projectImage.update({ where: { id: image.id }, data: { url: source.url } });
         remappedImages++;
+      }
+      const chats = await prisma.directMessage.findMany({ where: { imageUrl: { not: null } }, select: { id: true, imageUrl: true } });
+      for (const message of chats) {
+        const source = media.restored.find(object => {
+          if (object.provider.startsWith("vercel-blob")) { try { return decodeURIComponent(new URL(message.imageUrl!).pathname.slice(1)) === object.pathname; } catch { return false; } }
+          return message.imageUrl === object.pathname;
+        });
+        if (!source) throw new Error("Restored chat media has no saved bytes");
+        await prisma.directMessage.update({ where: { id: message.id }, data: { imageUrl: source.url } });
+        remappedChatImages++;
       }
     }
     if (clientFixture) stopGateway = await recoveryAuthGateway();
@@ -108,12 +119,22 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient, clientFixtur
         if (!adminCookie) throw new Error("Restored admin media authentication failed");
         const staff = await call(privateImageUrl(image.id, "admin", fixture.id), { headers: { cookie: adminCookie } });
         if (staff.status !== 200 || createHash("sha256").update(Buffer.from(await staff.arrayBuffer())).digest("hex") !== object.sha256) throw new Error("Restored staff media serving failed");
+        stage = "restored-private-chat-http";
+        const chat = await prisma.directMessage.create({ data: { clientId: linked.id, author: "admin", body: "Recovery fixture", imageUrl: object.url } });
+        const chatUrl = privateImageUrl(chat.id, "client", linked.id).replace("/images/", "/chat-images/");
+        const chatOwn = await call(chatUrl, { headers: { cookie: clientCookie } });
+        if (chatOwn.status !== 200 || createHash("sha256").update(Buffer.from(await chatOwn.arrayBuffer())).digest("hex") !== object.sha256) throw new Error("Restored chat owner serving failed");
+        if ((await call(chatUrl)).status !== 401 || (await call(chatUrl.replace("token=", "token=invalid"), { headers: { cookie: clientCookie } })).status !== 403) throw new Error("Restored chat authentication boundary failed");
+        const foreignChat = await prisma.directMessage.create({ data: { clientId: other.id, author: "admin", body: "Other fixture", imageUrl: object.url } });
+        if ((await call(privateImageUrl(foreignChat.id, "client", linked.id).replace("/images/", "/chat-images/"), { headers: { cookie: clientCookie } })).status !== 404) throw new Error("Restored chat IDOR boundary failed");
+        const chatStaff = await call(privateImageUrl(chat.id, "admin", fixture.id).replace("/images/", "/chat-images/"), { headers: { cookie: adminCookie } });
+        if (chatStaff.status !== 200 || createHash("sha256").update(Buffer.from(await chatStaff.arrayBuffer())).digest("hex") !== object.sha256) throw new Error("Restored staff chat serving failed");
       }
       stage = "client-logout";
       const logout = await call("/api/client/auth/logout", { method: "POST", headers: { origin, cookie: clientCookie } });
       if (logout.status !== 200 || !logout.headers.get("set-cookie")?.includes("Max-Age=0")) throw new Error("Restored client logout failed");
     }
-    return { productionHttpLogin: true, clientApplicationHttpLogin: Boolean(clientFixture), restoredPrivateObjects: media?.restored.length ?? 0, remappedImages, privateMediaHttpServing: Boolean(media && clientFixture), mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
+    return { productionHttpLogin: true, clientApplicationHttpLogin: Boolean(clientFixture), restoredPrivateObjects: media?.restored.length ?? 0, remappedImages, remappedChatImages, privateMediaHttpServing: Boolean(media && clientFixture), privateChatHttpServing: Boolean(media && clientFixture), mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
   } catch {
     console.error("RESTORED_ADMIN_HTTP_FAILED_STAGE", stage);
     throw new Error("Restored admin HTTP verification failed");

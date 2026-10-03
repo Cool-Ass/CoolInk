@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { put, get } from "@vercel/blob";
+import { put } from "@vercel/blob";
+import { privateBlobToken, readPrivateBlob } from "@/lib/privateBlob";
 import { preparePrivateImage } from "@/lib/privateImageUpload";
 import { isPrivateBlobLocation, privateImageUrl } from "@/lib/privateMedia";
 import { NextResponse } from "next/server";
@@ -18,8 +19,9 @@ export async function readChatInput(request: Request, owner: string) {
   const prepared = await preparePrivateImage(file);
   const path = `chat/${owner}/${randomUUID()}.webp`;
   let imageUrl: string;
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    imageUrl = (await put(`project-inspirations/${path}`, prepared.buffer, { access: "private", contentType: prepared.contentType, addRandomSuffix: false })).url;
+  const blobToken = privateBlobToken();
+  if (blobToken) {
+    imageUrl = (await put(`project-inspirations/${path}`, prepared.buffer, { access: "private", token: blobToken, contentType: prepared.contentType, addRandomSuffix: false })).url;
   } else {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -36,7 +38,7 @@ export function serializeDirectMessage(message: { id: string; author: string; bo
 export async function streamChatImage(location: string) {
   const headers = { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
   if (isPrivateBlobLocation(location)) {
-    const source = await get(location, { access: "private", useCache: false }).catch(() => null);
+    const source = await readPrivateBlob(location).catch(() => null);
     if (source?.statusCode === 200 && source.stream) return new NextResponse(source.stream, { headers });
   } else if (/^chat\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9-]+\.webp$/.test(location)) {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

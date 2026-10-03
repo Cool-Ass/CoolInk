@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { put as putBlob } from "@vercel/blob";
+import { privateBlobToken } from "@/lib/privateBlob";
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/adminApi";
 import { getSupabaseConfig } from "@/lib/clientAuth";
@@ -27,8 +28,9 @@ export async function POST(request: Request, { params }: Params) {
   catch (error) { return NextResponse.json({ error: error instanceof PrivateImageUploadError ? error.message : "Nie udało się odczytać obrazu." }, { status: 422 }); }
   const objectPath = `admin/${project.clientId}/${randomUUID()}.${prepared.extension}`;
   let storedLocation = objectPath;
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, { access: "private", addRandomSuffix: false, contentType: prepared.contentType }).catch(() => null);
+  const blobToken = privateBlobToken();
+  if (blobToken) {
+    const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, { access: "private", token: blobToken, addRandomSuffix: false, contentType: prepared.contentType }).catch(() => null);
     if (!upload) return NextResponse.json({ error: "Nie udało się bezpiecznie zapisać pliku." }, { status: 502 });
     storedLocation = upload.url;
   } else {

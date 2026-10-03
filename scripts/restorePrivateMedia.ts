@@ -15,7 +15,7 @@ export function mediaRestoreInventory(input: unknown, root: string) {
   if (!Array.isArray(objects) || !objects.length || objects.length > 100) throw new Error("Invalid media inventory");
   let size = 0; const seen = new Set<string>();
   for (const object of objects) {
-    if (!object || !["vercel-blob", "supabase-project-inspirations", "s3"].includes(object.provider) || typeof object.pathname !== "string" || typeof object.backupPath !== "string" || !/^[a-f0-9]{64}$/.test(object.sha256) || !Number.isSafeInteger(object.size) || object.size < 0) throw new Error("Invalid media inventory");
+    if (!object || !["vercel-blob", "vercel-blob-private", "supabase-project-inspirations", "s3"].includes(object.provider) || typeof object.pathname !== "string" || typeof object.backupPath !== "string" || !/^[a-f0-9]{64}$/.test(object.sha256) || !Number.isSafeInteger(object.size) || object.size < 0) throw new Error("Invalid media inventory");
     const path = resolve(root, object.backupPath);
     if (!path.startsWith(root + sep) || seen.has(path)) throw new Error("Unsafe media inventory path");
     seen.add(path); size += object.size;

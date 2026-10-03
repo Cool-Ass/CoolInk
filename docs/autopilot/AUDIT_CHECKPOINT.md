@@ -1,6 +1,48 @@
 # Audyt — checkpoint 2026-10-01 (Europe/Warsaw)
 
+## Private production media — 2026-10-03 04:34 UTC
+
+PRIVATE-PRODUCTION-MEDIA-20261003 approved by owner. Created separate
+`coolink-client-media-private`, `store_rV1Oa03Q3jg8NzRm`, Private/FRA1,
+Hobby with no paid plan. Connection to cool-ink explicitly saved/confirmed
+**Production only**, prefix PRIVATE_BLOB, sensitive read-write token.
+Initial UI connection unexpectedly retained Preview; corrected and independently
+verified before any code push/build. Public CMS store/token unchanged.
+GitHub PRIVATE_BLOB_READ_WRITE_TOKEN saved; no values in logs/repo.
+New code requires the separate token for uploads, scopes reads/deletes to its
+exact private hostname, never borrows public CMS token; Supabase fallback retained.
+Backup enumerates public and private stores under distinct provider paths,
+with no public-access fallback for private objects. Recovery overrides only
+the isolated test credential and includes direct-chat attachment checks.
+Types, targeted lint and 14 targeted tests PASS; exact 13195a0 CI37095487104
+SUCCESS. New SHA still requires exact CI and saved-artifact restore; no promotion.
+A10 execution and A14 delivery remain open. No customer or source files removed.
+
 ## Private media recovery — 2026-10-03 04:09 UTC
+
+04:18 UTC: saved-artifact restore **37095491129 SUCCESS /13195a0**.
+10 actual saved objects restored to the isolated Private store, verified
+byte-for-byte and denied anonymously; actual Next client/admin signed media
+serving and foreign-client/signature denial PASS. All original ProjectImage
+references in this snapshot: **0**; restored-byte serving uses disposable
+fixtures, not a claim of existing production-private-image coverage.
+Actual source MFA enabled true, original ciphertext used, fixtureOnlyMfa false;
+Next admin/client login, CRM linking, logout and session revocation PASS.
+New-store Manage Blobs UI independently confirms **There are no blobs in this
+store yet** after exact-object cleanup. Original files and encrypted backup
+remain untouched. Exact CI37095487104 /13195a0 still in progress; gitleaks,
+CodeQL and backup-snapshot SUCCESS, browser/HTTP still running.
+
+Additional production configuration gap observed: existing connected
+`coolink-media` store_EJoRYywWQyUvNDU5 is **Public**, whereas project/chat
+uploads request `access: private` using the same BLOB_READ_WRITE_TOKEN.
+CI exercises the isolated Supabase fallback without that public Blob token,
+so its success does not prove this production storage configuration works.
+The new approved store is test-only and must not be connected to production.
+Next request: authorize a **separate private production store/token** with
+no paid plan, leaving public CMS storage unchanged; code must separate the
+two credentials and backups must cover both. No production configuration
+or source media changed. A10 execution and A14 delivery also remain open.
 
 Owner approved MEDIA-RESTORE-20261003. Created separate Private Blob store
 `coolink-recovery-drill-private`, ID `store_3Yn2RpULDWBtDc8W`, FRA1,

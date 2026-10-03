@@ -6,10 +6,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | WORKING — private isolated media restoration approved; exact e95a135 CI SUCCESS |
+| Status | VERIFYING — separate private production store approved/configured; code and recovery gates pending |
 | Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-03 04:02 UTC, lease do 05:00 UTC. Brak innego aktywnego Workera. Exact e95a135 CI37093678056 SUCCESS. MEDIA-RESTORE-20261003 zgoda w bieżącym czacie. |
 | Zbadana baza main | `eb6ff7637e0fa01681b5c1f774b8170a47e29286` / staged cool-m49mvi8je-cool-ass.vercel.app Ready, domains assignment Skipped. Trusted encrypted backup 37035132250 SUCCESS, includes current runtime keys without rotation. |
-| Następny krok | Push manual private-media recovery, dispatch saved backup37093068451 with private_media=true; collect exact new-SHA CI and restored-byte HTTP proof. e95a135 CI37093678056 SUCCESS. Isolated Private store3Yn2RpULDWBtDc8W/FRA1 created under MEDIA-RESTORE-20261003, store-only GitHub secret saved; no paid plan or production connection. 13 targeted tests/types/lint PASS. Trusted main backup37093068451 /eb6ff76 artifact11263182680; prior saved restore37093348098 SUCCESS proves actual source MFA and Next admin/client login. A01 media HTTP, A10 execution and A14 delivery still open until actual evidence. No production deletion/migration/promotion. |
+| Następny krok | Restore37095491129 SUCCESS /13195a0 from trusted backup37093068451:10 objects/private HTTP/MFA/client login PASS; remapped original ProjectImage0, fixture serving reported honestly. Store3Yn2RpULDWBtDc8W confirmed empty after cleanup; no production link/paid plan. CI37095487104 still running; gitleaks/CodeQL/snapshot PASS. Await scope decision for separate PRIVATE production store/token: current connected coolink-media store_EJoRYywWQyUvNDU5 is Public but project/chat code uses its BLOB token for private uploads. Never repurpose test store or replace public CMS token. A10 execution/A14 delivery still open; no promotion. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Bez rotacji kluczy, restore/usuwania produkcji lub promocji nowej aplikacji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 

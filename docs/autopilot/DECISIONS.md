@@ -1,5 +1,18 @@
 # Decyzje i ADR
 
+## PRIVATE-PRODUCTION-MEDIA-20261003
+
+- ACCEPTED: właściciel w bieżącym czacie odpowiedział „tak” na osobny,
+  bezpłatny prywatny magazyn produkcyjny zdjęć klientów, przy zachowaniu
+  obecnego publicznego magazynu strony bez zmian.
+- Zakres HIGH: nowy Private Blob store, oddzielny token
+  PRIVATE_BLOB_READ_WRITE_TOKEN dla aplikacji i backupu; rozdzielenie
+  uploadów/odczytów/usuwania prywatnych zdjęć od publicznych zasobów CMS.
+  Testowy magazyn nie jest repurposed; brak płatnego planu i rotacji starego klucza.
+- Backup obejmuje oba magazyny. Nie usuwać ani migrować źródłowych plików.
+  Publikacja nadal wymaga wszystkich bramek; rollback kodu/config bez kasowania
+  zapisanych zdjęć. Ta zgoda nie obejmuje usuwania rzeczywistych klientów.
+
 ## MEDIA-RESTORE-20261003
 
 - ACCEPTED: właściciel odpowiedział „zgadzam się” na odtworzenie prywatnych

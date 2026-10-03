@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { del as deleteBlob } from "@vercel/blob";
+import { privateBlobToken } from "@/lib/privateBlob";
 
 type Audience = "admin" | "client";
 
@@ -49,9 +50,9 @@ export async function deletePrivateProjectMedia(locations: string[]) {
   const legacyLocations = unique.filter((location) => !isPrivateBlobLocation(location));
 
   if (blobLocations.length) {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) failures.push(...blobLocations);
+    if (!process.env.PRIVATE_BLOB_READ_WRITE_TOKEN) failures.push(...blobLocations);
     else {
-      const results = await Promise.allSettled(blobLocations.map((location) => deleteBlob(location)));
+      const results = await Promise.allSettled(blobLocations.map(async (location) => deleteBlob(location, { token: privateBlobToken(location), abortSignal: AbortSignal.timeout(15000) })));
       results.forEach((result, index) => { if (result.status === "rejected") failures.push(blobLocations[index]); });
     }
   }
