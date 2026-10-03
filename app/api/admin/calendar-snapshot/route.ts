@@ -10,7 +10,7 @@ export async function GET() {
     prisma.appointment.findMany({ where: { status: { notIn: ["cancelled", "no_show"] }, endsAt: { gte: from }, startsAt: { lte: to } }, select: { id: true, startsAt: true, endsAt: true, status: true, notes: true, price: true, project: { select: { title: true, client: { select: { id: true, firstName: true, lastName: true } } } } } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: from }, startsAt: { lte: to } }, select: { id: true, startsAt: true, endsAt: true, reason: true } }),
     prisma.availableSlot.findMany({ where: { endsAt: { gte: from }, startsAt: { lte: to } }, select: { id: true, startsAt: true, endsAt: true, title: true, description: true, color: true, icon: true, isPublic: true } }),
-    prisma.calendarEvent.findMany({ where: { endsAt: { gte: from }, startsAt: { lte: to }, googleCalendarSync: { isNot: null } }, select: { startsAt: true, endsAt: true, title: true, color: true } }),
+    prisma.calendarEvent.findMany({ where: { endsAt: { gte: from }, startsAt: { lte: to }, googleCalendarSync: { is: { syncStatus: "SYNCED", connection: { active: true } } } }, select: { startsAt: true, endsAt: true, title: true, color: true } }),
     prisma.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } }),
   ]);
   return NextResponse.json({

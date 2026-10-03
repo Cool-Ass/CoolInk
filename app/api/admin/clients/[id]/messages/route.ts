@@ -1,5 +1,6 @@
 import { hideDirectMessages, messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
+import { withClientMediaWrite } from "@/lib/clientMediaWrite";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -36,15 +37,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!limit.allowed) return tooManyRequests(limit);
   const client = await prisma.client.findUnique({ where: { id }, select: { id: true } });
   if (!client) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
-  let input: Awaited<ReturnType<typeof readChatInput>>;
-  try { input = await readChatInput(request, id); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Nie udało się odczytać wiadomości." }, { status: 422 }); }
-  const { body, imageUrl } = input;
-  if ((!body && !imageUrl) || body.length > MAX_MESSAGE_LENGTH) return NextResponse.json({ error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` }, { status: 400 });
-  const message = await prisma.$transaction(async (tx) => {
+  let message;
+  try { message = await withClientMediaWrite(id, async (tx, track) => {
+    const { body, imageUrl } = await readChatInput(request, id, track);
+    if (imageUrl) track(imageUrl);
+    if ((!body && !imageUrl) || body.length > MAX_MESSAGE_LENGTH) throw new Error("Nieprawidłowa wiadomość.");
     const created = await tx.directMessage.create({ data: { clientId: id, author: "admin", body, imageUrl } });
     await tx.clientNotification.create({ data: { clientId: id, type: "NEW_STUDIO_MESSAGE", title: "Nowa wiadomość od studia", body: body.slice(0, 240), href: "/app/portal/messages#studio" } });
     return created;
-  });
+  }); } catch { return NextResponse.json({ error: "Nie udało się zapisać wiadomości. Sprawdź profil i spróbuj ponownie." }, { status: 409 }); }
+  const body = message.body;
   await sendPushToClient(id, { title: "Nowa wiadomość od CoolInk", body: body.slice(0, 160), url: "/app/portal/messages#studio", tag: `studio-direct-${message.id}` }).catch(() => undefined);
   return NextResponse.json({ message: serializeDirectMessage(message, "admin", admin.id) }, { status: 201 });
 }

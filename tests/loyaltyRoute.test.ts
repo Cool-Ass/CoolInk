@@ -3,7 +3,7 @@ import { DEFAULT_LOYALTY_RULES } from "../lib/loyaltyRules";
 
 const mock = vi.hoisted(() => ({
   admin: vi.fn(), origin: vi.fn(), limit: vi.fn(), balance: vi.fn(),
-  tx: { $queryRaw: vi.fn(), appointment: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() }, tattooProject: { update: vi.fn() }, loyaltyEntry: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }, clientNotification: { create: vi.fn() }, projectActivity: { create: vi.fn() } },
+  tx: { $queryRaw: vi.fn(), adminAuditLog: { findFirst: vi.fn(), create: vi.fn() }, appointment: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() }, tattooProject: { update: vi.fn() }, loyaltyEntry: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }, clientNotification: { create: vi.fn() }, projectActivity: { create: vi.fn() } },
 }));
 vi.mock("@/lib/auth", () => ({ getCurrentAdmin: mock.admin }));
 vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: mock.origin, rateLimit: mock.limit, tooManyRequests: () => new Response(null, { status: 429 }) }));
@@ -26,6 +26,26 @@ beforeEach(() => {
 });
 
 describe("loyalty route security and lifecycle", () => {
+  it("records a correction resolution without changing paid amounts or stamps", async () => {
+    mock.tx.loyaltyEntry.findFirst.mockResolvedValue({ id: "entry", kind: "visit", voidedAt: new Date() });
+    expect((await call({ action: "resolve_void", entryId: "entry", note: "Zwrot potwierdzony" })).status).toBe(200);
+    expect(mock.tx.loyaltyEntry.findFirst).toHaveBeenCalledWith({ where: { id: "entry", clientId: "client", kind: "visit", voidedAt: { not: null } } });
+    expect(mock.tx.adminAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: "loyalty.correction_resolved", targetId: "entry", summary: "Zwrot potwierdzony" }) }));
+    expect(mock.tx.loyaltyEntry.update).not.toHaveBeenCalled();
+    expect(mock.tx.loyaltyEntry.create).not.toHaveBeenCalled();
+  });
+  it("requires an explanation and an owned voided visit", async () => {
+    expect((await call({ action: "resolve_void", entryId: "entry", note: " " })).status).toBe(409);
+    mock.tx.loyaltyEntry.findFirst.mockResolvedValue(null);
+    expect((await call({ action: "resolve_void", entryId: "foreign", note: "Zwrot" })).status).toBe(409);
+    expect(mock.tx.adminAuditLog.create).not.toHaveBeenCalled();
+  });
+  it("replays correction closure without duplicate audit records", async () => {
+    mock.tx.loyaltyEntry.findFirst.mockResolvedValue({ id: "entry", voidedAt: new Date() });
+    mock.tx.adminAuditLog.findFirst.mockResolvedValue({ id: "resolved" });
+    expect((await call({ action: "resolve_void", entryId: "entry", note: "Zwrot" })).status).toBe(200);
+    expect(mock.tx.adminAuditLog.create).not.toHaveBeenCalled();
+  });
   it("completes a confirmed visit and queues the next session without a payment", async () => {
     mock.tx.appointment.findFirst.mockResolvedValue({ id: "visit", projectId: "project", status: "confirmed", startsAt: new Date("2025-01-01"), project: { kind: "tattoo", title: "Tatuaż", depositStatus: "not_required" } });
     mock.tx.appointment.findMany.mockResolvedValue([{ status: "completed" }]);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { put as putBlob } from "@vercel/blob";
+import { privateBlobToken, privateBlobObjectLocation } from "@/lib/privateBlob";
 import {
   getClientAccessToken,
   getCurrentClient,
@@ -11,6 +12,7 @@ import { sendPushToAdmins } from "@/lib/webPush";
 import { preparePrivateImage, PrivateImageUploadError } from "@/lib/privateImageUpload";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { privateImageUrl } from "@/lib/privateMedia";
+import { withClientMediaWrite } from "@/lib/clientMediaWrite";
 
 export async function POST(
   request: Request,
@@ -41,19 +43,20 @@ export async function POST(
   let prepared: Awaited<ReturnType<typeof preparePrivateImage>>;
   try { prepared = await preparePrivateImage(file); }
   catch (error) { return NextResponse.json({ error: error instanceof PrivateImageUploadError ? error.message : "Nie udało się odczytać obrazu." }, { status: 422 }); }
+  const { image, chatMessage } = await withClientMediaWrite(client.id, async (tx, track) => {
   const objectPath = `${client.supabaseUserId}/${randomUUID()}.${prepared.extension}`;
   let storedLocation = objectPath;
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobToken = privateBlobToken();
+  track(blobToken ? privateBlobObjectLocation(`project-inspirations/${objectPath}`) : objectPath);
+  if (blobToken) {
     const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, {
       access: "private",
+      token: blobToken,
       addRandomSuffix: false,
       contentType: prepared.contentType,
+      abortSignal: AbortSignal.timeout(15000),
     }).catch(() => null);
-    if (!upload)
-      return NextResponse.json(
-        { error: "Nie udało się bezpiecznie zapisać pliku. Spróbuj ponownie." },
-        { status: 502 },
-      );
+    if (!upload) throw new Error("Nie udało się bezpiecznie zapisać pliku.");
     storedLocation = upload.url;
   } else {
     const { url, key } = getSupabaseConfig();
@@ -66,16 +69,15 @@ export async function POST(
           Authorization: `Bearer ${token}`,
           "Content-Type": prepared.contentType,
           "x-upsert": "false",
+          "cache-control": "no-store, max-age=0",
         },
         body: prepared.buffer,
         cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+        redirect: "error",
       },
     );
-    if (!upload.ok)
-      return NextResponse.json(
-        { error: "Nie udało się bezpiecznie zapisać pliku. Spróbuj ponownie." },
-        { status: 502 },
-      );
+    if (!upload.ok) throw new Error("Nie udało się bezpiecznie zapisać pliku.");
   }
   const caption =
     String(form.get("caption") ?? "")
@@ -84,11 +86,11 @@ export async function POST(
   const chatMessage = String(form.get("chatMessage") ?? "")
     .trim()
     .slice(0, 2_000);
-  const image = await prisma.$transaction(async (tx) => {
+  track(storedLocation);
     const created = await tx.projectImage.create({ data: { projectId: project.id, url: storedLocation, caption } });
     await tx.tattooProject.update({ where: { id: project.id }, data: { nextAction: "Sprawdź nową inspirację klienta", nextActionDueAt: new Date() } });
     await tx.projectActivity.create({ data: { projectId: project.id, type: "inspiration_added_by_client", message: "Klient dodał nową inspirację do projektu.", visibility: "admin" } });
-    return created;
+    return { image: created, chatMessage };
   });
   await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=projects`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")

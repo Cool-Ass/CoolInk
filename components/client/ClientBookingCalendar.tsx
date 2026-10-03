@@ -9,10 +9,11 @@ import BookingRequestForm, { type BookingConsent } from "@/components/client/Boo
 import AppModal from "@/components/ui/AppModal";
 import { sanitizeRichText } from "@/lib/richText";
 import { imageSource } from "@/lib/imageSource";
+import { publicCalendarBlockLabel } from "@/lib/publicCalendarBlock";
 
 type Project = { id: string; title: string };
 type Busy = { startsAt: string; endsAt: string };
-type Block = { startsAt: string; endsAt: string };
+type Block = { startsAt: string; endsAt: string; kind?: "occupied" | "unavailable" };
 type Hours = { weekday: number; enabled: boolean; startsAt: string; endsAt: string };
 type Override = { date: string; enabled: boolean; startsAt: string; endsAt: string };
 type AvailableSlot = { startsAt: string; endsAt: string; title?: string | null; description?: string | null; color?: string; isPublic: boolean };
@@ -203,7 +204,7 @@ export default function ClientBookingCalendar({
     const appearance = resolveCalendarDayAppearance({ hasAvailability: dayAvailability.length > 0, hasUnavailable: Boolean(dayBlocks.length || dayBusy.length || implicitSunday), customColor });
     const entries = [
       ...dayAvailability.map((entry) => ({ key: `slot-${entry.startsAt.toISOString()}-${entry.endsAt.toISOString()}`, startsAt: entry.startsAt, endsAt: entry.endsAt, label: entry.consultation ? copy.consultationLabel : copy.freeLabel, color: CALENDAR_AVAILABLE_COLOR, kind: "available" as const })),
-      ...dayBlocks.map((item) => ({ key: `block-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: copy.unavailableLabel, color: CALENDAR_UNAVAILABLE_COLOR, kind: "unavailable" as const })),
+      ...dayBlocks.map((item) => ({ key: `block-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: publicCalendarBlockLabel(item.kind, copy.unavailableLabel), color: CALENDAR_UNAVAILABLE_COLOR, kind: "unavailable" as const })),
       ...dayBusy.map((item) => ({ key: `busy-${item.startsAt}-${item.endsAt}`, startsAt: item.startsAt, endsAt: item.endsAt, label: "ZAJĘTY", color: CALENDAR_UNAVAILABLE_COLOR, kind: "unavailable" as const })),
       ...dayPromotions.map((item) => ({ key: `promotion-${item.id}`, startsAt: item.startsAt, endsAt: item.endsAt, label: item.badge || item.title || copy.promotionFallbackLabel, color: item.color, kind: "custom" as const })),
       ...dayEvents.map((item) => ({ key: `event-${item.id}`, startsAt: item.startsAt, endsAt: item.endsAt, label: item.label || item.title || copy.eventFallbackLabel, color: item.color, kind: "custom" as const })),
@@ -252,6 +253,7 @@ export default function ClientBookingCalendar({
           selectedKeys={selectedKeys}
           onPrevious={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))}
           onNext={() => setCursor((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))}
+          onToday={() => setCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
           previousDisabled={previousDisabled}
           nextDisabled={nextDisabled}
           appearanceFor={(date) => dayFor(date).appearance}

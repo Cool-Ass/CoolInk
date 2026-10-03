@@ -1,0 +1,85 @@
+name: Recovery evidence health
+on:
+  schedule:
+    - cron: "11 * * * *"
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: "Optional verified staged Production cool-ink URL; no domain promotion"
+        required: false
+        type: string
+      alert_probe:
+        description: "Approved controlled owner-dashboard alarm delivery test; clear with a normal follow-up run"
+        default: false
+        type: boolean
+  workflow_run:
+    workflows: ["Encrypted production backup", "Quarterly restore drill"]
+    types: [completed]
+concurrency:
+  group: coolink-recovery-evidence-health
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+  issues: write
+  id-token: write
+jobs:
+  monitor:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Never checkout the triggering run's code; this workflow is trusted main only.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { ref: main, persist-credentials: false }
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          # Environment, not script interpolation: manual inputs are untrusted.
+          script: |
+            const { recoveryAgeHealth } = await import(process.env.GITHUB_WORKSPACE + "/scripts/recoveryAgeHealth.mjs");
+            const latest = async workflow_id => (await github.rest.actions.listWorkflowRuns({ ...context.repo, workflow_id, branch: "main", status: "success", per_page: 1 })).data.workflow_runs[0];
+            const backup = await latest("backup.yml");
+            const drill = await latest("restore-drill.yml");
+            const artifacts = backup ? await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { ...context.repo, run_id: backup.id }) : [];
+            const artifact = artifacts.find(a => a.name === "coolink-encrypted-backup-" + backup.id);
+            const health = recoveryAgeHealth({ backup, drill, artifact });
+            if (context.eventName === "workflow_dispatch" && process.env.RECOVERY_ALERT_PROBE === "true") {
+              health.reasons.push("MONITOR_DELIVERY_TEST"); health.healthy = false;
+            }
+            if (context.eventName === "workflow_run" && context.payload.workflow_run.conclusion !== "success") {
+              health.reasons.push("LATEST_RECOVERY_RUN_FAILED"); health.healthy = false;
+            }
+            let persisted = false;
+            try {
+              const audience = "https://www.coolinktattoo.pl/api/cron/recovery-health";
+              const deployment = process.env.RECOVERY_DEPLOYMENT_URL;
+              if (deployment && !/^https:\/\/cool-[a-z0-9]+-cool-ass\.vercel\.app$/.test(deployment)) throw new Error("Invalid staged target");
+              const endpoint = deployment ? deployment + "/api/cron/recovery-health" : audience;
+              const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+              tokenUrl.searchParams.set("audience", audience);
+              const identity = await fetch(tokenUrl, { headers: { Authorization: "Bearer " + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, signal: AbortSignal.timeout(15000), redirect: "error" });
+              if (!identity.ok) throw new Error("Unable to obtain monitor identity");
+              const token = (await identity.json()).value;
+              if (typeof token !== "string" || !token) throw new Error("Missing monitor identity");
+              core.setSecret(token);
+              const response = await fetch(endpoint, { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify(health), signal: AbortSignal.timeout(30000), redirect: "error" });
+              if (!response.ok) throw new Error("Monitor delivery HTTP " + response.status);
+              const report = await response.json();
+              persisted = report.ok === true && report.persisted === true;
+              if (!persisted) throw new Error("Monitor not persisted");
+              core.info("Owner-dashboard recovery report persisted; push receipt is separate.");
+            } catch {
+              health.reasons.push("OWNER_DASHBOARD_REPORT_UNDELIVERED"); health.healthy = false;
+            }
+            await core.summary.addHeading("Recovery evidence health").addRaw(health.healthy ? "PASS: metadata age and saved-artifact availability. Not a full application recovery certificate." : health.reasons.join("\n")).write();
+            if (health.healthy && persisted) return;
+            const marker = "<!-- coolink-recovery-health:v1 -->";
+            const issues = await github.paginate(github.rest.issues.listForRepo, { ...context.repo, state: "open", creator: "github-actions[bot]", per_page: 100 });
+            if (!issues.some(issue => !issue.pull_request && issue.user?.login === "github-actions[bot]" && issue.body?.startsWith(marker))) {
+              const result = await github.rest.issues.create({ ...context.repo, title: "Recovery: backup / restore evidence needs attention", body: marker + "\n\n" + health.reasons.join("\n") + "\n\n" + `Evidence: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}` + "\n\nBackup limit: 36 hours. Restore drill limit: 100 days. Review before any production data migration. This issue is not automatically closed; actual recovery and notification receipt must be verified by the owner." });
+              if (!result.data.number) throw new Error("Recovery alert persistence failed");
+            }
+            core.setFailed("Recovery evidence unhealthy; durable repository alert exists. Owner reading/email delivery not verified.");
+        env:
+          RECOVERY_DEPLOYMENT_URL: ${{ inputs.deployment_url }}
+          RECOVERY_ALERT_PROBE: ${{ inputs.alert_probe }}

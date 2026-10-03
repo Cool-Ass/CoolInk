@@ -27,7 +27,7 @@ W pliku `.env` ustaw:
 Następnie utwórz i zasil bazę danych:
 
 ```bash
-npm run db:push    # tworzy prisma/dev.db i strukturę bazy
+npm run db:push    # synchronizuje schemat z PostgreSQL wskazanym przez DATABASE_URL; tylko środowisko developerskie
 npm run db:seed    # tworzy konto administratora + stronę główną z domyślnymi modułami + portfolio
 npm run dev
 ```
@@ -180,13 +180,17 @@ wysyłane e-mailem — integrację z pocztą lub CRM można dodać osobno.
 3. **Zmienne środowiskowe**: oprócz danych bazy ustaw co najmniej `SESSION_SECRET`,
    `MFA_ENCRYPTION_KEY`, `PRIVATE_MEDIA_SIGNING_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
    `CRON_SECRET`, `MAX_UPLOAD_MB` i trwały magazyn (`BLOB_READ_WRITE_TOKEN` lub `S3_*`).
+   Zdjęcia klientów w projekcie/czacie wymagają osobnego **Private** Blob store
+   i `PRIVATE_BLOB_READ_WRITE_TOKEN`; nigdy nie używaj publicznego tokenu CMS.
+   Bez tego klucza pozostaje prywatny Supabase `project-inspirations`.
    Token Google szyfruje `GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEYS` — pierwszy klucz jest
    aktywny, kolejne służą do bezpiecznej rotacji. Kluczy nigdy nie zapisuj w repozytorium.
 4. **Kopie i testy bezpieczeństwa**: w GitHub Actions ustaw `DATABASE_DIRECT_URL`,
    `BACKUP_ENCRYPTION_PASSWORD`, dane używanego magazynu (`BLOB_READ_WRITE_TOKEN`,
-   `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` lub `S3_*`) oraz sekrety odizolowanego projektu
+   `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` lub `S3_*`),
+   `PRIVATE_BLOB_READ_WRITE_TOKEN` dodatkowo dla prywatnego Blob oraz sekrety odizolowanego projektu
    testowego `DRY_RUN_SUPABASE_URL`, `DRY_RUN_SUPABASE_PUBLISHABLE_KEY` i
-   `DRY_RUN_DIRECT_URL`. Workflow wykonuje testy ról/IDOR, cotygodniowy szyfrowany backup
+   `DRY_RUN_DIRECT_URL`. Workflow wykonuje testy ról/IDOR, codzienny szyfrowany backup (03:23 UTC)
    danych aplikacji z publicznego schematu PostgreSQL i wszystkich skonfigurowanych magazynów
    mediów oraz kwartalną próbę odtworzenia z porównaniem liczby rekordów i sum plików.
 5. **CSP**: rozpocznij z `CSP_MODE=report-only`; po usunięciu raportowanych naruszeń zmień na

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { get as getBlob, put as putBlob } from "@vercel/blob";
+import { put as putBlob } from "@vercel/blob";
+import { privateBlobToken, readPrivateBlob } from "@/lib/privateBlob";
 import { getClientAccessToken, getCurrentClient, getSupabaseConfig } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { verifyPrivateImageToken } from "@/lib/privateMedia";
@@ -24,38 +25,40 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!image) return NextResponse.json({ error: "Nie znaleziono pliku." }, { status: 404 });
 
   if (isBlobLocation(image.url)) {
-    const source = await getBlob(image.url, { access: "private", useCache: false }).catch(() => null);
+    const source = await readPrivateBlob(image.url).catch(() => null);
     if (!source || source.statusCode !== 200 || !source.stream)
       return NextResponse.json({ error: "Plik nie jest obecnie dostępny." }, { status: 502 });
     return new NextResponse(source.stream, {
       headers: {
         "Content-Type": source.blob.contentType || "application/octet-stream",
-        "Cache-Control": "private, max-age=300",
+        "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });
   }
 
   const { url, key } = getSupabaseConfig();
-  const source = await fetch(`${url}/storage/v1/object/authenticated/project-inspirations/${image.url}`, { headers: { apikey: key, Authorization: `Bearer ${token}` }, cache: "no-store" });
+  const source = await fetch(`${url}/storage/v1/object/authenticated/project-inspirations/${image.url}?private_read=${crypto.randomUUID()}`, { headers: { apikey: key, Authorization: `Bearer ${token}` }, cache: "no-store" });
   if (!source.ok || !source.body) return NextResponse.json({ error: "Plik nie jest obecnie dostępny." }, { status: 502 });
 
   // Existing Supabase objects are migrated on a legitimate owner read. This
   // gives both the client and authenticated studio staff access through the
   // application without ever making an inspiration publicly addressable.
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobToken = privateBlobToken();
+  if (blobToken) {
     const data = Buffer.from(await source.arrayBuffer());
     const contentType = source.headers.get("Content-Type") ?? "application/octet-stream";
     const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
     const migrated = await putBlob(`project-inspirations/migrated/${image.id}.${extension}`, data, {
       access: "private",
+      token: blobToken,
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType,
     }).catch(() => null);
     if (migrated) await prisma.projectImage.update({ where: { id: image.id }, data: { url: migrated.url } });
-    return new NextResponse(data, { headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff" } });
+    return new NextResponse(data, { headers: { "Content-Type": contentType, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
   }
 
-  return new NextResponse(source.body, { headers: { "Content-Type": source.headers.get("Content-Type") ?? "application/octet-stream", "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff" } });
+  return new NextResponse(source.body, { headers: { "Content-Type": source.headers.get("Content-Type") ?? "application/octet-stream", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
 }

@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { imageSource } from "@/lib/imageSource";
 import type { MessageTemplate } from "@/lib/messageTemplates";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
+import { startVisiblePolling } from "@/lib/visiblePolling";
 
 type Message = {
   id: string;
@@ -66,21 +67,19 @@ export default function ProjectChat({
   useEffect(() => { streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" }); }, [messages.length]);
   useEffect(() => {
     let alive = true;
-    async function refreshConversation() {
-      try {
-        const response = await fetch(api, { cache: "no-store" });
+    async function refreshConversation(signal: AbortSignal) {
+        const response = await fetch(api, { cache: "no-store", signal });
+        if (!response.ok) throw new Error("Conversation refresh failed");
         const result = await response.json();
-        if (alive && response.ok && Array.isArray(result.messages)) {
+        if (alive && !signal.aborted && Array.isArray(result.messages)) {
           setMessages(result.messages);
           if (result.messages.some((message: Message) => message.author !== role && !message.readAt)) {
-            void fetch(api, { method: "PATCH" }).catch(() => undefined);
+            await fetch(api, { method: "PATCH", signal });
           }
         }
-      } catch { /* polling is progressive enhancement; the composer still works */ }
     }
-    void refreshConversation();
-    const timer = window.setInterval(refreshConversation, 2500);
-    return () => { alive = false; window.clearInterval(timer); };
+    const stop = startVisiblePolling(refreshConversation);
+    return () => { alive = false; stop(); };
   }, [api, role]);
 
   const add = (message: Message) => setMessages((items) => [...items, message]);

@@ -87,9 +87,11 @@ const ICONS: Record<ModuleType, LucideIcon> = {
 
 export default function AddModulePicker({
   onAdd,
+  onAddHero,
   insertAfterSelection,
 }: {
   onAdd: (type: ModuleType) => void;
+  onAddHero: () => void;
   insertAfterSelection?: boolean;
 }) {
   const [query, setQuery] = useState("");
@@ -149,6 +151,7 @@ export default function AddModulePicker({
       </div>
 
       <div data-lenis-prevent className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden overscroll-contain px-2.5 pb-3 [scrollbar-gutter:stable]">
+        {view === "all" && (!normalizedQuery || "hero swobodny sekcja powitalna".includes(normalizedQuery)) && <button type="button" onClick={onAddHero} className="flex w-full items-center gap-2 rounded-lg border border-ink-gold/25 bg-ink-gold/5 px-2.5 py-2 text-left hover:border-ink-gold/60 hover:bg-ink-gold/10"><PanelTop aria-hidden className="h-4 w-4 shrink-0 text-ink-gold" /><span className="min-w-0"><span className="block text-[11px] font-medium text-white">Hero · swobodny</span><span className="block text-[10px] leading-snug text-white/65">Kolumny, tekst, zdjęcie i CTA — edytujesz każdy element.</span></span></button>}
         {(["widgets", "templates"] as const).map((category) => {
           const types = visibleTypes.filter((type) => MODULE_CATEGORIES[type] === category);
           if (!types.length) return null;
@@ -170,9 +173,9 @@ export default function AddModulePicker({
                         event.dataTransfer.setData(PALETTE_WIDGET_MIME, type);
                         event.dataTransfer.effectAllowed = "copy";
                       }}
-                      className="group relative min-h-16 min-w-0 cursor-grab rounded-md border border-white/12 bg-[#202226] text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
+                      className="group relative min-h-14 min-w-0 cursor-grab rounded-md border border-white/12 bg-[#202226] text-center text-white/75 transition-colors hover:border-ink-gold/70 hover:bg-ink-gold/10 hover:text-white active:cursor-grabbing active:bg-ink-gold/15"
                     >
-                      <button type="button" onClick={() => onAdd(type)} className="flex min-h-16 w-full min-w-0 flex-col items-center justify-center gap-1 px-1.5 py-1.5 text-center"><Icon aria-hidden className="h-4 w-4 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" /><span className="line-clamp-2 max-w-[78%] break-words text-[9px] leading-tight">{MODULE_LABELS[type]}</span></button>
+                      <button type="button" onClick={() => onAdd(type)} className="flex min-h-14 w-full min-w-0 flex-col items-center justify-center gap-1 px-1.5 py-1 text-center"><Icon aria-hidden className="h-4 w-4 stroke-[1.45] text-white/65 transition group-hover:text-ink-gold" /><span className="line-clamp-2 max-w-[85%] break-words text-[10px] leading-tight">{MODULE_LABELS[type]}</span></button>
                       <button type="button" aria-pressed={favorite} aria-label={favorite ? `Usuń ${MODULE_LABELS[type]} z ulubionych` : `Dodaj ${MODULE_LABELS[type]} do ulubionych`} title={favorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"} onClick={() => toggleFavorite(type)} className={`absolute right-0 top-0 z-10 flex h-8 w-8 items-center justify-center rounded-tr-md transition-colors ${favorite ? "text-ink-gold" : "text-white/25 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-white"}`}><Star aria-hidden className={`h-3 w-3 ${favorite ? "fill-current" : ""}`} /></button>
                     </div>
                   );

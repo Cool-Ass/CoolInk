@@ -1,4 +1,5 @@
 const { PrismaClient, Prisma } = require("@prisma/client");
+const { readFileSync } = require("node:fs");
 const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("./dryRunTestEnv.cjs");
 const dryRun = loadDryRunEnvironment();
 requireTestProject(dryRun);
@@ -20,7 +21,11 @@ async function main() {
     ORDER BY c.relkind, c.relname;
   `);
   const routines = await prisma.$queryRawUnsafe(`
-    SELECT p.proname AS name, p.prokind::text AS kind, CASE WHEN p.prosecdef THEN 'definer' ELSE 'invoker' END AS security
+    SELECT p.proname AS name, p.prokind::text AS kind, CASE WHEN p.prosecdef THEN 'definer' ELSE 'invoker' END AS security,
+      p.pronargs AS args, p.prorettype::regtype::text AS result, p.prosrc AS source, p.proconfig AS config,
+      has_function_privilege('anon', p.oid, 'EXECUTE') AS "anonExec",
+      has_function_privilege('authenticated', p.oid, 'EXECUTE') AS "authenticatedExec",
+      EXISTS (SELECT 1 FROM aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl WHERE acl.grantee = 0 AND acl.privilege_type = 'EXECUTE') AS "publicExec"
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' ORDER BY p.proname;
   `);
   const storageBuckets = await prisma.$queryRawUnsafe(`
@@ -45,7 +50,22 @@ async function main() {
       if (relation.authenticated) problems.push(`${table}: uprawnienia authenticated=${relation.authenticated}`);
     }
   }
-  for (const routine of routines) if (routine.security === "definer") problems.push(`${routine.name}: SECURITY DEFINER wymaga ręcznego przeglądu`);
+  // One individually reviewed boolean Storage guard. No arguments, personal
+  // data, dynamic SQL or public/anon execute; pin the actual function body to
+  // the reviewed migration. Every other definer remains a failing audit.
+  const guardMigration = readFileSync("prisma/migrations/20261003081000_privacy_guard_correction/migration.sql", "utf8");
+  const guardBody = guardMigration.match(/CREATE OR REPLACE FUNCTION public\.coolink_storage_identity_active\(\)[\s\S]*?AS \$\$([\s\S]*?)\$\$/)?.[1];
+  const normalized = text => String(text).replace(/\s+/g, " ").trim();
+  let reviewedGuard = false;
+  for (const routine of routines) if (routine.security === "definer") {
+    const approved = routine.name === "coolink_storage_identity_active" && routine.args === 0 && routine.result === "boolean"
+      && guardBody && normalized(routine.source) === normalized(guardBody)
+      && JSON.stringify(routine.config) === JSON.stringify(["search_path=public, pg_temp"])
+      && !routine.anonExec && !routine.publicExec && routine.authenticatedExec;
+    if (!approved) problems.push(`${routine.name}: SECURITY DEFINER wymaga ręcznego przeglądu`);
+    else reviewedGuard = true;
+  }
+  if (!reviewedGuard) problems.push("coolink_storage_identity_active: brak zatwierdzonej ochrony kwarantanny");
   const inspirationBucket = storageBuckets[0];
   if (!inspirationBucket) problems.push("project-inspirations: brak prywatnego bucketu");
   else {
@@ -60,6 +80,6 @@ async function main() {
     if (policy.permissive !== "RESTRICTIVE") problems.push(`${policy.policyname}: polityka ochronna nie jest RESTRICTIVE`);
   }
   if (problems.length) throw new Error(`Nieprawidłowa konfiguracja bazy:\n${problems.join("\n")}`);
-  console.log(`PASS: ${expectedTables.length} tabel ma RLS i nie udostępnia CRUD rolom anon/authenticated; prywatny bucket inspiracji ma ochronę właściciela; brak funkcji SECURITY DEFINER.`);
+  console.log(`PASS: ${expectedTables.length} tabel ma RLS bez CRUD anon/authenticated; prywatny Storage ma ochronę właściciela i kwarantanny; tylko jedna indywidualnie sprawdzona funkcja boolean SECURITY DEFINER, exact source/search_path/grants.`);
 }
 main().catch((error) => { console.error(error.message); process.exitCode = 1; }).finally(() => prisma.$disconnect());

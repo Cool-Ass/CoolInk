@@ -9,6 +9,8 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { getCurrentAdmin } from "@/lib/auth";
 import { hasAdminPermission } from "@/lib/adminPermissions";
 import { coolinkDayRange, formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
+import { pendingLoyaltyCorrections } from "@/lib/loyaltyCorrections";
+import { RECOVERY_MONITOR_KEY, readRecoveryMonitor } from "@/lib/recoveryMonitor";
 
 export const dynamic = "force-dynamic";
 const fmt = (value: Date) => formatCoolinkDateTime(value, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -27,6 +29,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const visible = visibleMessages(messageRecipient("admin", admin.id));
   const sectionLayout = await getAdminSectionLayout(admin?.id ?? "", "dashboard");
   const unpaid = admin && hasAdminPermission(admin.role, "finance.manage") ? await prisma.appointment.findMany({ where: { status: "completed", loyaltyEntry: null, project: { kind: "tattoo" }, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" }, take: 50 }) : [];
+  const corrections = hasAdminPermission(admin.role, "finance.manage") ? await pendingLoyaltyCorrections() : [];
 
   const [today, newProjects, actionProjects, upcoming, unreadMessages, unreadDirectMessages, syncIssues, waitlistEntries] = await Promise.all([
     prisma.appointment.findMany({ where: { startsAt: { gte: start, lt: end }, status: { notIn: ["cancelled", "no_show"] } }, include: { project: { include: { client: true } } }, orderBy: { startsAt: "asc" } }),
@@ -40,6 +43,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   ]);
 
   const actions: ActionItem[] = [];
+  if (admin.role === "owner") {
+    const recovery = readRecoveryMonitor((await prisma.siteSetting.findUnique({ where: { key: RECOVERY_MONITOR_KEY } }))?.value, now.getTime());
+    if (!recovery || !recovery.healthy) actions.push({ key: "recovery-health", priority: 1, label: "BEZPIECZEŃSTWO DANYCH", title: !recovery ? "Brak aktualnego potwierdzenia monitoringu" : "Kopia lub test odtworzenia wymaga uwagi", detail: !recovery ? "Monitor nie zgłosił wyniku przez 2 godziny. Sprawdź zadania kopii bezpieczeństwa." : "Sprawdź raport kopii bezpieczeństwa i odtworzenia przed zmianą danych.", href: "https://github.com/Cool-Ass/CoolInk/actions/workflows/recovery-health.yml", dueAt: recovery ? new Date(recovery.checkedAt) : now });
+    const failures = await prisma.adminAuditLog.findMany({ where: { action: "operational.reminders", createdAt: { gte: new Date(now.getTime() - 24 * 3600_000) } }, orderBy: { createdAt: "desc" }, take: 1 });
+    if (failures.length) actions.push({ key: "operational-reminders", priority: 1, label: "AUTOMATYZACJE", title: "Błąd przypomnień w ostatnich 24 godzinach", detail: "Sprawdź zadanie i ponów je po usunięciu przyczyny. Alarm jest zapisany niezależnie od powiadomień push.", href: "https://github.com/Cool-Ass/CoolInk/actions", dueAt: failures[0].createdAt });
+  }
   const latestUnreadByProject = new Map(unreadMessages.map((message) => [message.projectId, message]));
   for (const message of latestUnreadByProject.values()) actions.push({ key: `message-${message.projectId}`, priority: message.createdAt <= staleMessage ? 1 : 2, label: message.createdAt <= staleMessage ? "ODPOWIEDŹ PILNA" : "NOWA WIADOMOŚĆ", title: `${message.project.client.firstName} ${message.project.client.lastName} · ${message.project.title}`, detail: message.body || "Klient wysłał załącznik.", href: `/admin/clients/${message.project.client.id}?view=messages`, dueAt: message.createdAt });
   const latestUnreadByClient = new Map(unreadDirectMessages.map((message) => [message.clientId, message]));
@@ -55,6 +64,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     actions.push({ key: `waitlist-${entry.id}`, priority: expired ? 1 : 3, label: expired ? "OFERTA WYGASŁA" : entry.status === "offered" ? "LISTA · OCZEKUJE NA ODPOWIEDŹ" : "LISTA REZERWOWA", title: `${entry.client.firstName} ${entry.client.lastName} · ${entry.project.title}`, detail: expired ? "Zwolnij propozycję i zaoferuj kolejny termin." : entry.status === "offered" ? "Termin jest tymczasowo zablokowany dla klienta." : "Klient czeka na pasujący zwolniony termin.", href: "/admin/waitlist", dueAt: entry.offerExpiresAt ?? entry.createdAt });
   }
   if (syncIssues > 0) actions.push({ key: "calendar-sync", priority: 1, label: "KALENDARZ", title: `${syncIssues} ${syncIssues === 1 ? "problem synchronizacji" : "problemy synchronizacji"}`, detail: "Sprawdź połączenie z Kalendarzem Google, aby uniknąć rozbieżności terminów.", href: "/admin/calendar" });
+  for (const entry of corrections) actions.push({ key: `correction-${entry.id}`, priority: 1, label: "KOREKTA ROZLICZENIA", title: `${entry.firstName} ${entry.lastName} · ${entry.note}`, detail: "Wycofana płatność wymaga wyjaśnienia. Zapisz wynik w historii karty lojalnościowej.", href: `/admin/clients/${entry.clientId}`, dueAt: entry.voidedAt });
   actions.sort((a, b) => a.priority - b.priority || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER));
 
   return <div className="studio-page w-full min-w-0">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type MouseEvent, type ReactNode, type WheelEvent } from "react";
+import { useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { localDateKey, type CalendarDayVisualAppearance } from "@/lib/calendarHub";
 
 const DAYS = ["PN", "WT", "ŚR", "CZ", "PT", "SB", "ND"];
@@ -17,13 +17,13 @@ const TONE_CLASS: Record<CalendarDayAppearance["tone"], string> = {
 };
 
 const ENTRY_TONE_CLASS: Record<CalendarEntryTone, string> = {
-  available: "bg-emerald-500 text-ink-black",
-  unavailable: "bg-red-500/30 text-red-100",
+  available: "border-l-2 border-emerald-400 bg-emerald-400/10 text-emerald-200",
+  unavailable: "border-l-2 border-red-400/70 bg-red-400/10 text-red-100",
   custom: "text-ink-black",
 };
 
 export function calendarEntryClassName(tone: CalendarEntryTone) {
-  return `block w-full truncate px-1 py-0.5 text-left text-[8px] leading-tight ${ENTRY_TONE_CLASS[tone]}`;
+  return `calendar-entry block w-full min-w-0 truncate rounded px-1.5 py-1 text-left text-[10px] leading-tight sm:text-[11px] ${ENTRY_TONE_CLASS[tone]}`;
 }
 
 export default function CalendarMonthGrid({
@@ -32,6 +32,7 @@ export default function CalendarMonthGrid({
   selectedKeys,
   onPrevious,
   onNext,
+  onToday,
   previousDisabled = false,
   nextDisabled = false,
   appearanceFor,
@@ -46,6 +47,7 @@ export default function CalendarMonthGrid({
   selectedKeys?: Set<string>;
   onPrevious: () => void;
   onNext: () => void;
+  onToday?: () => void;
   previousDisabled?: boolean;
   nextDisabled?: boolean;
   appearanceFor: (date: Date) => CalendarDayAppearance;
@@ -57,38 +59,40 @@ export default function CalendarMonthGrid({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const monthLabel = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+  const todayKey = localDateKey(new Date());
   const cellClass = (date: Date) => {
     const appearance = appearanceFor(date);
-    return `${compact ? "min-h-24 p-1" : "min-h-20 p-1 sm:min-h-28 sm:p-1.5"} min-w-0 overflow-hidden border-b border-r border-ink-white/10 text-left align-top transition-colors ${TONE_CLASS[appearance.tone]} ${selectedKeys?.has(localDateKey(date)) ? "ring-1 ring-inset ring-ink-gold" : "hover:brightness-125"} ${date.getMonth() !== cursor.getMonth() ? "opacity-35" : ""}`;
+    return `calendar-day ${compact ? "min-h-20 p-1" : "min-h-20 p-1 sm:min-h-28 sm:p-1.5"} min-w-0 rounded-md text-left align-top transition-colors ${TONE_CLASS[appearance.tone]} ${selectedKeys?.has(localDateKey(date)) ? "ring-1 ring-inset ring-ink-gold bg-ink-gold/5" : "hover:bg-ink-white/[0.07]"} ${date.getMonth() !== cursor.getMonth() ? "text-ink-grey" : ""}`;
   };
-  const cellStyle = (_date: Date) => undefined;
   const dateLabel = (date: Date) => ariaLabelFor?.(date) ?? date.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    const scroller = scrollRef.current;
-    if (!scroller || scroller.scrollWidth <= scroller.clientWidth || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
-
-    const previousLeft = scroller.scrollLeft;
-    scroller.scrollLeft += event.deltaY;
-    if (scroller.scrollLeft !== previousLeft) event.preventDefault();
+  const handleDayKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+    const target = event.key === "Home" ? index - index % 7 : event.key === "End" ? Math.min(dates.length - 1, index - index % 7 + 6) : offset === undefined ? -1 : index + offset;
+    if (target < 0 || target >= dates.length) return;
+    event.preventDefault();
+    scrollRef.current?.querySelector<HTMLButtonElement>(`[data-calendar-day="${target}"]`)?.focus();
   };
 
   return <div className="min-w-0">
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={onPrevious} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">←</button>
-      <h2 className="min-w-0 text-center font-display text-xl sm:text-2xl">{monthLabel}</h2>
-      <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={onNext} className="flex h-9 w-9 shrink-0 items-center justify-center border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30">→</button>
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <h2 aria-live="polite" aria-atomic="true" className="min-w-0 font-sans text-base font-semibold capitalize sm:text-lg">{monthLabel}</h2>
+      <div className="flex items-center gap-1">
+        {onToday && <button type="button" onClick={onToday} className="calendar-nav rounded-md border border-ink-white/15 px-2 text-[11px] text-ink-grey hover:text-ink-white">Dziś</button>}
+        <button type="button" disabled={previousDisabled} aria-label="Poprzedni miesiąc" onClick={onPrevious} className="calendar-nav rounded-md border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-40">←</button>
+        <button type="button" disabled={nextDisabled} aria-label="Następny miesiąc" onClick={onNext} className="calendar-nav rounded-md border border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-40">→</button>
+      </div>
     </div>
-    <div ref={scrollRef} onWheel={handleWheel} className="overflow-x-auto overscroll-x-contain pb-1">
-      <div className={`grid grid-cols-7 border-l border-t border-ink-white/10 ${compact ? "min-w-[600px]" : "min-w-[680px]"}`}>
-        {DAYS.map((day) => <div key={day} className="border-b border-r border-ink-white/10 py-2 text-center text-[10px] text-ink-grey">{day}</div>)}
-        {dates.map((date) => wholeDayButton ? (
-          <button key={date.toISOString()} type="button" aria-label={dateLabel(date)} onClick={(event) => onDayClick(date, event)} style={cellStyle(date)} className={cellClass(date)}>
-            <b className="text-sm sm:text-base">{date.getDate()}</b>
+    <div ref={scrollRef} className="min-w-0">
+      <div className="grid grid-cols-7 gap-px sm:gap-1">
+        {DAYS.map((day) => <div key={day} className="py-1.5 text-center text-[10px] font-medium text-ink-grey">{day}</div>)}
+        {dates.map((date, index) => wholeDayButton ? (
+          <button key={date.toISOString()} type="button" data-calendar-day={index} aria-label={dateLabel(date)} aria-pressed={selectedKeys?.has(localDateKey(date)) ?? false} aria-current={localDateKey(date) === todayKey ? "date" : undefined} onKeyDown={(event) => handleDayKey(event, index)} onClick={(event) => onDayClick(date, event)} className={cellClass(date)}>
+            <b className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs ${localDateKey(date) === todayKey ? "bg-ink-gold text-ink-black" : ""}`}>{date.getDate()}</b>
             <span aria-hidden className="mt-1 block space-y-1">{renderDayContent(date)}</span>
           </button>
         ) : (
-          <div key={date.toISOString()} style={cellStyle(date)} className={cellClass(date)}>
-            <button type="button" aria-label={dateLabel(date)} onClick={(event) => onDayClick(date, event)} className="w-full text-left"><b className="text-sm sm:text-base">{date.getDate()}</b></button>
+          <div key={date.toISOString()} className={cellClass(date)}>
+            <button type="button" data-calendar-day={index} aria-label={dateLabel(date)} aria-current={localDateKey(date) === todayKey ? "date" : undefined} onKeyDown={(event) => handleDayKey(event, index)} onClick={(event) => onDayClick(date, event)} className="calendar-date w-full rounded text-left"><b className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs ${localDateKey(date) === todayKey ? "bg-ink-gold text-ink-black" : ""}`}>{date.getDate()}</b></button>
             <div className="mt-1 space-y-1">{renderDayContent(date)}</div>
           </div>
         ))}

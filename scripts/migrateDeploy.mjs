@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
 
+// Preview builds must never mutate a database shared with production. Schema
+// verification runs separately against the explicitly isolated CI database.
+if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") {
+  console.log("Skipping database migrations outside the production deployment target.");
+  process.exit(0);
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   console.error("DATABASE_URL is required for production migrations.");

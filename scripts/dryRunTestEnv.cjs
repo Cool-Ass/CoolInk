@@ -21,7 +21,9 @@ function loadDryRunEnvironment() {
 
 function requireTestProject(values) {
   const url = values.DRY_RUN_SUPABASE_URL;
-  if (!url || !url.startsWith(`https://${TEST_PROJECT_REF}.supabase.co`)) {
+  let parsed;
+  try { parsed = new URL(url); } catch { throw new Error("Invalid isolated Supabase URL."); }
+  if (parsed.origin !== `https://${TEST_PROJECT_REF}.supabase.co` || !["", "/"].includes(parsed.pathname) || parsed.search || parsed.hash || parsed.username || parsed.password) {
     throw new Error(`Refusing to run: DRY_RUN_SUPABASE_URL must point exactly to test project ${TEST_PROJECT_REF}.`);
   }
   if (url.includes("kqqqhasawqodikpzjemy")) throw new Error("Refusing to run against production.");
@@ -33,8 +35,9 @@ function requireTestDatabase(values) {
   if (!directUrl) throw new Error("Missing DRY_RUN_DIRECT_URL for the isolated test project.");
   let parsed;
   try { parsed = new URL(directUrl); } catch { throw new Error("DRY_RUN_DIRECT_URL is not a valid database URL."); }
-  const identity = `${parsed.hostname}:${decodeURIComponent(parsed.username)}`;
-  if (!identity.includes(TEST_PROJECT_REF) || identity.includes("kqqqhasawqodikpzjemy")) {
+  const direct = parsed.hostname === `db.${TEST_PROJECT_REF}.supabase.co` && decodeURIComponent(parsed.username) === "postgres";
+  const pooler = /^aws-\d+-[a-z0-9-]+\.pooler\.supabase\.com$/.test(parsed.hostname) && decodeURIComponent(parsed.username) === `postgres.${TEST_PROJECT_REF}`;
+  if (!["postgresql:", "postgres:"].includes(parsed.protocol) || (!direct && !pooler) || parsed.pathname !== "/postgres") {
     throw new Error(`Refusing to run: database must belong exactly to test project ${TEST_PROJECT_REF}.`);
   }
   return directUrl;

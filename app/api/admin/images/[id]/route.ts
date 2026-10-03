@@ -1,4 +1,4 @@
-import { get as getBlob } from "@vercel/blob";
+import { readPrivateBlob } from "@/lib/privateBlob";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { getSupabaseConfig } from "@/lib/clientAuth";
@@ -25,13 +25,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!image) return NextResponse.json({ error: "Nie znaleziono pliku." }, { status: 404 });
 
   if (isBlobLocation(image.url)) {
-    const source = await getBlob(image.url, { access: "private", useCache: false }).catch(() => null);
+    const source = await readPrivateBlob(image.url).catch(() => null);
     if (!source || source.statusCode !== 200 || !source.stream)
       return NextResponse.json({ error: "Plik nie jest obecnie dostępny." }, { status: 502 });
     return new NextResponse(source.stream, {
       headers: {
         "Content-Type": source.blob.contentType || "application/octet-stream",
-        "Cache-Control": "private, max-age=300",
+        "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });
@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { url } = getSupabaseConfig();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) return NextResponse.json({ error: "Starszy prywatny plik wymaga konfiguracji SUPABASE_SERVICE_ROLE_KEY." }, { status: 503 });
-  const source = await fetch(`${url}/storage/v1/object/authenticated/project-inspirations/${image.url}`, {
+  const source = await fetch(`${url}/storage/v1/object/authenticated/project-inspirations/${image.url}?private_read=${crypto.randomUUID()}`, {
     headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
     cache: "no-store",
   });
@@ -53,7 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   return new NextResponse(source.body, {
     headers: {
       "Content-Type": source.headers.get("Content-Type") ?? "application/octet-stream",
-      "Cache-Control": "private, max-age=300",
+      "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },
   });

@@ -1,5 +1,73 @@
 # Decyzje i ADR
 
+## AUDIT-FINAL-20261003 — kontynuacja do pełnej publikacji
+
+- ACCEPTED: właściciel w bieżącym czacie: „kontynuuj. masz moje wszystkie zgody.
+  daj znac jak juz wszystko wdrozysz na produkcje”.
+- Zakres: dokończenie istniejącego audytu A10/A14, walidacja, migracja
+  ochrony wykonania prywatności, merge PR26 i ręczna promocja po bramkach.
+  AI/social pozostają odroczone. Nie wybieramy rzeczywistego klienta
+  do usunięcia ani nie odtwarzamy produkcji; wykonanie konkretnego wniosku
+  wymaga oddzielnej świadomej decyzji właściciela w panelu i świeżego backupu.
+- A10: retencja prawnych zapisów, kontrolowana kwarantanna, osobna fraza
+  potwierdzenia, dziennik i retry bez odtwarzania usuniętych danych.
+  Testy kasują wyłącznie oznaczone fixtures izolowanej bazy.
+- A14: zapis raportu OIDC w panelu właściciela, trwałe alarmy niezależne od
+  push, wykrywanie braku heartbeat, issue GitHub przy niedoręczonym raporcie.
+  Zapis w panelu nie jest dowodem przeczytania powiadomienia przez człowieka.
+- Rollback: poprzedni artefakt aplikacji, bez przywracania Auth/plików ani
+  kaskadowania legalnych danych; ochronę zamkniętych profili zachować.
+  CI/backup/restore/publication gate nie są pomijane przez tę zgodę.
+
+## PRIVATE-PRODUCTION-MEDIA-20261003
+
+- ACCEPTED: właściciel w bieżącym czacie odpowiedział „tak” na osobny,
+  bezpłatny prywatny magazyn produkcyjny zdjęć klientów, przy zachowaniu
+  obecnego publicznego magazynu strony bez zmian.
+- Zakres HIGH: nowy Private Blob store, oddzielny token
+  PRIVATE_BLOB_READ_WRITE_TOKEN dla aplikacji i backupu; rozdzielenie
+  uploadów/odczytów/usuwania prywatnych zdjęć od publicznych zasobów CMS.
+  Testowy magazyn nie jest repurposed; brak płatnego planu i rotacji starego klucza.
+- Backup obejmuje oba magazyny. Nie usuwać ani migrować źródłowych plików.
+  Publikacja nadal wymaga wszystkich bramek; rollback kodu/config bez kasowania
+  zapisanych zdjęć. Ta zgoda nie obejmuje usuwania rzeczywistych klientów.
+
+## MEDIA-RESTORE-20261003
+
+- ACCEPTED: właściciel odpowiedział „zgadzam się” na odtworzenie prywatnych
+  zdjęć w osobnym, prywatnym magazynie testowym, bez zmian w produkcji i bez
+  uruchamiania płatnego planu. Zgoda dotyczy testu z zaszyfrowanej kopii,
+  nie publikacji zdjęć, migracji produkcyjnego magazynu ani rotacji jego kluczy.
+- Zakres HIGH: izolowany magazyn, token tylko do niego, twarda identyfikacja
+  docelowego store, weryfikacja sum i odczytu aplikacji dla uprawnionej roli
+  oraz odmowy dla anonimowego/cudzego konta. Nigdy nie używać produkcyjnego
+  BLOB_READ_WRITE_TOKEN do zapisu testowego. Dane nie trafiają do repo/logów.
+- Rollback: usuń wyłącznie jawnie zapisane obiekty utworzone przez tę próbę;
+  źródło pozostaje nienaruszone. Brak płatnego planu jest warunkiem zgody.
+
+## PRIVACY-REVIEW-20261003 / OWNER-MFA-20261003
+
+- ACCEPTED: właściciel w tym czacie „jak mam potwierdzić to potwierdzam”;
+  potwierdzono indywidualną decyzję właściciela o retencji oraz osobne
+  zatwierdzenie wykonania usuwania. Wdrożenie mechanizmu nie upoważnia
+  Workera do usunięcia żadnego rzeczywistego klienta podczas publikacji.
+- Właściciel następnie „ok dziala mam, kontynuuj” potwierdził działanie MFA
+  i zapisanie nowych kodów awaryjnych. Nie zażądano kodów ani sekretu.
+- Pakiet A10: owner-only audytowana ocena wniosków, podstawa i termin retencji,
+  jawny status dla klienta. Nie oznaczać danych jako usuniętych po samym zapisie
+  decyzji. Wykonanie destrukcyjne musi być osobno zatwierdzone w konkretnym
+  przypadku, z gate kopii/restore i bez kasowania wymaganej historii.
+- Walidacja: origin, RBAC/IDOR, walidacja planu, CAS i rollback transakcji;
+  izolowane testy HTTP/browser przed publikacją. Rollback: revert kodu,
+  zachowanie wniosków i wpisów audytu, bez restore produkcji.
+
+## CONFIG-ESCROW-20261002 / UX-20261002
+
+- Status: ACCEPTED, źródło: właściciel w bieżącym czacie, „Tak. Dodatkowo przed wdrożeniem…”.
+- Zgoda obejmuje zaszyfrowane escrow bieżącej konfiguracji i kluczy MFA/Google, bez rotacji i bez ujawniania wartości w logach, repo ani czacie. Nie obejmuje odtworzenia ani usuwania produkcyjnych danych.
+- Dodatkowy zakres MEDIUM: wspólny przegląd UI/UX admina i klienta, spójny kalendarz, subtelny ruch z reduced-motion, kompaktowy builder oraz swobodnie komponowany hero. Nie zmienia cen, uprawnień ani zasad rezerwacji.
+- Walidacja: regresja obu paneli i buildera, klawiatura/mobile/reduced-motion; pełne bramki audytu nadal obowiązują przed produkcją. Rollback UI: revert zmian prezentacji bez restore bazy.
+- Diagnostyka A01: backup readonly 36953435073 / 255564a z tej zgody może być odtworzony wyłącznie w tymczasowym PostgreSQL runnera. Tryb audit_preflight jest przypięty do tego run/SHA i brancha; nie zastępuje wymaganego backupu main ani nie zmienia bramki publikacji. Zapis konfiguracji runtime pozostaje osobnym nieukończonym krokiem.
 ## CONFIG-ESCROW-20261002 — bieżące klucze, bez rotacji
 
 - ACCEPTED: właściciel w tym czacie odpowiedział „Tak” na escrow kluczy, a następnie zlecił wspólny przegląd UI/UX przed produkcją. Zakres nie obejmuje usuwania ani odtwarzania produkcji.
@@ -46,3 +114,12 @@ REJECTED, SUPERSEDED. Nie twórz fikcyjnych linków ani zgód z milczenia.
 - Zakres: poprawki audytu technicznego z 2026-09-29, kolejno według priorytetu; zgoda zastępuje wymaganie każdorazowej akceptacji commitu dla tego zakresu, nie znosi testów ani kontroli wdrożeń.
 - Wyłączenia: usuwanie danych produkcyjnych i przywracanie produkcyjnej bazy pozostają niedozwolone bez odrębnej zgody.
 - Pierwszy pakiet: A01 (częściowo) zapisany artefakt jako źródło drill; A02 wspólny snapshot dumpa i liczników. Brak migracji i zmian danych źródłowych. Rollback: revert workflow/skryptu; żadnego restore produkcji.
+
+## HOSTING-GATE-20261002 — ręczna promocja po testach
+
+- Status: ACCEPTED. Właściciel w bieżącym czacie odpowiedział „Tak, ustaw bezpieczną publikację po testach” na pytanie o wyłączenie automatycznego przypisania domen produkcyjnych Vercel.
+- Zakres: projekt `cool-ass/cool-ink`, Production, wyłączenie `Auto-assign Custom Production Domains`; istniejące wdrożenie i domeny pozostają aktywne. Nowe wersje promowane dopiero po bramkach audytu.
+- Ryzyko: HIGH (konfiguracja hostingu). Nie upoważnia do usunięcia danych, zmiany sekretów ani publikacji niezweryfikowanego SHA.
+- Rollback: ponowne włączenie opcji po uzgodnieniu z właścicielem; nie zmienia danych bazy.
+- Uwaga: ustawienie domen nie blokuje samego builda/migracji. Backup i wszystkie testy muszą poprzedzać merge do produkcyjnego `main`.
+- Wykonanie: zapisano i potwierdzono po ponownym otwarciu strony Vercel Production 2026-10-02 około 01:05 UTC: `Disabled`, checkbox niezaznaczony, komunikat o ręcznej promocji. Nie wdrożono nowego kodu.

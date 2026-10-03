@@ -58,7 +58,7 @@ async function startupDiagnostics(container) {
   console.error("RESTORED_AUTH_STARTUP", { exitCode: /^\d{1,3}\s*$/.test(state?.stdout ?? "") ? Number(state.stdout) : null, classes, ...(sqlState ? { sqlState } : {}), ...(key ? { requiredEnvironmentName: key } : {}), ...(column ? { missingSchemaColumn: column } : {}), ...(migration ? { vendorMigration: migration } : {}) });
 }
 
-async function main() {
+export async function verifyRestoredAuthRuntime(applicationProbe) {
   if (process.env.GITHUB_ACTIONS !== "true" || !/^\d{1,30}$/.test(process.env.GITHUB_RUN_ID ?? "")) throw new Error("Drill requires disposable GitHub runner");
   const started = Date.now(); const prisma = new PrismaClient({ datasources: { db: { url: database } }, log: [] });
   const container = `coolink-drill-auth-${process.env.GITHUB_RUN_ID}`;
@@ -108,8 +108,11 @@ async function main() {
     if (!login.access_token || login.user?.id !== fixture.id) throw new Error("Restored password grant failed");
     const verified = await json("/user", { headers: { authorization: `Bearer ${login.access_token}` } });
     if (verified.id !== fixture.id) throw new Error("Restored user verification failed");
+    stage = "isolated-application-probe";
+    const application = applicationProbe ? await applicationProbe({ id: fixture.id, email, password }) : undefined;
     console.log(JSON.stringify({ verified: "restored-auth-runtime", restoredUsers: users.length, linkedClients: linked.length, isolatedPasswordFlow: true, durationMs: Date.now() - started }));
-  } catch { console.error(`Restored Auth runtime failed at ${stage}; private diagnostics withheld`); process.exitCode = 1; }
+    return application;
+  } catch { console.error(`Restored Auth runtime failed at ${stage}; private diagnostics withheld`); throw new Error("Restored Auth runtime verification failed"); }
   finally {
     if (containerStarted) {
       const label = await exec("docker", ["inspect", "--format", '{{ index .Config.Labels "coolink.drill" }}', container], { timeout: 5000 }).catch(() => null);
@@ -122,4 +125,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main().catch(() => { console.error("Restored Auth drill guard failed"); process.exitCode = 1; });
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await verifyRestoredAuthRuntime().catch(() => { console.error("Restored Auth drill guard failed"); process.exitCode = 1; });

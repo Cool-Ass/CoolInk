@@ -113,6 +113,7 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
         selectedKeys={selectedKeys}
         onPrevious={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
         onNext={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+        onToday={() => setCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
         onDayClick={selectDay}
         appearanceFor={(date) => dayFor(date).appearance}
         renderDayContent={(date) => {

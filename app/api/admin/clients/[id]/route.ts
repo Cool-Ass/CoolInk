@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 
 type Params = { params: Promise<{ id: string }> };
+class ClientEditConflict extends Error {}
 
 export async function PATCH(request: Request, { params }: Params) {
   const access = await requireAdminApi("operations.manage");
@@ -19,12 +20,20 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!firstName || !lastName || !email.includes("@")) return NextResponse.json({ error: "Uzupełnij imię, nazwisko i e-mail." }, { status: 400 });
   try {
     const client = await prisma.$transaction(async (tx) => {
-      const updated = await tx.client.update({ where: { id }, data: { firstName, lastName, email, phone: String(body?.phone ?? "").trim() || null, tags: String(body?.tags ?? "").trim() } });
+      const current = await tx.client.findUnique({ where: { id }, select: { email: true, supabaseUserId: true } });
+      if (!current) throw new ClientEditConflict("Nie znaleziono klienta.");
+      if (current.supabaseUserId && email !== current.email.toLowerCase()) {
+        throw new ClientEditConflict("Adres jest powiązany z kontem logowania. Nie można zmienić go tylko w karcie klienta.");
+      }
+      // Compare-and-swap also protects against linking an account during this edit.
+      const changed = await tx.client.updateMany({ where: { id, email: current.email, supabaseUserId: current.supabaseUserId }, data: { firstName, lastName, ...(current.supabaseUserId ? {} : { email }), phone: String(body?.phone ?? "").trim() || null, tags: String(body?.tags ?? "").trim() } });
+      if (changed.count !== 1) throw new ClientEditConflict("Dane konta zmieniły się. Odśwież kartę klienta i spróbuj ponownie.");
+      const updated = await tx.client.findUniqueOrThrow({ where: { id } });
       await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "client.update", targetType: "Client", targetId: id, summary: `Zaktualizowano dane klienta ${firstName} ${lastName}.` } });
       return updated;
     });
     return NextResponse.json({ client });
-  } catch { return NextResponse.json({ error: "Nie udało się zapisać danych klienta." }, { status: 409 }); }
+  } catch (error) { return NextResponse.json({ error: error instanceof ClientEditConflict ? error.message : "Nie udało się zapisać danych klienta." }, { status: 409 }); }
 }
 
 export async function DELETE(request: Request, { params }: Params) {

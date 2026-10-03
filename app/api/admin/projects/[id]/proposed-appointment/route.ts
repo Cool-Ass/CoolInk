@@ -22,6 +22,8 @@ export async function POST(request: Request, { params }: Params) {
   const extra = String(body?.note ?? "").trim();
   const appointment = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
+    const currentProject = await tx.tattooProject.findUnique({ where: { id }, select: { clientArchivedAt: true } });
+    if (!currentProject || currentProject.clientArchivedAt) throw new Error("BOOKING_CONFLICT:Projekt jest archiwalny lub nie istnieje.");
     const availability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, tx);
     if (!availability.ok) throw new Error(`BOOKING_CONFLICT:${availability.error}`);
     const created = await tx.appointment.create({ data: { projectId: id, startsAt, endsAt, status: "proposed", notes: `[PROPOZYCJA STUDIA]${extra ? ` ${extra.slice(0, 1000)}` : ""}` } });
@@ -32,7 +34,7 @@ export async function POST(request: Request, { params }: Params) {
     if (error instanceof Error && error.message.startsWith("BOOKING_CONFLICT:")) return null;
     throw error;
   });
-  if (!appointment) return NextResponse.json({ error: "Ten termin został właśnie zajęty. Wybierz inny wolny zakres." }, { status: 409 });
+  if (!appointment) return NextResponse.json({ error: "Nie można zaproponować wizyty: projekt jest archiwalny albo termin jest niedostępny." }, { status: 409 });
   await recordWorkflowEvent({ projectId: id, type: "APPOINTMENT_PROPOSED", notification: { title: "Nowa propozycja terminu", body: "Sprawdź proponowaną wizytę i potwierdź, czy termin Ci pasuje.", appointmentId: appointment.id } });
   await syncAppointmentToGoogle(appointment.id).catch(() => undefined);
   return NextResponse.json({ appointment }, { status: 201 });

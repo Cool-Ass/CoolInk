@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { loyaltySummary } from "@/lib/loyaltyRules";
 import { getLoyaltyRules, getLoyaltyDescription } from "@/lib/loyaltySettings";
+import { pendingLoyaltyCorrections } from "@/lib/loyaltyCorrections";
 
 export async function loyaltyBalance(clientId: string, db: Prisma.TransactionClient = prisma) {
   const result = await db.loyaltyEntry.aggregate({ where: { clientId, voidedAt: null }, _sum: { stamps: true } });
@@ -15,5 +16,6 @@ export async function getLoyaltyCard(clientId: string) {
     getLoyaltyRules(),
     getLoyaltyDescription(),
   ]);
-  return { ...loyaltySummary(balance, rules), rules, description, history: history.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), voidedAt: item.voidedAt?.toISOString() ?? null })) };
+  const pendingCorrections = await pendingLoyaltyCorrections(clientId);
+  return { ...loyaltySummary(balance, rules), rules, description, pendingCorrections: pendingCorrections.map((entry) => ({ id: entry.id, note: entry.note, voidedAt: entry.voidedAt.toISOString() })), history: history.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), voidedAt: item.voidedAt?.toISOString() ?? null })) };
 }

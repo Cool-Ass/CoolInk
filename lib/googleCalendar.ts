@@ -6,7 +6,7 @@ export const GOOGLE_CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar
 export const GOOGLE_CALENDAR_TIME_ZONE = "Europe/Warsaw";
 
 export type GoogleCalendarSummary = { id: string; summary: string; primary?: boolean; accessRole?: string };
-export type GoogleEvent = { id: string; status?: string; summary?: string; description?: string; location?: string; updated?: string; colorId?: string; recurringEventId?: string; originalStartTime?: { dateTime?: string; date?: string }; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } };
+export type GoogleEvent = { id: string; etag?: string; status?: string; summary?: string; description?: string; location?: string; updated?: string; colorId?: string; recurringEventId?: string; originalStartTime?: { dateTime?: string; date?: string }; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } };
 
 export class GoogleCalendarApiError extends Error {
   constructor(
@@ -28,7 +28,7 @@ export function googleCalendarRedirectUri(origin?: string) { return process.env.
 export function googleCalendarAuthorizationUrl({ state, origin }: { state: string; origin: string }) { const params = new URLSearchParams({ client_id: required("GOOGLE_CALENDAR_CLIENT_ID"), redirect_uri: googleCalendarRedirectUri(origin), response_type: "code", scope: GOOGLE_CALENDAR_SCOPES.join(" "), access_type: "offline", prompt: "consent", include_granted_scopes: "false", state }); return `${GOOGLE_AUTH_URL}?${params}`; }
 
 export async function exchangeGoogleCalendarCode(code: string, origin: string) { const response = await fetch(GOOGLE_TOKEN_URL, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: required("GOOGLE_CALENDAR_CLIENT_ID"), client_secret: required("GOOGLE_CALENDAR_CLIENT_SECRET"), redirect_uri: googleCalendarRedirectUri(origin), grant_type: "authorization_code" }), cache: "no-store" }); const data = await response.json(); if (!response.ok || !data.refresh_token) throw new Error("Google Calendar nie zwrócił refresh tokenu. Wybierz Połącz ponownie i zaakceptuj dostęp."); return data as { access_token: string; refresh_token: string; expires_in?: number; scope?: string }; }
-export async function refreshGoogleCalendarAccessToken(refreshToken: string) { const response = await fetch(GOOGLE_TOKEN_URL, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ refresh_token: refreshToken, client_id: required("GOOGLE_CALENDAR_CLIENT_ID"), client_secret: required("GOOGLE_CALENDAR_CLIENT_SECRET"), grant_type: "refresh_token" }), cache: "no-store" }); const data = await response.json(); if (!response.ok || !data.access_token) throw new Error("Google Calendar odrzucił odświeżenie dostępu. Połącz integrację ponownie."); return data as { access_token: string; expires_in?: number }; }
+export async function refreshGoogleCalendarAccessToken(refreshToken: string) { const response = await fetch(GOOGLE_TOKEN_URL, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ refresh_token: refreshToken, client_id: required("GOOGLE_CALENDAR_CLIENT_ID"), client_secret: required("GOOGLE_CALENDAR_CLIENT_SECRET"), grant_type: "refresh_token" }), cache: "no-store", signal: AbortSignal.timeout(15_000) }); const data = await response.json(); if (!response.ok || !data.access_token) throw new Error("Google Calendar odrzucił odświeżenie dostępu. Połącz integrację ponownie."); return data as { access_token: string; expires_in?: number }; }
 export async function googleCalendarRequest<T>(accessToken: string, path: string, init?: RequestInit) {
   const response = await fetch(`${GOOGLE_CALENDAR_API}${path}`, {
     ...init,
@@ -38,6 +38,7 @@ export async function googleCalendarRequest<T>(accessToken: string, path: string
       ...(init?.headers || {}),
     },
     cache: "no-store",
+    signal: init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
   });
   const data = await response.json().catch(() => ({})) as {
     error?: { message?: unknown; errors?: Array<{ reason?: unknown }> };

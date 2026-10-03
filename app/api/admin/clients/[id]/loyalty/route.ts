@@ -9,6 +9,7 @@ import { loyaltySettlement } from "@/lib/loyaltyRules";
 
 import { getLoyaltyRules } from "@/lib/loyaltySettings";
 import { projectStatusAfterAppointmentChange } from "@/lib/projectLifecycle";
+import { LOYALTY_CORRECTION_RESOLVED } from "@/lib/loyaltyCorrections";
 
 class LoyaltyError extends Error {}
 
@@ -20,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!limit.allowed) return tooManyRequests(limit);
   const { id: clientId } = await params;
   const body = await request.json().catch(() => null);
-  if (!body || !["settle", "complete", "paper", "void"].includes(body.action)) return NextResponse.json({ error: "Nieprawidłowa operacja." }, { status: 400 });
+  if (!body || !["settle", "complete", "paper", "void", "resolve_void"].includes(body.action)) return NextResponse.json({ error: "Nieprawidłowa operacja." }, { status: 400 });
   try {
     await prisma.$transaction(async (tx) => {
       // Same lock order as appointment edits; serialize redemptions across projects.
@@ -31,6 +32,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const rules = await getLoyaltyRules(tx);
       if (["settle", "paper"].includes(body.action) && (!body.rules || Object.entries(rules).some(([key, value]) => body.rules[key] !== value))) throw new LoyaltyError("Zasady programu zmieniły się. Odśwież stronę i sprawdź nową kwotę przed rozliczeniem.");
       const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : "";
+      if (body.action === "resolve_void") {
+        if (!note) throw new LoyaltyError("Opisz sposób wyjaśnienia korekty, np. wykonany zwrot lub poprawny dokument rozliczenia.");
+        const entry = await tx.loyaltyEntry.findFirst({ where: { id: String(body.entryId ?? ""), clientId, kind: "visit", voidedAt: { not: null } } });
+        if (!entry) throw new LoyaltyError("Nie znaleziono wycofanego rozliczenia klienta.");
+        if (await tx.adminAuditLog.findFirst({ where: { action: LOYALTY_CORRECTION_RESOLVED, targetType: "LoyaltyEntry", targetId: entry.id } })) return;
+        await tx.adminAuditLog.create({ data: { adminUserId: admin.id, action: LOYALTY_CORRECTION_RESOLVED, targetType: "LoyaltyEntry", targetId: entry.id, summary: note } });
+        return;
+      }
       if (body.action === "void") {
         if (!note) throw new LoyaltyError("Podaj powód wycofania rozliczenia.");
         const entry = await tx.loyaltyEntry.findFirst({ where: { id: String(body.entryId ?? ""), clientId } });
