@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { PRIVACY_POLICY_HTML, PRIVACY_POLICY_SLUG, PRIVACY_POLICY_VERSION } from "@/lib/privacyPolicy";
+import { PRIVACY_LOCKED_STATUSES } from "@/lib/privacyExecutionPlan";
 
 export const CLIENT_ACCESS_COOKIE = "coolink_client_access";
 export const CLIENT_REFRESH_COOKIE = "coolink_client_refresh";
@@ -35,8 +36,15 @@ export async function linkAuthenticatedClient(user: SupabaseUser) {
   const email = user.email?.trim().toLowerCase();
   if (!email || (!user.email_confirmed_at && !user.confirmed_at)) return null;
   const linked = await prisma.client.findUnique({ where: { supabaseUserId: user.id } });
-  if (linked) return linked;
+  if (linked) {
+    const privacy = await prisma.accountDeletionRequest.findUnique({ where: { clientId: linked.id }, select: { status: true } });
+    return privacy && PRIVACY_LOCKED_STATUSES.includes(privacy.status) ? null : linked;
+  }
   const existing = await prisma.client.findUnique({ where: { email } });
+  if (existing) {
+    const privacy = await prisma.accountDeletionRequest.findUnique({ where: { clientId: existing.id }, select: { status: true } });
+    if (privacy && PRIVACY_LOCKED_STATUSES.includes(privacy.status)) return null;
+  }
   if (existing?.supabaseUserId && existing.supabaseUserId !== user.id) return null;
   const meta = user.user_metadata ?? {};
   const fullName = String(meta.full_name ?? meta.name ?? "").trim().split(/\s+/).filter(Boolean);

@@ -69,6 +69,8 @@ export async function deletePrivateProjectMedia(locations: string[]) {
           method: "DELETE",
           headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
           cache: "no-store",
+          signal: AbortSignal.timeout(15000),
+          redirect: "error",
         }).catch(() => null);
         return Boolean(response && (response.ok || response.status === 404));
       }));

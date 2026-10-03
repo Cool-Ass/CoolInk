@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { prisma } from "@/lib/prisma";
 
 /** Report fixed diagnostic codes only; exceptions may contain secrets or PII. */
 export async function operationalJob(task: () => Promise<Response>) {
@@ -10,6 +11,11 @@ export async function operationalJob(task: () => Promise<Response>) {
     const eventId = randomUUID();
     console.error("operational_job_failed", { job: "reminders", eventId });
     let alertDelivered = false;
+    let alertPersisted = false;
+    try {
+      await prisma.adminAuditLog.create({ data: { action: "operational.reminders", targetType: "OperationalJob", summary: "Zadanie przypomnień nie zakończyło się poprawnie.", metadata: JSON.stringify({ eventId }) } });
+      alertPersisted = true;
+    } catch { console.error("operational_alert_not_persisted", { job: "reminders", eventId }); }
     try {
       const alert = await sendPushToAdmins({
         title: "Zadanie automatyczne wymaga sprawdzenia",
@@ -19,6 +25,6 @@ export async function operationalJob(task: () => Promise<Response>) {
       alertDelivered = alert.configured && alert.sent > 0;
     } catch { /* Failure to send an alert must not hide the original failure. */ }
     if (!alertDelivered) console.error("operational_alert_not_delivered", { job: "reminders", eventId });
-    return NextResponse.json({ ok: false, error: "OPERATIONAL_JOB_FAILED", eventId, alertDelivered }, { status: 503 });
+    return NextResponse.json({ ok: false, error: "OPERATIONAL_JOB_FAILED", eventId, alertDelivered, alertPersisted }, { status: 503 });
   }
 }

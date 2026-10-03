@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { put as putBlob } from "@vercel/blob";
-import { privateBlobToken } from "@/lib/privateBlob";
+import { privateBlobToken, privateBlobObjectLocation } from "@/lib/privateBlob";
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/adminApi";
 import { getSupabaseConfig } from "@/lib/clientAuth";
@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { preparePrivateImage, PrivateImageUploadError } from "@/lib/privateImageUpload";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { deletePrivateProjectMedia, privateImageUrl } from "@/lib/privateMedia";
+import { withClientMediaWrite } from "@/lib/clientMediaWrite";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,22 +27,25 @@ export async function POST(request: Request, { params }: Params) {
   let prepared: Awaited<ReturnType<typeof preparePrivateImage>>;
   try { prepared = await preparePrivateImage(file); }
   catch (error) { return NextResponse.json({ error: error instanceof PrivateImageUploadError ? error.message : "Nie udało się odczytać obrazu." }, { status: 422 }); }
+  const image = await withClientMediaWrite(project.clientId, async (tx, track) => {
   const objectPath = `admin/${project.clientId}/${randomUUID()}.${prepared.extension}`;
   let storedLocation = objectPath;
   const blobToken = privateBlobToken();
+  track(blobToken ? privateBlobObjectLocation(`project-inspirations/${objectPath}`) : objectPath);
   if (blobToken) {
-    const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, { access: "private", token: blobToken, addRandomSuffix: false, contentType: prepared.contentType }).catch(() => null);
-    if (!upload) return NextResponse.json({ error: "Nie udało się bezpiecznie zapisać pliku." }, { status: 502 });
+    const upload = await putBlob(`project-inspirations/${objectPath}`, prepared.buffer, { access: "private", token: blobToken, addRandomSuffix: false, contentType: prepared.contentType, abortSignal: AbortSignal.timeout(15000) });
     storedLocation = upload.url;
   } else {
     const { url } = getSupabaseConfig();
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) return NextResponse.json({ error: "Prywatny magazyn inspiracji nie jest skonfigurowany." }, { status: 503 });
-    const upload = await fetch(`${url}/storage/v1/object/project-inspirations/${objectPath}`, { method: "POST", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": prepared.contentType, "x-upsert": "false" }, body: prepared.buffer, cache: "no-store" });
-    if (!upload.ok) return NextResponse.json({ error: "Nie udało się bezpiecznie zapisać pliku." }, { status: 502 });
+    if (!serviceKey) throw new Error("Prywatny magazyn inspiracji nie jest skonfigurowany.");
+    const upload = await fetch(`${url}/storage/v1/object/project-inspirations/${objectPath}`, { method: "POST", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": prepared.contentType, "x-upsert": "false" }, body: prepared.buffer, cache: "no-store", signal: AbortSignal.timeout(15000), redirect: "error" });
+    if (!upload.ok) throw new Error("Nie udało się bezpiecznie zapisać pliku.");
   }
   const caption = String(form?.get("caption") ?? "").trim().slice(0, 500) || null;
-  const image = await prisma.projectImage.create({ data: { projectId: id, url: storedLocation, caption } });
+  track(storedLocation);
+  return tx.projectImage.create({ data: { projectId: id, url: storedLocation, caption } });
+  });
   const attachment = { id: image.id, caption: image.caption, url: privateImageUrl(image.id, "admin", access.admin.id) };
   const message = form?.get("chat") === "true" ? await prisma.projectMessage.create({ data: { projectId: id, author: "admin", body: String(form.get("chatMessage") ?? "").trim().slice(0, 2000), attachmentId: image.id } }) : null;
   await prisma.clientNotification.create({ data: { clientId: project.clientId, projectId: id, type: "PROJECT_IMAGE", title: message ? "Nowe zdjęcie w rozmowie" : "Studio dodało inspirację", body: project.title, href: `/app/portal/projects?project=${id}` } });

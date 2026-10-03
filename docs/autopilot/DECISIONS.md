@@ -1,5 +1,24 @@
 # Decyzje i ADR
 
+## AUDIT-FINAL-20261003 — kontynuacja do pełnej publikacji
+
+- ACCEPTED: właściciel w bieżącym czacie: „kontynuuj. masz moje wszystkie zgody.
+  daj znac jak juz wszystko wdrozysz na produkcje”.
+- Zakres: dokończenie istniejącego audytu A10/A14, walidacja, migracja
+  ochrony wykonania prywatności, merge PR26 i ręczna promocja po bramkach.
+  AI/social pozostają odroczone. Nie wybieramy rzeczywistego klienta
+  do usunięcia ani nie odtwarzamy produkcji; wykonanie konkretnego wniosku
+  wymaga oddzielnej świadomej decyzji właściciela w panelu i świeżego backupu.
+- A10: retencja prawnych zapisów, kontrolowana kwarantanna, osobna fraza
+  potwierdzenia, dziennik i retry bez odtwarzania usuniętych danych.
+  Testy kasują wyłącznie oznaczone fixtures izolowanej bazy.
+- A14: zapis raportu OIDC w panelu właściciela, trwałe alarmy niezależne od
+  push, wykrywanie braku heartbeat, issue GitHub przy niedoręczonym raporcie.
+  Zapis w panelu nie jest dowodem przeczytania powiadomienia przez człowieka.
+- Rollback: poprzedni artefakt aplikacji, bez przywracania Auth/plików ani
+  kaskadowania legalnych danych; ochronę zamkniętych profili zachować.
+  CI/backup/restore/publication gate nie są pomijane przez tę zgodę.
+
 ## PRIVATE-PRODUCTION-MEDIA-20261003
 
 - ACCEPTED: właściciel w bieżącym czacie odpowiedział „tak” na osobny,

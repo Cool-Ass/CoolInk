@@ -1,6 +1,60 @@
 # Audyt — checkpoint 2026-10-01 (Europe/Warsaw)
 
+## A10/A14 — 2026-10-03 05:18 UTC, przed nowym CI
+
+- Ten sam Worker, PR26/ai/audit-sync-outbox. Właściciel potwierdził dalszą
+  realizację i zgody zakresu audytu (AUDIT-FINAL-20261003); nie wybierano
+  rzeczywistych klientów do usunięcia.
+- A10 przygotowane: osobne potwierdzenie właściciela + revision CAS,
+  świeży main backup/artifact i późniejszy matching-SHA restore; atomowe
+  zamrożenie profilu, trigger obejmujący powiązane dane, RLS Storage
+  odrzucające nadal ważne JWT zamkniętego konta, retry z dziennikiem.
+  Dane finansowe i podpisane zgody pozostają wraz z identyfikacją
+  podczas retencji; po jej wygaśnięciu wymagana nowa ocena/wykonanie.
+  Wpisy z przyszłymi wizytami, Google links/exportami lub ponad100 plików
+  są blokowane zamiast pomijać zewnętrzne kopie.
+- Przesyłanie zdjęć dzieli blokadę z wykonaniem prywatności.
+  SAVEPOINT pozwala sprzątać tylko nowo utworzone obiekty po błędzie DB,
+  nie tracąc blokady; failed cleanup zapisuje prywatny marker do retry.
+- A14 przygotowane: recovery-health.yml podpisuje raport GitHub OIDC
+  exact-main-workflow; endpoint odrzuca cookies/origin/preview/replay.
+  Zapis w panelu właściciela jest trwały mimo braku push. Brak aktualnego
+  raportu przez2h jest alarmem; błędy przypomnień zachowane w audycie.
+  To nie potwierdza przeczytania alarmu ani realnej dostawy produkcyjnej.
+- Lokalnie typy/353 unit tests PASS; lint bez nowych błędów.
+  Izolowany test SQL dodano do CI: client/project/media/chat/financial
+  quarantine, upload vs execution race, executor with fixture-only backup
+  metadata, rollback, tombstone i replay. To NIE jest certyfikat prawdziwego
+  backupu. Nowy exact-SHA CI/restore i delivered production report pending.
+- Nie zmergowano main, nie wykonano migracji produkcyjnych ani promocji.
+  Przed merge obowiązuje nowy zaufany main backup bezpośrednio przed zmianą.
+
 ## Private production media — 2026-10-03 04:34 UTC
+
+Final scope evidence: **92d053a9c952cd631caeaabc9359b6daff404f59**.
+Exact CI **37097019891 SUCCESS**, including lint/types/unit/build/audit,
+gitleaks/CodeQL, isolated DB/HTTP and desktop/mobile browser regressions.
+Saved-artifact restore **37097029884 SUCCESS**, trusted main backup37093068451:
+10 bytes/checksums/private objects, project and direct-chat HTTP owner/admin
+serving, signature/anonymous/IDOR rejection and real restored MFA/client
+login PASS. Original ProjectImage/DirectMessage attachment refs both0; HTTP
+proof uses disposable fixtures with restored bytes, not actual customer login.
+Test store independently confirmed empty after cleanup.
+Source readonly diagnostic backup **37097031422 SUCCESS**, 10 objects from
+3 configured stores (public Blob, new Private Blob, Supabase); encrypted artifact
+11264383863, archive SHA256
+`9cddee694d501f498a33631c39a89a2a0202afa66d71d35425a1e8e40738f93e`.
+It is a branch diagnostic, not the trusted-main pre-migration gate.
+The Production-only PRIVATE_BLOB connection is saved in Vercel; preview access
+removed/confirmed, and GitHub backup secret independently verified present.
+No source file/customer removal or rotation of old public CMS credentials.
+No main merge/public-domain promotion: **A10 execution and A14 delivered
+production monitoring still require implementation/verification**.
+Next worker: complete these, verify one exact SHA, take fresh trusted main
+backup immediately before outbox migration/main merge, stage and promote only
+after all release gates. Do not claim this scoped infrastructure result as
+the whole audit deployment. Local evidence checkpoint edits are intentional;
+durable evidence also recorded in PR26 comment, avoiding a docs-only CI rerun.
 
 PRIVATE-PRODUCTION-MEDIA-20261003 approved by owner. Created separate
 `coolink-client-media-private`, `store_rV1Oa03Q3jg8NzRm`, Private/FRA1,

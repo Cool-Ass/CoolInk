@@ -15,6 +15,6 @@ describe("privacy queue role boundary", () => {
   it("fetches the oldest pending requests for the owner only", async () => {
     mocks.admin.mockResolvedValue({ id: "owner", role: "owner" });
     await ClientsPage();
-    expect(mocks.requests).toHaveBeenCalledWith(expect.objectContaining({ where: { status: { in: ["pending", "reviewing", "awaiting_execution", "retained"] } }, orderBy: { requestedAt: "asc" } }));
+    expect(mocks.requests).toHaveBeenCalledWith(expect.objectContaining({ where: { status: { in: ["pending", "reviewing", "awaiting_execution", "retained", "executing", "execution_failed", "completed_retained", "retention_review", "awaiting_retention_execution", "retention_retained"] } }, orderBy: { requestedAt: "asc" } }));
   });
 });

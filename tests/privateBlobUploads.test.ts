@@ -7,7 +7,7 @@ vi.mock("@/lib/privateImageUpload", () => ({ preparePrivateImage: m.prepare, Pri
 vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: () => true, rateLimit: async () => ({ allowed: true }), tooManyRequests: vi.fn() }));
 vi.mock("@/lib/webPush", () => ({ sendPushToAdmins: async () => {} }));
 vi.mock("@/lib/prisma", () => {
-  const db = { tattooProject: { findFirst: m.find, findUnique: m.find, update: m.noop }, projectImage: { create: m.create }, projectActivity: { create: m.noop }, clientNotification: { create: m.noop } };
+  const db = { $executeRaw: m.noop, $executeRawUnsafe: m.noop, accountDeletionRequest: { findUnique: async () => null }, tattooProject: { findFirst: m.find, findUnique: m.find, update: m.noop }, projectImage: { create: m.create }, projectActivity: { create: m.noop }, clientNotification: { create: m.noop } };
   return { prisma: { ...db, $transaction: async (work: (tx: typeof db) => unknown) => work(db) } };
 });
 import { POST as adminUpload } from "../app/api/admin/projects/[id]/images/route";

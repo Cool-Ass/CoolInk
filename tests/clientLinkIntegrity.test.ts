@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({ update: vi.fn(), notify: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: {
+  accountDeletionRequest: { findUnique: async () => null },
   client: { findUnique: async ({ where }: { where: { email?: string } }) => where.email ? { id: "client", email: where.email, supabaseUserId: null, firstName: "Test", lastName: "Client" } : null },
   $transaction: (run: (tx: unknown) => unknown) => run({ client: { update: m.update }, contactMessage: { create: m.notify } }),
 } }));

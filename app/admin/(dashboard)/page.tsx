@@ -10,6 +10,7 @@ import { getCurrentAdmin } from "@/lib/auth";
 import { hasAdminPermission } from "@/lib/adminPermissions";
 import { coolinkDayRange, formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
 import { pendingLoyaltyCorrections } from "@/lib/loyaltyCorrections";
+import { RECOVERY_MONITOR_KEY, readRecoveryMonitor } from "@/lib/recoveryMonitor";
 
 export const dynamic = "force-dynamic";
 const fmt = (value: Date) => formatCoolinkDateTime(value, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -42,6 +43,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   ]);
 
   const actions: ActionItem[] = [];
+  if (admin.role === "owner") {
+    const recovery = readRecoveryMonitor((await prisma.siteSetting.findUnique({ where: { key: RECOVERY_MONITOR_KEY } }))?.value, now.getTime());
+    if (!recovery || !recovery.healthy) actions.push({ key: "recovery-health", priority: 1, label: "BEZPIECZEŃSTWO DANYCH", title: !recovery ? "Brak aktualnego potwierdzenia monitoringu" : "Kopia lub test odtworzenia wymaga uwagi", detail: !recovery ? "Monitor nie zgłosił wyniku przez 2 godziny. Sprawdź zadania kopii bezpieczeństwa." : "Sprawdź raport kopii bezpieczeństwa i odtworzenia przed zmianą danych.", href: "https://github.com/Cool-Ass/CoolInk/actions/workflows/recovery-health.yml", dueAt: recovery ? new Date(recovery.checkedAt) : now });
+    const failures = await prisma.adminAuditLog.findMany({ where: { action: "operational.reminders", createdAt: { gte: new Date(now.getTime() - 24 * 3600_000) } }, orderBy: { createdAt: "desc" }, take: 1 });
+    if (failures.length) actions.push({ key: "operational-reminders", priority: 1, label: "AUTOMATYZACJE", title: "Błąd przypomnień w ostatnich 24 godzinach", detail: "Sprawdź zadanie i ponów je po usunięciu przyczyny. Alarm jest zapisany niezależnie od powiadomień push.", href: "https://github.com/Cool-Ass/CoolInk/actions", dueAt: failures[0].createdAt });
+  }
   const latestUnreadByProject = new Map(unreadMessages.map((message) => [message.projectId, message]));
   for (const message of latestUnreadByProject.values()) actions.push({ key: `message-${message.projectId}`, priority: message.createdAt <= staleMessage ? 1 : 2, label: message.createdAt <= staleMessage ? "ODPOWIEDŹ PILNA" : "NOWA WIADOMOŚĆ", title: `${message.project.client.firstName} ${message.project.client.lastName} · ${message.project.title}`, detail: message.body || "Klient wysłał załącznik.", href: `/admin/clients/${message.project.client.id}?view=messages`, dueAt: message.createdAt });
   const latestUnreadByClient = new Map(unreadDirectMessages.map((message) => [message.clientId, message]));

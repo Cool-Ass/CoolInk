@@ -32,13 +32,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     await prisma.$transaction(async tx => {
       const current = await tx.accountDeletionRequest.findUnique({ where: { id } });
-      if (!current || current.resolvedAt || !["pending", "reviewing", "awaiting_execution", "retained"].includes(current.status) || privacyRevision(current) !== body.expectedRevision) throw new ReviewConflict();
-      const status = { review: "reviewing", approve: "awaiting_execution", retain: "retained" }[plan.decision];
+      const retentionReview = Boolean(current && ["completed_retained", "retention_review", "awaiting_retention_execution", "retention_retained"].includes(current.status));
+      if (!current || (current.resolvedAt && !retentionReview) || !["pending", "reviewing", "awaiting_execution", "retained", "completed_retained", "retention_review", "awaiting_retention_execution", "retention_retained"].includes(current.status) || privacyRevision(current) !== body.expectedRevision) throw new ReviewConflict();
+      if (retentionReview) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"privacy:" + current.clientId}, 0))`;
+        await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${id}, true)`;
+      }
+      const status = retentionReview ? { review: "retention_review", approve: "awaiting_retention_execution", retain: "retention_retained" }[plan.decision] : { review: "reviewing", approve: "awaiting_execution", retain: "retained" }[plan.decision];
       const note = JSON.stringify({ version: 1, ...plan, reviewerId: access.admin.id, reviewedAt: new Date().toISOString() });
-      const updated = await tx.accountDeletionRequest.updateMany({ where: { id, status: current.status, note: current.note, resolvedAt: null }, data: { status, note } });
+      const updated = await tx.accountDeletionRequest.updateMany({ where: { id, status: current.status, note: current.note, resolvedAt: current.resolvedAt }, data: { status, note, ...(retentionReview ? { resolvedAt: null } : {}) } });
       if (updated.count !== 1) throw new ReviewConflict();
       await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "privacy.review", targetType: "AccountDeletionRequest", targetId: id, summary: `Ocena wniosku: ${status}. Dane nie zostały usunięte.`, metadata: JSON.stringify({ decision: plan.decision, retainedScopes: plan.retainedScopes, retainUntil: plan.retainUntil }) } });
-      if (plan.response) await tx.clientNotification.create({ data: { clientId: current.clientId, type: "privacy", title: "Aktualizacja Twojego wniosku", body: plan.response, href: "/app/portal/profile" } });
+      if (plan.response && !retentionReview) await tx.clientNotification.create({ data: { clientId: current.clientId, type: "privacy", title: "Aktualizacja Twojego wniosku", body: plan.response, href: "/app/portal/profile" } });
     }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true, deleted: false }, { headers: { "Cache-Control": "no-store" } });
   } catch { return NextResponse.json({ error: "Wniosek zmienił się lub nie udało się zapisać oceny. Odśwież widok." }, { status: 409 }); }

@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { put } from "@vercel/blob";
-import { privateBlobToken, readPrivateBlob } from "@/lib/privateBlob";
+import { privateBlobToken, readPrivateBlob, privateBlobObjectLocation } from "@/lib/privateBlob";
 import { preparePrivateImage } from "@/lib/privateImageUpload";
 import { isPrivateBlobLocation, privateImageUrl } from "@/lib/privateMedia";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function readChatInput(request: Request, owner: string) {
+export async function readChatInput(request: Request, owner: string, track?: (location: string) => void) {
   if (!request.headers.get("content-type")?.includes("multipart/form-data")) {
     const input = await request.json();
     return { body: String(input?.body ?? "").trim(), imageUrl: null };
@@ -20,13 +20,14 @@ export async function readChatInput(request: Request, owner: string) {
   const path = `chat/${owner}/${randomUUID()}.webp`;
   let imageUrl: string;
   const blobToken = privateBlobToken();
+  track?.(blobToken ? privateBlobObjectLocation(`project-inspirations/${path}`) : path);
   if (blobToken) {
-    imageUrl = (await put(`project-inspirations/${path}`, prepared.buffer, { access: "private", token: blobToken, contentType: prepared.contentType, addRandomSuffix: false })).url;
+    imageUrl = (await put(`project-inspirations/${path}`, prepared.buffer, { access: "private", token: blobToken, contentType: prepared.contentType, addRandomSuffix: false, abortSignal: AbortSignal.timeout(15000) })).url;
   } else {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!key || !url) throw new Error("Prywatny magazyn zdjęć nie jest skonfigurowany.");
-    const response = await fetch(`${url}/storage/v1/object/project-inspirations/${path}`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": prepared.contentType }, body: prepared.buffer });
+    const response = await fetch(`${url}/storage/v1/object/project-inspirations/${path}`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": prepared.contentType }, body: prepared.buffer, signal: AbortSignal.timeout(15000), redirect: "error" });
     if (!response.ok) throw new Error("Nie udało się zapisać zdjęcia.");
     imageUrl = path;
   }

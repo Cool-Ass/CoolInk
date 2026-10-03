@@ -1,5 +1,6 @@
 import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
+import { withClientMediaWrite } from "@/lib/clientMediaWrite";
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
@@ -34,11 +35,14 @@ export async function POST(request: Request) {
   if (!limit.allowed) return tooManyRequests(limit);
   const opened = await prisma.directMessage.findFirst({ where: { clientId: client.id, author: "admin" }, select: { id: true } });
   if (!opened) return NextResponse.json({ error: "Rozmowę ogólną może rozpocząć studio. Wiadomość dotyczącą projektu wyślij z jego karty." }, { status: 403 });
-  let input: Awaited<ReturnType<typeof readChatInput>>;
-  try { input = await readChatInput(request, client.id); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Nie udało się odczytać wiadomości." }, { status: 422 }); }
-  const { body, imageUrl } = input;
-  if ((!body && !imageUrl) || body.length > MAX_MESSAGE_LENGTH) return NextResponse.json({ error: `Wiadomość musi mieć od 1 do ${MAX_MESSAGE_LENGTH} znaków.` }, { status: 400 });
-  const message = await prisma.directMessage.create({ data: { clientId: client.id, author: "client", body, imageUrl } });
+  let message;
+  try { message = await withClientMediaWrite(client.id, async (tx, track) => {
+    const { body, imageUrl } = await readChatInput(request, client.id, track);
+    if (imageUrl) track(imageUrl);
+    if ((!body && !imageUrl) || body.length > MAX_MESSAGE_LENGTH) throw new Error("Nieprawidłowa wiadomość.");
+    return tx.directMessage.create({ data: { clientId: client.id, author: "client", body, imageUrl } });
+  }); } catch { return NextResponse.json({ error: "Nie udało się zapisać wiadomości. Sprawdź profil i spróbuj ponownie." }, { status: 409 }); }
+  const body = message.body;
   await sendPushToAdmins({ title: "Nowa wiadomość od klienta", body: `${client.firstName} ${client.lastName}: ${body.slice(0, 120)}`, url: `/admin/clients/${client.id}?view=messages`, tag: `client-direct-${message.id}` }).catch(() => undefined);
   return NextResponse.json({ message: serializeDirectMessage(message, "client", client.id) }, { status: 201 });
 }

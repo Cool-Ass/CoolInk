@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 const push = vi.hoisted(() => vi.fn());
+const audit = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/webPush", () => ({ sendPushToAdmins: push }));
+vi.mock("@/lib/prisma", () => ({ prisma: { adminAuditLog: { create: audit } } }));
 import { operationalJob } from "../lib/operationalJob";
 afterEach(() => vi.restoreAllMocks());
 
@@ -17,6 +19,7 @@ describe("operational job reporting", () => {
     expect(response.status).toBe(503);
     expect(body.ok).toBe(false);
     expect(body.alertDelivered).toBe(true);
+    expect(body.alertPersisted).toBe(true);
     expect(push.mock.calls.at(-1)?.[0].body).toContain(body.eventId);
     expect(JSON.stringify([body, push.mock.calls, log.mock.calls])).not.toContain("private token");
   });

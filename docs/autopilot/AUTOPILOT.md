@@ -6,10 +6,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | VERIFYING — separate private production store approved/configured; code and recovery gates pending |
-| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-03 04:02 UTC, lease do 05:00 UTC. Brak innego aktywnego Workera. Exact e95a135 CI37093678056 SUCCESS. MEDIA-RESTORE-20261003 zgoda w bieżącym czacie. |
+| Status | WORKING — A10 privacy execution/quarantine and A14 durable owner-dashboard monitoring |
+| Aktywne zadanie / run / lease | Ten sam Worker kontynuuje; ai/audit-sync-outbox / PR #26; 2026-10-03 05:03 UTC, lease do 06:00 UTC. Poprzednie CI/backup/restore zakończone; brak drugiego Workera lub deployu. Użytkownik potwierdził kontynuację i wszystkie zgody zakresu audytu; nie wybieramy żadnego rzeczywistego klienta do usunięcia. |
 | Zbadana baza main | `eb6ff7637e0fa01681b5c1f774b8170a47e29286` / staged cool-m49mvi8je-cool-ass.vercel.app Ready, domains assignment Skipped. Trusted encrypted backup 37035132250 SUCCESS, includes current runtime keys without rotation. |
-| Następny krok | Restore37095491129 SUCCESS /13195a0 from trusted backup37093068451:10 objects/private HTTP/MFA/client login PASS; remapped original ProjectImage0, fixture serving reported honestly. Store3Yn2RpULDWBtDc8W confirmed empty after cleanup; no production link/paid plan. CI37095487104 still running; gitleaks/CodeQL/snapshot PASS. Await scope decision for separate PRIVATE production store/token: current connected coolink-media store_EJoRYywWQyUvNDU5 is Public but project/chat code uses its BLOB token for private uploads. Never repurpose test store or replace public CMS token. A10 execution/A14 delivery still open; no promotion. |
+| Następny krok | 92d053a exact CI37097019891 SUCCESS; private project/chat HTTP restore37097029884 SUCCESS from trusted backup37093068451, original private refs0/fixtures documented. Branch readonly backup37097031422 SUCCESS:10 objects/3 stores, artifact11264383863,digest9cddee694d501f498a33631c39a89a2a0202afa66d71d35425a1e8e40738f93e. New Private/FRA1 store_rV1Oa03Q3jg8NzRm connected Production-only under PRIVATE_BLOB prefix; GitHub secret saved; public CMS/test stores unchanged, no paid plan. Next: finish A10 separately confirmed execution and verify A14 monitor/delivery. No main merge/domain promotion. Fresh trusted main backup required immediately before outbox migration. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Bez rotacji kluczy, restore/usuwania produkcji lub promocji nowej aplikacji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 

@@ -24,6 +24,7 @@ export function readPrivacyReview(note: string | null): PrivacyReview | null {
 }
 export function publicPrivacyStatus(row: { status: string; note: string | null; requestedAt: Date }) {
   const plan = readPrivacyReview(row.note);
-  const labels: Record<string, string> = { pending: "Wniosek odebrany", reviewing: "W trakcie oceny", awaiting_execution: "Oczekuje osobnego zatwierdzenia wykonania", retained: "Decyzja o dalszym przechowywaniu danych" };
-  return { label: labels[row.status] || "W trakcie obsługi", receivedAt: row.requestedAt.toISOString(), response: plan?.response || null, retainedUntil: plan?.retainUntil || null };
+  const labels: Record<string, string> = { pending: "Wniosek odebrany", reviewing: "W trakcie oceny", awaiting_execution: "Oczekuje osobnego zatwierdzenia wykonania", retained: "Decyzja o dalszym przechowywaniu danych", executing: "Wykonanie w toku — profil zablokowany", execution_failed: "Wykonanie wymaga ponowienia — profil zablokowany", completed: "Zatwierdzony zakres wykonany", completed_retained: "Zatwierdzony zakres wykonany — pozostała retencja" };
+  const retentionLabels: Record<string, string> = { retention_review: "Ponowna ocena przechowywanych danych", awaiting_retention_execution: "Retencja — oczekuje osobnego wykonania", retention_retained: "Retencja przedłużona po ocenie" };
+  return { label: labels[row.status] || retentionLabels[row.status] || "W trakcie obsługi", receivedAt: row.requestedAt.toISOString(), response: plan?.response || null, retainedUntil: plan?.retainUntil || null };
 }
