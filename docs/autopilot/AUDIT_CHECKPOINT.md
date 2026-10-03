@@ -24,6 +24,19 @@ Local gateway/inventory/crypto tests: 12 PASS; types PASS. Saved-artifact
 drill planned after push. Private-media serving and separate privacy execution
 remain open; neither prepared code nor backup success closes those findings.
 
+03:33 UTC: restore **37093348098 SUCCESS /49901d5**, saved trusted backup
+37093068451. Actual source MFA enabled now confirmed **true**, restored
+ciphertext used true, fixtureOnlyMfa false. Real Next production-build admin
+MFA challenge/login/revocation and client app login/CRM linking/own notifications,
+anonymous/admin rejection and logout PASS. Inventory32/Auth links22 and
+actual crypto records1MFA/1Google PASS. Private-media bytes/signatures still
+not a full private-storage HTTP recovery certificate.
+Review CI **37093058529 FAIL /0928911**: browser selectOption timed out on
+exact label Decyzja, before saving the form. Label wrapped option text; changed
+to separate explicit htmlFor/id label, preserving real accessible interaction.
+Latest49901d5 CI37093349593 currently running; wait for its gitleaks before
+pushing the correction. No running database worker cancelled. No publication.
+
 Latest: **37037505567 SUCCESS** / `abec305` from saved main backup
 37035132250, including actual restored pending MFA ciphertext cloned into
 the disposable test account for HTTP challenge/login/revocation. Original
