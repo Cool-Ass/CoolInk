@@ -1,5 +1,18 @@
 # Decyzje i ADR
 
+## MEDIA-RESTORE-20261003
+
+- ACCEPTED: właściciel odpowiedział „zgadzam się” na odtworzenie prywatnych
+  zdjęć w osobnym, prywatnym magazynie testowym, bez zmian w produkcji i bez
+  uruchamiania płatnego planu. Zgoda dotyczy testu z zaszyfrowanej kopii,
+  nie publikacji zdjęć, migracji produkcyjnego magazynu ani rotacji jego kluczy.
+- Zakres HIGH: izolowany magazyn, token tylko do niego, twarda identyfikacja
+  docelowego store, weryfikacja sum i odczytu aplikacji dla uprawnionej roli
+  oraz odmowy dla anonimowego/cudzego konta. Nigdy nie używać produkcyjnego
+  BLOB_READ_WRITE_TOKEN do zapisu testowego. Dane nie trafiają do repo/logów.
+- Rollback: usuń wyłącznie jawnie zapisane obiekty utworzone przez tę próbę;
+  źródło pozostaje nienaruszone. Brak płatnego planu jest warunkiem zgody.
+
 ## PRIVACY-REVIEW-20261003 / OWNER-MFA-20261003
 
 - ACCEPTED: właściciel w tym czacie „jak mam potwierdzić to potwierdzam”;

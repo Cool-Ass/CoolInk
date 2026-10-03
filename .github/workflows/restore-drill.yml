@@ -4,6 +4,10 @@ on:
     - cron: "41 4 1 1,4,7,10 *"
   workflow_dispatch:
     inputs:
+      private_media:
+        description: "Approved private isolated media restoration; manual only, no production writes"
+        default: false
+        type: boolean
       backup_run_id:
         description: "Successful saved backup run ID (empty = latest successful main backup)"
         required: false
@@ -133,6 +137,9 @@ jobs:
             node scripts/verifyRestoredAuth.mjs
           fi
       - name: Verify sealed runtime configuration when captured
+        env:
+          DRILL_MEDIA_RESTORE: ${{ github.event_name == 'workflow_dispatch' && inputs.private_media == true && '1' || '0' }}
+          DRILL_BLOB_READ_WRITE_TOKEN: ${{ github.event_name == 'workflow_dispatch' && inputs.private_media == true && secrets.DRILL_BLOB_READ_WRITE_TOKEN || '' }}
         run: |
           if [ -d restored/runtime-config ]; then
             node scripts/backupRuntimeConfiguration.mjs verify restored/runtime-config

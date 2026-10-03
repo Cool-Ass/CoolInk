@@ -6,10 +6,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 | Pole | Stan |
 |---|---|
-| Status | WORKING — owner-confirmed privacy review/retention flow; no production deletion |
-| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-03 03:12 UTC, lease do 04:10 UTC. Sprawdzono zadania po wygaśnięciu lease: brak innego aktywnego Workera. Exact abec305 CI 37037450528 SUCCESS. |
+| Status | WORKING — private isolated media restoration approved; exact e95a135 CI SUCCESS |
+| Aktywne zadanie / run / lease | Jeden Worker; ai/audit-sync-outbox / PR #26; checkpoint 2026-10-03 04:02 UTC, lease do 05:00 UTC. Brak innego aktywnego Workera. Exact e95a135 CI37093678056 SUCCESS. MEDIA-RESTORE-20261003 zgoda w bieżącym czacie. |
 | Zbadana baza main | `eb6ff7637e0fa01681b5c1f774b8170a47e29286` / staged cool-m49mvi8je-cool-ass.vercel.app Ready, domains assignment Skipped. Trusted encrypted backup 37035132250 SUCCESS, includes current runtime keys without rotation. |
-| Następny krok | Exact abec305 CI 37037450528 SUCCESS; restore 37037505567 SUCCESS. Owner reports MFA activated and recovery codes saved, and approved individualized retention decisions with separate deletion confirmation. Prepared owner-only CAS review, audited retention plan, own-client notification/status and desktop/mobile E2E; local 14 targeted tests, types and targeted lint PASS. No deletion implementation/execution claimed. Push PR26 for exact new CI. Fresh trusted main runtime-config backup planned against observed staged URL, then isolated restore of that saved artifact to verify current enabled MFA. A01 client app/private-media HTTP recovery, A10 separate execution and A14 monitor/delivery remain open. No source deletion/migration/domain promotion. |
+| Następny krok | Push manual private-media recovery, dispatch saved backup37093068451 with private_media=true; collect exact new-SHA CI and restored-byte HTTP proof. e95a135 CI37093678056 SUCCESS. Isolated Private store3Yn2RpULDWBtDc8W/FRA1 created under MEDIA-RESTORE-20261003, store-only GitHub secret saved; no paid plan or production connection. 13 targeted tests/types/lint PASS. Trusted main backup37093068451 /eb6ff76 artifact11263182680; prior saved restore37093348098 SUCCESS proves actual source MFA and Next admin/client login. A01 media HTTP, A10 execution and A14 delivery still open until actual evidence. No production deletion/migration/promotion. |
 | Auto-deploy gotowy | Auto-assign Custom Production Domains Disabled. Bez rotacji kluczy, restore/usuwania produkcji lub promocji nowej aplikacji. |
 | Scheduler co 5 godzin | Wspomniany w przekazanym kontekście, niezweryfikowany w tej sesji; nie utworzono ani nie zmieniono harmonogramu |
 

@@ -1,10 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
 import { spawn, spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
 import { createMfaSecret, decryptMfaSecret, encryptMfaSecret, totpCode } from "../lib/adminMfa";
 import { recoveryAuthGateway } from "./recoveryAuthGateway";
+import { restorePrivateMedia } from "./restorePrivateMedia";
+import { privateImageUrl } from "../lib/privateMedia";
 
 const database = "postgresql://postgres:restore-test@127.0.0.1:5432/coolink_restore";
 const origin = "http://127.0.0.1:3217";
@@ -26,8 +28,27 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient, clientFixtur
   const next = resolve("node_modules/next/dist/bin/next");
   let server: ReturnType<typeof spawn> | undefined;
   let stopGateway: (() => Promise<void>) | undefined;
+  let media: Awaited<ReturnType<typeof restorePrivateMedia>> | undefined;
+  let otherClientId: string | undefined;
+  let remappedImages = 0;
   let stage = "offline-build";
   try {
+    if (process.env.DRILL_MEDIA_RESTORE === "1") {
+      stage = "private-media-restore";
+      media = await restorePrivateMedia();
+      env.BLOB_READ_WRITE_TOKEN = process.env.DRILL_BLOB_READ_WRITE_TOKEN;
+      // Repoint only the disposable restored DB, never the source DB/store.
+      const images = await prisma.projectImage.findMany({ select: { id: true, url: true } });
+      for (const image of images) {
+        const source = media.restored.find(object => {
+          if (object.provider === "vercel-blob") { try { return decodeURIComponent(new URL(image.url).pathname.slice(1)) === object.pathname; } catch { return false; } }
+          return image.url === object.pathname;
+        });
+        if (!source) throw new Error("Restored media reference has no saved bytes");
+        await prisma.projectImage.update({ where: { id: image.id }, data: { url: source.url } });
+        remappedImages++;
+      }
+    }
     if (clientFixture) stopGateway = await recoveryAuthGateway();
     const build = spawnSync(process.execPath, [next, "build"], { env, stdio: "ignore", timeout: 240000 });
     if (build.status !== 0) throw new Error("Offline application build failed");
@@ -68,11 +89,31 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient, clientFixtur
       if ((await call("/api/client/notifications", { headers: { cookie: clientCookie } })).status !== 200
         || (await call("/api/client/notifications")).status !== 401
         || (await call("/api/admin/mfa", { headers: { cookie: clientCookie } })).status !== 401) throw new Error("Restored client ownership boundary failed");
+      if (media) {
+        stage = "restored-private-media-http";
+        const object = media.restored[0];
+        const project = await prisma.tattooProject.create({ data: { clientId: linked.id, title: "Recovery media fixture", description: "Isolated restored-byte access proof" } });
+        const image = await prisma.projectImage.create({ data: { projectId: project.id, url: object.url } });
+        const url = privateImageUrl(image.id, "client", linked.id);
+        const own = await call(url, { headers: { cookie: clientCookie } });
+        if (own.status !== 200 || createHash("sha256").update(Buffer.from(await own.arrayBuffer())).digest("hex") !== object.sha256) throw new Error("Restored owner media serving failed");
+        if ((await call(url)).status !== 401 || (await call(url.replace("token=", "token=invalid"), { headers: { cookie: clientCookie } })).status !== 403) throw new Error("Restored media authentication boundary failed");
+        const other = await prisma.client.create({ data: { email: `other-${randomBytes(12).toString("hex")}@example.invalid`, firstName: "Recovery", lastName: "Other" } });
+        otherClientId = other.id;
+        const foreignProject = await prisma.tattooProject.create({ data: { clientId: other.id, title: "Other recovery fixture", description: "Isolated ownership denial proof" } });
+        const foreignImage = await prisma.projectImage.create({ data: { projectId: foreignProject.id, url: object.url } });
+        if ((await call(privateImageUrl(foreignImage.id, "client", linked.id), { headers: { cookie: clientCookie } })).status !== 404) throw new Error("Restored media IDOR boundary failed");
+        const reauthenticated = await login(totpCode(seed));
+        const adminCookie = reauthenticated.headers.get("set-cookie")?.match(/coolink_admin_session=([^;]+)/)?.[0];
+        if (!adminCookie) throw new Error("Restored admin media authentication failed");
+        const staff = await call(privateImageUrl(image.id, "admin", fixture.id), { headers: { cookie: adminCookie } });
+        if (staff.status !== 200 || createHash("sha256").update(Buffer.from(await staff.arrayBuffer())).digest("hex") !== object.sha256) throw new Error("Restored staff media serving failed");
+      }
       stage = "client-logout";
       const logout = await call("/api/client/auth/logout", { method: "POST", headers: { origin, cookie: clientCookie } });
       if (logout.status !== 200 || !logout.headers.get("set-cookie")?.includes("Max-Age=0")) throw new Error("Restored client logout failed");
     }
-    return { productionHttpLogin: true, clientApplicationHttpLogin: Boolean(clientFixture), mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
+    return { productionHttpLogin: true, clientApplicationHttpLogin: Boolean(clientFixture), restoredPrivateObjects: media?.restored.length ?? 0, remappedImages, privateMediaHttpServing: Boolean(media && clientFixture), mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
   } catch {
     console.error("RESTORED_ADMIN_HTTP_FAILED_STAGE", stage);
     throw new Error("Restored admin HTTP verification failed");
@@ -82,12 +123,17 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient, clientFixtur
       await Promise.race([new Promise(done => server!.once("exit", done)), new Promise(done => setTimeout(done, 5000))]);
       if (server.exitCode === null) server.kill("SIGKILL");
     }
+    try {
     await prisma.adminUser.delete({ where: { id: fixture.id } });
     if (stopGateway) await stopGateway();
     if (clientFixture) {
       // Only the exact newly created offline Auth fixture may be cleaned up.
       await prisma.client.deleteMany({ where: { supabaseUserId: clientFixture.id, email: clientFixture.email } });
       await prisma.contactMessage.deleteMany({ where: { email: clientFixture.email } });
+    }
+    if (otherClientId) await prisma.client.delete({ where: { id: otherClientId } });
+    } finally {
+      if (media) await media.cleanup();
     }
   }
 }

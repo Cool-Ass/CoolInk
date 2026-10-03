@@ -1,5 +1,21 @@
 # Audyt — checkpoint 2026-10-01 (Europe/Warsaw)
 
+## Private media recovery — 2026-10-03 04:09 UTC
+
+Owner approved MEDIA-RESTORE-20261003. Created separate Private Blob store
+`coolink-recovery-drill-private`, ID `store_3Yn2RpULDWBtDc8W`, FRA1,
+no production project connection or paid plan. New store-only token saved as
+GitHub `DRILL_BLOB_READ_WRITE_TOKEN`; no production token changed.
+Exact e95a135 CI37093678056 SUCCESS, including desktop/mobile privacy review.
+Prepared manual-only saved-artifact media restore with fixed store/run prefix,
+64 MiB budget, checksum verification, anonymous denial and actual application
+owner/admin serving plus IDOR/signature checks. Child fetch and SDK Undici
+restricted to loopback and read-only isolated private hostname.
+Cleanup targets only newly uploaded run objects; production source untouched.
+13 targeted tests, TypeScript and targeted lint PASS. New code still needs
+its exact CI and actual restore execution; no publication or A01 closure yet.
+A10 separate confirmed execution and A14 monitor/delivery remain open.
+
 ## Recovery update — 2026-10-02 16:44 UTC
 
 2026-10-03 03:25 UTC: owner confirms MFA working and saved recovery codes;
@@ -36,6 +52,17 @@ exact label Decyzja, before saving the form. Label wrapped option text; changed
 to separate explicit htmlFor/id label, preserving real accessible interaction.
 Latest49901d5 CI37093349593 currently running; wait for its gitleaks before
 pushing the correction. No running database worker cancelled. No publication.
+
+03:45 UTC: corrected label pushed **e95a135**, exact CI **37093678056**
+running; CodeQL and backup-snapshot SUCCESS, verify at isolated DB tests.
+No further code push while this exact regression runs. Offline Chrome/Edge
+semantic probe unavailable locally; not counted as successful UI proof.
+Separate authorization question submitted for a **private isolated test media
+store and restoration**, no production changes and no paid plan. Existing
+approved restoration scope is disposable offline runner, not uploading real
+customer files to a new external provider store. Do not assume this new consent
+from the prior MFA/escrow response. A10 execution and A14 monitor receipt also
+remain open. Local AUTOPILOT/checkpoint edits belong to this worker; preserve.
 
 Latest: **37037505567 SUCCESS** / `abec305` from saved main backup
 37035132250, including actual restored pending MFA ciphertext cloned into
