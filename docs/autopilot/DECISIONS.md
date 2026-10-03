@@ -1,5 +1,21 @@
 # Decyzje i ADR
 
+## PRIVACY-REVIEW-20261003 / OWNER-MFA-20261003
+
+- ACCEPTED: właściciel w tym czacie „jak mam potwierdzić to potwierdzam”;
+  potwierdzono indywidualną decyzję właściciela o retencji oraz osobne
+  zatwierdzenie wykonania usuwania. Wdrożenie mechanizmu nie upoważnia
+  Workera do usunięcia żadnego rzeczywistego klienta podczas publikacji.
+- Właściciel następnie „ok dziala mam, kontynuuj” potwierdził działanie MFA
+  i zapisanie nowych kodów awaryjnych. Nie zażądano kodów ani sekretu.
+- Pakiet A10: owner-only audytowana ocena wniosków, podstawa i termin retencji,
+  jawny status dla klienta. Nie oznaczać danych jako usuniętych po samym zapisie
+  decyzji. Wykonanie destrukcyjne musi być osobno zatwierdzone w konkretnym
+  przypadku, z gate kopii/restore i bez kasowania wymaganej historii.
+- Walidacja: origin, RBAC/IDOR, walidacja planu, CAS i rollback transakcji;
+  izolowane testy HTTP/browser przed publikacją. Rollback: revert kodu,
+  zachowanie wniosków i wpisów audytu, bez restore produkcji.
+
 ## CONFIG-ESCROW-20261002 / UX-20261002
 
 - Status: ACCEPTED, źródło: właściciel w bieżącym czacie, „Tak. Dodatkowo przed wdrożeniem…”.

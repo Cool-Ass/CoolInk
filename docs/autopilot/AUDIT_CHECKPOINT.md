@@ -2,6 +2,26 @@
 
 ## Recovery update — 2026-10-02 16:44 UTC
 
+2026-10-03 03:25 UTC: owner confirms MFA working and saved recovery codes;
+no secret supplied or source account modified by worker. Individual privacy
+review/retention approved; real-client deletion still not authorized for worker.
+PR26 prepared review-only flow: owner permission, origin/rate/body limit,
+SHA256 CAS revision, serializable review/audit/own-client notification,
+no resolved/deleted state on save. Client sees only its response, no internal
+reason or reviewer. 14 targeted tests, TypeScript and targeted lint PASS.
+Desktop/mobile browser regression added but not yet run. Exact abec305
+CI 37037450528 confirmed SUCCESS. New SHA still requires complete CI.
+Fresh trusted main escrow backup planned against observed staged
+cool-m49mvi8je-cool-ass.vercel.app; no domain promotion/migration/deletion.
+
+Latest: **37037505567 SUCCESS** / `abec305` from saved main backup
+37035132250, including actual restored pending MFA ciphertext cloned into
+the disposable test account for HTTP challenge/login/revocation. Original
+source MFA enabled status is reported separately; it is not enabled by the
+drill. Owner asked to personally enable MFA and retain recovery codes (never
+send them in chat). Privacy retention/execution choice also awaiting owner.
+Exact CI **37037450528** / `abec305` still running. No publication/migration.
+
 Follow-up 16:56 UTC: **37037086568 SUCCESS** / `99013ac` restores saved main
 backup 37035132250. Actual production Next HTTP: MFA challenge, wrong-code
 rejection, successful login, authenticated MFA settings GET and revocation

@@ -186,6 +186,35 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await page.getByRole("button", { name: "EDYTUJ DANE", exact: true }).click();
   await expect(page.getByLabel("E-MAIL", { exact: false })).toHaveAttribute("readonly", "");
   await page.getByRole("button", { name: "ANULUJ", exact: true }).click();
+  const privacyRequest = await prisma.accountDeletionRequest.create({ data: { clientId: client.id } });
+  const privateReason = "Wewnętrzna ocena właściciela — nie udostępniać w portalu.";
+  const publicResponse = "Wniosek oceniony. Wykonanie wymaga osobnego zatwierdzenia.";
+  await page.goto("/admin/clients");
+  const reviewForm = page.locator(`[data-privacy-request="${privacyRequest.id}"]`);
+  await reviewForm.getByText("OCENA I RETENCJA", { exact: true }).click();
+  await reviewForm.getByLabel("Decyzja", { exact: true }).selectOption("approve");
+  await reviewForm.getByLabel("Uzasadnienie i podstawa retencji — tylko dla właściciela", { exact: true }).fill(privateReason);
+  await reviewForm.getByLabel("Tożsamość i zakres wniosku zostały ocenione", { exact: true }).check();
+  await reviewForm.getByLabel("Odpowiedź widoczna dla klienta", { exact: true }).fill(publicResponse);
+  const reviewSaved = page.waitForResponse(response => response.url().endsWith(`/api/admin/privacy-requests/${privacyRequest.id}`) && response.request().method() === "PATCH");
+  await reviewForm.getByRole("button", { name: "ZAPISZ OCENĘ", exact: true }).click();
+  expect((await reviewSaved).status()).toBe(200);
+  const savedRequest = await prisma.accountDeletionRequest.findUniqueOrThrow({ where: { id: privacyRequest.id } });
+  expect(savedRequest.status).toBe("awaiting_execution"); expect(savedRequest.resolvedAt).toBeNull();
+  const ownClient = await page.context().browser().newContext();
+  try {
+    const ownPage = await ownClient.newPage();
+    await ownPage.goto("http://127.0.0.1:3120/app");
+    await ownPage.getByLabel("E-MAIL", { exact: true }).fill(email);
+    await ownPage.getByLabel("HASŁO", { exact: true }).fill(password);
+    await ownPage.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
+    await expect(ownPage).toHaveURL(/\/app\/portal/);
+    await ownPage.goto("http://127.0.0.1:3120/app/portal/profile?clientId=not-own-client");
+    await ownPage.getByText("TWÓJ WNIOSEK DOTYCZĄCY DANYCH", { exact: true }).click();
+    await expect(ownPage.getByText(publicResponse, { exact: true })).toBeVisible();
+    expect(await ownPage.content()).not.toContain(privateReason);
+    expect((await ownPage.request.patch(`http://127.0.0.1:3120/api/admin/privacy-requests/${privacyRequest.id}`, { headers: { origin: "http://127.0.0.1:3120" }, data: {} })).status()).toBe(401);
+  } finally { await ownClient.close(); }
   cmsPage = await prisma.page.create({ data: { title: "Browser CMS fixture", slug: `browser-cms-${randomUUID()}`, status: "draft", showInNav: false } });
   const visitor = await page.context().browser().newContext();
   const publicPage = await visitor.newPage();
@@ -207,6 +236,7 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   } finally { await visitor.close(); }
   await page.goto("/admin");
   await prisma.adminUser.update({ where: { id: adminId }, data: { role: "artist" } });
+  expect(await page.evaluate(async id => (await fetch(`/api/admin/privacy-requests/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: "{}" })).status, privacyRequest.id)).toBe(403);
   expect(await page.evaluate(async () => (await fetch("/api/admin/google-calendar/calendars")).status)).toBe(403);
   if (test.info().project.name === "mobile") await page.getByRole("button", { name: "Otwórz nawigację administratora", exact: true }).click();
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
