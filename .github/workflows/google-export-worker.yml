@@ -15,24 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { ref: main, persist-credentials: false }
       - name: Consume due export jobs with short-lived GitHub identity
         shell: bash
         run: |
           node <<'JS'
           const endpoint = 'https://www.coolinktattoo.pl/api/cron/google-exports';
           async function main() {
-            const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
-            tokenUrl.searchParams.set('audience', endpoint);
-            const identity = await fetch(tokenUrl, {
-              headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
-              signal: AbortSignal.timeout(15000),
-            });
-            if (!identity.ok) throw new Error('Unable to obtain worker identity');
-            const token = (await identity.json()).value;
-            if (!token) throw new Error('Missing worker identity');
-            console.log('::add-mask::' + token);
+            const { trustedWorkerHeaders } = await import('./scripts/trustedWorkerHeaders.mjs');
+            const identityHeaders = await trustedWorkerHeaders(endpoint, token => console.log('::add-mask::' + token));
             const response = await fetch(endpoint, {
-              method: 'POST', headers: { Authorization: `Bearer ${token}` },
+              method: 'POST', headers: identityHeaders, redirect: 'error',
               signal: AbortSignal.timeout(290000),
             });
             if (!response.ok) throw new Error(`Export worker HTTP ${response.status}`);
