@@ -2,6 +2,10 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
+Implementacja i konfiguracja v2: [Clef/OpenShell](AUTOPILOT_V2.md).
+Bootstrap v2 nie przejmuje aktywnego zadania A01 ani checkpointu poniżej;
+runtime wykonawczy nie został tu aktywowany.
+
 ## Checkpoint startowy — 2026-09-30
 
 | Pole | Stan |

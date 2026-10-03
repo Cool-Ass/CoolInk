@@ -1,5 +1,20 @@
 # Decyzje i ADR
 
+## ADR-003 — Autopilot v2: router poza granicą uprawnień
+
+- Data: 2026-10-03. Zlecenie właściciela w tym czacie dotyczy wdrożenia
+  propozycji „wdrażamy to do CoolInk”: Clef → sandbox → agent → testy → PR.
+- Zakres bootstrapu: implementacja i testy w branchu, PR, instrukcja konfiguracji
+  runtime. Nie obejmuje samodzielnego zatwierdzania przyszłych zmian polityki,
+  dostępu do danych produkcji ani pomijania AP-001/release gates.
+- Decyzja: model jedynie proponuje decyzję z allowlisty; uprawnienia kontroluje
+  runner hosta i polityka OpenShell. Fail closed przy błędzie API/niepewności.
+  Pierwszy adapter wykonawczy: OpenCode, OpenShell v0.1.2.
+- Wynik agenta: niezaufany patch i raport. Brak auto-apply, push, merge i deploy.
+  Harmonogram GitHub wykonuje tylko plan bez credentiali modelu/runtime.
+- Szczegóły i rollback: [AUTOPILOT_V2](AUTOPILOT_V2.md). Żywe Clef/OpenShell
+  i globalna wyłączność wielu hostów wymagają osobnej weryfikacji operacyjnej.
+
 ## CONFIG-ESCROW-20261002 — bieżące klucze, bez rotacji
 
 - ACCEPTED: właściciel w tym czacie odpowiedział „Tak” na escrow kluczy, a następnie zlecił wspólny przegląd UI/UX przed produkcją. Zakres nie obejmuje usuwania ani odtwarzania produkcji.

@@ -19,3 +19,6 @@ out
 .env
 .vercel
 .env*
+
+# Local Autopilot state, mutex, untrusted patches and audit history
+.autopilot/

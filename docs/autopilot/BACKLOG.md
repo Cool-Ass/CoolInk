@@ -14,6 +14,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 | AP-005 | P2 | LOW (odczyt) | TODO | Potwierdzić konfigurację i historię harmonogramu Worker co 5 h. Dowód uruchomienia, prompt czytający zasady i kontrola nakładania uruchomień. |
 | AP-006 | P2 | LOW (odczyt) | TODO | Pierwszy pełny audit i market watch do 2026-10-07 według szablonów. |
 | AP-007 | P3 | MEDIUM, ponowna ocena przed realizacją | BLOCKED | AI i publikacja social pozostają odroczone zgodnie z decyzją roadmapy 2026-09-12; wymagają nowej decyzji właściciela. |
+| AP-008 | P2 | HIGH (runtime/polityka) | BLOCKED | Kod Autopilota v2 przygotowany na zlecenie właściciela 2026-10-03: router Clef, runner OpenShell, testy i PR. Aktywacja wymaga obrazu z digestem, providera inference, przeglądu efektywnej polityki i live smoke; kryteria oraz rollback w AUTOPILOT_V2.md. Bez merge/promocji w bootstrapie. |
 
 Brak potwierdzonego otwartego P0 w tej inspekcji. Nie jest to raport zdrowia
 produkcji. Naprawy z PR #14, #15, #16 są już na main; nie otwieraj ich ponownie
