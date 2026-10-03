@@ -85,10 +85,12 @@ async function checkPrivateStorage(url, key, owner, foreign, createdObjects, pri
       if (result[0]?.active !== false) throw new Error("Quarantined identity passed the database Storage guard.");
     });
     const deniedRead = await fetch(storageObjectUrl(url, "authenticated", ownerPath), { headers: headers(key, owner.token) });
-    if (deniedRead.ok) throw new Error("Quarantined identity read private media using an existing JWT.");
+    const originRead = await fetch(`${storageObjectUrl(url, "authenticated", ownerPath)}?privacy_probe=${randomUUID()}`, { headers: { ...headers(key, owner.token), "Cache-Control": "no-cache" } });
+    console.log(JSON.stringify({ quarantineRead: deniedRead.status, originRead: originRead.status, cache: deniedRead.headers.get("cf-cache-status"), age: deniedRead.headers.get("age"), control: deniedRead.headers.get("cache-control") }));
     const deniedPath = `${owner.userId}/quarantined-${probe}`;
     const deniedUpload = await fetch(storageObjectUrl(url, "", deniedPath), { method: "POST", headers: uploadHeaders(owner.token), body: pixel });
     if (deniedUpload.ok) { createdObjects.push(deniedPath); throw new Error("Quarantined identity uploaded media using an existing JWT."); }
+    if (deniedRead.ok || originRead.ok) throw new Error("Quarantined identity read private media using an existing JWT.");
   } finally {
     await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${fixtureId}, true)`;
