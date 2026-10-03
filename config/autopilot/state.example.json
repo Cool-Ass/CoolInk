@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "taskId": null,
+  "risk": "UNKNOWN",
+  "phase": "IDLE",
+  "checks": "UNKNOWN",
+  "workInProgress": false,
+  "securityFinding": false
+}

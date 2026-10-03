@@ -24,3 +24,16 @@ Każde następne wydanie: data UTC, zadanie/ryzyko, commit/PR, zgoda, wszystkie
 CI/E2E/security run URL, backup gate (lub uzasadnione N/A), deployment ID/URL,
 poprzednia wersja, smoke i obserwacja, wynik, rollback (czas, powód, wersja,
 wynik ponownego smoke), link do incydentu. Bez dowodu oznacz UNKNOWN/PENDING.
+# 2026-10-03 — Autopilot v2 bootstrap (bez promocji)
+
+- Zakres: router rules/Clef, hostowy runner OpenShell v0.1.2, worker OpenCode,
+  polityka Landlock, planujący workflow i instrukcja konfiguracji.
+- Walidacja lokalna Node 22.23.3: 49 plików / 253 testy PASS, w tym 21 nowych
+  testów routera i protokołu runnera; typecheck PASS; lint 0 błędów,
+  15 istniejących ostrzeżeń; YAML i diff whitespace PASS. Prisma generate PASS.
+- Brak zmian runtime aplikacji lub zależności; nie wykonano builda aplikacji,
+  testów bazy/E2E, wywołania żywego Clef ani sandbox smoke. Wyniki mocka CLI
+  potwierdzają protokół/cleanup/mutex, nie izolację rzeczywistego runtime.
+- Stan: kod do przeglądu w `ai/autopilot-v2-clef-openshell`; AP-008 BLOCKED na
+  aktywacji hosta, obrazu, providera i zatwierdzonej efektywnej polityki.
+  Nie wykonano merge ani wdrożenia produkcji. Rollback: revert pakietu v2.

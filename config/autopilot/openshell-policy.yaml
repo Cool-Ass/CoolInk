@@ -1,0 +1,16 @@
+version: 1
+filesystem_policy:
+  include_workdir: false
+  read_only: [/bin, /usr, /lib, /lib64, /etc, /proc, /dev/urandom]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: hard_requirement
+network_policies:
+  npm_registry:
+    endpoints:
+      - {host: registry.npmjs.org, port: 443, protocol: rest, access: read-only, enforcement: enforce}
+      - {host: binaries.prisma.sh, port: 443, protocol: rest, access: read-only, enforcement: enforce}
+    binaries:
+      - {path: /usr/local/bin/node}
+# Inference access is contributed by the reviewed coolink-inference provider.
+# No GitHub, Supabase, Vercel, production or wildcard network access.

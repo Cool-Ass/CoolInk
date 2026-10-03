@@ -1,0 +1,29 @@
+name: Autopilot v2 planning
+on:
+  workflow_dispatch:
+  schedule:
+    # Five-hour intervals inside each UTC day; the midnight gap is four hours.
+    - cron: '13 0,5,10,15,20 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: coolink-autopilot-plan
+  cancel-in-progress: false
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      # Planning only: no provider secrets, agent execution, DB or deploy access.
+      - run: node scripts/autopilot/cli.mjs plan config/autopilot/state.example.json rules
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: autopilot-plan-${{ github.run_id }}
+          path: .autopilot/history.jsonl
+          if-no-files-found: error
+          retention-days: 14
