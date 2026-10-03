@@ -75,7 +75,10 @@ async function main() {
     const token = await createSessionToken({ sub: "offline-admin", email: "drill@example.invalid", version: 1 });
     if ((await verifySessionToken(token))?.sub !== "offline-admin" || await verifySessionToken(token + "tampered")) throw new Error("Restored session signing failed");
     stage = "restored-admin-http";
-    const http = await verifyRestoredAdminHttp(prisma);
+    // Keep actual restored GoTrue alive during the application's client login.
+    // @ts-expect-error Independent ESM offline recovery runtime.
+    const { verifyRestoredAuthRuntime } = await import("./verifyRestoredAuth.mjs");
+    const http = await verifyRestoredAuthRuntime((fixture: { id: string; email: string; password: string }) => verifyRestoredAdminHttp(prisma, fixture));
     console.log(JSON.stringify({ verified: "restored-cryptographic-records", ...coverage, ...http, sessionSigning: true, deploymentSha: actual.deploymentSha }));
   } catch { console.error(`Restored cryptographic verification failed at ${stage}; private diagnostics withheld`); process.exitCode = 1; }
   finally {

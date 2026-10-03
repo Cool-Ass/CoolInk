@@ -1,5 +1,17 @@
 # Isolated restored Auth runtime — A01 diagnostic
 
+2026-10-03 follow-up: the cryptographic drill now keeps restored GoTrue alive
+during the actual Next production-build client login. A loopback-only routing
+gateway maps just password grant and user verification to that real Auth API;
+it does not simulate an identity or verify a synthetic client JWT. One fresh
+offline Auth fixture proves app login, CRM linking, authenticated notifications,
+anonymous/admin boundary rejection and logout-cookie clearing. Credentials
+stay in memory, logs are suppressed, exact fixture cleanup stays local.
+When runtime config is absent, the earlier Auth-only drill still runs. With
+config, a single integrated Auth/application pass avoids duplicate container
+startup. The new HTTP path remains unverified until its saved-artifact drill
+succeeds. It is not proof of recovered private-media HTTP serving.
+
 Scope AUDIT-20260930: read a trusted encrypted main backup and restore **only in
 the disposable GitHub runner database `coolink_restore`**. Never connect to a
 production DB or Supabase project; no caller-supplied DB URL is accepted.

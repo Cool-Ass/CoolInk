@@ -4,10 +4,11 @@ import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
 import { createMfaSecret, decryptMfaSecret, encryptMfaSecret, totpCode } from "../lib/adminMfa";
+import { recoveryAuthGateway } from "./recoveryAuthGateway";
 
 const database = "postgresql://postgres:restore-test@127.0.0.1:5432/coolink_restore";
 const origin = "http://127.0.0.1:3217";
-export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
+export async function verifyRestoredAdminHttp(prisma: PrismaClient, clientFixture?: { id: string; email: string; password: string }) {
   if (process.env.GITHUB_ACTIONS !== "true" || !/^\d{1,30}$/.test(process.env.GITHUB_RUN_ID ?? "")) throw new Error("Disposable runner required");
   const [{ name }] = await prisma.$queryRawUnsafe<Array<{ name: string }>>("SELECT current_database() AS name");
   if (name !== "coolink_restore") throw new Error("Wrong restore target");
@@ -24,8 +25,10 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
   for (const key of Object.keys(env)) if (/^(GOOGLE_|VAPID_|S3_|BLOB_|SUPABASE_SERVICE_ROLE_KEY|BACKUP_ENCRYPTION_PASSWORD|VERCEL_|CRON_SECRET)/.test(key)) delete env[key as keyof typeof env];
   const next = resolve("node_modules/next/dist/bin/next");
   let server: ReturnType<typeof spawn> | undefined;
+  let stopGateway: (() => Promise<void>) | undefined;
   let stage = "offline-build";
   try {
+    if (clientFixture) stopGateway = await recoveryAuthGateway();
     const build = spawnSync(process.execPath, [next, "build"], { env, stdio: "ignore", timeout: 240000 });
     if (build.status !== 0) throw new Error("Offline application build failed");
     stage = "offline-server-start";
@@ -51,7 +54,25 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
     stage = "session-revocation";
     await prisma.adminUser.update({ where: { id: fixture.id }, data: { sessionVersion: { increment: 1 } } });
     if ((await call("/api/admin/mfa", { headers: { cookie } })).status !== 401) throw new Error("Restored session revocation failed");
-    return { productionHttpLogin: true, mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
+    if (clientFixture) {
+      stage = "client-login-boundary";
+      const clientLogin = (password = clientFixture.password, requestOrigin = origin) => call("/api/client/auth/login", { method: "POST", headers: { origin: requestOrigin, "content-type": "application/json" }, body: JSON.stringify({ email: clientFixture.email, password }) });
+      if ((await clientLogin(undefined, "https://example.invalid")).status !== 403 || (await clientLogin("incorrect-password")).status !== 401) throw new Error("Restored client login boundary failed");
+      stage = "client-application-login";
+      const session = await clientLogin();
+      const clientCookie = session.headers.get("set-cookie")?.match(/coolink_client_access=([^;]+)/)?.[0];
+      if (session.status !== 200 || !clientCookie) throw new Error("Restored client application login failed");
+      const linked = await prisma.client.findUnique({ where: { supabaseUserId: clientFixture.id } });
+      if (!linked || linked.email !== clientFixture.email) throw new Error("Restored client linking failed");
+      stage = "client-authenticated-access";
+      if ((await call("/api/client/notifications", { headers: { cookie: clientCookie } })).status !== 200
+        || (await call("/api/client/notifications")).status !== 401
+        || (await call("/api/admin/mfa", { headers: { cookie: clientCookie } })).status !== 401) throw new Error("Restored client ownership boundary failed");
+      stage = "client-logout";
+      const logout = await call("/api/client/auth/logout", { method: "POST", headers: { origin, cookie: clientCookie } });
+      if (logout.status !== 200 || !logout.headers.get("set-cookie")?.includes("Max-Age=0")) throw new Error("Restored client logout failed");
+    }
+    return { productionHttpLogin: true, clientApplicationHttpLogin: Boolean(clientFixture), mfaChallengeAndRejection: true, sessionRevocation: true, restoredMfaCiphertextUsed: Boolean(material?.mfaSecretEncrypted), sourceMfaEnabled: Boolean(material?.mfaEnabled), fixtureOnlyMfa: !material?.mfaSecretEncrypted };
   } catch {
     console.error("RESTORED_ADMIN_HTTP_FAILED_STAGE", stage);
     throw new Error("Restored admin HTTP verification failed");
@@ -62,5 +83,11 @@ export async function verifyRestoredAdminHttp(prisma: PrismaClient) {
       if (server.exitCode === null) server.kill("SIGKILL");
     }
     await prisma.adminUser.delete({ where: { id: fixture.id } });
+    if (stopGateway) await stopGateway();
+    if (clientFixture) {
+      // Only the exact newly created offline Auth fixture may be cleaned up.
+      await prisma.client.deleteMany({ where: { supabaseUserId: clientFixture.id, email: clientFixture.email } });
+      await prisma.contactMessage.deleteMany({ where: { email: clientFixture.email } });
+    }
   }
 }

@@ -128,7 +128,10 @@ jobs:
       - name: Verify restored media byte-for-byte
         run: node scripts/verifyMediaBackup.mjs restored/media-backup
       - name: Verify restored Auth inventory and isolated password login
-        run: node scripts/verifyRestoredAuth.mjs
+        run: |
+          if [ ! -d restored/runtime-config ]; then
+            node scripts/verifyRestoredAuth.mjs
+          fi
       - name: Verify sealed runtime configuration when captured
         run: |
           if [ -d restored/runtime-config ]; then
