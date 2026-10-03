@@ -37,6 +37,7 @@ jobs:
           # Environment, not script interpolation: manual inputs are untrusted.
           script: |
             const { recoveryAgeHealth } = await import(process.env.GITHUB_WORKSPACE + "/scripts/recoveryAgeHealth.mjs");
+            const { trustedWorkerHeaders } = await import(process.env.GITHUB_WORKSPACE + "/scripts/trustedWorkerHeaders.mjs");
             const latest = async workflow_id => (await github.rest.actions.listWorkflowRuns({ ...context.repo, workflow_id, branch: "main", status: "success", per_page: 1 })).data.workflow_runs[0];
             const backup = await latest("backup.yml");
             const drill = await latest("restore-drill.yml");
@@ -55,14 +56,8 @@ jobs:
               const deployment = process.env.RECOVERY_DEPLOYMENT_URL;
               if (deployment && !/^https:\/\/cool-[a-z0-9]+-cool-ass\.vercel\.app$/.test(deployment)) throw new Error("Invalid staged target");
               const endpoint = deployment ? deployment + "/api/cron/recovery-health" : audience;
-              const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
-              tokenUrl.searchParams.set("audience", audience);
-              const identity = await fetch(tokenUrl, { headers: { Authorization: "Bearer " + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, signal: AbortSignal.timeout(15000), redirect: "error" });
-              if (!identity.ok) throw new Error("Unable to obtain monitor identity");
-              const token = (await identity.json()).value;
-              if (typeof token !== "string" || !token) throw new Error("Missing monitor identity");
-              core.setSecret(token);
-              const response = await fetch(endpoint, { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify(health), signal: AbortSignal.timeout(30000), redirect: "error" });
+              const identityHeaders = await trustedWorkerHeaders(audience, token => core.setSecret(token));
+              const response = await fetch(endpoint, { method: "POST", headers: { ...identityHeaders, "Content-Type": "application/json" }, body: JSON.stringify(health), signal: AbortSignal.timeout(30000), redirect: "error" });
               if (!response.ok) throw new Error("Monitor delivery HTTP " + response.status);
               const report = await response.json();
               persisted = report.ok === true && report.persisted === true;
