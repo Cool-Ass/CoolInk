@@ -69,6 +69,7 @@ export async function POST(
           Authorization: `Bearer ${token}`,
           "Content-Type": prepared.contentType,
           "x-upsert": "false",
+          "cache-control": "no-store, max-age=0",
         },
         body: prepared.buffer,
         cache: "no-store",

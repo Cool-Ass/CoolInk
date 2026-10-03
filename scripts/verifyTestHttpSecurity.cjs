@@ -61,7 +61,7 @@ async function checkPrivateStorage(url, key, owner, foreign, createdObjects, pri
   const ownerPath = `${owner.userId}/${probe}`;
   const forgedPath = `${foreign.userId}/forged-${probe}`;
   const pixel = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
-  const uploadHeaders = (token) => ({ ...headers(key, token), "Content-Type": "image/png", "x-upsert": "false" });
+  const uploadHeaders = (token) => ({ ...headers(key, token), "Content-Type": "image/png", "x-upsert": "false", "cache-control": "no-store, max-age=0" });
 
   const uploaded = await fetch(storageObjectUrl(url, "", ownerPath), { method: "POST", headers: uploadHeaders(owner.token), body: pixel });
   if (!uploaded.ok) throw new Error(`Owner storage upload returned ${uploaded.status}.`);
@@ -79,6 +79,11 @@ async function checkPrivateStorage(url, key, owner, foreign, createdObjects, pri
   try {
     await prisma.client.create({ data: { id: fixtureId, firstName: "Storage", lastName: "Fixture", email: `${fixtureId}@example.test`, supabaseUserId: owner.userId } });
     await prisma.accountDeletionRequest.create({ data: { id: fixtureId, clientId: fixtureId, status: "executing" } });
+    await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT set_config('request.jwt.claim.sub', ${owner.userId}, true)`;
+      const result = await tx.$queryRaw`SELECT public.coolink_storage_identity_active() AS active`;
+      if (result[0]?.active !== false) throw new Error("Quarantined identity passed the database Storage guard.");
+    });
     const deniedRead = await fetch(storageObjectUrl(url, "authenticated", ownerPath), { headers: headers(key, owner.token) });
     if (deniedRead.ok) throw new Error("Quarantined identity read private media using an existing JWT.");
     const deniedPath = `${owner.userId}/quarantined-${probe}`;

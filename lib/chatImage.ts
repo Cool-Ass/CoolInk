@@ -27,7 +27,7 @@ export async function readChatInput(request: Request, owner: string, track?: (lo
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!key || !url) throw new Error("Prywatny magazyn zdjęć nie jest skonfigurowany.");
-    const response = await fetch(`${url}/storage/v1/object/project-inspirations/${path}`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": prepared.contentType }, body: prepared.buffer, signal: AbortSignal.timeout(15000), redirect: "error" });
+    const response = await fetch(`${url}/storage/v1/object/project-inspirations/${path}`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": prepared.contentType, "cache-control": "no-store, max-age=0" }, body: prepared.buffer, signal: AbortSignal.timeout(15000), redirect: "error" });
     if (!response.ok) throw new Error("Nie udało się zapisać zdjęcia.");
     imageUrl = path;
   }

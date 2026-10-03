@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: Params) {
     const { url } = getSupabaseConfig();
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) throw new Error("Prywatny magazyn inspiracji nie jest skonfigurowany.");
-    const upload = await fetch(`${url}/storage/v1/object/project-inspirations/${objectPath}`, { method: "POST", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": prepared.contentType, "x-upsert": "false" }, body: prepared.buffer, cache: "no-store", signal: AbortSignal.timeout(15000), redirect: "error" });
+    const upload = await fetch(`${url}/storage/v1/object/project-inspirations/${objectPath}`, { method: "POST", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": prepared.contentType, "x-upsert": "false", "cache-control": "no-store, max-age=0" }, body: prepared.buffer, cache: "no-store", signal: AbortSignal.timeout(15000), redirect: "error" });
     if (!upload.ok) throw new Error("Nie udało się bezpiecznie zapisać pliku.");
   }
   const caption = String(form?.get("caption") ?? "").trim().slice(0, 500) || null;
