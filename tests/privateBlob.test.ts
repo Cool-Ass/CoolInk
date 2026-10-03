@@ -5,6 +5,11 @@ import { privateBlobToken, readPrivateBlob } from "../lib/privateBlob";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 describe("separate private Blob credentials", () => {
+  it("fails closed in production instead of writing to legacy Supabase storage", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("PRIVATE_BLOB_READ_WRITE_TOKEN", "");
+    expect(() => privateBlobToken()).toThrow();
+  });
   it("never falls back to the public CMS credential", () => {
     vi.stubEnv("PRIVATE_BLOB_READ_WRITE_TOKEN", "");
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "vercel_blob_rw_Public_testonly");

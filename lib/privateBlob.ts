@@ -4,7 +4,7 @@ import { get } from "@vercel/blob";
 export function privateBlobToken(location?: string): string | undefined {
   const token = process.env.PRIVATE_BLOB_READ_WRITE_TOKEN;
   if (!token) {
-    if (location) throw new Error("Prywatny magazyn zdjęć nie jest skonfigurowany.");
+    if (location || process.env.VERCEL_ENV === "production") throw new Error("Prywatny magazyn zdjęć nie jest skonfigurowany.");
     return undefined;
   }
   const store = token.match(/^vercel_blob_rw_([A-Za-z0-9]+)_[A-Za-z0-9]+$/)?.[1];

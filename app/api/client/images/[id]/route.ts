@@ -31,14 +31,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return new NextResponse(source.stream, {
       headers: {
         "Content-Type": source.blob.contentType || "application/octet-stream",
-        "Cache-Control": "private, max-age=300",
+        "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });
   }
 
   const { url, key } = getSupabaseConfig();
-  const source = await fetch(`${url}/storage/v1/object/authenticated/project-inspirations/${image.url}`, { headers: { apikey: key, Authorization: `Bearer ${token}` }, cache: "no-store" });
+  const source = await fetch(`${url}/storage/v1/object/authenticated/project-inspirations/${image.url}?private_read=${crypto.randomUUID()}`, { headers: { apikey: key, Authorization: `Bearer ${token}` }, cache: "no-store" });
   if (!source.ok || !source.body) return NextResponse.json({ error: "Plik nie jest obecnie dostępny." }, { status: 502 });
 
   // Existing Supabase objects are migrated on a legitimate owner read. This
@@ -57,8 +57,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       contentType,
     }).catch(() => null);
     if (migrated) await prisma.projectImage.update({ where: { id: image.id }, data: { url: migrated.url } });
-    return new NextResponse(data, { headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff" } });
+    return new NextResponse(data, { headers: { "Content-Type": contentType, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
   }
 
-  return new NextResponse(source.body, { headers: { "Content-Type": source.headers.get("Content-Type") ?? "application/octet-stream", "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff" } });
+  return new NextResponse(source.body, { headers: { "Content-Type": source.headers.get("Content-Type") ?? "application/octet-stream", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
 }

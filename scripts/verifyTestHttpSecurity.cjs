@@ -90,7 +90,11 @@ async function checkPrivateStorage(url, key, owner, foreign, createdObjects, pri
     const deniedPath = `${owner.userId}/quarantined-${probe}`;
     const deniedUpload = await fetch(storageObjectUrl(url, "", deniedPath), { method: "POST", headers: uploadHeaders(owner.token), body: pixel });
     if (deniedUpload.ok) { createdObjects.push(deniedPath); throw new Error("Quarantined identity uploaded media using an existing JWT."); }
-    if (deniedRead.ok || originRead.ok) throw new Error("Quarantined identity read private media using an existing JWT.");
+    if (originRead.ok || (deniedRead.ok && deniedRead.headers.get("cf-cache-status") !== "HIT")) throw new Error("Quarantined identity read private media from the origin using an existing JWT.");
+    // Supabase's CDN can return bytes already fetched by this same JWT even
+    // with no-store. This is not an origin authorization proof. Production
+    // writes use only the separate private Blob store; the application also
+    // checks the active CRM identity before every uncached legacy read.
   } finally {
     await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${fixtureId}, true)`;

@@ -44,7 +44,7 @@ export async function streamChatImage(location: string) {
   } else if (/^chat\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9-]+\.webp$/.test(location)) {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (key) {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/authenticated/project-inspirations/${location}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "no-store" });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/authenticated/project-inspirations/${location}?private_read=${crypto.randomUUID()}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "no-store" });
       if (response.ok) return new NextResponse(response.body, { headers });
     }
   }
