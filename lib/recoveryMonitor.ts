@@ -1,5 +1,5 @@
 export const RECOVERY_MONITOR_KEY = "internal.recoveryMonitor";
-export const RECOVERY_REASONS = ["BACKUP_MISSING_OR_STALE", "BACKUP_ARTIFACT_UNAVAILABLE", "RESTORE_DRILL_MISSING_OR_STALE", "LATEST_RECOVERY_RUN_FAILED"] as const;
+export const RECOVERY_REASONS = ["BACKUP_MISSING_OR_STALE", "BACKUP_ARTIFACT_UNAVAILABLE", "RESTORE_DRILL_MISSING_OR_STALE", "LATEST_RECOVERY_RUN_FAILED", "MONITOR_DELIVERY_TEST"] as const;
 export type RecoveryMonitor = { checkedAt: string; eventId: string; healthy: boolean; reasons: string[] };
 export function validateRecoveryHealth(input: unknown) {
   if (!input || typeof input !== "object") throw new Error("Invalid health report");

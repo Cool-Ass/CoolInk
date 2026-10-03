@@ -8,6 +8,10 @@ on:
         description: "Optional verified staged Production cool-ink URL; no domain promotion"
         required: false
         type: string
+      alert_probe:
+        description: "Approved controlled owner-dashboard alarm delivery test; clear with a normal follow-up run"
+        default: false
+        type: boolean
   workflow_run:
     workflows: ["Encrypted production backup", "Quarterly restore drill"]
     types: [completed]
@@ -39,6 +43,9 @@ jobs:
             const artifacts = backup ? await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { ...context.repo, run_id: backup.id }) : [];
             const artifact = artifacts.find(a => a.name === "coolink-encrypted-backup-" + backup.id);
             const health = recoveryAgeHealth({ backup, drill, artifact });
+            if (context.eventName === "workflow_dispatch" && process.env.RECOVERY_ALERT_PROBE === "true") {
+              health.reasons.push("MONITOR_DELIVERY_TEST"); health.healthy = false;
+            }
             if (context.eventName === "workflow_run" && context.payload.workflow_run.conclusion !== "success") {
               health.reasons.push("LATEST_RECOVERY_RUN_FAILED"); health.healthy = false;
             }
@@ -75,3 +82,4 @@ jobs:
             core.setFailed("Recovery evidence unhealthy; durable repository alert exists. Owner reading/email delivery not verified.");
         env:
           RECOVERY_DEPLOYMENT_URL: ${{ inputs.deployment_url }}
+          RECOVERY_ALERT_PROBE: ${{ inputs.alert_probe }}
