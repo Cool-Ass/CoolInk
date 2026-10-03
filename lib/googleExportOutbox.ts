@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
-export async function claimGoogleExport(appointmentId: string) {
+async function claimUnlockedGoogleExport(appointmentId: string) {
   const key = `google_retry:${appointmentId}`;
   // Manual sync of historical visits may have no marker. Never overwrite a
   // marker already committed by a newer appointment mutation or another worker.
@@ -20,6 +20,15 @@ export async function claimGoogleExport(appointmentId: string) {
   if (!row) return null;
   const parsed = JSON.parse(row.value) as { nonce: string };
   return { ...row, nonce: parsed.nonce };
+}
+export async function claimGoogleExport(appointmentId: string) {
+  try { return await claimUnlockedGoogleExport(appointmentId); }
+  catch (error) {
+    // The DB guard shares the client erasure lock. A closed profile is not a
+    // failed provider retry and must never create a new external copy.
+    if (error instanceof Error && error.message.includes("Client privacy execution locks this record")) return null;
+    throw error;
+  }
 }
 
 export type GoogleExportFailure = "EXPORT_FAILED" | "CONFIGURATION_REQUIRED" | "REMOTE_CONFLICT";

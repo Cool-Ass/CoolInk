@@ -11,11 +11,14 @@ require("tsx/cjs");
 const { executePrivacyRequest } = require("../lib/privacyExecution.ts");
 const { privacyRevision } = require("../lib/privacyRevision.ts");
 const { withClientMediaWrite } = require("../lib/clientMediaWrite.ts");
+const { claimGoogleExport } = require("../lib/googleExportOutbox.ts");
 let stage = "create";
 async function main() {
   try {
     await prisma.client.create({ data: { id, firstName: "Privacy", lastName: "Fixture", email: `${id}@example.test` } });
     await prisma.tattooProject.create({ data: { id, clientId: id, title: "Disposable fixture", description: "Private data" } });
+    await prisma.appointment.create({ data: { id, projectId: id, startsAt: new Date("2000-01-01T10:00:00Z"), endsAt: new Date("2000-01-01T11:00:00Z"), status: "completed" } });
+    await prisma.siteSetting.deleteMany({ where: { key: `google_retry:${id}` } });
     await prisma.accountDeletionRequest.create({ data: { id, clientId: id, status: "awaiting_execution" } });
     stage = "upload-erasure-race";
     let entered; const enteredPromise = new Promise(resolve => { entered = resolve; });
@@ -33,6 +36,8 @@ async function main() {
     let callbackStarted = false;
     await assert.rejects(withClientMediaWrite(id, async () => { callbackStarted = true; }));
     assert.equal(callbackStarted, false, "No new upload can begin after quarantine");
+    assert.equal(await claimGoogleExport(id), null, "Manual sync cannot create an external copy after quarantine");
+    assert.equal(await prisma.siteSetting.count({ where: { key: `google_retry:${id}` } }), 0);
     stage = "quarantine";
     stage = "blocked-writes";
     for (const work of [

@@ -56,7 +56,7 @@ function storageObjectUrl(url, mode, path) {
   return `${url}/storage/v1/object/${accessPrefix}project-inspirations/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-async function checkPrivateStorage(url, key, owner, foreign, createdObjects) {
+async function checkPrivateStorage(url, key, owner, foreign, createdObjects, prisma) {
   const probe = `security-${Date.now()}-${randomUUID().slice(0, 8)}.png`;
   const ownerPath = `${owner.userId}/${probe}`;
   const forgedPath = `${foreign.userId}/forged-${probe}`;
@@ -75,6 +75,22 @@ async function checkPrivateStorage(url, key, owner, foreign, createdObjects) {
   if (publicRead.ok) throw new Error("Private inspiration is reachable through the public storage endpoint.");
   const forgedUpload = await fetch(storageObjectUrl(url, "", forgedPath), { method: "POST", headers: uploadHeaders(owner.token), body: pixel });
   if (forgedUpload.ok) { createdObjects.push(forgedPath); throw new Error("Client A uploaded into client B's private folder."); }
+  const fixtureId = `storage-quarantine-${randomUUID()}`;
+  try {
+    await prisma.client.create({ data: { id: fixtureId, firstName: "Storage", lastName: "Fixture", email: `${fixtureId}@example.test`, supabaseUserId: owner.userId } });
+    await prisma.accountDeletionRequest.create({ data: { id: fixtureId, clientId: fixtureId, status: "executing" } });
+    const deniedRead = await fetch(storageObjectUrl(url, "authenticated", ownerPath), { headers: headers(key, owner.token) });
+    if (deniedRead.ok) throw new Error("Quarantined identity read private media using an existing JWT.");
+    const deniedPath = `${owner.userId}/quarantined-${probe}`;
+    const deniedUpload = await fetch(storageObjectUrl(url, "", deniedPath), { method: "POST", headers: uploadHeaders(owner.token), body: pixel });
+    if (deniedUpload.ok) { createdObjects.push(deniedPath); throw new Error("Quarantined identity uploaded media using an existing JWT."); }
+  } finally {
+    await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${fixtureId}, true)`;
+      await tx.client.deleteMany({ where: { id: fixtureId } });
+    });
+  }
+  console.log("PASS: quarantined identity cannot read or upload private media with an existing JWT.");
   console.log("PASS: private inspiration bucket blocks public and cross-client reads/writes.");
 }
 
@@ -107,7 +123,7 @@ async function main() {
     const anon = await checkPrincipal("anon", url, key, null);
     const clientA = await signUp(url, key, "a", prisma); createdEmails.push(clientA.email);
     const clientB = await signUp(url, key, "b", prisma); createdEmails.push(clientB.email);
-    await checkPrivateStorage(url, key, clientA, clientB, createdStorageObjects);
+    await checkPrivateStorage(url, key, clientA, clientB, createdStorageObjects, prisma);
     const authenticatedA = await checkPrincipal("authenticated client A", url, key, clientA.token);
     const authenticatedB = await checkPrincipal("authenticated client B", url, key, clientB.token);
     console.log(JSON.stringify({ tables: tables.length, anon, authenticatedA, authenticatedB }, null, 2));
