@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { Globe2, RotateCcw } from "lucide-react";
+import InspectorPopover from "./InspectorPopover";
+
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import ColorPicker from "@/components/admin/builder/ColorPicker";
 import IconPicker from "@/components/admin/builder/IconPicker";
@@ -13,16 +17,20 @@ const BLEND_OPTIONS: { value: BlendMode; label: string }[] = [
 ];
 
 function ResponsivePixels({ label, value, fallback, min = 0, max = 400, onChange }: { label: string; value?: ResponsiveNumber; fallback: number; min?: number; max?: number; onChange: (value: ResponsiveNumber) => void }) {
+  const [device, setDevice] = useState<keyof ResponsiveNumber>("desktop");
   const current = { desktop: value?.desktop ?? fallback, tablet: value?.tablet ?? value?.desktop ?? fallback, mobile: value?.mobile ?? value?.tablet ?? value?.desktop ?? fallback };
-  return <fieldset><legend className="mb-1.5 text-[10px] tracking-[0.08em] text-ink-grey">{label}</legend><div className="grid grid-cols-3 gap-1.5">{(["desktop", "tablet", "mobile"] as const).map((key) => <NumberField key={key} label={key === "desktop" ? "KOMPUTER" : key === "tablet" ? "TABLET" : "TELEFON"} value={current[key]} min={min} max={max} onChange={(next) => onChange({ ...current, [key]: next })} />)}</div></fieldset>;
+  return <fieldset className="min-w-0"><div role="group" aria-label={`${label} — urządzenie`} className="mb-1 flex justify-end gap-1">{(["desktop", "tablet", "mobile"] as const).map((key) => <button key={key} type="button" aria-pressed={device === key} onClick={() => setDevice(key)} className={`min-h-7 rounded px-1.5 text-[10px] ${device === key ? "bg-ink-gold/15 text-ink-gold" : "text-white/65 hover:bg-white/5"}`}>{key === "desktop" ? "Komputer" : key === "tablet" ? "Tablet" : "Telefon"}</button>)}</div><RangeField label={label} value={current[device]} min={min} max={max} suffix="px" onChange={(next) => onChange({ ...value, [device]: next })} /></fieldset>;
 }
 
 export default function BackgroundControls({ value, onChange }: { value?: ModuleStyle; onChange: (value: ModuleStyle) => void }) {
   const style = value ?? {};
   const set = (patch: Partial<ModuleStyle>) => onChange({ ...style, ...patch });
+  const reset = (keys: (keyof ModuleStyle)[]) => { const next = { ...style }; keys.forEach((key) => delete next[key]); onChange(next); };
 
   return <div className="flex flex-col">
-    <PanelSection title="Typografia" defaultOpen>
+    <PanelSection title="Tekst" defaultOpen>
+      <SelectField label="WYRÓWNANIE" value={style.textAlign ?? "left"} onChange={(textAlign) => set({ textAlign })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Do środka" }, { value: "right", label: "Do prawej" }, { value: "justify", label: "Wyjustowane" }]} />
+      <div className="flex min-h-9 items-center justify-between gap-2 text-[10px] text-white/75"><span>Typografia</span><div className="flex gap-1"><InspectorPopover title="Globalne kroje pisma" icon={<Globe2 aria-hidden className="h-3.5 w-3.5" />}>{[{ value: "inherit" as const, label: "Domyślny widgetu" }, { value: "display" as const, label: "Nagłówki" }, { value: "body" as const, label: "Tekst" }].map((item) => <button key={item.value} type="button" aria-pressed={style.fontFamily === item.value} onClick={() => set({ fontFamily: item.value })} className="min-h-9 rounded px-2 text-left text-xs hover:bg-white/10">{item.label}</button>)}</InspectorPopover><InspectorPopover title="Typografia">
       <SelectField label="KRÓJ PISMA" value={style.fontFamily ?? "inherit"} onChange={(fontFamily) => set({ fontFamily })} options={[{ value: "inherit", label: "Domyślny widgetu" }, { value: "display", label: "Nagłówkowy CoolInk" }, { value: "body", label: "Tekstowy CoolInk" }]} />
       <ResponsivePixels label="WIELKOŚĆ PISMA (PX)" value={style.responsiveFontSize} fallback={style.fontSize ?? 0} max={260} onChange={(responsiveFontSize) => set({ responsiveFontSize, fontSize: responsiveFontSize.desktop || undefined })} />
       <div className="grid grid-cols-2 gap-2">
@@ -33,15 +41,18 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
         <NumberField label="ODSTĘP SŁÓW" value={style.wordSpacing ?? 0} min={-30} max={100} step={0.5} onChange={(wordSpacing) => set({ wordSpacing })} />
         <SelectField label="DEKORACJA" value={style.textDecoration ?? "none"} onChange={(textDecoration) => set({ textDecoration })} options={[{ value: "none", label: "Brak" }, { value: "underline", label: "Podkreślenie" }, { value: "line-through", label: "Przekreślenie" }, { value: "overline", label: "Linia nad tekstem" }]} />
       </div>
-      <div className="grid grid-cols-2 gap-2"><SelectField label="WYRÓWNANIE" value={style.textAlign ?? "left"} onChange={(textAlign) => set({ textAlign })} options={[{ value: "left", label: "Do lewej" }, { value: "center", label: "Do środka" }, { value: "right", label: "Do prawej" }, { value: "justify", label: "Wyjustowane" }]} /><SelectField label="WIELKOŚĆ LITER" value={style.textTransform ?? "none"} onChange={(textTransform) => set({ textTransform })} options={[{ value: "none", label: "Bez zmian" }, { value: "uppercase", label: "WERSALIKI" }, { value: "lowercase", label: "małe litery" }, { value: "capitalize", label: "Pierwsze Wielkie" }]} /></div>
+      <SelectField label="WIELKOŚĆ LITER" value={style.textTransform ?? "none"} onChange={(textTransform) => set({ textTransform })} options={[{ value: "none", label: "Bez zmian" }, { value: "uppercase", label: "WERSALIKI" }, { value: "lowercase", label: "małe litery" }, { value: "capitalize", label: "Pierwsze Wielkie" }]} />
+      <button type="button" onClick={() => reset(["fontFamily", "fontSize", "responsiveFontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "textDecoration", "textTransform"])} className="flex min-h-8 items-center gap-1 text-xs text-ink-gold"><RotateCcw className="h-3 w-3" />Reset typografii</button>
+      </InspectorPopover></div></div>
       <ColorPicker label="KOLOR TEKSTU" value={style.color ?? ""} onChange={(color) => set({ color })} />
     </PanelSection>
 
-    <PanelSection title="Obrys i cień tekstu">
+    <div className="flex min-h-9 items-center justify-between border-t border-white/10 text-[10px] text-white/75"><span>Obrys i cień tekstu</span><InspectorPopover title="Obrys i cień tekstu">
       <div className="grid grid-cols-2 gap-2"><NumberField label="GRUBOŚĆ OBRYSU" value={style.textStrokeWidth ?? 0} min={0} max={8} step={0.25} onChange={(textStrokeWidth) => set({ textStrokeWidth })} /><ColorPicker label="KOLOR OBRYSU" value={style.textStrokeColor ?? ""} onChange={(textStrokeColor) => set({ textStrokeColor })} /></div>
       <ColorPicker label="KOLOR CIENIA" value={style.textShadowColor ?? ""} onChange={(textShadowColor) => set({ textShadowColor })} />
       <div className="grid grid-cols-3 gap-2"><NumberField label="X" value={style.textShadowX ?? 0} min={-100} max={100} onChange={(textShadowX) => set({ textShadowX })} /><NumberField label="Y" value={style.textShadowY ?? 2} min={-100} max={100} onChange={(textShadowY) => set({ textShadowY })} /><NumberField label="ROZMYCIE" value={style.textShadowBlur ?? 0} min={0} max={100} onChange={(textShadowBlur) => set({ textShadowBlur })} /></div>
-    </PanelSection>
+      <button type="button" onClick={() => reset(["textStrokeWidth", "textStrokeColor", "textShadowColor", "textShadowX", "textShadowY", "textShadowBlur"])} className="min-h-8 text-left text-xs text-ink-gold">Reset obrysu i cienia</button>
+    </InspectorPopover></div>
 
     <PanelSection title="Tło: kolor, gradient i obraz">
       <ColorPicker label="KOLOR TŁA" value={style.backgroundColor ?? ""} onChange={(backgroundColor) => set({ backgroundColor })} />

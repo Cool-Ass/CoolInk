@@ -2,7 +2,19 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-03 10:00:19 UTC
+## Aktualny checkpoint — 2026-10-05 19:40 UTC
+
+- WORKING, jeden root Worker, branch `ai/compact-controls-workflow`, lease do20:35UTC.
+- Zakres nowego żądania właściciela: kompaktowy inspector całego buildera,
+  prowadnice px/drag/kąt/duplikacja, sesje od najnowszej i wspólny ekran rozliczenia.
+- MEDIUM: zmiany prezentacji/workflow. Bez zmian reguł finansowych, endpointów,
+  schematu, uprawnień, produkcyjnych danych lub sekretów. Wdrożenie wymaga
+  dokładnego SHA CI/E2E/security i ręcznej promocji; nie deklarowano publikacji.
+- Bazowy publiczny main202c8f1. Dotychczasowy audyt pozostaje zakończony.
+- Następny krok: regresje nowych kontrolek/prowadnic/sesji i PR z zakresem,
+  następnie zgoda MEDIUM zgodnie z gate repo przed promocją.
+
+## Zakończony checkpoint — 2026-10-03 10:00:19 UTC
 
 | Pole | Stan |
 |---|---|

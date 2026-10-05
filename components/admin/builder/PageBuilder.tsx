@@ -6,6 +6,8 @@ import { Blocks, ChevronLeft, ChevronRight, GripVertical, Grid3X3, Plus, Ruler, 
 import ModuleRenderer, { type ModuleRendererGlobals } from "@/components/ModuleRenderer";
 import BuilderTopBar, { type DeviceMode } from "@/components/admin/builder/BuilderTopBar";
 import BuilderNavigator from "@/components/admin/builder/BuilderNavigator";
+import CanvasGuides from "@/components/admin/builder/CanvasGuides";
+import { InspectorTheme } from "@/components/admin/builder/InspectorPopover";
 import PageVersionsPanel from "@/components/admin/builder/PageVersionsPanel";
 import AddModulePicker from "@/components/admin/builder/AddModulePicker";
 import ModuleSettingsSidebar from "@/components/admin/builder/ModuleSettingsSidebar";
@@ -99,8 +101,6 @@ const DEVICE_WIDTHS: Record<DeviceMode, string> = {
   mobile: "390px",
 };
 
-interface CanvasGuide { id: number; axis: "x" | "y"; position: number }
-
 interface ReusableBlock { id: string; name: string; module: Module }
 const REUSABLE_BLOCKS_KEY = "coolink-builder-reusable-blocks-v1";
 const SIDEBAR_PREFS_KEY = "coolink-builder-sidebar-v1";
@@ -147,11 +147,6 @@ export default function PageBuilder({
   const [showGrid, setShowGrid] = useState(false);
   const [showGuides, setShowGuides] = useState(false);
   const [snapSize, setSnapSize] = useState(8);
-  const [guides, setGuides] = useState<CanvasGuide[]>([
-    { id: 1, axis: "x", position: 50 },
-    { id: 2, axis: "y", position: 50 },
-  ]);
-  const guideIdRef = useRef(2);
   const [reusableBlocks, setReusableBlocks] = useState<ReusableBlock[]>([]);
   const [selectedReusableBlock, setSelectedReusableBlock] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -756,18 +751,6 @@ export default function PageBuilder({
     showToast(`Wersja ${version} została przywrócona jako szkic.`);
   }
 
-  function addGuide(axis: CanvasGuide["axis"]) {
-    guideIdRef.current += 1;
-    const id = guideIdRef.current;
-    setGuides((current) => [...current, { id, axis, position: 50 }]);
-    setShowGuides(true);
-  }
-
-  function updateGuide(id: number, position: number) {
-    const safePosition = Math.min(100, Math.max(0, position));
-    setGuides((current) => current.map((guide) => guide.id === id ? { ...guide, position: safePosition } : guide));
-  }
-
   if (previewOpen) return (
     <div data-lenis-prevent className="h-[100dvh] overflow-y-auto bg-ink-black">
       <button ref={previewExitRef} type="button" onClick={closePreview} aria-label="Wróć do edytora" title="Wróć do edytora (Esc)" className="fixed bottom-4 right-4 z-[300] rounded-full border border-white/20 bg-black/85 px-3 py-2 text-xs text-white shadow-lg backdrop-blur hover:border-ink-gold hover:text-ink-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-gold">← Edytor · Esc</button>
@@ -841,7 +824,7 @@ export default function PageBuilder({
             className="builder-sidebar h-full min-h-0 w-full overflow-hidden border-r border-white/10 bg-[#1d1f22]"
           >
             {activeEditorModule ? (
-              <ModuleSettingsSidebar
+              <InspectorTheme.Provider value={globals.theme ? siteThemeStyle(globals.theme) : {}}><ModuleSettingsSidebar
                 key={activeEditorModule.id}
                 module={activeEditorModule}
                 scope={selectedWidget ? "widget" : selectedColumnIndex !== null ? "column" : "section"}
@@ -853,7 +836,7 @@ export default function PageBuilder({
                 onClose={() => { setSelectedId(null); setSelectedWidgetId(null); setSelectedColumnIndex(null); setSelectedColumnOwnerId(null); }}
                 portfolioItems={portfolioItems}
                 globalContact={globals.contact}
-              />
+              /></InspectorTheme.Provider>
             ) : <AddModulePicker onAdd={addModule} onAddHero={() => addModule("columns", createHeroStarter())} />}
           </aside>
           {sidebarOpen && <div role="separator" aria-label="Zmień szerokość panelu" aria-orientation="vertical" aria-valuemin={264} aria-valuemax={460} aria-valuenow={Math.round(sidebarWidth)} tabIndex={0} title="Przeciągnij, aby zmienić szerokość panelu" onPointerDown={startSidebarResize} onKeyDown={(event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; event.preventDefault(); setSidebarWidth((width) => Math.min(460, Math.max(264, width + (event.key === "ArrowRight" ? 16 : -16)))); }} className="group absolute inset-y-0 right-[-4px] z-[71] w-2 cursor-col-resize touch-none outline-none focus-visible:bg-ink-gold/35"><span className="absolute inset-y-0 left-1/2 w-px bg-transparent transition-colors group-hover:bg-ink-gold/60 group-focus-visible:bg-ink-gold" /><GripVertical aria-hidden className="absolute left-1/2 top-[calc(50%+2.5rem)] h-5 w-3 -translate-x-1/2 text-transparent transition-colors group-hover:text-ink-gold group-focus-visible:text-ink-gold" /></div>}
@@ -884,8 +867,7 @@ export default function PageBuilder({
                     <label className="text-[8px] tracking-[.1em] text-white/55">PX<input aria-label="Rozmiar siatki w pikselach" type="number" min={2} max={100} value={snapSize} onChange={(event) => setSnapSize(Math.min(100, Math.max(2, Number(event.target.value) || 2)))} className="mt-1 h-8 w-full rounded-md border border-white/15 bg-black/35 px-2 text-[10px] text-white outline-none focus:border-ink-gold" /></label>
                   </div>
                   <div className="my-2 h-px bg-white/10" />
-                  <div className="mb-1.5 flex items-center justify-between"><span className="tracking-[.1em] text-white/45">PROWADNICE</span><span className="flex gap-1"><button type="button" onClick={() => addGuide("x")} className="h-8 rounded-md border border-white/12 px-2 text-[8px] hover:border-cyan-300/60 hover:text-cyan-200">+ PIONOWA</button><button type="button" onClick={() => addGuide("y")} className="h-8 rounded-md border border-white/12 px-2 text-[8px] hover:border-cyan-300/60 hover:text-cyan-200">+ POZIOMA</button></span></div>
-                  <div className="max-h-32 space-y-1 overflow-y-auto pr-0.5">{guides.length ? guides.map((guide, index) => <div key={guide.id} className="grid grid-cols-[1fr_64px_32px] items-center gap-1 rounded-md bg-white/[0.035] px-1.5 py-1"><span>{guide.axis === "x" ? "Pionowa" : "Pozioma"} {index + 1}</span><label className="sr-only" htmlFor={`guide-${guide.id}`}>Pozycja prowadnicy {index + 1} w procentach</label><input id={`guide-${guide.id}`} type="number" min={0} max={100} value={guide.position} onChange={(event) => updateGuide(guide.id, Number(event.target.value))} className="h-7 rounded-md border border-white/12 bg-black/35 px-1.5 text-right text-[9px] text-white outline-none focus:border-ink-gold" /><button type="button" aria-label={`Usuń prowadnicę ${index + 1}`} title="Usuń prowadnicę" onClick={() => setGuides((current) => current.filter((item) => item.id !== guide.id))} className="flex h-7 w-7 items-center justify-center rounded-md text-red-300/70 hover:bg-red-400/10 hover:text-red-300"><Trash2 className="h-3 w-3" /></button></div>) : <p className="py-2 text-center text-white/35">Brak prowadnic</p>}</div>
+                  <button type="button" onClick={() => setShowGuides(true)} className="min-h-8 text-cyan-200">Pokaż prowadnice i ich ustawienia na canvasie</button>
                   <div className="my-2 h-px bg-white/10" />
                   <button type="button" onClick={saveReusableBlock} disabled={!selectedModule} className="flex min-h-8 w-full items-center gap-2 rounded-md border border-white/10 px-2 text-white/60 hover:border-ink-gold/60 hover:text-ink-gold disabled:opacity-30"><Save className="h-3.5 w-3.5" />ZAPISZ ZAZNACZENIE JAKO BLOK</button>
                   <p className="mb-1 mt-2 flex items-center gap-2 tracking-[.1em] text-white/45"><Blocks className="h-3.5 w-3.5" />BIBLIOTEKA BLOKÓW</p>
@@ -896,7 +878,7 @@ export default function PageBuilder({
               <details className="relative ml-auto text-[9px] text-white/60"><summary title="Audyt strony" aria-label={`Audyt strony: ${auditIssues.length || "bez problemów"}`} className={`flex h-8 cursor-pointer list-none items-center gap-1.5 border px-2 marker:hidden ${auditIssues.some((issue) => issue.severity === "error") ? "border-red-400/60 text-red-300" : auditIssues.length ? "border-amber-400/60 text-amber-300" : "border-emerald-400/40 text-emerald-300"}`}><ShieldCheck className="h-3.5 w-3.5" /><span>{auditIssues.length || "OK"}</span></summary>{auditIssues.length > 0 && <div className="absolute right-0 top-full z-[80] mt-1 max-h-64 w-[min(28rem,80vw)] overflow-y-auto border border-white/15 bg-black/95 p-2 shadow-2xl">{auditIssues.map((issue) => <p key={issue.id} className={`border-b border-white/10 px-1 py-2 leading-relaxed ${issue.severity === "error" ? "text-red-300" : "text-amber-200"}`}>{issue.message}</p>)}</div>}</details>
             </div>
             {showGrid && <div aria-hidden className="builder-grid-overlay pointer-events-none absolute inset-0 z-[34]" />}
-            {showGuides && <div aria-hidden className="pointer-events-none absolute inset-0 z-[35]">{guides.map((guide) => <span key={guide.id} className={guide.axis === "x" ? "absolute inset-y-0 border-l border-dashed border-cyan-300/60" : "absolute inset-x-0 border-t border-dashed border-cyan-300/60"} style={guide.axis === "x" ? { left: `${guide.position}%` } : { top: `${guide.position}%` }} />)}</div>}
+            <CanvasGuides visible={showGuides} />
             <ModuleRenderer
               modules={modules}
               editorDevice={device}
