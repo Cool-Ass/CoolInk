@@ -2,7 +2,27 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-05 19:40 UTC
+## Aktualny checkpoint — 2026-10-06 01:54 CEST / 2026-10-05 23:54 UTC
+
+- IDLE, PR39 opublikowany i zweryfikowany; lease zwolniony, bez drugiego Workera.
+- PR39 scalony po zgodzie właściciela i CI37367158121 attempt2 SUCCESS.
+- Exact-main `8a9431ed9d26cb285f38fb47393d2e708092d47d`, CI37388586456
+  SUCCESS: verify/E2E, gitleaks, CodeQL i backup-snapshot.
+- Vercel `fLYEoVMDMxwLS9B7iDeRuSJDdJAX`, `cool-d1658zr1e-cool-ass.vercel.app`,
+  promocja 2026-10-05 23:37:35 UTC na www.coolinktattoo.pl / cool-ink.vercel.app.
+- Readonly smoke: home, klient, admin/login, terminy HTTP200; chronione API
+  kalendarza i ustawień lojalności HTTP401 bez sesji. Error Rate0%.
+- Auto-assign Custom Production Domains nadal Disabled po promocji.
+- Brak migracji, produkcyjnych fixture, zmian zasad płatności lub uprawnień.
+- Obserwacja PASS,23:38:30–23:54:07UTC, ponad15min; Production Error0%/Timeout0%,
+  końcowy readonly smoke PASS. Kalendarz istniejącej sesji klienta i logo
+  renderują się poprawnie; admin wymaga logowania, MFA nie omijano.
+- Rollback202c8f1/CXSorzy7faJTyhSr2PNCPynFVXRS bez restore; niewykonany.
+- Następny krok: rutynowy monitoring, bez ponownego wdrażania tego pakietu.
+  Osobny dokumentacyjny branch ai/release-pr39-evidence nie jest SHA aplikacji.
+- Dowody operacyjne: https://github.com/Cool-Ass/CoolInk/pull/39.
+
+## Historyczny checkpoint — 2026-10-05 19:40 UTC
 
 - VERIFYING, jeden root Worker, branch `ai/compact-controls-workflow`, lease do20:35UTC.
 - Zakres nowego żądania właściciela: kompaktowy inspector całego buildera,
