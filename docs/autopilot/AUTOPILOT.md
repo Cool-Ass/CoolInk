@@ -2,7 +2,46 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Checkpoint startowy — 2026-09-30
+## Aktualny checkpoint — 2026-10-05 19:40 UTC
+
+- VERIFYING, jeden root Worker, branch `ai/compact-controls-workflow`, lease do20:35UTC.
+- Zakres nowego żądania właściciela: kompaktowy inspector całego buildera,
+  prowadnice px/drag/kąt/duplikacja, sesje od najnowszej i wspólny ekran rozliczenia.
+- MEDIUM: zmiany prezentacji/workflow. Bez zmian reguł finansowych, endpointów,
+  schematu, uprawnień, produkcyjnych danych lub sekretów. Wdrożenie wymaga
+  dokładnego SHA CI/E2E/security i ręcznej promocji; nie deklarowano publikacji.
+- Bazowy publiczny main202c8f1. Dotychczasowy audyt pozostaje zakończony.
+- PR39 zatwierdzony przez właściciela „Tak, opublikuj po testach”. Lokalne
+  typecheck/lint i36 ukierunkowanych testów PASS. CI37365802883/37366246658
+  oczekują na runner; nie anulować. Dokładna najnowsza wersja wymaga nowych checks.
+- 20:00UTC: potwierdzona publiczna awaria przydzielania GitHub-hosted runnerów,
+  https://www.githubstatus.com/ (incydent od19:11UTC). CodeQL pierwszego PR run
+  SUCCESS, verify/backup-snapshot queued; nie pomijać bramek ani anulować izolacji.
+- Edycja początku wizyty zachowuje jej dotychczasowy czas; edycja końca niezależna.
+  Globalny motyw nie podmienia kolorów chrome inspektora (kontrast UI).
+- Kalendarz: edycja dat/czasu w tym samym modalu i przejście do tej wizyty
+  w rozliczeniach; URL otwiera wyłącznie formularz dla server-eligible wizyty,
+  nie zatwierdza płatności/rabatu i nie rozszerza uprawnień.
+- Main schedule37302779331: scanner wykrył synthetic SESSION_SECRET fixture
+  tests/privateBlobUploads.test.ts:26/92d053a, nie produkcyjny sekret;
+  nie zmieniano scanner policy ani kluczy. Nowe exact-SHA checks są obowiązkowe.
+- Następny krok: exact CI/E2E/security PR39, merge po bramkach, staged main
+  i ręczna promocja; nadal publiczny202c8f1, bez nowego wdrożenia.
+
+## Zakończony checkpoint — 2026-10-03 10:00:19 UTC
+
+| Pole | Stan |
+|---|---|
+| Status | IDLE — pakiet audytu opublikowany i zweryfikowany; poniższe checkpointy są historyczne |
+| Worker / lease | Ten sam root Worker, ai/audit-recovery-proxy. Zadanie zakończone; lease zwolniony, bez drugiego Workera |
+| Publiczna wersja | main202c8f122c9bf4422846fe4a8a0d909152477c79; VercelCXSorzy7faJTyhSr2PNCPynFVXRS, promocja09:44:42UTC na www.coolinktattoo.pl i cool-ink.vercel.app |
+| Dowody | Exact-main CI37113405016, sealed backup37113478046, saved-artifact/private full restore37113647881, public recovery37114086817 i Google worker37114185152 SUCCESS; szczegóły w AUDIT_CHECKPOINT/RELEASE_LOG |
+| Obserwacja | Ponad15min do10:00:19UTC, Production Error0%/Timeout0%, public smoke PASS; ręczny ZAJĘTY poprawny także u klienta |
+| Następny krok | Rutynowy monitoring/backlog. Nie powtarzać zakończonych pakietów ani controlled alarm probe bez nowej reprodukcji. Brak rzeczywistej osoby wybranej do erasure; AI/social odroczone |
+| Publikacja / rollback | Auto-assign Custom Production Domains Disabled ponownie potwierdzone po promocji. Kolejne wersje wymagają ręcznej promocji po testach. Zgodny rollback e370bd1/9HVf5Ank4G9bCbarKSEzXkGiANfk, nie restore bazy |
+| Backup | BACKUP_RUNTIME_CONFIG=true, codzienna kopia obejmuje sealed runtime bez rotacji; CONFIG_ESCROW_DEPLOYMENT_URL nie ustawiono, więc canonical production endpoint |
+
+## Historyczny checkpoint startowy — 2026-09-30
 
 | Pole | Stan |
 |---|---|

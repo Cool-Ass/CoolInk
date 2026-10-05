@@ -1,5 +1,55 @@
 # Audyt — checkpoint 2026-10-01 (Europe/Warsaw)
 
+## Aktualny wynik — 2026-10-03, publikacja 09:44:42 UTC
+
+Ten wpis zastępuje historyczne statusy pending poniżej, nie ich dowody.
+PR26/37/38 scalone; produkcyjny main `202c8f122c9bf4422846fe4a8a0d909152477c79`.
+Vercel `CXSorzy7faJTyhSr2PNCPynFVXRS` / cool-dc2d49ddv-cool-ass.vercel.app
+promowany ręcznie na www.coolinktattoo.pl i cool-ink.vercel.app po wszystkich
+bramkach. Auto-przypisywanie domen pozostaje wyłączone.
+
+- CI exact main [37113405016](https://github.com/Cool-Ass/CoolInk/actions/runs/37113405016)
+  SUCCESS: 82 pliki/359 unit tests, lint/types/build/security, RLS/IDOR 39 tabel,
+  SQL outbox/quarantine/execution races, role-aware HTTP, 4 desktop/mobile E2E.
+  Odczyt czatu p95 w izolacji: desktop831ms/mobile707ms; nie pomiar produkcyjny.
+- Zaufany backup main [37113478046](https://github.com/Cool-Ass/CoolInk/actions/runs/37113478046)
+  SUCCESS: zgodny snapshot, Auth/storage, 10 obiektów mediów i bieżące klucze
+  zaszyfrowane bez rotacji. Artefakt11271126320, SHA256 ZIP
+  `c5c4649ee263553bbc115c20817df28ad83b091f701b39fd6e0a1a31067a1869`.
+- Odtworzenie zapisanego artefaktu [37113647881](https://github.com/Cool-Ass/CoolInk/actions/runs/37113647881)
+  SUCCESS dla tego samego SHA: zgodność danych/Auth, realny izolowany flow GoTrue,
+  logowanie aplikacji klienta, odtworzone MFA/ciphertext, odrzucenie błędnego MFA,
+  sesje, podpisy/ownership i prywatne zdjęcia projektu/czatu HTTP.
+  32 odtworzone Auth users/22 zgodne powiązane profile; oryginalne prywatne refs0.
+  HTTP media używają jednorazowych fixtures z odtworzonych bajtów; nie hasła klientów.
+  Brak restore, fixtures, erasure lub czyszczenia danych na produkcji.
+- A10: osobna ocena/retencja i potwierdzone wykonanie są wdrożone; blokady,
+  backup gate, retry, zamrożenie i zachowanie finansów/zgód przeszły izolowane CI.
+  Nie wybrano żadnej rzeczywistej osoby do usunięcia. Granica wcześniej
+  pobranych/cache'owanych bajtów pozostaje jawnie opisana w PRIVATE_MEDIA_CACHE.md.
+- A14: podpisany probe [37113476751](https://github.com/Cool-Ass/CoolInk/actions/runs/37113476751)
+  zapisał raport właściciela (POST200,09:34:09UTC); failure oczekiwany tylko dla
+  kontrolowanego alarmu. Follow-up37113514001 i publiczny37114086817 SUCCESS.
+  To dowód trwałego zapisu, nie przeczytania/push/email. Osobne Production-only
+  reguły Vercel pinują immutable main subject i dokładne workflow_ref; ochrona
+  nie została wyłączona. BACKUP_RUNTIME_CONFIG=true utrwala klucze w codziennej kopii.
+- A09: publiczny Google worker37114185152 SUCCESS, checked0/synced0;
+  nie tworzono testowych wydarzeń ani danych klientów. Harmonogram istniejący.
+- Publiczne smoke: home/CMS polityka prywatności/login admina/klienta200,
+  niezalogowany admin API401, cron GET405; chronione strony przekierowują na login.
+  W istniejącej zalogowanej sesji klienta portal i kalendarz działają,
+  ręczne5/7/12/15/20/21/26 października pokazują ZAJĘTY, niedziele NIEDOSTĘPNY;
+  logo załadowane. Zachowano ustawiony przez właściciela tryb budowy strony głównej.
+- Obserwacja po publikacji: PASS,09:44:42–10:00:19UTC (ponad15min),
+  Vercel Production Error0%/Timeout0%; public smoke i brak regresji krytycznych.
+  To okno obserwacji, nie gwarancja braku przyszłych awarii.
+  Pakiet audytu opublikowany; rzeczywiste wnioski privacy nadal wymagają
+  osobnego wyboru/oceny właściciela, AI/social pozostają odroczone.
+- Rollback kodu: przetestowany, zgodny ze schematem/private-store e370bd1,
+  deployment9HVf5Ank4G9bCbarKSEzXkGiANfk. Nie przywracać starszego ed85fb8
+  bez sprawdzenia odczytu nowego private Blob; rollback nie jest restore danych.
+
+
 ## A10/A14 — 2026-10-03 05:18 UTC, przed nowym CI
 
 - Ten sam Worker, PR26/ai/audit-sync-outbox. Właściciel potwierdził dalszą

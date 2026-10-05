@@ -1,5 +1,24 @@
 # Decyzje i ADR
 
+## COMPACT-WORKFLOW-20261005
+
+- Właściciel zlecił: sesje od najnowszej, prostszy workflow edycji/rozliczenia,
+  kompaktowe wspólne kontrolki inspirowane dołączonymi screenami oraz
+  prowadnice przeciągane w px z kątem i duplikowaniem.
+- MEDIUM, osobny PR. Bez zmiany zasad pieczątek, płatności, API, schematu,
+  auth lub infrastruktury. Rozliczenie nadal wymaga świadomego potwierdzenia.
+- Wspólny inspector portalowy zapobiega ucinaniu przez scroll sidebara;
+  ustawienia typografii/kolorów/obrysu rozwijane na żądanie. Fonty ograniczone
+  do rzeczywiście zainstalowanych; globalne kolory powiązane z motywem.
+- Prowadnice wyłącznie w edytorze, maks32, brak zapisu do opublikowanej strony.
+  X/Y określają punkt obrotu względem lewego/górnego brzegu;0° poziom/90° pion.
+- Rollback: obecny publiczny202c8f1/CXSorzy7faJTyhSr2PNCPynFVXRS bez restore.
+- Kryteria: dokładny CI/E2E/security SHA, focus/Escape/nested popovers,
+  desktop/mobile, kolejność i reset formularza bez naliczenia testowej płatności.
+- ACCEPTED: właściciel zatwierdził PR39: „Tak, opublikuj po testach”. Dowód
+  https://github.com/Cool-Ass/CoolInk/pull/39#issuecomment-6001879191.
+  Zgoda obejmuje ten UI-only zakres; brak promocji przed exact-SHA checks.
+
 ## AUDIT-FINAL-20261003 — kontynuacja do pełnej publikacji
 
 - ACCEPTED: właściciel w bieżącym czacie: „kontynuuj. masz moje wszystkie zgody.
