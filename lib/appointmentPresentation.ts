@@ -6,3 +6,10 @@ export function newestSessionsFirst<T extends { id: string; startsAt: Date | str
   });
 }
 export const OPEN_VISIT_SETTLEMENT = "coolink:open-visit-settlement";
+
+/** Moving a visit keeps its existing duration; explicit end edits remain independent. */
+export function shiftedSessionRange(startsAt: Date | string, endsAt: Date | string, nextStart: string) {
+  const start = new Date(startsAt).getTime(), end = new Date(endsAt).getTime(), next = new Date(nextStart).getTime();
+  if (![start, end, next].every(Number.isFinite) || end <= start) return null;
+  return { startsAt: new Date(next).toISOString(), endsAt: new Date(next + end - start).toISOString() };
+}

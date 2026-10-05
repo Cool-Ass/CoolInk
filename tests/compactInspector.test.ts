@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { inspectorLayout } from "@/lib/inspectorLayout";
 import { constrainGuide, duplicateGuide, guideLine } from "@/lib/canvasGuides";
-import { newestSessionsFirst } from "@/lib/appointmentPresentation";
+import { newestSessionsFirst, shiftedSessionRange } from "@/lib/appointmentPresentation";
 
 describe("compact inspector and guides", () => {
+  it("moves both ends of a visit while preserving the original duration", () => {
+    expect(shiftedSessionRange("2026-10-01T08:00Z", "2026-10-01T16:00Z", "2026-10-06T08:00Z")).toEqual({ startsAt: "2026-10-06T08:00:00.000Z", endsAt: "2026-10-06T16:00:00.000Z" });
+    expect(shiftedSessionRange("invalid", "2026-10-01T16:00Z", "2026-10-06T08:00Z")).toBeNull();
+    expect(shiftedSessionRange("2026-10-01T16:00Z", "2026-10-01T08:00Z", "2026-10-06T08:00Z")).toBeNull();
+  });
   it("keeps popovers within narrow and short viewports", () => {
     for (const viewport of [{ width: 390, height: 600 }, { width: 280, height: 320 }, { width: 1440, height: 900 }]) {
       const result = inspectorLayout({ left: 160, right: 230, top: viewport.height - 70, bottom: viewport.height - 38 }, viewport, 800);

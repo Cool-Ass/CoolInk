@@ -12,8 +12,13 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
   dokładnego SHA CI/E2E/security i ręcznej promocji; nie deklarowano publikacji.
 - Bazowy publiczny main202c8f1. Dotychczasowy audyt pozostaje zakończony.
 - PR39 zatwierdzony przez właściciela „Tak, opublikuj po testach”. Lokalne
-  typecheck/lint i35 ukierunkowanych testów PASS. CI37365802883/37366246658
+  typecheck/lint i36 ukierunkowanych testów PASS. CI37365802883/37366246658
   oczekują na runner; nie anulować. Dokładna najnowsza wersja wymaga nowych checks.
+- 20:00UTC: potwierdzona publiczna awaria przydzielania GitHub-hosted runnerów,
+  https://www.githubstatus.com/ (incydent od19:11UTC). CodeQL pierwszego PR run
+  SUCCESS, verify/backup-snapshot queued; nie pomijać bramek ani anulować izolacji.
+- Edycja początku wizyty zachowuje jej dotychczasowy czas; edycja końca niezależna.
+  Globalny motyw nie podmienia kolorów chrome inspektora (kontrast UI).
 - Kalendarz: edycja dat/czasu w tym samym modalu i przejście do tej wizyty
   w rozliczeniach; URL otwiera wyłącznie formularz dla server-eligible wizyty,
   nie zatwierdza płatności/rabatu i nie rozszerza uprawnień.
