@@ -258,6 +258,8 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await page.getByRole("button", { name: "Ustawienia: KOLOR TEKSTU — kolory globalne", exact: true }).click();
     await page.getByRole("dialog", { name: "KOLOR TEKSTU — kolory globalne", exact: true }).getByRole("button", { name: "Akcent", exact: true }).click();
     await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Ukryj panel narzędzi", exact: true }).click();
+    await expect.poll(() => page.locator(".builder-canvas").evaluate((element) => element.clientWidth)).toBeGreaterThan(300);
     await page.getByRole("button", { name: "Prowadnice", exact: true }).click();
     await page.getByRole("button", { name: "Dodaj pionową prowadnicę", exact: true }).click();
     await page.getByRole("button", { name: "Ustawienia: Prowadnice — pozycja i kąt", exact: true }).click();
