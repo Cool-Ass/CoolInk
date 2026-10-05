@@ -265,6 +265,14 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /^Prowadnica 2: X/ }).press("ArrowRight");
     await expect(page.getByRole("button", { name: /^Prowadnica 2: X 117 px/ })).toBeVisible();
+    const canvasBox = await page.locator(".builder-canvas").boundingBox();
+    const guideBox = await page.getByRole("button", { name: /^Prowadnica 2: X/ }).evaluate((line) => { const layer = line.closest("svg"); const rect = layer.getBoundingClientRect(); return { x: rect.x + 117, y: rect.y + 216 }; });
+    expect(canvasBox).not.toBeNull();
+    await page.mouse.move(guideBox.x, guideBox.y);
+    await page.mouse.down();
+    await page.mouse.move(guideBox.x + 20, guideBox.y + 10, { steps: 5 });
+    await page.mouse.up();
+    await expect(page.getByRole("button", { name: /^Prowadnica 2: X 137 px, Y 226 px/ })).toBeVisible();
     await page.getByRole("button", { name: "Prowadnice", exact: true }).click();
     await page.getByRole("button", { name: "OPUBLIKUJ", exact: true }).click();
     await expect.poll(async () => (await prisma.page.findUniqueOrThrow({ where: { id: cmsPage.id } })).status).toBe("published");

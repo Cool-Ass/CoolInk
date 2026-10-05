@@ -6,12 +6,15 @@ import { constrainGuide, duplicateGuide, guideLine, type CanvasGuide } from "@/l
 import InspectorPopover from "./InspectorPopover";
 
 /** Editor-only pixel guides. Pointer movement never rewrites page content. */
-export default function CanvasGuides({ visible }: { visible: boolean }) {
+export default function CanvasGuides({ visible, initialGuides = [], onChange }: { visible: boolean; initialGuides?: CanvasGuide[]; onChange?: (guides: CanvasGuide[]) => void }) {
   const layer = useRef<HTMLDivElement>(null);
-  const nextId = useRef(0);
+  const nextId = useRef(Math.max(0, ...initialGuides.map((item) => item.id)));
   const drag = useRef<{ id: number; pointer: number; x: number; y: number; originX: number; originY: number } | null>(null);
   const [bounds, setBounds] = useState({ width: 0, height: 0 });
-  const [guides, setGuides] = useState<CanvasGuide[]>([]);
+  const [guides, setGuides] = useState<CanvasGuide[]>(initialGuides);
+  const latestGuides = useRef(guides);
+  useEffect(() => { latestGuides.current = guides; }, [guides]);
+  useEffect(() => () => { onChange?.(latestGuides.current); }, [onChange]);
   const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => {
     const parent = layer.current?.parentElement;

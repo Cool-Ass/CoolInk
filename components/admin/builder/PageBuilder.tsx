@@ -7,6 +7,7 @@ import ModuleRenderer, { type ModuleRendererGlobals } from "@/components/ModuleR
 import BuilderTopBar, { type DeviceMode } from "@/components/admin/builder/BuilderTopBar";
 import BuilderNavigator from "@/components/admin/builder/BuilderNavigator";
 import CanvasGuides from "@/components/admin/builder/CanvasGuides";
+import type { CanvasGuide } from "@/lib/canvasGuides";
 import { InspectorTheme } from "@/components/admin/builder/InspectorPopover";
 import PageVersionsPanel from "@/components/admin/builder/PageVersionsPanel";
 import AddModulePicker from "@/components/admin/builder/AddModulePicker";
@@ -146,6 +147,7 @@ export default function PageBuilder({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [showGrid, setShowGrid] = useState(false);
   const [showGuides, setShowGuides] = useState(false);
+  const [guideSession, rememberGuides] = useState<CanvasGuide[]>([]);
   const [snapSize, setSnapSize] = useState(8);
   const [reusableBlocks, setReusableBlocks] = useState<ReusableBlock[]>([]);
   const [selectedReusableBlock, setSelectedReusableBlock] = useState("");
@@ -878,7 +880,7 @@ export default function PageBuilder({
               <details className="relative ml-auto text-[9px] text-white/60"><summary title="Audyt strony" aria-label={`Audyt strony: ${auditIssues.length || "bez problemów"}`} className={`flex h-8 cursor-pointer list-none items-center gap-1.5 border px-2 marker:hidden ${auditIssues.some((issue) => issue.severity === "error") ? "border-red-400/60 text-red-300" : auditIssues.length ? "border-amber-400/60 text-amber-300" : "border-emerald-400/40 text-emerald-300"}`}><ShieldCheck className="h-3.5 w-3.5" /><span>{auditIssues.length || "OK"}</span></summary>{auditIssues.length > 0 && <div className="absolute right-0 top-full z-[80] mt-1 max-h-64 w-[min(28rem,80vw)] overflow-y-auto border border-white/15 bg-black/95 p-2 shadow-2xl">{auditIssues.map((issue) => <p key={issue.id} className={`border-b border-white/10 px-1 py-2 leading-relaxed ${issue.severity === "error" ? "text-red-300" : "text-amber-200"}`}>{issue.message}</p>)}</div>}</details>
             </div>
             {showGrid && <div aria-hidden className="builder-grid-overlay pointer-events-none absolute inset-0 z-[34]" />}
-            <CanvasGuides visible={showGuides} />
+            <CanvasGuides visible={showGuides} initialGuides={guideSession} onChange={rememberGuides} />
             <ModuleRenderer
               modules={modules}
               editorDevice={device}
