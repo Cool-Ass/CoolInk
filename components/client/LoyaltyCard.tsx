@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppModal from "@/components/ui/AppModal";
 import { OPEN_VISIT_SETTLEMENT } from "@/lib/appointmentPresentation";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Gift, Check } from "lucide-react";
 import type { getLoyaltyCard } from "@/lib/loyalty";
 import { renderLoyaltyDescription } from "@/lib/loyaltyDescription";
@@ -15,6 +15,9 @@ const money = (cents: number) => (cents / 100).toLocaleString("pl-PL", { style: 
 
 export default function LoyaltyCard({ card, clientId, visits = [] }: { card: Card; clientId?: string; visits?: Visit[] }) {
   const router = useRouter();
+  const params = useSearchParams();
+  const requestedVisit = params.get("settle");
+  const openedFromLink = useRef<string | null>(null);
   const [visitId, setVisitId] = useState("");
   const [amount, setAmount] = useState(String(card.rules.sessionPriceCents / 100));
   const [redeem, setRedeem] = useState(false);
@@ -25,6 +28,13 @@ export default function LoyaltyCard({ card, clientId, visits = [] }: { card: Car
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [settlementOpen, setSettlementOpen] = useState(false);
+  useEffect(() => {
+    if (!clientId || !requestedVisit || openedFromLink.current === requestedVisit) return;
+    const visit = visits.find((item) => item.id === requestedVisit);
+    if (!visit) return;
+    const frame = requestAnimationFrame(() => { openedFromLink.current = requestedVisit; setVisitId(visit.id); setAmount(String(visit.price ?? card.rules.sessionPriceCents / 100)); setPaid(false); setRedeem(false); setNextStep("keep"); setMessage(""); setSettlementOpen(true); });
+    return () => cancelAnimationFrame(frame);
+  }, [clientId, requestedVisit, visits, card.rules.sessionPriceCents]);
   const selectVisit = (id: string) => { setVisitId(id); setAmount(String(visits.find((visit) => visit.id === id)?.price ?? card.rules.sessionPriceCents / 100)); setPaid(false); setRedeem(false); setNextStep("keep"); setMessage(""); };
   useEffect(() => {
     const open = (event: Event) => {

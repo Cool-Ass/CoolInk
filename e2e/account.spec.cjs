@@ -202,6 +202,9 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await expect(settlement.getByRole("button", { name: "Zakończ i zapisz rozliczenie", exact: true })).toBeDisabled();
   await page.keyboard.press("Escape");
   await expect(settlement).toHaveCount(0);
+  await page.goto(`/admin/clients/${client.id}?view=appointments&settle=${newVisit.id}`);
+  await expect(page.getByRole("dialog", { name: "Zakończ i rozlicz wizytę", exact: true }).getByLabel("Wizyta do zakończenia lub rozliczenia")).toHaveValue(newVisit.id);
+  await page.keyboard.press("Escape");
   expect(await prisma.loyaltyEntry.count({ where: { appointmentId: { in: [oldVisit.id, newVisit.id] } } })).toBe(0);
   await page.goto(`/admin/clients/${client.id}`);
   const privacyRequest = await prisma.accountDeletionRequest.create({ data: { clientId: client.id } });
