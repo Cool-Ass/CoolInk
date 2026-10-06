@@ -57,6 +57,7 @@ function mediaUrls(node: AuditedNode) {
   for (const key of ["image", "imageUrl", "logoUrl", "coverImage"]) if (typeof data[key] === "string" && data[key]) values.push(data[key] as string);
   if (Array.isArray(data.images)) for (const image of data.images) if (typeof image === "string" && image) values.push(image);
   if (node.style?.backgroundImage) values.push(node.style.backgroundImage);
+  if (node.style?.overlayImage) values.push(node.style.overlayImage);
   return values;
 }
 

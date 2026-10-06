@@ -31,6 +31,24 @@ export function parseSafeCssDeclarations(value: unknown): CSSProperties {
 
 type BuilderCssProperties = CSSProperties & Record<`--builder-${string}`, string | number | undefined>;
 
+/** Decorative layer only: never fades content or intercepts canvas interaction. */
+export function buildOverlayStyle(style: ModuleStyle): CSSProperties | undefined {
+  const source = style.overlayImage?.trim();
+  const image = source && /^(?:https?:\/\/|\/(?!\/))/i.test(source) ? source : undefined;
+  const rawOpacity = style.overlayOpacity ?? (image ? 100 : 0);
+  const opacity = Number.isFinite(rawOpacity) ? Math.min(100, Math.max(0, rawOpacity)) / 100 : 0;
+  if ((!image && !style.overlayColor) || opacity === 0) return undefined;
+  return {
+    backgroundColor: style.overlayColor || undefined,
+    backgroundImage: image ? `url(${JSON.stringify(image)})` : undefined,
+    backgroundSize: style.overlaySize ?? "cover",
+    backgroundPosition: style.overlayPosition ?? "center",
+    backgroundRepeat: style.overlayRepeat ?? "no-repeat",
+    opacity,
+    mixBlendMode: style.overlayBlendMode ?? "normal",
+  };
+}
+
 function px(value: number | undefined, min = -4_000, max = 4_000) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${Math.min(max, Math.max(min, value))}px`

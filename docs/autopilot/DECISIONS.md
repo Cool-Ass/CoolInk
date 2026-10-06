@@ -1,5 +1,25 @@
 # Decyzje i ADR
 
+## TEXT-GROUP-20261006
+
+- 00:23UTC: właściciel dodatkowo zlecił obraz jako nakładkę tła oraz wskazał
+  ciemne tło PNG w widżecie. Zakres PR40 rozszerzony, MEDIUM; poprzedni LOW
+  nie upoważnia do automatycznej publikacji rozszerzonego pakietu.
+- Przyczyną wymuszonego tła jest bg-ink-charcoal w ramce wczytanego Obrazu.
+  Konwersja uploadu zachowuje alpha, nie zmieniano backendu ani dawnych plików.
+- Nowe pola stylu są opcjonalne; bez obrazu stare nakładki koloru bez zmian.
+  Dodanie pierwszego obrazu do wyłączonej nakładki ustawia krycie100%,
+  dalsze zmiany zachowują ustawione krycie. Usunięcie obrazu zachowuje kolor.
+- Publikacja oczekuje zgody właściciela na rozszerzony PR40 i nowych exact checks.
+
+- Właściciel wskazał screenshot i zlecił: „no to popraw błąd” po potwierdzeniu,
+  że obrys/cień tekstu należą do sekcji Tekst, nie osobnego wiersza poza nią.
+- LOW, wyłącznie przeniesienie granicy JSX PanelSection w wspólnym komponencie.
+  Bez zmian wartości, zapisów CMS, schematu, reguł finansowych lub popoverów.
+- Regresja browser: poprawny rodzic, zwijanie/rozwijanie, otwarcie okna,
+  Escape i focus. Publikacja wyłącznie po obowiązujących dokładnych bramkach.
+- Rollback:8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX, bez restore danych.
+
 ## COMPACT-WORKFLOW-20261005
 
 - Właściciel zlecił: sesje od najnowszej, prostszy workflow edycji/rozliczenia,
@@ -18,6 +38,9 @@
 - ACCEPTED: właściciel zatwierdził PR39: „Tak, opublikuj po testach”. Dowód
   https://github.com/Cool-Ass/CoolInk/pull/39#issuecomment-6001879191.
   Zgoda obejmuje ten UI-only zakres; brak promocji przed exact-SHA checks.
+- Wykonane: PR39 merged main8a9431e, exact-main CI37388586456 SUCCESS,
+  ręczna promocja2026-10-05 23:37:35UTC. Ponad15min obserwacji PASS do23:54:07UTC,
+  Error0%/Timeout0%, readonly smoke i bramka kolejnych publikacji potwierdzone.
 
 ## AUDIT-FINAL-20261003 — kontynuacja do pełnej publikacji
 

@@ -2,7 +2,55 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-05 19:40 UTC
+## Aktualny checkpoint — 2026-10-06 00:23 UTC / 02:23 CEST
+
+- VERIFYING, jeden root Worker ai/text-effects-group, lease do01:18UTC.
+- PR40 rozszerzony na żądanie właściciela: obraz jako nakładka tła oraz
+  przezroczyste tło widgetu Obraz. MEDIUM, zgoda przed merge/publikacją wymagana.
+- Nakładka wspólna dla widgetów/kolumn/sekcji, obraz + kolor, krycie, fit,
+  pozycja i repeat; nie zasłania interakcji ani nie zmienia krycia treści.
+- Upload już zachowuje alpha; test rzeczywistych pikseli PNG/WebP PASS.
+  Usunięto wymuszony charcoal z ramki wczytanego obrazu; placeholder bez zmian.
+- 13 ukierunkowanych testów PASS, typecheck i lint bez błędów. Browser regresje
+  obejmują overlay w canvasie/public i przezroczystą ramkę. Nowe exact CI wymagane;
+  wcześniejsze CI37391982666 SUCCESS dotyczy wyłącznie afc347c, nie nowego zakresu.
+- Produkcja nadal8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX, ten sam rollback bez restore.
+
+## Historyczny checkpoint — 2026-10-06 00:03 UTC / 02:03 CEST
+
+- VERIFYING, jeden root Worker, ai/text-effects-group, lease do00:58UTC.
+- TEXT-GROUP-20261006, LOW: właściciel wskazał błędny osobny wiersz
+  „Obrys i cień tekstu” i zlecił poprawkę. Przeniesiono go do istniejącego
+  PanelSection Tekst bez zmiany wartości, stylowania ani mechanizmu popoverów.
+- Dodano browser regresję rodzica, zwijania, otwierania i Escape/focus.
+  Lint zmienionych plików i typecheck PASS. Exact CI/E2E/security obowiązkowe.
+- Publiczny8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX pozostaje bez zmian.
+  Rollback tego UI-only pakietu: ten sam deployment, bez restore danych.
+- Włączono wyłącznie dowodową dokumentację poprzedniego wydania PR39
+  z osobnego brancha; nie ponawiać jego publikacji/testów jako nowego zadania.
+- Następny krok: PR poprawki, exact checks, normal merge i ręczna promocja.
+
+## Zakończony checkpoint — 2026-10-06 01:54 CEST / 2026-10-05 23:54 UTC
+
+- IDLE, PR39 opublikowany i zweryfikowany; lease zwolniony, bez drugiego Workera.
+- PR39 scalony po zgodzie właściciela i CI37367158121 attempt2 SUCCESS.
+- Exact-main `8a9431ed9d26cb285f38fb47393d2e708092d47d`, CI37388586456
+  SUCCESS: verify/E2E, gitleaks, CodeQL i backup-snapshot.
+- Vercel `fLYEoVMDMxwLS9B7iDeRuSJDdJAX`, `cool-d1658zr1e-cool-ass.vercel.app`,
+  promocja 2026-10-05 23:37:35 UTC na www.coolinktattoo.pl / cool-ink.vercel.app.
+- Readonly smoke: home, klient, admin/login, terminy HTTP200; chronione API
+  kalendarza i ustawień lojalności HTTP401 bez sesji. Error Rate0%.
+- Auto-assign Custom Production Domains nadal Disabled po promocji.
+- Brak migracji, produkcyjnych fixture, zmian zasad płatności lub uprawnień.
+- Obserwacja PASS,23:38:30–23:54:07UTC, ponad15min; Production Error0%/Timeout0%,
+  końcowy readonly smoke PASS. Kalendarz istniejącej sesji klienta i logo
+  renderują się poprawnie; admin wymaga logowania, MFA nie omijano.
+- Rollback202c8f1/CXSorzy7faJTyhSr2PNCPynFVXRS bez restore; niewykonany.
+- Następny krok: rutynowy monitoring, bez ponownego wdrażania tego pakietu.
+  Osobny dokumentacyjny branch ai/release-pr39-evidence nie jest SHA aplikacji.
+- Dowody operacyjne: https://github.com/Cool-Ass/CoolInk/pull/39.
+
+## Historyczny checkpoint — 2026-10-05 19:40 UTC
 
 - VERIFYING, jeden root Worker, branch `ai/compact-controls-workflow`, lease do20:35UTC.
 - Zakres nowego żądania właściciela: kompaktowy inspector całego buildera,

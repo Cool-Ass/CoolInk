@@ -45,7 +45,6 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
       <button type="button" onClick={() => reset(["fontFamily", "fontSize", "responsiveFontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "textDecoration", "textTransform"])} className="flex min-h-8 items-center gap-1 text-xs text-ink-gold"><RotateCcw className="h-3 w-3" />Reset typografii</button>
       </InspectorPopover></div></div>
       <ColorPicker label="KOLOR TEKSTU" value={style.color ?? ""} onChange={(color) => set({ color })} />
-    </PanelSection>
 
     <div className="flex min-h-9 items-center justify-between border-t border-white/10 text-[10px] text-white/75"><span>Obrys i cień tekstu</span><InspectorPopover title="Obrys i cień tekstu">
       <div className="grid grid-cols-2 gap-2"><NumberField label="GRUBOŚĆ OBRYSU" value={style.textStrokeWidth ?? 0} min={0} max={8} step={0.25} onChange={(textStrokeWidth) => set({ textStrokeWidth })} /><ColorPicker label="KOLOR OBRYSU" value={style.textStrokeColor ?? ""} onChange={(textStrokeColor) => set({ textStrokeColor })} /></div>
@@ -53,6 +52,7 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
       <div className="grid grid-cols-3 gap-2"><NumberField label="X" value={style.textShadowX ?? 0} min={-100} max={100} onChange={(textShadowX) => set({ textShadowX })} /><NumberField label="Y" value={style.textShadowY ?? 2} min={-100} max={100} onChange={(textShadowY) => set({ textShadowY })} /><NumberField label="ROZMYCIE" value={style.textShadowBlur ?? 0} min={0} max={100} onChange={(textShadowBlur) => set({ textShadowBlur })} /></div>
       <button type="button" onClick={() => reset(["textStrokeWidth", "textStrokeColor", "textShadowColor", "textShadowX", "textShadowY", "textShadowBlur"])} className="min-h-8 text-left text-xs text-ink-gold">Reset obrysu i cienia</button>
     </InspectorPopover></div>
+    </PanelSection>
 
     <PanelSection title="Tło: kolor, gradient i obraz">
       <ColorPicker label="KOLOR TŁA" value={style.backgroundColor ?? ""} onChange={(backgroundColor) => set({ backgroundColor })} />
@@ -65,8 +65,14 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
     </PanelSection>
 
     <PanelSection title="Nakładka i wzór">
+      <ImageUploadField label="OBRAZ NAKŁADKI" value={style.overlayImage ?? ""} previewFit="contain" transparentPreview onChange={(overlayImage) => set({ overlayImage, ...(overlayImage && !style.overlayImage && !(style.overlayOpacity ?? 0) ? { overlayOpacity: 100 } : {}) })} />
+      {style.overlayImage && <div className="grid grid-cols-2 gap-2">
+        <SelectField label="DOPASOWANIE OBRAZU" value={style.overlaySize ?? "cover"} onChange={(overlaySize) => set({ overlaySize })} options={[{ value: "cover", label: "Wypełnij" }, { value: "contain", label: "Pokaż cały" }, { value: "auto", label: "Naturalny" }]} />
+        <SelectField label="POZYCJA OBRAZU" value={style.overlayPosition ?? "center"} onChange={(overlayPosition) => set({ overlayPosition })} options={[{ value: "center", label: "Środek" }, { value: "top", label: "Góra" }, { value: "bottom", label: "Dół" }, { value: "left", label: "Lewo" }, { value: "right", label: "Prawo" }]} />
+        <SelectField label="POWTARZANIE OBRAZU" value={style.overlayRepeat ?? "no-repeat"} onChange={(overlayRepeat) => set({ overlayRepeat })} options={[{ value: "no-repeat", label: "Bez powtarzania" }, { value: "repeat", label: "Powtarzaj" }, { value: "repeat-x", label: "Poziomo" }, { value: "repeat-y", label: "Pionowo" }]} />
+      </div>}
       <ColorPicker label="KOLOR NAKŁADKI" value={style.overlayColor ?? ""} onChange={(overlayColor) => set({ overlayColor })} />
-      <RangeField label="KRYCIE NAKŁADKI" value={style.overlayOpacity ?? 0} min={0} max={100} suffix="%" onChange={(overlayOpacity) => set({ overlayOpacity })} />
+      <RangeField label="KRYCIE NAKŁADKI" value={style.overlayOpacity ?? (style.overlayImage ? 100 : 0)} min={0} max={100} suffix="%" onChange={(overlayOpacity) => set({ overlayOpacity })} />
       <SelectField label="MIESZANIE NAKŁADKI" value={style.overlayBlendMode ?? "normal"} onChange={(overlayBlendMode) => set({ overlayBlendMode })} options={BLEND_OPTIONS} />
       <SelectField label="DARMOWY WZÓR" value={style.pattern ?? "none"} onChange={(pattern) => set({ pattern })} options={[{ value: "none", label: "Brak" }, { value: "noise", label: "Filmowe ziarno" }, { value: "dots", label: "Kropki" }, { value: "grid", label: "Siatka" }, { value: "diagonal", label: "Linie diagonalne" }, { value: "crosses", label: "Krzyże" }]} />
       {style.pattern && style.pattern !== "none" && <><ColorPicker label="KOLOR WZORU" value={style.patternColor ?? "#c99a4a"} onChange={(patternColor) => set({ patternColor })} /><div className="grid grid-cols-2 gap-2"><RangeField label="KRYCIE" value={style.patternOpacity ?? 18} min={0} max={100} suffix="%" onChange={(patternOpacity) => set({ patternOpacity })} /><RangeField label="SKALA" value={style.patternSize ?? 28} min={4} max={240} suffix="px" onChange={(patternSize) => set({ patternSize })} /></div></>}

@@ -236,17 +236,34 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     expect(await ownPage.content()).not.toContain(privateReason);
     expect((await ownPage.request.patch(`http://127.0.0.1:3120/api/admin/privacy-requests/${privacyRequest.id}`, { headers: { origin: "http://127.0.0.1:3120" }, data: {} })).status()).toBe(401);
   } finally { await ownClient.close(); }
-  cmsPage = await prisma.page.create({ data: { title: "Browser CMS fixture", slug: `browser-cms-${randomUUID()}`, status: "draft", showInNav: false } });
+  cmsPage = await prisma.page.create({ data: { title: "Browser CMS fixture", slug: `browser-cms-${randomUUID()}`, status: "draft", showInNav: false, modules: JSON.stringify([{ id: "browser-image-fixture", type: "image", data: { image: "/images/texture-bg.jpg", alt: "Browser image fixture", fit: "contain" } }]) } });
   const visitor = await page.context().browser().newContext();
   const publicPage = await visitor.newPage();
   try {
     expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(404);
     await page.goto(`/admin/pages/${cmsPage.id}`);
+    await expect(page.locator(".builder-canvas").getByRole("img", { name: "Browser image fixture", exact: true }).locator("..")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     await expect(page.getByRole("complementary", { name: "Nawigator struktury strony" })).toHaveCount(0);
     await page.getByRole("button", { name: /Hero · swobodny/ }).click();
     await expect(page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
     await page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true }).click();
     await page.getByRole("tab", { name: "STYL", exact: true }).click();
+    const textEffects = page.getByRole("button", { name: "Ustawienia: Obrys i cień tekstu", exact: true });
+    await expect(textEffects).toBeVisible();
+    expect(await textEffects.evaluate((button) => button.closest("details").querySelector(":scope > summary").textContent.trim())).toBe("Tekst");
+    const textSummary = page.locator("summary").filter({ hasText: /^Tekst$/ });
+    await textSummary.click();
+    await expect(textEffects).not.toBeVisible();
+    await textSummary.click();
+    await textEffects.click();
+    await expect(page.getByRole("dialog", { name: "Obrys i cień tekstu", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(textEffects).toBeFocused();
+    await page.locator("summary").filter({ hasText: /^Nakładka i wzór$/ }).click();
+    await page.getByRole("textbox", { name: "OBRAZ NAKŁADKI — adres obrazu", exact: true }).fill("/images/texture-bg.jpg");
+    await expect.poll(() => page.locator('.builder-canvas .builder-overlay-layer[style*="texture-bg.jpg"]').count()).toBe(1);
+    await expect(page.locator('.builder-canvas .builder-overlay-layer[style*="texture-bg.jpg"]')).toHaveCSS("opacity", "1");
+    await page.locator("summary").filter({ hasText: /^Nakładka i wzór$/ }).click();
     await expect(page.getByRole("dialog", { name: "Typografia", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Ustawienia: Typografia", exact: true }).click();
     const typography = page.getByRole("dialog", { name: "Typografia", exact: true });
@@ -270,6 +287,13 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /^Prowadnica 2: X/ }).press("ArrowRight");
     await expect(page.getByRole("button", { name: /^Prowadnica 2: X 117 px/ })).toBeVisible();
+    // Tall image fixtures can scroll the canvas while the selected heading or
+    // guide takes focus. Measure and drag from a visible canvas origin.
+    await page.locator(".builder-canvas").evaluate((canvas) => {
+      for (let parent = canvas.parentElement; parent; parent = parent.parentElement) {
+        if (parent.scrollHeight > parent.clientHeight) parent.scrollTop = 0;
+      }
+    });
     const canvasBox = await page.locator(".builder-canvas").boundingBox();
     const guideBox = await page.getByRole("button", { name: /^Prowadnica 2: X/ }).evaluate((line) => { const layer = line.closest("svg"); const rect = layer.getBoundingClientRect(); return { x: rect.x + 117, y: rect.y + 216 }; });
     expect(canvasBox).not.toBeNull();
@@ -283,6 +307,8 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect.poll(async () => (await prisma.page.findUniqueOrThrow({ where: { id: cmsPage.id } })).status).toBe("published");
     expect((await publicPage.goto(`http://127.0.0.1:3120/${cmsPage.slug}`)).status()).toBe(200);
     await expect(publicPage).toHaveTitle(/Browser CMS fixture/);
+    await expect(publicPage.getByRole("img", { name: "Browser image fixture", exact: true }).locator("..")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(publicPage.locator('.builder-overlay-layer[style*="texture-bg.jpg"]')).toHaveCSS("opacity", "1");
     await expect(publicPage.getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
     page.once("dialog", async (dialog) => { expect(dialog.message()).toContain("Cofnąć publikację?"); await dialog.accept(); });
     await page.getByRole("button", { name: "COFNIJ PUBLIKACJĘ", exact: true }).click();
