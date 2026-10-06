@@ -1,5 +1,32 @@
 # Rejestr wydań i rollback
 
+## 2026-10-06 — PR41, publikacja 09:44 CEST / 07:44 UTC
+
+- Zakres: masowe komunikaty admina w głównym panelu klienta, silent lub dzwonek,
+  trwałe zamknięcie klienta, expiry i wyłączenie admina. Wspólny wygląd
+  Pages/builder list, Portfolio, Media oraz formularzy. Minimalny source-map-js1.2.2
+  usuwa advisory. Bez migracji, zmian zasad auth/płatności lub marketing email/push.
+- Zgoda: https://github.com/Cool-Ass/CoolInk/pull/41#issuecomment-6011073285.
+- Exact-head3ad0a4995e95cc5cd8ed79ebb7c3f881c4dbd466 CI37429055023 SUCCESS;
+  85 plików/378 testów, sześć browser scenariuszy desktop/mobile PASS.
+  Exact-mainfe857c09b55e16574e98eb59539414004829a4f0 CI37430254219 SUCCESS:
+  verify, CodeQL, audit/gitleaks, izolowane DB/HTTP/E2E i backup-snapshot.
+  Oba Vercel contexts SUCCESS przed promocją. Nie pominięto żadnej bramki.
+- Vercel GFN7yZMAwGvcyxa47o61kYAu94kH, cool-3mrhd21ub-cool-ass.vercel.app;
+  ręczna promocja www.coolinktattoo.pl / cool-ink.vercel.app. Auto-assign
+  Custom Production Domains Disabled potwierdzone przed merge.
+- Smoke readonly07:44:22 i08:00:19UTC: /, /app, /admin/login200;
+  /api/admin/announcements i /api/admin/calendar-snapshot401 bez sesji.
+- Obserwacja ponad15min: początkowo i w pomiarach pośrednich Error0%/Timeout0%;
+  końcowe Production Last15min07:46–08:01UTC Error0%/Timeout0%.
+  Chwilowe „No data”08:00 nie interpretowane jako zero, ponowiony odczyt.
+  Nie publikowano komunikatów do realnych klientów w ramach testu.
+- Dowody poza repo: artifacts/pr41-production-2026-10-06.png oraz
+  artifacts/pr41-observation-2026-10-06.png.
+- Rollback ad434aaefc1f7b47d6886269fe9426f68a904ef9 /
+  8BydWbL4snRywt6f1fjkEvBTAScW, bez restore bazy, niewykonany.
+- Dokumentacyjny branch ai/release-pr41-evidence nie zmienia wdrożonego SHA.
+
 ## 2026-10-06 — PR40, publikacja 02:56:43 CEST / 00:56:43 UTC
 
 - Zakres: obrys/cień tekstu w sekcji Tekst; obraz jako dekoracyjna nakładka

@@ -8,7 +8,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
 | TEXT-GROUP-20261006 | P2 | MEDIUM | DONE | PR40: obrys/cień w Tekst, overlay obrazu i alpha widgetu. Exact gates PASS, ad434aa opublikowany, smoke i świeże15min metryki PASS. |
-| ANNOUNCEMENTS-CMS-20261006 | P2 | MEDIUM | IN_PROGRESS | Komunikaty dla klientów: silent/dzwonek, zamknięcie i wyłączenie, expiry; wspólne style Pages/Portfolio/Media. Odbiór: autoryzacja, CSRF, izolacja klienta, idempotencja, regresja CMS, exact gates i zgoda. Rollback kodu do ad434aa; bez restore lub wysyłania kampanii produkcyjnej. |
+| ANNOUNCEMENTS-CMS-20261006 | P2 | MEDIUM | DONE | PR41 zaakceptowany; exact-head/main gates SUCCESS, ręczna promocja fe857c0 2026-10-06 07:44UTC, smoke i ponad15min obserwacji PASS. Komunikaty silent/dzwonek, zamknięcie, wyłączenie, expiry; wspólne style Pages/Portfolio/Media. Rollback ad434aa bez restore; żadnej testowej kampanii produkcyjnej. |
 | UX-20261005 | P2 | MEDIUM | DONE | PR39, main8a9431e, CI37388586456 SUCCESS; ręczna promocja fLYEoVMDMxwLS9B7iDeRuSJDdJAX, ponad15min smoke/obserwacji PASS. Wspólny kompaktowy inspector, globalne style, prowadnice px/drag/kąt/duplikacja, sesje malejąco i wspólne rozliczenie. UI-only, zatwierdzone przez właściciela. |
 | AP-001 | P1 | HIGH | TODO | Zweryfikować ochronę main, wyłączność Workera, hosting i gate CI/E2E/security. Dowody dla jednego SHA, lista E2E i brak promocji przed checks; zmiany ustawień dopiero po zgodzie. |
 | AP-002 | P1 | LOW (odczyt) | TODO | Potwierdzić najnowszy restore drill, kompletność backupu i plan odtworzenia. Run URL, środowisko, data i wynik; brak dowodu blokuje zmiany danych. |

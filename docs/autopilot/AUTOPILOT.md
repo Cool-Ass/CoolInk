@@ -2,7 +2,43 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
+## Aktualny checkpoint — 2026-10-06 08:02 UTC / 10:02 CEST
+
+- IDLE: PR41 wdrożony na produkcję, lease zwolniony; jeden root Worker.
+- Exact-head3ad0a49 CI37429055023 i exact-mainfe857c0 CI37430254219 SUCCESS,
+  verify/backup-snapshot/codeql i oba Vercel contexts; brak pominiętych bramek.
+- Ręczna promocja07:44UTC: GFN7yZMAwGvcyxa47o61kYAu94kH,
+  cool-3mrhd21ub-cool-ass.vercel.app, www.coolinktattoo.pl / cool-ink.vercel.app.
+- Readonly smoke07:44:22 i08:00:19UTC PASS; obserwacja ponad15min.
+  Końcowy Production Last15min07:46–08:01UTC Error0%/Timeout0%;
+  chwilowe „No data”08:00 nie zostało uznane za zero, pomiar odświeżono.
+- Komunikaty silent/dzwonek/persistent dismiss/disable/expiry i spójność CMS.
+  Nie wysłano testowego komunikatu realnym klientom, bez migracji/auth/płatności.
+- Dowody i rollbackad434aa/8BydWbL4snRywt6f1fjkEvBTAScW w RELEASE_LOG.
+  Branch ai/release-pr41-evidence docs-only, nie wdrażany zamiast aplikacji.
+
+## Historyczny checkpoint — 2026-10-06 07:32 UTC / 09:32 CEST
+
+- MERGING, jeden root Worker, lease do08:30UTC. PR41 zatwierdzony przez
+  właściciela „Zatwierdzam”, dowód komentarz6011073285.
+- Exact-head3ad0a4995e95cc5cd8ed79ebb7c3f881c4dbd466:
+  CI37429055023 SUCCESS, verify/CodeQL/backup, wszystkie6 browser scenariuszy,
+  85 plików/378 testów PASS; oba Vercel contexts SUCCESS.
+- Zakończone poprawki backendu i testów opisane w PR; żadnej pominiętej asercji.
+  Auto-assign Custom Production Domains potwierdzone Value0; rollbackad434aa.
+- Normalmerge po kompletnych bramkach; następnie exact-main gates i ręczna
+  promocja. Produkcja jeszczead434aa, żadnej testowej kampanii.
+- Mergefe857c09b55e16574e98eb59539414004829a4f0; exact-mainCI37430254219
+  SUCCESS: verify/backup-snapshot/codeql oraz oba Vercel contexts SUCCESS.
+  Ręczna promocja GFN7yZMAwGvcyxa47o61kYAu94kH zatwierdzonego SHA;
+  rollback8BydWbL4snRywt6f1fjkEvBTAScW. Promocja07:44UTC potwierdzona:
+  Production Ready fe857c0, www.coolinktattoo.pl. Smoke07:44:22UTC PASS,
+  home/app/admin-login200, announcements/calendar-snapshot401 bez sesji.
+  OBSERVING Production15min, początkowo Error0%/Timeout0%; końcowy pomiar
+  nie wcześniej niż08:00UTC. Lokalny branch ai/release-pr41-evidence wyłącznie dokumentacyjny;
+  nie publikować go zamiast dokładnej wersji main.
+
+## Historyczny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
 
 - FIXING, jeden root Worker ai/client-announcements, lease do07:50UTC.
 - Właściciel zatwierdził PR41 w czacie: „Zatwierdzam”. Publikacja po testach.

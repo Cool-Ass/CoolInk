@@ -2,6 +2,11 @@
 
 ## ANNOUNCEMENTS-CMS-20261006
 
+- CLOSED: zgoda https://github.com/Cool-Ass/CoolInk/pull/41#issuecomment-6011073285.
+  Exact-head3ad0a49/CI37429055023 oraz exact-mainfe857c0/CI37430254219
+  SUCCESS. Ręczna promocja07:44UTC, readonly smoke i ponad15min obserwacji PASS.
+  Bez zmiany auto-assign Disabled, bez rzeczywistej kampanii testowej.
+
 - ACCEPTED: właściciel odpowiedział „Zatwierdzam” po opisie finalnego PR41
   (komunikaty, spójność CMS, wymagany minimalny security patch).
 - CI37423946945 wykrył503 w nowym E2E publikacji. Advisory lock PostgreSQL
