@@ -206,7 +206,8 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
   // This test may only upload to the isolated runner filesystem, not external storage.
   if (process.env.S3_ENDPOINT || process.env.BLOB_READ_WRITE_TOKEN) throw new Error("External public media storage forbidden in browser fixture");
   const uploadedAnnouncement = page.waitForResponse(response => response.url().endsWith("/api/admin/media") && response.request().method() === "POST");
-  await page.getByLabel("Prześlij obraz do komunikatu").setInputFiles({ name: "announcement.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") });
+  const announcementPng = await require("sharp")({ create: { width: 64, height: 64, channels: 3, background: { r: 201, g: 154, b: 74 } } }).png().toBuffer();
+  await page.getByLabel("Prześlij obraz do komunikatu").setInputFiles({ name: "announcement.png", mimeType: "image/png", buffer: announcementPng });
   const uploadedResponse = await uploadedAnnouncement;
   expect(uploadedResponse.status()).toBe(201);
   const uploadedMedia = (await uploadedResponse.json()).media;
@@ -239,7 +240,7 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     const rawImageResponse = await clientPage.request.get(uploadedMedia.url);
     expect(rawImageResponse.status(), "Registered public upload must be readable").toBe(200);
     const imageSource = await published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.currentSrc || image.src);
-    const optimizedImageResponse = await clientPage.request.get(imageSource);
+    const optimizedImageResponse = await clientPage.request.get(imageSource, { headers: { accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" } });
     const imageError = optimizedImageResponse.ok() ? "" : (await optimizedImageResponse.text()).slice(0, 150);
     expect(optimizedImageResponse.status(), `Image optimizer: ${imageError}`).toBe(200);
     const decoded = await require("sharp")(await optimizedImageResponse.body()).metadata();
