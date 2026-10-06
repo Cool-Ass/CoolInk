@@ -242,6 +242,15 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   await page.goto(`/admin/clients/${client.id}`);
   await expect(page.getByText(email, { exact: true }).first()).toBeVisible();
+  const identity = page.getByTestId("client-identity");
+  await expect(identity.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(identity.getByRole("list", { name: /pieczątek w kolejnym cyklu/ })).toBeVisible();
+  const loyaltyDetails = page.locator("details[aria-label='Karta lojalnościowa']");
+  await expect(loyaltyDetails).not.toHaveAttribute("open", "");
+  await loyaltyDetails.locator("summary").click();
+  await expect(loyaltyDetails).toHaveAttribute("open", "");
+  await loyaltyDetails.locator("summary").click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "EDYTUJ DANE", exact: true }).click();
   await expect(page.getByLabel("E-MAIL", { exact: false })).toHaveAttribute("readonly", "");
   await page.getByRole("button", { name: "ANULUJ", exact: true }).click();

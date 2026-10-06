@@ -2,7 +2,7 @@
 
 import AdminSections from "@/components/admin/AdminSections";
 import type { SectionLayout } from "@/lib/adminSectionLayout";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AppButton from "@/components/ui/AppButton";
@@ -26,7 +26,7 @@ const views = ["summary", "projects", "appointments", "messages", "history"] as 
 type View = typeof views[number];
 const labels: Record<View, string> = { summary: "PODSUMOWANIE", projects: "PROJEKTY", appointments: "WIZYTY", messages: "WIADOMOŚCI", history: "HISTORIA" };
 
-export default function ClientWorkspace({ client, projects, directMessages, messageTemplates, canManageFinance, canDeleteProject, sectionLayout, settleableIds = [] }: { settleableIds?: string[]; sectionLayout: SectionLayout; client: Client; projects: Project[]; directMessages: DirectMessage[]; messageTemplates: MessageTemplate[]; canManageFinance: boolean; canDeleteProject: boolean }) {
+export default function ClientWorkspace({ client, projects, directMessages, messageTemplates, canManageFinance, canDeleteProject, sectionLayout, loyaltyProgress, loyaltyDetails, settleableIds = [] }: { loyaltyProgress?: ReactNode; loyaltyDetails?: ReactNode; settleableIds?: string[]; sectionLayout: SectionLayout; client: Client; projects: Project[]; directMessages: DirectMessage[]; messageTemplates: MessageTemplate[]; canManageFinance: boolean; canDeleteProject: boolean }) {
   const router = useRouter(); const pathname = usePathname(); const params = useSearchParams();
   const { showToast } = useToast();
   const view = views.includes(params.get("view") as View) ? params.get("view") as View : "summary";
@@ -45,7 +45,8 @@ export default function ClientWorkspace({ client, projects, directMessages, mess
     ...project.appointments.map((item) => ({ id: `appointment-${item.id}`, message: `${formatCoolinkDateTime(item.startsAt)} · ${item.status}`, createdAt: item.createdAt, project: project.title, category: "TERMIN" })),
   ]).sort((a,b) => +new Date(b.createdAt)-+new Date(a.createdAt));
   return <section className="studio-page">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="studio-eyebrow">KLIENT</p><h1 className="studio-page-title">{client.firstName} {client.lastName}</h1></div><div className="flex flex-wrap gap-2"><NewAppointmentForm projects={calendarProjects} fixedClient={{ id: client.id, firstName: client.firstName, lastName: client.lastName }} label="WIZYTA" /><AppButton variant="secondary" onClick={() => setNewProject(true)}>PROJEKT</AppButton><AppButton variant="secondary" onClick={() => setView("messages")}>NAPISZ WIADOMOŚĆ</AppButton></div></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="studio-eyebrow">KLIENT</p><div data-testid="client-identity" className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2"><h1 className="studio-page-title break-words">{client.firstName} {client.lastName}</h1>{loyaltyProgress}</div></div><div className="flex flex-wrap gap-2"><NewAppointmentForm projects={calendarProjects} fixedClient={{ id: client.id, firstName: client.firstName, lastName: client.lastName }} label="WIZYTA" /><AppButton variant="secondary" onClick={() => setNewProject(true)}>PROJEKT</AppButton><AppButton variant="secondary" onClick={() => setView("messages")}>NAPISZ WIADOMOŚĆ</AppButton></div></div>
+    {loyaltyDetails}
     <nav aria-label="Widoki klienta" className="flex gap-1 overflow-x-auto border-y border-ink-white/10 py-2">{views.map((item) => <button key={item} type="button" onClick={() => setView(item)} className={`shrink-0 px-3 py-2 text-[11px] tracking-[.08em] ${view === item ? "border-b-2 border-ink-gold text-ink-gold" : "text-ink-grey hover:text-ink-white"}`}>{labels[item]}</button>)}</nav>
     {view === "summary" && <AdminSections scope="client" initial={sectionLayout} sections={[{ id: "summary-0", title: "Dane klienta", content: (<article className="border border-ink-white/15 bg-ink-charcoal/20 p-5"><div className="flex justify-between gap-3"><div><p className="text-[10px] tracking-widest text-ink-gold">DANE KLIENTA</p><p className="mt-3 text-sm">{client.email}</p><p className="mt-1 text-sm text-ink-grey">{client.phone || "Brak telefonu"}</p><p className="mt-3 text-xs text-ink-grey">{client.tags || "Bez tagów"}</p></div><AppButton variant="ghost" onClick={() => setEditing(true)}>EDYTUJ DANE</AppButton></div></article>) },
 { id: "summary-1", title: "Najbliższa wizyta", content: (<article className="border border-ink-white/15 bg-ink-charcoal/20 p-5"><p className="text-[10px] tracking-widest text-ink-gold">NAJBLIŻSZA WIZYTA</p>{nextAppointment ? <><p className="mt-3 text-lg">{formatCoolinkDateTime(nextAppointment.startsAt)}</p><div className="mt-2 flex flex-wrap items-center gap-2"><p className="text-sm text-ink-grey">{nextAppointment.project}</p><StatusBadge status={nextAppointment.status} /></div></> : <p className="mt-3 text-sm text-ink-grey">Brak zaplanowanej wizyty.</p>}</article>) },

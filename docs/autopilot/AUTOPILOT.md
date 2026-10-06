@@ -2,7 +2,19 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 08:02 UTC / 10:02 CEST
+## Aktualny checkpoint — 2026-10-06 21:54 UTC / 23:54 CEST
+
+- VERIFYING, jeden root Worker ai/loyalty-header, lease do22:50UTC.
+- LOYALTY-HEADER-20261006 LOW RISK, zlecenie właściciela: kółka obok imienia
+  i nazwiska w profilu klienta admina. UI-only, bez naliczania/finansów/auth.
+- Wspólny LoyaltyProgress; header slot i kompaktowe szczegóły; wszystkie
+  dotychczasowe akcje rozliczania/importu/korekt pozostają dostępne.
+- Odbiór: desktop/mobile kółka przy nazwie, wrap bez overflow, rozwijane
+  szczegóły, istniejące rozliczenie. Typecheck/lint i exact CI.
+- Publikacja tylko po pełnych head/main gates, rollbackfe857c0/GFN7yZMAwGvcyxa47o61kYAu94kH,
+  bez restore. Brak mutacji produkcyjnych danych testowych.
+
+## Historyczny checkpoint — 2026-10-06 08:02 UTC / 10:02 CEST
 
 - IDLE: PR41 wdrożony na produkcję, lease zwolniony; jeden root Worker.
 - Exact-head3ad0a49 CI37429055023 i exact-mainfe857c0 CI37430254219 SUCCESS,
