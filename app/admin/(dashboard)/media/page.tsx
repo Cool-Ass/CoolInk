@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import WorkspaceHeader from "@/components/ui/WorkspaceHeader";
 import MediaGrid from "@/components/admin/MediaGrid";
 import { getMediaUsageMap } from "@/lib/mediaUsage";
 import type { Media } from "@prisma/client";
@@ -20,19 +21,9 @@ export default async function MediaPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-[13px] font-medium tracking-[0.3em] text-ink-gold">
-          OBRAZY / MEDIA
-        </p>
-        <h1 className="font-display text-3xl text-ink-white">Biblioteka mediów</h1>
-        <p className="mt-2 max-w-xl text-[13px] text-ink-grey">
-          Każdy obraz przesłany tutaj (lub przez formularz strony/portfolio) jest automatycznie
-          skalowany i konwertowany do zoptymalizowanego formatu WebP. Skopiuj adres URL pliku, aby
-          użyć go w innym miejscu.
-        </p>
-      </div>
-      {!usesExternalStorage() && <div role="status" className="border border-amber-400/45 bg-amber-400/5 p-4 text-sm text-amber-200">Trwałe przesyłanie nowych zdjęć jest wyłączone, dopóki w Vercel nie skonfigurujesz magazynu zgodnego z S3 (np. Cloudflare R2). Obrazy dołączone do repozytorium nadal działają.</div>}
+    <div className="studio-page">
+      <WorkspaceHeader eyebrow="STRONA / CMS" title="Biblioteka mediów" description="Przesyłaj zdjęcia, sprawdzaj ich użycia i edytuj opisy. Obrazy rastrowe optymalizujemy do WebP z zachowaniem przezroczystości." />
+      {!usesExternalStorage() && <div role="status" className="studio-panel border-amber-400/45 text-xs leading-relaxed text-amber-200">Trwałe przesyłanie nowych zdjęć jest wyłączone, dopóki w Vercel nie skonfigurujesz magazynu zgodnego z S3 (np. Cloudflare R2). Obrazy dołączone do repozytorium nadal działają.</div>}
       <MediaGrid initialMedia={mediaWithUsage} />
     </div>
   );

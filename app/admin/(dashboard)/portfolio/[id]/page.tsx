@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PortfolioForm from "@/components/admin/PortfolioForm";
+import WorkspaceHeader from "@/components/ui/WorkspaceHeader";
 import { requireAdminPage } from "@/lib/adminPage";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +17,8 @@ export default async function EditPortfolioItemPage({ params }: Props) {
   if (!item) notFound();
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-[13px] font-medium tracking-[0.3em] text-ink-gold">
-          PORTFOLIO / GALERIA
-        </p>
-        <h1 className="font-display text-3xl text-ink-white">Edytuj element</h1>
-      </div>
+    <div className="studio-page">
+      <WorkspaceHeader eyebrow="STRONA / CMS" title="Edytuj element portfolio" description={item.title} />
       <PortfolioForm
         initial={{
           id: item.id,

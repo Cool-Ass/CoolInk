@@ -66,7 +66,7 @@ export default function PortfolioRowActions({
           disabled={isFirst}
           aria-label="Przesuń w górę"
           title="Przesuń wcześniej"
-          className="flex h-8 w-8 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
+          className="studio-icon-action border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
         >
           <ArrowUp className="h-3.5 w-3.5" />
         </button>
@@ -75,7 +75,7 @@ export default function PortfolioRowActions({
           disabled={isLast}
           aria-label="Przesuń w dół"
           title="Przesuń później"
-          className="flex h-8 w-8 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
+          className="studio-icon-action border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold disabled:opacity-30"
         >
           <ArrowDown className="h-3.5 w-3.5" />
         </button>
@@ -85,7 +85,7 @@ export default function PortfolioRowActions({
           onClick={togglePublish}
           aria-label={published ? "Cofnij publikację" : "Opublikuj"}
           title={published ? "Cofnij publikację" : "Opublikuj"}
-          className="flex h-8 w-8 items-center justify-center border border-ink-white/15 text-ink-grey transition-colors hover:border-ink-gold hover:text-ink-gold"
+          className="studio-icon-action border-ink-white/15 text-ink-grey hover:border-ink-gold hover:text-ink-gold"
         >
           {published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
@@ -94,7 +94,7 @@ export default function PortfolioRowActions({
           label={<><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Usuń</span></>}
           confirmText="Usunąć ten element portfolio na stałe?"
           pendingLabel="USUWANIE…"
-          className="flex h-8 w-8 items-center justify-center border border-red-400/20 text-red-400/75 transition-colors hover:border-red-400/60 hover:text-red-300"
+          className="studio-icon-action border-red-400/20 text-red-400/75 hover:border-red-400/60 hover:text-red-300"
         />
       </div>
     </div>

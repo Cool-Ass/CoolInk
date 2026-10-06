@@ -1,6 +1,32 @@
 # Decyzje i ADR
 
+## ANNOUNCEMENTS-CMS-20261006
+
+- ACCEPTED: właściciel odpowiedział „Zatwierdzam” po opisie finalnego PR41
+  (komunikaty, spójność CMS, wymagany minimalny security patch).
+- CI37423946945 wykrył503 w nowym E2E publikacji. Advisory lock PostgreSQL
+  zwraca void; użycie queryRaw próbowało dekodować nieobsługiwany typ.
+  Przeniesiono wszystkie3 locki na executeRaw jak w bookingRules. Bez zmiany
+  funkcji/uprawnień lub pominięcia asercji; nowy exact CI wymagany.
+
+- Właściciel zlecił komunikaty masowe z opcjonalnym powiadomieniem i możliwość
+  wyłączenia, następnie wskazał niespójność Pages/Portfolio/Media. MEDIUM,
+  osobny PR, zgoda na finalny zakres przed merge/publikacją pozostaje wymagana.
+- Wybór: komunikat głównego panelu + istniejący dzwonek. Nie inferujemy zgody
+  na marketing email/push ani nie wysyłamy próbnej kampanii na produkcji.
+- Istniejące SiteSetting/ClientNotification bez migracji. Markery zamknięcia
+  wykluczone z list/dzwonka i usuwane przez istniejące wykonanie privacy.
+- UI reuse WorkspaceHeader/studio tokens/AppButton; canvas buildera bez zmian.
+- Ryzyka, lifecycle i plan walidacji: docs/CLIENT_ANNOUNCEMENTS.md.
+
 ## TEXT-GROUP-20261006
+
+- ACCEPTED: właściciel odpowiedział „Tak, opublikuj po testach” na prośbę
+  obejmującą trzy zmiany PR40. Dowód zgody:
+  https://github.com/Cool-Ass/CoolInk/pull/40#issuecomment-6006361951.
+- 9b44b46 zmienia wyłącznie reset scrolla fixture przed testem drag; funkcje
+  aplikacji bez zmian. Nowy exact CI37394486798 SUCCESS. Mergead434aa,
+  exact-mainCI37395584488 SUCCESS, ręczna promocja00:56:43UTC, obserwacja trwa.
 
 - 00:23UTC: właściciel dodatkowo zlecił obraz jako nakładkę tła oraz wskazał
   ciemne tło PNG w widżecie. Zakres PR40 rozszerzony, MEDIUM; poprzedni LOW

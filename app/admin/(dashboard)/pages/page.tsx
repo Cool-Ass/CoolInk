@@ -1,4 +1,5 @@
 import Link from "next/link";
+import WorkspaceHeader from "@/components/ui/WorkspaceHeader";
 import { prisma } from "@/lib/prisma";
 import PageRowActions from "@/components/admin/PageRowActions";
 import MaintenanceModeCard from "@/components/admin/MaintenanceModeCard";
@@ -31,48 +32,38 @@ export default async function PagesListPage() {
   })).filter((page) => !isSystemPageSlug(page.slug));
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="mb-2 text-[13px] font-medium tracking-[0.3em] text-ink-gold">STRONY</p>
-          <h1 className="font-display text-3xl text-ink-white">Zarządzaj stronami</h1>
-        </div>
-        <Link
-          href="/admin/pages/new"
-          className="inline-flex items-center gap-2 border border-ink-gold px-5 py-3 text-[13px] font-medium tracking-[0.08em] text-ink-gold transition-colors hover:bg-ink-gold hover:text-ink-black"
-        >
-          + NOWA STRONA
-        </Link>
-      </div>
+    <div className="studio-page">
+      <WorkspaceHeader eyebrow="STRONA / CMS" title="Strony i builder" description="Strony publiczne i ekrany systemowe w jednym miejscu."
+        actions={<Link href="/admin/pages/new" className="studio-primary-link">+ Nowa strona</Link>} />
 
       <MaintenanceModeCard initialEnabled={maintenanceEnabled} homepageId={homepage.id} />
 
       <section>
-        <div className="mb-3"><p className="text-[10px] tracking-[.18em] text-ink-gold">EKRANY SYSTEMOWE</p><h2 className="mt-1 font-display text-2xl">Edytuj bezpośrednio w builderze</h2><p className="mt-1 text-xs text-ink-grey">Treści i oprawę ekranów możesz zmieniać wizualnie. Własny HTML i CSS działa w bezpiecznej, odizolowanej ramce; pola logowania i wysyłania danych pozostają chronione.</p></div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{systemPages.map((page) => <Link key={page.id} href={`/admin/pages/${page.id}`} className="border border-ink-white/10 bg-ink-charcoal/30 p-4 hover:border-ink-gold"><div className="flex items-center justify-between gap-3"><p className="font-display text-xl">{page.title}</p><span className="text-ink-gold">EDYTUJ →</span></div><p className="mt-2 text-[10px] tracking-[.1em] text-ink-grey">SYSTEMOWY · {page.status === "published" ? "OPUBLIKOWANY" : "WERSJA ROBOCZA"}</p></Link>)}</div>
+        <div className="mb-3"><p className="studio-eyebrow">EKRANY SYSTEMOWE</p><h2 className="mt-1 text-base font-semibold">Edytuj bezpośrednio w builderze</h2><p className="studio-page-description">Treści i oprawę ekranów możesz zmieniać wizualnie. Własny HTML i CSS działa w odizolowanej ramce; pola logowania i wysyłania danych pozostają chronione.</p></div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{systemPages.map((page) => <Link key={page.id} href={`/admin/pages/${page.id}`} className="studio-panel min-w-0 transition-colors hover:border-ink-gold focus-visible:outline-2 focus-visible:outline-ink-gold"><div className="flex items-center justify-between gap-3"><p className="min-w-0 text-sm font-medium">{page.title}</p><span aria-hidden className="shrink-0 text-ink-gold">→</span></div><p className="mt-2 text-[10px] tracking-[.1em] text-ink-grey">SYSTEMOWY · {page.status === "published" ? "OPUBLIKOWANY" : "WERSJA ROBOCZA"}</p></Link>)}</div>
       </section>
 
       {pages.length === 0 ? (
-        <p className="border border-dashed border-ink-white/15 px-6 py-10 text-center text-[14px] text-ink-grey">
+        <p className="studio-panel py-8 text-center text-sm text-ink-grey">
           Brak stron. Utwórz pierwszą — O nas, FAQ, Cennik, Pielęgnacja…
         </p>
       ) : (
-        <div className="flex flex-col divide-y divide-ink-white/10 border border-ink-white/10">
+        <div className="studio-panel p-0 flex flex-col divide-y divide-ink-white/10">
           {pages.map((page) => (
             <div
               key={page.id}
-              className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-[15px] text-ink-white">{page.title}</p>
                   {page.isHomepage && (
-                    <span className="shrink-0 border border-ink-gold/50 px-2 py-0.5 text-[10px] tracking-[0.1em] text-ink-gold">
+                    <span className="shrink-0 rounded-full border border-ink-gold/50 px-2 py-0.5 text-[10px] tracking-[0.1em] text-ink-gold">
                       STRONA GŁÓWNA
                     </span>
                   )}
                   <span
-                    className={`shrink-0 border px-2 py-0.5 text-[10px] tracking-[0.1em] ${
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.1em] ${
                       page.status === "published"
                         ? "border-ink-gold/50 text-ink-gold"
                         : "border-ink-grey/40 text-ink-grey"

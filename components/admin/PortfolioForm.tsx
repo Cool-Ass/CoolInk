@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AppButton from "@/components/ui/AppButton";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
@@ -72,7 +73,7 @@ export default function PortfolioForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-6">
+    <form onSubmit={handleSubmit} className="studio-panel flex max-w-2xl flex-col gap-4">
       <ImageUploadField
         label="OBRAZ"
         value={form.imageUrl}
@@ -102,7 +103,7 @@ export default function PortfolioForm({
         />
       </label>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2 text-[12px] tracking-[0.12em] text-ink-grey">
           KATEGORIA
           <input
@@ -141,14 +142,13 @@ export default function PortfolioForm({
         </p>
       )}
 
-      <div className="flex items-center gap-4">
-        <button
+      <div className="flex flex-wrap items-center gap-3">
+        <AppButton
           type="submit"
           disabled={saving}
-          className="inline-flex items-center gap-2 border border-ink-gold px-6 py-3.5 text-[13px] font-medium tracking-[0.08em] text-ink-gold transition-colors hover:bg-ink-gold hover:text-ink-black disabled:opacity-50"
         >
           {saving ? "ZAPISYWANIE…" : isEdit ? "ZAPISZ ZMIANY" : "DODAJ DO PORTFOLIO"}
-        </button>
+        </AppButton>
         {!onSaved && (
           <Link href="/admin/portfolio" className="text-[13px] text-ink-grey transition-colors hover:text-ink-white">
             Anuluj
