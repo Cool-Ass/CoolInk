@@ -233,6 +233,12 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     await expect(published).toContainText("🎁");
     await expect(published.getByRole("img", { name: "Obraz promocji studia" })).toBeVisible();
     await published.getByRole("img", { name: "Obraz promocji studia" }).scrollIntoViewIfNeeded();
+    const rawImageResponse = await clientPage.request.get(uploadedMedia.url);
+    expect(rawImageResponse.status(), "Registered public upload must be readable").toBe(200);
+    const imageSource = await published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.currentSrc || image.src);
+    const optimizedImageResponse = await clientPage.request.get(imageSource);
+    const imageError = optimizedImageResponse.ok() ? "" : (await optimizedImageResponse.text()).slice(0, 150);
+    expect(optimizedImageResponse.status(), `Image optimizer: ${imageError}`).toBe(200);
     await expect.poll(() => published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await clientPage.getByRole("button", { name: `Zamknij komunikat: ${title}`, exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
