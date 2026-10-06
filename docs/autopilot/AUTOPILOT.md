@@ -4,6 +4,14 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 ## Aktualny checkpoint — 2026-10-06 22:04 UTC / 2026-10-07 00:04 CEST
 
+- VERIFYING od22:05UTC, jeden root Worker, lease do23:00UTC. Właściciel
+  zatwierdził „tak” oba pakiety i sharp0.35.5 po pełnych testach; dowód
+  https://github.com/Cool-Ass/CoolInk/pull/43#issuecomment-6026311085.
+- PR42 c6f33ab włączony do PR43, jeden finalny head/main cykl, jedna promocja.
+  Stary PR42 zamknąć jako zastąpiony dopiero po sukcesie rollup.
+- Minimalny sharp0.35.4→0.35.5 plus jego @img/libvips; npm production audit0,
+  bez audit fix --force lub szerokiej aktualizacji. Produkcja nadalfe857c0.
+
 - WAITING_APPROVAL, jeden root Worker ai/announcement-rich-content, lease
   zwolniony przed oczekiwaniem na właściciela. ANNOUNCEMENT-RICH-20261007 MEDIUM.
 - Zlecenie: różne formatowania, emoji i obrazy w komunikatach. Text-only markup

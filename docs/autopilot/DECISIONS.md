@@ -2,6 +2,11 @@
 
 ## ANNOUNCEMENT-RICH-20261007
 
+- ACCEPTED: „tak” w odpowiedzi na publikację komunikatów i kółek wraz z
+  sharp0.35.5 po pełnych testach. Dowód PR43 comment6026311085;
+  PR42 comment6026310892. Zatwierdzone funkcje połączone w PR43, bez
+  omijania bramek PR42 (zastąpiony, nie scalony niesprawny head).
+
 - Właściciel zlecił formatowanie/emoji/obrazy. MEDIUM, publikacja po zatwierdzeniu
   finalnego pakietu i pełnych testach; aktualizacja sharp0.35.5 jeszcze niezaakceptowana.
 - Text-only markup renderowane elementami React, nie HTML. Format „plain”
