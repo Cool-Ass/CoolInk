@@ -63,6 +63,10 @@ export interface ModuleStyle {
   gradientStop1?: number;
   gradientStop2?: number;
   overlayColor?: string;
+  overlayImage?: string;
+  overlaySize?: "cover" | "contain" | "auto";
+  overlayPosition?: "center" | "top" | "bottom" | "left" | "right";
+  overlayRepeat?: "no-repeat" | "repeat" | "repeat-x" | "repeat-y";
   overlayOpacity?: number;
   overlayBlendMode?: BlendMode;
   pattern?: "none" | "noise" | "dots" | "grid" | "diagonal" | "crosses";

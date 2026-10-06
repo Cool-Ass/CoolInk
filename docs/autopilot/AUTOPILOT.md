@@ -2,7 +2,21 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 00:03 UTC / 02:03 CEST
+## Aktualny checkpoint — 2026-10-06 00:23 UTC / 02:23 CEST
+
+- VERIFYING, jeden root Worker ai/text-effects-group, lease do01:18UTC.
+- PR40 rozszerzony na żądanie właściciela: obraz jako nakładka tła oraz
+  przezroczyste tło widgetu Obraz. MEDIUM, zgoda przed merge/publikacją wymagana.
+- Nakładka wspólna dla widgetów/kolumn/sekcji, obraz + kolor, krycie, fit,
+  pozycja i repeat; nie zasłania interakcji ani nie zmienia krycia treści.
+- Upload już zachowuje alpha; test rzeczywistych pikseli PNG/WebP PASS.
+  Usunięto wymuszony charcoal z ramki wczytanego obrazu; placeholder bez zmian.
+- 13 ukierunkowanych testów PASS, typecheck i lint bez błędów. Browser regresje
+  obejmują overlay w canvasie/public i przezroczystą ramkę. Nowe exact CI wymagane;
+  wcześniejsze CI37391982666 SUCCESS dotyczy wyłącznie afc347c, nie nowego zakresu.
+- Produkcja nadal8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX, ten sam rollback bez restore.
+
+## Historyczny checkpoint — 2026-10-06 00:03 UTC / 02:03 CEST
 
 - VERIFYING, jeden root Worker, ai/text-effects-group, lease do00:58UTC.
 - TEXT-GROUP-20261006, LOW: właściciel wskazał błędny osobny wiersz

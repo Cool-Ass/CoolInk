@@ -7,7 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
-| TEXT-GROUP-20261006 | P2 | LOW | IN_PROGRESS | Obrys i cień tekstu wewnątrz rozwijanej sekcji Tekst; wspólny komponent wszystkich widgetów. Bez zmian danych/stylów. Odbiór: zwijanie, popup i Escape/focus, exact CI, ręczna promocja i smoke. |
+| TEXT-GROUP-20261006 | P2 | MEDIUM | IN_PROGRESS | PR40: obrys/cień w Tekst, obraz jako nakładka z kryciem/fit/pozycją/repeat, przezroczysta ramka widgetu Obraz. Bez migracji/auth/płatności. Odbiór: alpha upload, browser canvas/public, exact CI, zgoda na rozszerzony zakres, ręczna promocja i smoke. |
 | UX-20261005 | P2 | MEDIUM | DONE | PR39, main8a9431e, CI37388586456 SUCCESS; ręczna promocja fLYEoVMDMxwLS9B7iDeRuSJDdJAX, ponad15min smoke/obserwacji PASS. Wspólny kompaktowy inspector, globalne style, prowadnice px/drag/kąt/duplikacja, sesje malejąco i wspólne rozliczenie. UI-only, zatwierdzone przez właściciela. |
 | AP-001 | P1 | HIGH | TODO | Zweryfikować ochronę main, wyłączność Workera, hosting i gate CI/E2E/security. Dowody dla jednego SHA, lista E2E i brak promocji przed checks; zmiany ustawień dopiero po zgodzie. |
 | AP-002 | P1 | LOW (odczyt) | TODO | Potwierdzić najnowszy restore drill, kompletność backupu i plan odtworzenia. Run URL, środowisko, data i wynik; brak dowodu blokuje zmiany danych. |

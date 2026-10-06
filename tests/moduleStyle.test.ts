@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { buildVisualStyle, builderEffectClasses, parseSafeCssDeclarations } from "../lib/moduleStyle";
+import { buildOverlayStyle, buildVisualStyle, builderEffectClasses, parseSafeCssDeclarations } from "../lib/moduleStyle";
+
+describe("image overlays", () => {
+  it("renders image and color independently of content with explicit fit", () => {
+    expect(buildOverlayStyle({ overlayImage: "/overlay.png", overlayColor: "#000", overlayOpacity: 45, overlaySize: "contain", overlayPosition: "top", overlayRepeat: "repeat-x", overlayBlendMode: "multiply" })).toEqual({ backgroundImage: 'url("/overlay.png")', backgroundColor: "#000", opacity: .45, backgroundSize: "contain", backgroundPosition: "top", backgroundRepeat: "repeat-x", mixBlendMode: "multiply" });
+  });
+  it("keeps old color defaults and respects zero opacity", () => {
+    expect(buildOverlayStyle({ overlayColor: "#000" })).toBeUndefined();
+    expect(buildOverlayStyle({ overlayImage: "/overlay.png", overlayOpacity: 0 })).toBeUndefined();
+    expect(buildOverlayStyle({ overlayImage: "/overlay.png" })?.opacity).toBe(1);
+    expect(buildOverlayStyle({ overlayColor: "#000", overlayOpacity: 72 })?.opacity).toBe(.72);
+  });
+  it("bounds opacity and rejects unsafe image schemes", () => {
+    expect(buildOverlayStyle({ overlayImage: "https://example.com/overlay.png", overlayOpacity: 200 })?.opacity).toBe(1);
+    expect(buildOverlayStyle({ overlayImage: "/overlay.png", overlayOpacity: NaN })).toBeUndefined();
+    for (const overlayImage of ["javascript:alert(1)", "data:image/svg+xml,<svg/>", "//tracker.example/x", " "]) expect(buildOverlayStyle({ overlayImage })).toBeUndefined();
+  });
+});
 
 describe("safe module CSS declarations", () => {
   it("accepts ordinary inline CSS declarations", () => {

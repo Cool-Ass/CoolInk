@@ -2,6 +2,16 @@
 
 ## TEXT-GROUP-20261006
 
+- 00:23UTC: właściciel dodatkowo zlecił obraz jako nakładkę tła oraz wskazał
+  ciemne tło PNG w widżecie. Zakres PR40 rozszerzony, MEDIUM; poprzedni LOW
+  nie upoważnia do automatycznej publikacji rozszerzonego pakietu.
+- Przyczyną wymuszonego tła jest bg-ink-charcoal w ramce wczytanego Obrazu.
+  Konwersja uploadu zachowuje alpha, nie zmieniano backendu ani dawnych plików.
+- Nowe pola stylu są opcjonalne; bez obrazu stare nakładki koloru bez zmian.
+  Dodanie pierwszego obrazu do wyłączonej nakładki ustawia krycie100%,
+  dalsze zmiany zachowują ustawione krycie. Usunięcie obrazu zachowuje kolor.
+- Publikacja oczekuje zgody właściciela na rozszerzony PR40 i nowych exact checks.
+
 - Właściciel wskazał screenshot i zlecił: „no to popraw błąd” po potwierdzeniu,
   że obrys/cień tekstu należą do sekcji Tekst, nie osobnego wiersza poza nią.
 - LOW, wyłącznie przeniesienie granicy JSX PanelSection w wspólnym komponencie.
