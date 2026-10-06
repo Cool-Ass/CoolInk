@@ -13,6 +13,10 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 - c18468e/CI37426601486: silent publikacja i persistent dismiss PASS; techniczny
   page.request dostał401 poza browserowym transportem ciasteczek sesji. Test fan-out
   i disable używa teraz browser fetch jak UI, bez zmiany auth lub asercji.
+- 7af2fc4/CI37427861146: nowe komunikaty/CMS desktop i mobile PASS (5/6
+  scenariuszy), istniejący test mobile Escape wysłał klawisz przed rAF autofocus
+  popoveru. Dodano oczekiwanie na focus dialogu przed Escape; zachowano asercję
+  przywrócenia focusu. Bez zmian buildera. Nowy exact-head CI wymagany.
 
 ## Historyczny checkpoint — 2026-10-06 06:35 UTC / 08:35 CEST
 

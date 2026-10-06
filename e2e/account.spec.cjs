@@ -316,6 +316,8 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await textSummary.click();
     await textEffects.click();
     await expect(page.getByRole("dialog", { name: "Obrys i cień tekstu", exact: true })).toBeVisible();
+    // Visibility precedes the popover's requestAnimationFrame autofocus.
+    await expect(page.getByRole("dialog", { name: "Obrys i cień tekstu", exact: true })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(textEffects).toBeFocused();
     await page.locator("summary").filter({ hasText: /^Nakładka i wzór$/ }).click();
@@ -329,6 +331,7 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(typography).toBeVisible();
     const popupFits = await typography.evaluate((element) => { const box = element.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight; });
     expect(popupFits).toBe(true);
+    await expect(page.getByRole("dialog", { name: "Typografia", exact: true })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Ustawienia: Typografia", exact: true })).toBeFocused();
     await page.getByRole("button", { name: "Ustawienia: KOLOR TEKSTU — kolory globalne", exact: true }).click();
