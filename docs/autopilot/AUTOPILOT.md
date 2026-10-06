@@ -4,6 +4,12 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 ## Aktualny checkpoint — 2026-10-06 22:20 UTC / 2026-10-07 00:20 CEST
 
+- FIXING od22:33UTC, lease do23:30UTC: CI37539805825 potwierdził format/emoji/upload,
+  lecz runtime public upload nie ładuje się (naturalWidth0). Next static public
+  inventory nie zawiera plików utworzonych po starcie. Dynamiczny fallback
+  wyłącznie zarejestrowanych publicznych UUID.webp; bez prywatnych zdjęć/zmian
+  uploadu lub uprawnień. Zachowana pełna asercja dekodowania obrazu E2E.
+
 - FIXING: CI37538433323 zatrzymany na zmiennej etykiecie kontrolowanego textarea.
   Artefakt browser-report potwierdza poprawny markup; dodatkowy error oznacza
   jedynie zatrzymanie po pierwszym błędzie, nie błąd cleanup. Stałe aria-label

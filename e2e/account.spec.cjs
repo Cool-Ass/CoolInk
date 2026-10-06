@@ -232,6 +232,7 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     await expect(published.locator("strong").filter({ hasText: "Nowe terminy ✨" })).toBeVisible();
     await expect(published).toContainText("🎁");
     await expect(published.getByRole("img", { name: "Obraz promocji studia" })).toBeVisible();
+    await published.getByRole("img", { name: "Obraz promocji studia" }).scrollIntoViewIfNeeded();
     await expect.poll(() => published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await clientPage.getByRole("button", { name: `Zamknij komunikat: ${title}`, exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
