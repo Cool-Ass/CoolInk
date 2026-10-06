@@ -45,7 +45,6 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
       <button type="button" onClick={() => reset(["fontFamily", "fontSize", "responsiveFontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "textDecoration", "textTransform"])} className="flex min-h-8 items-center gap-1 text-xs text-ink-gold"><RotateCcw className="h-3 w-3" />Reset typografii</button>
       </InspectorPopover></div></div>
       <ColorPicker label="KOLOR TEKSTU" value={style.color ?? ""} onChange={(color) => set({ color })} />
-    </PanelSection>
 
     <div className="flex min-h-9 items-center justify-between border-t border-white/10 text-[10px] text-white/75"><span>Obrys i cień tekstu</span><InspectorPopover title="Obrys i cień tekstu">
       <div className="grid grid-cols-2 gap-2"><NumberField label="GRUBOŚĆ OBRYSU" value={style.textStrokeWidth ?? 0} min={0} max={8} step={0.25} onChange={(textStrokeWidth) => set({ textStrokeWidth })} /><ColorPicker label="KOLOR OBRYSU" value={style.textStrokeColor ?? ""} onChange={(textStrokeColor) => set({ textStrokeColor })} /></div>
@@ -53,6 +52,7 @@ export default function BackgroundControls({ value, onChange }: { value?: Module
       <div className="grid grid-cols-3 gap-2"><NumberField label="X" value={style.textShadowX ?? 0} min={-100} max={100} onChange={(textShadowX) => set({ textShadowX })} /><NumberField label="Y" value={style.textShadowY ?? 2} min={-100} max={100} onChange={(textShadowY) => set({ textShadowY })} /><NumberField label="ROZMYCIE" value={style.textShadowBlur ?? 0} min={0} max={100} onChange={(textShadowBlur) => set({ textShadowBlur })} /></div>
       <button type="button" onClick={() => reset(["textStrokeWidth", "textStrokeColor", "textShadowColor", "textShadowX", "textShadowY", "textShadowBlur"])} className="min-h-8 text-left text-xs text-ink-gold">Reset obrysu i cienia</button>
     </InspectorPopover></div>
+    </PanelSection>
 
     <PanelSection title="Tło: kolor, gradient i obraz">
       <ColorPicker label="KOLOR TŁA" value={style.backgroundColor ?? ""} onChange={(backgroundColor) => set({ backgroundColor })} />

@@ -247,6 +247,17 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
     await page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true }).click();
     await page.getByRole("tab", { name: "STYL", exact: true }).click();
+    const textEffects = page.getByRole("button", { name: "Ustawienia: Obrys i cień tekstu", exact: true });
+    await expect(textEffects).toBeVisible();
+    expect(await textEffects.evaluate((button) => button.closest("details").querySelector(":scope > summary").textContent.trim())).toBe("Tekst");
+    const textSummary = page.locator("summary").filter({ hasText: /^Tekst$/ });
+    await textSummary.click();
+    await expect(textEffects).not.toBeVisible();
+    await textSummary.click();
+    await textEffects.click();
+    await expect(page.getByRole("dialog", { name: "Obrys i cień tekstu", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(textEffects).toBeFocused();
     await expect(page.getByRole("dialog", { name: "Typografia", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Ustawienia: Typografia", exact: true }).click();
     const typography = page.getByRole("dialog", { name: "Typografia", exact: true });
