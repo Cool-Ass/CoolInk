@@ -223,6 +223,9 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
   const context = await browser.newContext();
   try {
     const clientPage = await context.newPage();
+    clientPage.on("requestfailed", request => {
+      if (request.resourceType() === "image") console.log("Announcement browser image failure", request.failure()?.errorText);
+    });
     await clientPage.goto("http://127.0.0.1:3120/app");
     await clientPage.getByLabel("E-MAIL", { exact: true }).fill(email);
     await clientPage.getByLabel("HASŁO", { exact: true }).fill(password);
@@ -239,6 +242,8 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     const optimizedImageResponse = await clientPage.request.get(imageSource);
     const imageError = optimizedImageResponse.ok() ? "" : (await optimizedImageResponse.text()).slice(0, 150);
     expect(optimizedImageResponse.status(), `Image optimizer: ${imageError}`).toBe(200);
+    const decoded = await require("sharp")(await optimizedImageResponse.body()).metadata();
+    console.log("Announcement image diagnostic", { type: optimizedImageResponse.headers()["content-type"], format: decoded.format, width: decoded.width, height: decoded.height, browser: await published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => ({ source: image.currentSrc, complete: image.complete, loading: image.loading, bounds: image.getBoundingClientRect().toJSON() })) });
     await expect.poll(() => published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await clientPage.getByRole("button", { name: `Zamknij komunikat: ${title}`, exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
