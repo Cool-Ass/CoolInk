@@ -38,6 +38,12 @@ WorkspaceHeader, studio-page/title/panel, AppButton i studio-icon-action:
 wspólna hierarchia, promienie, odstępy, focus i stany disabled. Nie dotykamy
 canvasu/inspektora ani publicznego wyglądu portfolio. Media zachowują ochronę
 używanych plików i transparentność; dodano etykiety upload/search/alt.
+Wspólna siatka bazuje na szerokości dostępnej treści (min190px), nie tylko
+viewportu: pokazanie bocznego menu nie ściska akcji kart poza ich granice.
+
+CI wykrył GHSA-68fv-2mgg-jv7q; minimalny patch source-map-js1.2.1→1.2.2
+w lockfile, bez zmiany zależności bezpośrednich. Production lock audit0.
+Źródło: https://github.com/advisories/GHSA-68fv-2mgg-jv7q.
 
 Targeted testy: walidacja, CSRF/RBAC/rate limit, silent/notify, retry,
 brak wycieku błędów bazy, wyłączenie, izolacja zamknięcia. Izolowane E2E:

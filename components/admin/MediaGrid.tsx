@@ -117,7 +117,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
           {media.length === 0 ? "Brak przesłanych plików." : "Brak wyników dla tego wyszukiwania."}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="studio-media-grid">
           {filtered.map((item) => {
             const source = imageSource(item.url);
             const expanded = expandedId === item.id;

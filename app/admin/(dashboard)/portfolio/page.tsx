@@ -22,7 +22,7 @@ export default async function PortfolioListPage() {
           Brak elementów portfolio. Dodaj pierwsze zdjęcie tatuażu powyżej.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="studio-media-grid">
           {items.map((item, i) => {
             const source = imageSource(item.imageUrl);
             return <article key={item.id} className="studio-panel p-0 group min-w-0 overflow-hidden transition-colors hover:border-ink-gold/45">

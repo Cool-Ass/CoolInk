@@ -11,6 +11,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
   Limity100 komunikatów/5000 dzwonków; istniejący privacy cleanup usuwa markery.
 - 10 ukierunkowanych testów PASS; typecheck i lint zmienionego zakresu PASS.
   Nowe izolowane browser regresje desktop/mobile czekają na exact CI.
+- CI37423741671 zatrzymany na nowym advisory GHSA-68fv-2mgg-jv7q:
+  source-map-js1.2.1. Minimalny lockfile patch do1.2.2; production lock audit0.
+  Bez force update lub obniżenia bramek. Nowy exact SHA wymaga wszystkich checks.
 - PR40 zakończony; nowy zakres wymaga osobnego PR i zgody właściciela przed
   merge/promocją. Rollbackad434aa/8BydWbL4snRywt6f1fjkEvBTAScW bez restore.
 
