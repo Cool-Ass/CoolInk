@@ -1,5 +1,15 @@
 # Decyzje i ADR
 
+## TEXT-GROUP-20261006
+
+- Właściciel wskazał screenshot i zlecił: „no to popraw błąd” po potwierdzeniu,
+  że obrys/cień tekstu należą do sekcji Tekst, nie osobnego wiersza poza nią.
+- LOW, wyłącznie przeniesienie granicy JSX PanelSection w wspólnym komponencie.
+  Bez zmian wartości, zapisów CMS, schematu, reguł finansowych lub popoverów.
+- Regresja browser: poprawny rodzic, zwijanie/rozwijanie, otwarcie okna,
+  Escape i focus. Publikacja wyłącznie po obowiązujących dokładnych bramkach.
+- Rollback:8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX, bez restore danych.
+
 ## COMPACT-WORKFLOW-20261005
 
 - Właściciel zlecił: sesje od najnowszej, prostszy workflow edycji/rozliczenia,

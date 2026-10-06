@@ -2,7 +2,21 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 01:54 CEST / 2026-10-05 23:54 UTC
+## Aktualny checkpoint — 2026-10-06 00:03 UTC / 02:03 CEST
+
+- VERIFYING, jeden root Worker, ai/text-effects-group, lease do00:58UTC.
+- TEXT-GROUP-20261006, LOW: właściciel wskazał błędny osobny wiersz
+  „Obrys i cień tekstu” i zlecił poprawkę. Przeniesiono go do istniejącego
+  PanelSection Tekst bez zmiany wartości, stylowania ani mechanizmu popoverów.
+- Dodano browser regresję rodzica, zwijania, otwierania i Escape/focus.
+  Lint zmienionych plików i typecheck PASS. Exact CI/E2E/security obowiązkowe.
+- Publiczny8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX pozostaje bez zmian.
+  Rollback tego UI-only pakietu: ten sam deployment, bez restore danych.
+- Włączono wyłącznie dowodową dokumentację poprzedniego wydania PR39
+  z osobnego brancha; nie ponawiać jego publikacji/testów jako nowego zadania.
+- Następny krok: PR poprawki, exact checks, normal merge i ręczna promocja.
+
+## Zakończony checkpoint — 2026-10-06 01:54 CEST / 2026-10-05 23:54 UTC
 
 - IDLE, PR39 opublikowany i zweryfikowany; lease zwolniony, bez drugiego Workera.
 - PR39 scalony po zgodzie właściciela i CI37367158121 attempt2 SUCCESS.
