@@ -212,13 +212,20 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
     const notifiedId = randomUUID(); announcementIds.push(notifiedId);
     const input = { id: notifiedId, title: `${title} bell`, body: "In-app only", href: "/app/portal/calendar", notify: true, expiresAt: new Date(Date.now() + 86400000).toISOString() };
-    const response = await page.request.post("/api/admin/announcements", { headers: { origin: "http://127.0.0.1:3120" }, data: input });
-    expect(response.status()).toBe(200);
-    const duplicate = await page.request.post("/api/admin/announcements", { headers: { origin: "http://127.0.0.1:3120" }, data: input }); expect((await duplicate.json()).duplicate).toBe(true);
+    // Use the browser's cookie handling (Secure session on CI's loopback HTTP).
+    const publish = (payload) => page.evaluate(async data => {
+      const response = await fetch("/api/admin/announcements", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      return { status: response.status, data: await response.json() };
+    }, payload);
+    const response = await publish(input);
+    expect(response.status).toBe(200);
+    const duplicate = await publish(input); expect(duplicate.data.duplicate).toBe(true);
     const client = await prisma.client.findUniqueOrThrow({ where: { email } });
     expect(await prisma.clientNotification.count({ where: { clientId: client.id, type: `announcement:${notifiedId}` } })).toBe(1);
     await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: input.title, exact: true })).toBeVisible();
-    const disabled = await page.request.patch("/api/admin/announcements", { headers: { origin: "http://127.0.0.1:3120" }, data: { id: notifiedId } }); expect(disabled.status()).toBe(200);
+    const disabled = await page.evaluate(async id => {
+      const response = await fetch("/api/admin/announcements", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); return response.status;
+    }, notifiedId); expect(disabled).toBe(200);
     await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: input.title, exact: true })).toHaveCount(0);
     expect(await prisma.clientNotification.count({ where: { type: `announcement:${notifiedId}` } })).toBe(0);
   } finally { await context.close(); }

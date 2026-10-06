@@ -10,6 +10,9 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
   w nowej browser regresji. Nie scalono ani nie promowano niesprawnego pakietu.
 - Zdiagnozować transakcję publikacji, poprawić bez rozszerzenia zakresu, ponowić
   exact-head gates. Produkcja nadalad434aa.
+- c18468e/CI37426601486: silent publikacja i persistent dismiss PASS; techniczny
+  page.request dostał401 poza browserowym transportem ciasteczek sesji. Test fan-out
+  i disable używa teraz browser fetch jak UI, bez zmiany auth lub asercji.
 
 ## Historyczny checkpoint — 2026-10-06 06:35 UTC / 08:35 CEST
 
