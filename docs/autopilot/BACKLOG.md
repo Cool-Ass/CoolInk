@@ -8,7 +8,9 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
 | TEXT-GROUP-20261006 | P2 | MEDIUM | DONE | PR40: obrys/cień w Tekst, overlay obrazu i alpha widgetu. Exact gates PASS, ad434aa opublikowany, smoke i świeże15min metryki PASS. |
-| ANNOUNCEMENTS-CMS-20261006 | P2 | MEDIUM | IN_PROGRESS | Komunikaty dla klientów: silent/dzwonek, zamknięcie i wyłączenie, expiry; wspólne style Pages/Portfolio/Media. Odbiór: autoryzacja, CSRF, izolacja klienta, idempotencja, regresja CMS, exact gates i zgoda. Rollback kodu do ad434aa; bez restore lub wysyłania kampanii produkcyjnej. |
+| ANNOUNCEMENT-RICH-20261007 | P2 | MEDIUM | WAITING_APPROVAL | Formatowanie tekstowe,32 emoji,4 obrazy publicznej biblioteki; upload/picker/preview, alt, media usage i bez HTML execution. Unit11/types/lint PASS, E2E wymagane. Security gate sharp0.35.4 wymaga zatwierdzenia patch0.35.5 i całego pakietu. Rollback fe857c0 bez restore. |
+| LOYALTY-HEADER-20261006 | P2 | MEDIUM | WAITING_APPROVAL | PR42 kółka przy nazwie klienta; UI-only, typy/lint PASS. CI37537167381 zablokowany nowym advisory sharp; zgoda wymagana na patch zależności przed publikacją. |
+| ANNOUNCEMENTS-CMS-20261006 | P2 | MEDIUM | DONE | PR41 fe857c0 opublikowany07:44UTC, exact-head/main CI i ponad15min smoke/obserwacji PASS. Dowody PR41 comment6012028861 oraz docs-only27a4992. |
 | UX-20261005 | P2 | MEDIUM | DONE | PR39, main8a9431e, CI37388586456 SUCCESS; ręczna promocja fLYEoVMDMxwLS9B7iDeRuSJDdJAX, ponad15min smoke/obserwacji PASS. Wspólny kompaktowy inspector, globalne style, prowadnice px/drag/kąt/duplikacja, sesje malejąco i wspólne rozliczenie. UI-only, zatwierdzone przez właściciela. |
 | AP-001 | P1 | HIGH | TODO | Zweryfikować ochronę main, wyłączność Workera, hosting i gate CI/E2E/security. Dowody dla jednego SHA, lista E2E i brak promocji przed checks; zmiany ustawień dopiero po zgodzie. |
 | AP-002 | P1 | LOW (odczyt) | TODO | Potwierdzić najnowszy restore drill, kompletność backupu i plan odtworzenia. Run URL, środowisko, data i wynik; brak dowodu blokuje zmiany danych. |

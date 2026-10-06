@@ -2,7 +2,63 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
+## Aktualny checkpoint — 2026-10-06 22:20 UTC / 2026-10-07 00:20 CEST
+
+- VERIFYING23:23UTC, lease do00:15UTC: CI37545093262 desktop komunikaty PASS
+  (format/emoji/upload/render/dismiss/bell/CMS). 64px realistyczny fixture działa;
+  1px AVIF nie dekoduje się w Chromium. Nie zmieniać formatów całej aplikacji.
+  Desktop loyalty test trafił na dwa zagnieżdżone summary; selektor teraz wskazuje
+  bezpośredni nagłówek szczegółów. Asercje open/focus/overflow zostają bez zmian.
+  Usunięto verbose diagnostykę, pozostawiono raw/optimized200 + decode asercje.
+
+- FIXING23:00UTC, lease do23:55UTC: CI37542058239 potwierdził raw i optimized
+  HTTP200, ale browser naturalWidth0. Dodana wyłącznie diagnostyka dekodowania
+  bajtów i publicznych requestfailed, bez trace/cookies/prywatnych mediów.
+  Nie obniżono asercji; brak merge/promocji. Lokalny Windows Turbopack/font błąd
+  nie występuje w CI Linux (build PASS), nie zmieniać fontów w tym pakiecie.
+
+- FIXING od22:33UTC, lease do23:30UTC: CI37539805825 potwierdził format/emoji/upload,
+  lecz runtime public upload nie ładuje się (naturalWidth0). Next static public
+  inventory nie zawiera plików utworzonych po starcie. Dynamiczny fallback
+  wyłącznie zarejestrowanych publicznych UUID.webp; bez prywatnych zdjęć/zmian
+  uploadu lub uprawnień. Zachowana pełna asercja dekodowania obrazu E2E.
+
+- FIXING: CI37538433323 zatrzymany na zmiennej etykiecie kontrolowanego textarea.
+  Artefakt browser-report potwierdza poprawny markup; dodatkowy error oznacza
+  jedynie zatrzymanie po pierwszym błędzie, nie błąd cleanup. Stałe aria-label
+  i deterministyczne zaznaczenie prawdziwego tekstu przed formatowaniem.
+  Types/build/unit/audit/RLS PASS; pełny exact-head browser cykl nadal wymagany.
+
+- VERIFYING od22:05UTC, jeden root Worker, lease do23:00UTC. Właściciel
+  zatwierdził „tak” oba pakiety i sharp0.35.5 po pełnych testach; dowód
+  https://github.com/Cool-Ass/CoolInk/pull/43#issuecomment-6026311085.
+- PR42 c6f33ab włączony do PR43, jeden finalny head/main cykl, jedna promocja.
+  Stary PR42 zamknąć jako zastąpiony dopiero po sukcesie rollup.
+- Minimalny sharp0.35.4→0.35.5 plus jego @img/libvips; npm production audit0,
+  bez audit fix --force lub szerokiej aktualizacji. Produkcja nadalfe857c0.
+
+- WAITING_APPROVAL, jeden root Worker ai/announcement-rich-content, lease
+  zwolniony przed oczekiwaniem na właściciela. ANNOUNCEMENT-RICH-20261007 MEDIUM.
+- Zlecenie: różne formatowania, emoji i obrazy w komunikatach. Text-only markup
+  bez HTML execution,32 emoji,4 publiczne media z opisami, upload/picker/preview.
+  Backend sprawdza Media, retry obejmuje format/obrazy; żadnej zmiany auth/upload/RLS.
+- Typecheck i targeted lint PASS,11 announcement unit tests PASS, node check
+  browser spec PASS. Dodana E2E desktop/mobile regresja format/emoji/upload/render,
+  jeszcze niewykonana. Nie twierdzić, że cały E2E przeszedł.
+- Publikację blokuje GHSA-wq5f-xc86-pv6w sharp0.35.4; minimalny patch0.35.5
+  poza zakresem poprzedniej zgody. Wymagane zatwierdzenie rozszerzonego pakietu,
+  osobny PR, pełne exact-head/main gates i ręczna promocja.
+- PR42 c6f33ab: kółka pieczątek przy nazwie, lokalne types/lint PASS; CI37537167381
+  backup/codeql PASS, verify FAIL na sharp audit. Brak merge lub promocji.
+- Produkcja PR41 fe857c0/GFN7yZMAwGvcyxa47o61kYAu94kH, promocja07:44UTC,
+  smoke07:44:22/08:00:19UTC i ponad15min obserwacji PASS. Dowody PR41
+  https://github.com/Cool-Ass/CoolInk/pull/41#issuecomment-6012028861,
+  docs-only commit27a4992, ai/release-pr41-evidence. Nie publikować evidence SHA.
+- Rollbackfe857c0 bez restore, bez produkcyjnych kampanii testowych. Stary kod
+  pokazuje rich znaczniki jako tekst i nie obrazy: wyłączyć nowe komunikaty
+  przed ewentualnym rollbackiem. Docelowo brak zmiany zasad płatności/pieczątek.
+
+## Historyczny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
 
 - FIXING, jeden root Worker ai/client-announcements, lease do07:50UTC.
 - Właściciel zatwierdził PR41 w czacie: „Zatwierdzam”. Publikacja po testach.
