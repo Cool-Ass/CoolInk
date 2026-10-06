@@ -198,8 +198,9 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
   const title = `Browser announcement ${randomUUID()}`;
   await page.getByLabel("Tytuł", { exact: true }).fill(title);
   await page.getByLabel("Treść", { exact: true }).fill("Nowe terminy ✨");
+  await page.getByLabel("Treść", { exact: true }).press("ControlOrMeta+A");
   await page.getByRole("button", { name: "Pogrubienie", exact: true }).click();
-  await expect(page.getByLabel("Treść", { exact: true })).toHaveValue(/\*\*tekst\*\*/);
+  await expect(page.getByLabel("Treść", { exact: true })).toHaveValue("**Nowe terminy ✨**");
   await page.getByRole("button", { name: "Wybierz emoji", exact: true }).click();
   await page.getByRole("button", { name: "Dodaj 🎁", exact: true }).click();
   // This test may only upload to the isolated runner filesystem, not external storage.
@@ -228,7 +229,7 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     await clientPage.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toBeVisible();
     const published = clientPage.locator(`#announcement-${announcement.id}`);
-    await expect(published.locator("strong").filter({ hasText: "tekst" })).toBeVisible();
+    await expect(published.locator("strong").filter({ hasText: "Nowe terminy ✨" })).toBeVisible();
     await expect(published).toContainText("🎁");
     await expect(published.getByRole("img", { name: "Obraz promocji studia" })).toBeVisible();
     await expect.poll(() => published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.naturalWidth)).toBeGreaterThan(0);

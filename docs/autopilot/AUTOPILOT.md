@@ -2,7 +2,13 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 22:04 UTC / 2026-10-07 00:04 CEST
+## Aktualny checkpoint — 2026-10-06 22:20 UTC / 2026-10-07 00:20 CEST
+
+- FIXING: CI37538433323 zatrzymany na zmiennej etykiecie kontrolowanego textarea.
+  Artefakt browser-report potwierdza poprawny markup; dodatkowy error oznacza
+  jedynie zatrzymanie po pierwszym błędzie, nie błąd cleanup. Stałe aria-label
+  i deterministyczne zaznaczenie prawdziwego tekstu przed formatowaniem.
+  Types/build/unit/audit/RLS PASS; pełny exact-head browser cykl nadal wymagany.
 
 - VERIFYING od22:05UTC, jeden root Worker, lease do23:00UTC. Właściciel
   zatwierdził „tak” oba pakiety i sharp0.35.5 po pełnych testach; dowód
