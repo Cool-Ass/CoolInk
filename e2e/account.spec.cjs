@@ -224,9 +224,6 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
   const context = await browser.newContext();
   try {
     const clientPage = await context.newPage();
-    clientPage.on("requestfailed", request => {
-      if (request.resourceType() === "image") console.log("Announcement browser image failure", request.failure()?.errorText);
-    });
     await clientPage.goto("http://127.0.0.1:3120/app");
     await clientPage.getByLabel("E-MAIL", { exact: true }).fill(email);
     await clientPage.getByLabel("HASŁO", { exact: true }).fill(password);
@@ -244,7 +241,8 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     const imageError = optimizedImageResponse.ok() ? "" : (await optimizedImageResponse.text()).slice(0, 150);
     expect(optimizedImageResponse.status(), `Image optimizer: ${imageError}`).toBe(200);
     const decoded = await require("sharp")(await optimizedImageResponse.body()).metadata();
-    console.log("Announcement image diagnostic", { type: optimizedImageResponse.headers()["content-type"], format: decoded.format, width: decoded.width, height: decoded.height, browser: await published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => ({ source: image.currentSrc, complete: image.complete, loading: image.loading, bounds: image.getBoundingClientRect().toJSON() })) });
+    expect(decoded.width).toBeGreaterThan(0);
+    expect(decoded.height).toBeGreaterThan(0);
     await expect.poll(() => published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await clientPage.getByRole("button", { name: `Zamknij komunikat: ${title}`, exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
@@ -286,9 +284,9 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await expect(identity.getByRole("list", { name: /pieczątek w kolejnym cyklu/ })).toBeVisible();
   const loyaltyDetails = page.locator("details[aria-label='Karta lojalnościowa']");
   await expect(loyaltyDetails).not.toHaveAttribute("open", "");
-  await loyaltyDetails.locator("summary").click();
+  await loyaltyDetails.locator(":scope > summary").click();
   await expect(loyaltyDetails).toHaveAttribute("open", "");
-  await loyaltyDetails.locator("summary").click();
+  await loyaltyDetails.locator(":scope > summary").click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "EDYTUJ DANE", exact: true }).click();
   await expect(page.getByLabel("E-MAIL", { exact: false })).toHaveAttribute("readonly", "");

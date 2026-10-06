@@ -4,6 +4,13 @@ Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 ## Aktualny checkpoint — 2026-10-06 22:20 UTC / 2026-10-07 00:20 CEST
 
+- VERIFYING23:23UTC, lease do00:15UTC: CI37545093262 desktop komunikaty PASS
+  (format/emoji/upload/render/dismiss/bell/CMS). 64px realistyczny fixture działa;
+  1px AVIF nie dekoduje się w Chromium. Nie zmieniać formatów całej aplikacji.
+  Desktop loyalty test trafił na dwa zagnieżdżone summary; selektor teraz wskazuje
+  bezpośredni nagłówek szczegółów. Asercje open/focus/overflow zostają bez zmian.
+  Usunięto verbose diagnostykę, pozostawiono raw/optimized200 + decode asercje.
+
 - FIXING23:00UTC, lease do23:55UTC: CI37542058239 potwierdził raw i optimized
   HTTP200, ale browser naturalWidth0. Dodana wyłącznie diagnostyka dekodowania
   bajtów i publicznych requestfailed, bez trace/cookies/prywatnych mediów.
