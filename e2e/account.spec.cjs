@@ -287,6 +287,13 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /^Prowadnica 2: X/ }).press("ArrowRight");
     await expect(page.getByRole("button", { name: /^Prowadnica 2: X 117 px/ })).toBeVisible();
+    // Tall image fixtures can scroll the canvas while the selected heading or
+    // guide takes focus. Measure and drag from a visible canvas origin.
+    await page.locator(".builder-canvas").evaluate((canvas) => {
+      for (let parent = canvas.parentElement; parent; parent = parent.parentElement) {
+        if (parent.scrollHeight > parent.clientHeight) parent.scrollTop = 0;
+      }
+    });
     const canvasBox = await page.locator(".builder-canvas").boundingBox();
     const guideBox = await page.getByRole("button", { name: /^Prowadnica 2: X/ }).evaluate((line) => { const layer = line.closest("svg"); const rect = layer.getBoundingClientRect(); return { x: rect.x + 117, y: rect.y + 216 }; });
     expect(canvasBox).not.toBeNull();
