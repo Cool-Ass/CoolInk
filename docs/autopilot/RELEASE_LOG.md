@@ -1,5 +1,26 @@
 # Rejestr wydań i rollback
 
+## 2026-10-06 — PR40, publikacja 02:56:43 CEST / 00:56:43 UTC
+
+- Zakres: obrys/cień tekstu w sekcji Tekst; obraz jako dekoracyjna nakładka
+  widgetów/kolumn/sekcji z kryciem, fit, pozycją i repeat; przezroczysta ramka
+  widgetu Obraz. Bez zmian uploadu, auth, bazy lub płatności.
+- Zgoda właściciela: https://github.com/Cool-Ass/CoolInk/pull/40#issuecomment-6006361951.
+- Pierwsza regresja37393590877 wykazała scroll-origin w istniejącym teście drag
+  po dodaniu wysokiego fixture obrazu;9b44b46 resetuje scroll przed pomiarem.
+  Nie pominięto ani nie osłabiono żadnej asercji. Następna regresja PASS.
+- Exact-head9b44b46 CI37394486798 oraz exact-mainad434aa CI37395584488 SUCCESS:
+  verify/E2E, audit, gitleaks, CodeQL, izolowana baza/HTTP i backup-snapshot.
+- Vercel8BydWbL4snRywt6f1fjkEvBTAScW, cool-o7basf33p-cool-ass.vercel.app,
+  ręczna promocja na www.coolinktattoo.pl / cool-ink.vercel.app.
+- Auto-assign Custom Production Domains nadal Disabled; brak produkcyjnych fixture.
+- Pierwszy smoke: home/app/admin-login200, chronione API kalendarza/lojalności401.
+- Obserwacja PASS: pierwszy smoke00:57:09UTC; przerwana i wznowiona rano.
+  Świeże Production Last15min05:56–06:11UTC Error0%/Timeout0%; końcowy smoke
+  home/app/admin-login200 i chronione API401. Nie deklarujemy ciągłej obserwacji nocy.
+- Dowód: artifacts/pr40-production-2026-10-06.png (poza repo, exact SHA/domains).
+- Rollback8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX bez restore danych, niewykonany.
+
 ## 2026-10-06 — PR39, publikacja 01:37:35 CEST / 2026-10-05 23:37:35 UTC
 
 - Zakres UI-only: wspólny kompaktowy inspector i globalne style, prowadnice

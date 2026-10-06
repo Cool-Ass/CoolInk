@@ -2,6 +2,13 @@
 
 ## TEXT-GROUP-20261006
 
+- ACCEPTED: właściciel odpowiedział „Tak, opublikuj po testach” na prośbę
+  obejmującą trzy zmiany PR40. Dowód zgody:
+  https://github.com/Cool-Ass/CoolInk/pull/40#issuecomment-6006361951.
+- 9b44b46 zmienia wyłącznie reset scrolla fixture przed testem drag; funkcje
+  aplikacji bez zmian. Nowy exact CI37394486798 SUCCESS. Mergead434aa,
+  exact-mainCI37395584488 SUCCESS, ręczna promocja00:56:43UTC, obserwacja trwa.
+
 - 00:23UTC: właściciel dodatkowo zlecił obraz jako nakładkę tła oraz wskazał
   ciemne tło PNG w widżecie. Zakres PR40 rozszerzony, MEDIUM; poprzedni LOW
   nie upoważnia do automatycznej publikacji rozszerzonego pakietu.

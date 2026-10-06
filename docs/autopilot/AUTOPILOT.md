@@ -2,7 +2,34 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 00:23 UTC / 02:23 CEST
+## Aktualny checkpoint — 2026-10-06 06:12 UTC / 08:12 CEST
+
+- PR40 DONE: końcowy readonly smoke home/app/admin-login200, chronione API401.
+- Obserwacja została przerwana po pierwszym smoke i wznowiona rano; nie jest
+  to ciągły monitoring nocy. Świeże Production Last15min 05:56–06:11UTC:
+  Error0%/Timeout0%. Produkcyjny deployment ad434aa pozostaje bez zmian.
+- Nowy zakres MEDIUM: komunikaty admina w panelu klienta (opcjonalny dzwonek,
+  zamknięcie przez klienta i wyłączenie przez admina) oraz spójność Pages,
+  Portfolio i Media z istniejącymi tokenami studio. Bez wysyłania kampanii.
+- Jeden root Worker; lease do07:12UTC. Osobny PR, zgoda przed publikacją.
+
+## Historyczny checkpoint — 2026-10-06 00:58 UTC / 02:58 CEST
+
+- OBSERVING, jeden root Worker, ai/release-pr40-evidence, lease do01:18UTC.
+- PR40 scalony po zatwierdzeniu rozszerzonego zakresu przez właściciela:
+  https://github.com/Cool-Ass/CoolInk/pull/40#issuecomment-6006361951.
+- Exact-head9b44b46 CI37394486798 i exact-mainad434aa CI37395584488 SUCCESS:
+  verify/E2E/security/backup; Vercel obu projektów SUCCESS.
+- Ręczna promocja00:56:43UTC, Vercel8BydWbL4snRywt6f1fjkEvBTAScW,
+  cool-o7basf33p-cool-ass.vercel.app, www.coolinktattoo.pl / cool-ink.vercel.app.
+- Start smoke/obserwacji00:57:09UTC. Home/app/admin-login200, chronione API401.
+  Auto-assign Custom Production Domains nadal Disabled. Bez fixture produkcyjnych.
+- Rollback8a9431e/fLYEoVMDMxwLS9B7iDeRuSJDdJAX bez restore. Następny krok:
+  minimum15min obserwacji, końcowy smoke i zamknięcie RELEASE_LOG.
+- Po wdrożeniu właściciel zlecił „zajmij się powiadomieniem”; brak jednoznacznego
+  wskazania rodzaju/usterki. Pytanie w czacie, nie zmieniać niczego na domysł.
+
+## Historyczny checkpoint — 2026-10-06 00:23 UTC / 02:23 CEST
 
 - VERIFYING, jeden root Worker ai/text-effects-group, lease do01:18UTC.
 - PR40 rozszerzony na żądanie właściciela: obraz jako nakładka tła oraz
