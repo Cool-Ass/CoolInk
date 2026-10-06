@@ -2,7 +2,30 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
+## Aktualny checkpoint — 2026-10-06 22:04 UTC / 2026-10-07 00:04 CEST
+
+- WAITING_APPROVAL, jeden root Worker ai/announcement-rich-content, lease
+  zwolniony przed oczekiwaniem na właściciela. ANNOUNCEMENT-RICH-20261007 MEDIUM.
+- Zlecenie: różne formatowania, emoji i obrazy w komunikatach. Text-only markup
+  bez HTML execution,32 emoji,4 publiczne media z opisami, upload/picker/preview.
+  Backend sprawdza Media, retry obejmuje format/obrazy; żadnej zmiany auth/upload/RLS.
+- Typecheck i targeted lint PASS,11 announcement unit tests PASS, node check
+  browser spec PASS. Dodana E2E desktop/mobile regresja format/emoji/upload/render,
+  jeszcze niewykonana. Nie twierdzić, że cały E2E przeszedł.
+- Publikację blokuje GHSA-wq5f-xc86-pv6w sharp0.35.4; minimalny patch0.35.5
+  poza zakresem poprzedniej zgody. Wymagane zatwierdzenie rozszerzonego pakietu,
+  osobny PR, pełne exact-head/main gates i ręczna promocja.
+- PR42 c6f33ab: kółka pieczątek przy nazwie, lokalne types/lint PASS; CI37537167381
+  backup/codeql PASS, verify FAIL na sharp audit. Brak merge lub promocji.
+- Produkcja PR41 fe857c0/GFN7yZMAwGvcyxa47o61kYAu94kH, promocja07:44UTC,
+  smoke07:44:22/08:00:19UTC i ponad15min obserwacji PASS. Dowody PR41
+  https://github.com/Cool-Ass/CoolInk/pull/41#issuecomment-6012028861,
+  docs-only commit27a4992, ai/release-pr41-evidence. Nie publikować evidence SHA.
+- Rollbackfe857c0 bez restore, bez produkcyjnych kampanii testowych. Stary kod
+  pokazuje rich znaczniki jako tekst i nie obrazy: wyłączyć nowe komunikaty
+  przed ewentualnym rollbackiem. Docelowo brak zmiany zasad płatności/pieczątek.
+
+## Historyczny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
 
 - FIXING, jeden root Worker ai/client-announcements, lease do07:50UTC.
 - Właściciel zatwierdził PR41 w czacie: „Zatwierdzam”. Publikacja po testach.

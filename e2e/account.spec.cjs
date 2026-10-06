@@ -15,6 +15,7 @@ let slot;
 let consent;
 let cmsPage;
 const announcementIds = [];
+const announcementMedia = [];
 
 async function verifyCalendarPresentation(page) {
   const day = page.locator('[data-calendar-day="0"]').first();
@@ -83,6 +84,11 @@ test.afterAll(async () => {
     await prisma.siteSetting.deleteMany({ where: { key: `client-announcement:${id}` } });
   }
   await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = $1", email);
+  for (const media of announcementMedia) {
+    await prisma.media.deleteMany({ where: { id: media.id } });
+    if (!/^\/uploads\/[a-f0-9-]+\.webp$/.test(media.url)) throw new Error("Expected isolated local announcement upload");
+    await require("node:fs/promises").unlink(require("node:path").join(process.cwd(), "public", media.url)).catch(error => { if (error.code !== "ENOENT") throw error; });
+  }
   await prisma.contactMessage.deleteMany({ where: { email } });
   if (slot) await prisma.availableSlot.delete({ where: { id: slot.id } });
   if (consent) await prisma.studioDocument.delete({ where: { id: consent.id } });
@@ -192,6 +198,20 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
   const title = `Browser announcement ${randomUUID()}`;
   await page.getByLabel("Tytuł", { exact: true }).fill(title);
   await page.getByLabel("Treść", { exact: true }).fill("Nowe terminy ✨");
+  await page.getByRole("button", { name: "Pogrubienie", exact: true }).click();
+  await expect(page.getByLabel("Treść", { exact: true })).toHaveValue(/\*\*tekst\*\*/);
+  await page.getByRole("button", { name: "Wybierz emoji", exact: true }).click();
+  await page.getByRole("button", { name: "Dodaj 🎁", exact: true }).click();
+  // This test may only upload to the isolated runner filesystem, not external storage.
+  if (process.env.S3_ENDPOINT || process.env.BLOB_READ_WRITE_TOKEN) throw new Error("External public media storage forbidden in browser fixture");
+  const uploadedAnnouncement = page.waitForResponse(response => response.url().endsWith("/api/admin/media") && response.request().method() === "POST");
+  await page.getByLabel("Prześlij obraz do komunikatu").setInputFiles({ name: "announcement.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") });
+  const uploadedResponse = await uploadedAnnouncement;
+  expect(uploadedResponse.status()).toBe(201);
+  const uploadedMedia = (await uploadedResponse.json()).media;
+  announcementMedia.push(uploadedMedia);
+  await page.getByLabel("Opis obrazu 1").fill("Obraz promocji studia");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   page.once("dialog", d => d.accept());
   await page.getByRole("button", { name: "Opublikuj dla klientów", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("Komunikat opublikowany.");
@@ -207,6 +227,11 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
     await clientPage.getByLabel("HASŁO", { exact: true }).fill(password);
     await clientPage.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    const published = clientPage.locator(`#announcement-${announcement.id}`);
+    await expect(published.locator("strong").filter({ hasText: "tekst" })).toBeVisible();
+    await expect(published).toContainText("🎁");
+    await expect(published.getByRole("img", { name: "Obraz promocji studia" })).toBeVisible();
+    await expect.poll(() => published.getByRole("img", { name: "Obraz promocji studia" }).evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await clientPage.getByRole("button", { name: `Zamknij komunikat: ${title}`, exact: true }).click();
     await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
     await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);

@@ -11,7 +11,7 @@ Nie wysyłamy maili, SMS ani web push, nie zapisujemy zgód marketingowych.
 
 ## Dane / niezawodność
 
-- SiteSetting `client-announcement:<uuid>`: plain text, portalowy link z allowlisty,
+- SiteSetting `client-announcement:<uuid>`: plain text lub text-only Markdown, portalowy link z allowlisty,
   data publikacji/wygaśnięcia, notify, active. Bez nowej tabeli/migracji.
 - ClientNotification: zwykłe wpisy `announcement:<uuid>` dla dzwonka;
   prywatny, przeczytany marker `announcement-dismissed:<uuid>` dla zamknięcia.
@@ -50,3 +50,25 @@ brak wycieku błędów bazy, wyłączenie, izolacja zamknięcia. Izolowane E2E:
 desktop/mobile CMS bez overflow, banner, zamknięcie po reload, dzwonek i disable.
 Produkcja: wyłącznie readonly smoke; nigdy testowa kampania do realnych klientów.
 Rollback kodu do ad434aa, bez restore; nowe wpisy nie wpływają na starszy kod.
+
+## Formatowanie i obrazy — przygotowane 2026-10-07
+
+- Pasek edytora: pogrubienie, kursywa, podkreślenie, przekreślenie, wyróżnienie,
+  nagłówki, listy i cytaty; 32 emoji wstawiane w miejscu kursora.
+- Wspólny podgląd/history/client renderer używa React elementów. Nie wykonuje HTML,
+  skryptów, arbitralnych linków ani inline obrazów. Dawne komunikaty pozostają plain.
+  Dzwonek dostaje tekst bez znaczników. Limit2000 znaków obejmuje znaczniki.
+- Maksymalnie4 obrazy z biblioteki studia lub istniejącego CMS uploadu JPEG/PNG/WebP;
+  wymagany opis dostępności, stałe proporcje miejsca, lazy loading, contain bez kadrowania.
+  Serwer sprawdza każdy URL w publicznej tabeli Media; nie przyjmuje prywatnych zdjęć czatu
+  lub projektu ani dowolnego URL. Żadnej zmiany uploadu/RLS/prywatnego storage.
+- Nowe pliki trafiają do publicznej biblioteki, nie tylko do klientów. Edytor ostrzega,
+  żeby nie wgrywać prywatnych materiałów, i że anulowana publikacja nie usuwa uploadu.
+  Aktywne komunikaty są uwzględniane w istniejącej ochronie usunięcia używanych mediów.
+- Retry porównuje także obrazy i format strukturalnie; bez powtórnego fan-out.
+  11 targeted unit tests PASS; typecheck/targeted lint PASS. Dodana izolowana
+  desktop/mobile regresja toolbar/emoji/upload/rendering; pełny CI jeszcze wymagany.
+- Publikacja blokowana przez GHSA-wq5f-xc86-pv6w sharp0.35.4; aktualizacja0.35.5
+  wymaga zatwierdzenia rozszerzonego pakietu, nie pomijać security gate.
+  Rollback fe857c0; dla opublikowanych nowych rich komunikatów stary kod wyświetla
+  znaczniki jako zwykły tekst i nie pokazuje obrazów — wyłączyć je przed rollbackiem.

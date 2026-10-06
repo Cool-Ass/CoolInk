@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { parseModules } from "./pageModules";
+import { ANNOUNCEMENT_PREFIX, announcementActive, parseAnnouncement } from "./announcementRules";
 
 function collectUrls(value: unknown, acc: string[] = []): string[] {
   if (typeof value === "string" && (value.startsWith("/") || value.startsWith("https://"))) {
@@ -54,6 +55,10 @@ export async function getMediaUsageMap(): Promise<Map<string, string[]>> {
 
   for (const setting of settings) {
     if (setting.key === "brand.logoUrl") add(setting.value, "Logo (globalne)");
+    if (setting.key.startsWith(ANNOUNCEMENT_PREFIX)) {
+      const announcement = parseAnnouncement(setting.value);
+      if (announcement && announcementActive(announcement)) for (const image of announcement.images ?? []) add(image.url, `Komunikat: ${announcement.title}`);
+    }
   }
 
   return usage;

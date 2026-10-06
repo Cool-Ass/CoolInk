@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { ANNOUNCEMENT_PREFIX, parseAnnouncement, validAnnouncementId, validateAnnouncement } from "@/lib/announcementRules";
 import { getAnnouncements } from "@/lib/announcements";
+import { announcementPlainText } from "@/lib/announcementFormatting";
 class PublicationError extends Error {}
 
 export async function GET() {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       const existing = await tx.siteSetting.findUnique({ where: { key } });
       if (existing) {
         const a = parseAnnouncement(existing.value);
-        if (!a || Object.keys(input).some(k => input[k as keyof typeof input] !== a[k as keyof typeof input])) throw new PublicationError("Identyfikator był już użyty dla innego komunikatu.");
+        if (!a || Object.keys(input).some(k => JSON.stringify(input[k as keyof typeof input]) !== JSON.stringify(a[k as keyof typeof input]))) throw new PublicationError("Identyfikator był już użyty dla innego komunikatu.");
         return { announcement: a, duplicate: true };
       }
       // Bounded history, no permanent accumulation of expired announcement bodies.
@@ -43,6 +44,10 @@ export async function POST(request: Request) {
       }
       if (await tx.siteSetting.count({ where: { key: { startsWith: ANNOUNCEMENT_PREFIX } } }) >= 100) throw new PublicationError("Limit 100 komunikatów. Poczekaj na zwolnienie historii wygasłych komunikatów.");
       const a = { ...input, active: true, createdAt: new Date().toISOString() };
+      if (input.images?.length) {
+        const media = await tx.media.findMany({ where: { url: { in: input.images.map(image => image.url) } }, select: { url: true } });
+        if (input.images.some(image => !media.some(item => item.url === image.url))) throw new PublicationError("Wybierz obrazy z biblioteki mediów studia.");
+      }
       await tx.siteSetting.create({ data: { key, value: JSON.stringify(a) } });
       let recipients = 0;
       if (input.notify) {
@@ -50,7 +55,7 @@ export async function POST(request: Request) {
         const clients = await tx.client.findMany({ where: { supabaseUserId: { not: null }, deletionRequest: null }, select: { id: true }, take: 5001 });
         if (clients.length > 5000) throw new PublicationError("Powiadomienie przekracza limit 5000 odbiorców. Opublikuj bez dzwonka.");
         recipients = clients.length;
-        if (clients.length) await tx.clientNotification.createMany({ data: clients.map(c => ({ clientId: c.id, type: `announcement:${a.id}`, title: a.title, body: a.body, href: "/app/portal" })) });
+        if (clients.length) await tx.clientNotification.createMany({ data: clients.map(c => ({ clientId: c.id, type: `announcement:${a.id}`, title: a.title, body: announcementPlainText(a.body, a.bodyFormat), href: "/app/portal" })) });
       }
       await tx.adminAuditLog.create({ data: { adminUserId: auth.admin.id, action: "announcement_published", targetType: "SiteSetting", targetId: key, summary: "Opublikowano komunikat dla klientów", metadata: JSON.stringify({ notify: a.notify, recipients, expiresAt: a.expiresAt }) } });
       return { announcement: a, recipients, duplicate: false };

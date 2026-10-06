@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { announcementActive, parseAnnouncement, validateAnnouncement, visibleNotificationType } from "@/lib/announcementRules";
-const m = vi.hoisted(() => ({ auth: vi.fn(), clientAuth: vi.fn(), origin: vi.fn(), limit: vi.fn(), find: vi.fn(), list: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), removeSetting: vi.fn(), clients: vi.fn(), notify: vi.fn(), audit: vi.fn(), remove: vi.fn(), dismiss: vi.fn(), read: vi.fn(), lock: vi.fn() }));
+import { announcementInline, announcementPlainText } from "@/lib/announcementFormatting";
+const m = vi.hoisted(() => ({ auth: vi.fn(), clientAuth: vi.fn(), origin: vi.fn(), limit: vi.fn(), find: vi.fn(), list: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), removeSetting: vi.fn(), clients: vi.fn(), notify: vi.fn(), audit: vi.fn(), remove: vi.fn(), dismiss: vi.fn(), read: vi.fn(), media: vi.fn(), lock: vi.fn() }));
 vi.mock("@/lib/adminApi", () => ({ requireAdminApi: m.auth }));
 vi.mock("@/lib/clientAuth", () => ({ getCurrentClient: m.clientAuth }));
 vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: m.origin, rateLimit: m.limit, tooManyRequests: () => new Response(null, { status: 429 }) }));
-vi.mock("@/lib/prisma", () => ({ prisma: { $transaction: (run: (tx: unknown) => unknown) => run({ $executeRaw: m.lock, siteSetting: { findUnique: m.find, findMany: m.list, count: m.count, create: m.create, update: m.update, delete: m.removeSetting }, client: { findMany: m.clients }, clientNotification: { createMany: m.notify, deleteMany: m.remove, upsert: m.dismiss, updateMany: m.read }, adminAuditLog: { create: m.audit } }) } }));
+vi.mock("@/lib/prisma", () => ({ prisma: { $transaction: (run: (tx: unknown) => unknown) => run({ $executeRaw: m.lock, media: { findMany: m.media }, siteSetting: { findUnique: m.find, findMany: m.list, count: m.count, create: m.create, update: m.update, delete: m.removeSetting }, client: { findMany: m.clients }, clientNotification: { createMany: m.notify, deleteMany: m.remove, upsert: m.dismiss, updateMany: m.read }, adminAuditLog: { create: m.audit } }) } }));
 import { POST, PATCH } from "@/app/api/admin/announcements/route";
 import { PATCH as dismiss } from "@/app/api/client/announcements/route";
 const id = "afba4826-3caf-4fb6-b73c-5430da21cb44";
@@ -13,6 +14,30 @@ const req = (body: unknown) => new Request("http://localhost/api/admin/announcem
 const stored = () => ({ ...payload(), active: true, createdAt: new Date().toISOString() });
 beforeEach(() => { vi.clearAllMocks(); m.auth.mockResolvedValue({ ok: true, admin: { id: "owner" } }); m.clientAuth.mockResolvedValue({ id: "own-client" }); m.origin.mockReturnValue(true); m.limit.mockResolvedValue({ allowed: true }); m.find.mockResolvedValue(null); m.list.mockResolvedValue([]); m.count.mockResolvedValue(0); m.clients.mockResolvedValue([{ id: "one" }]); });
 describe("client announcements", () => {
+  it("supports safe text formatting and preserves legacy plain text", () => {
+    expect(announcementInline("**Wolne** *terminy* __dziś__ ~~stare~~ ==ważne== 🎁").filter(part => part.style).map(part => part.style)).toEqual(["bold", "italic", "underline", "strike", "highlight"]);
+    expect(announcementPlainText("## Nowości\n- **Promocja** 🎁", "markdown")).toBe("Nowości\nPromocja 🎁");
+    expect(announcementPlainText("**literal**")).toBe("**literal**");
+    expect(announcementInline('<img src=x onerror=alert(1)>').map(part => part.text).join("")).toContain("<img");
+    expect(parseAnnouncement(JSON.stringify(stored()))).toMatchObject({ bodyFormat: "plain", images: [] });
+  });
+  it("validates images and refuses unsupported formats or missing descriptions", () => {
+    const image = { url: "/uploads/abc.webp", alt: "Tatuaż róży" };
+    expect(validateAnnouncement({ ...payload(), bodyFormat: "markdown", images: [image] }).images).toEqual([image]);
+    for (const images of [[{ ...image, url: "javascript:alert(1)" }], [{ ...image, url: "/api/client/images/private" }], [{ ...image, alt: "" }], Array(5).fill(image)]) expect(() => validateAnnouncement({ ...payload(), images })).toThrow();
+    expect(() => validateAnnouncement({ ...payload(), bodyFormat: "html" })).toThrow();
+    expect(parseAnnouncement(JSON.stringify({ ...stored(), images: [{ ...image, url: "data:image/svg+xml,foo" }] }))).toBeNull();
+  });
+  it("accepts only library images and retries rich payloads without duplicate bells", async () => {
+    const input = { ...payload(), notify: true, body: "**Nowe** 🎁", bodyFormat: "markdown", images: [{ url: "/uploads/abc.webp", alt: "Róża" }] };
+    m.media.mockResolvedValue([]);
+    expect((await POST(req(input))).status).toBe(409); expect(m.create).not.toHaveBeenCalled();
+    m.media.mockResolvedValue([{ url: "/uploads/abc.webp" }]);
+    expect((await POST(req(input))).status).toBe(200);
+    expect(m.notify.mock.calls[0][0].data[0].body).toBe("Nowe 🎁");
+    m.find.mockResolvedValue({ value: JSON.stringify({ ...input, active: true, createdAt: new Date().toISOString() }) });
+    expect((await (await POST(req(input))).json()).duplicate).toBe(true); expect(m.notify).toHaveBeenCalledOnce();
+  });
   it("validates expiry, lengths and only internal portal destinations", () => {
     expect(validateAnnouncement(payload()).body).toContain("✨");
     for (const extra of [{ href: "javascript:alert(1)" }, { href: "//evil.test" }, { title: "" }, { body: "x".repeat(2001) }, { notify: "true" }, { expiresAt: "bad" }, { expiresAt: new Date(0).toISOString() }, { id: "bad" }]) expect(() => validateAnnouncement({ ...payload(), ...extra })).toThrow();
