@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentClient } from "@/lib/clientAuth";
 import ClientPortalShell from "@/components/client/ClientPortalShell";
 import { getSiteContent } from "@/lib/content";
+import { visibleNotificationType } from "@/lib/announcementRules";
 
 export default async function ClientPortalLayout({ children }: { children: React.ReactNode }) {
   const current = await getCurrentClient();
@@ -11,10 +12,10 @@ export default async function ClientPortalLayout({ children }: { children: React
   const visible = visibleMessages(messageRecipient("client", current.id));
   const [client, unreadNotifications, unreadProjectMessages, unreadDirectMessages, notifications, messages, directMessages, content] = await Promise.all([
     prisma.client.findUniqueOrThrow({ where: { id: current.id }, select: { firstName: true } }),
-    prisma.clientNotification.count({ where: { clientId: current.id, readAt: null } }),
+    prisma.clientNotification.count({ where: { clientId: current.id, readAt: null, type: visibleNotificationType } }),
     prisma.projectMessage.count({ where: { ...visible, project: { clientId: current.id }, author: "admin", readAt: null } }),
     prisma.directMessage.count({ where: { ...visible, clientId: current.id, author: "admin", readAt: null } }),
-    prisma.clientNotification.findMany({ where: { clientId: current.id }, orderBy: { createdAt: "desc" }, take: 8, select: { id: true, title: true, body: true, href: true, createdAt: true, readAt: true } }),
+    prisma.clientNotification.findMany({ where: { clientId: current.id, type: visibleNotificationType }, orderBy: { createdAt: "desc" }, take: 8, select: { id: true, title: true, body: true, href: true, createdAt: true, readAt: true } }),
     prisma.projectMessage.findMany({ where: { ...visible, project: { clientId: current.id }, author: "admin" }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, body: true, createdAt: true, readAt: true, project: { select: { id: true, title: true } } } }),
     prisma.directMessage.findMany({ where: { ...visible, clientId: current.id, author: "admin" }, orderBy: { createdAt: "desc" }, take: 100 }),
     getSiteContent(),

@@ -2,7 +2,19 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 06:12 UTC / 08:12 CEST
+## Aktualny checkpoint — 2026-10-06 06:29 UTC / 08:29 CEST
+
+- VERIFYING, ai/client-announcements, jeden root Worker, lease do07:12UTC.
+- MEDIUM: nowe komunikaty (silent/dzwonek, expiry, dismiss, disable, UUID retry)
+  oraz wspólna prezentacja Pages/Portfolio/Media i formularzy CMS.
+- Brak migracji, rozszerzenia RBAC, wysyłek zewnętrznych lub zmian płatności.
+  Limity100 komunikatów/5000 dzwonków; istniejący privacy cleanup usuwa markery.
+- 10 ukierunkowanych testów PASS; typecheck i lint zmienionego zakresu PASS.
+  Nowe izolowane browser regresje desktop/mobile czekają na exact CI.
+- PR40 zakończony; nowy zakres wymaga osobnego PR i zgody właściciela przed
+  merge/promocją. Rollbackad434aa/8BydWbL4snRywt6f1fjkEvBTAScW bez restore.
+
+## Historyczny checkpoint — 2026-10-06 06:12 UTC / 08:12 CEST
 
 - PR40 DONE: końcowy readonly smoke home/app/admin-login200, chronione API401.
 - Obserwacja została przerwana po pierwszym smoke i wznowiona rano; nie jest

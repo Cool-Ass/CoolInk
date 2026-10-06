@@ -1,4 +1,5 @@
 import Image from "next/image";
+import WorkspaceHeader from "@/components/ui/WorkspaceHeader";
 import { prisma } from "@/lib/prisma";
 import AddPortfolioItem from "@/components/admin/AddPortfolioItem";
 import PortfolioRowActions from "@/components/admin/PortfolioRowActions";
@@ -13,29 +14,18 @@ export default async function PortfolioListPage() {
   const items = await prisma.portfolioItem.findMany({ orderBy: { order: "asc" } });
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="mb-1 text-[11px] font-medium tracking-[0.22em] text-ink-gold">
-            PORTFOLIO / GALERIA
-          </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <h1 className="font-display text-3xl text-ink-white">Zarządzaj portfolio</h1>
-            <span className="mb-1 text-xs text-ink-grey">{items.length} {items.length === 1 ? "element" : "elementów"}</span>
-          </div>
-        </div>
-        <AddPortfolioItem />
-      </div>
+    <div className="studio-page">
+      <WorkspaceHeader eyebrow="STRONA / CMS" title="Portfolio / Galeria" description={`${items.length} ${items.length === 1 ? "element" : "elementów"} · Zdjęcia, opisy i kolejność wyświetlania.`} actions={<AddPortfolioItem />} />
 
       {items.length === 0 ? (
-        <p className="border border-dashed border-ink-white/15 px-6 py-10 text-center text-[14px] text-ink-grey">
+        <p className="studio-panel py-8 text-center text-sm text-ink-grey">
           Brak elementów portfolio. Dodaj pierwsze zdjęcie tatuażu powyżej.
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map((item, i) => {
             const source = imageSource(item.imageUrl);
-            return <article key={item.id} className="group overflow-hidden border border-ink-white/10 bg-ink-charcoal/30 transition-colors hover:border-ink-gold/45">
+            return <article key={item.id} className="studio-panel p-0 group min-w-0 overflow-hidden transition-colors hover:border-ink-gold/45">
               <Link href={`/admin/portfolio/${item.id}`} aria-label={`Edytuj: ${item.title}`} className="relative block aspect-[4/3] w-full overflow-hidden bg-ink-black">
                 {source ? <Image
                   src={source}

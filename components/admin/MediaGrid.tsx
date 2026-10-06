@@ -88,14 +88,15 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-3 border border-ink-white/15 bg-ink-charcoal/40 p-3 sm:p-4">
+      <div className="studio-panel flex min-w-0 flex-wrap items-center gap-3">
         <input
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/svg+xml"
           onChange={handleUpload}
           disabled={uploading}
-          className="text-[13px] text-ink-grey file:mr-3 file:cursor-pointer file:border file:border-ink-gold/60 file:bg-transparent file:px-3 file:py-2 file:text-[12px] file:tracking-[0.08em] file:text-ink-gold hover:file:bg-ink-gold/10"
+          aria-label="Prześlij obraz"
+          className="min-w-0 max-w-full text-xs text-ink-grey file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-ink-gold/60 file:bg-transparent file:px-3 file:py-2 file:text-xs file:text-ink-gold hover:file:bg-ink-gold/10"
         />
         {uploading && <span className="text-[12px] text-ink-grey">Przesyłanie…</span>}
         <input
@@ -103,6 +104,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Szukaj po nazwie, opisie lub miejscu użycia…"
+          aria-label="Szukaj w bibliotece mediów"
           className="ml-auto w-full max-w-xs border border-ink-white/20 bg-transparent px-3 py-2 text-[12px] text-ink-white outline-none focus:border-ink-gold"
         />
         <span className="shrink-0 text-[12px] text-ink-grey">
@@ -111,7 +113,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
       </div>
 
       {filtered.length === 0 ? (
-        <p className="border border-dashed border-ink-white/15 px-6 py-10 text-center text-[14px] text-ink-grey">
+        <p className="studio-panel py-8 text-center text-sm text-ink-grey">
           {media.length === 0 ? "Brak przesłanych plików." : "Brak wyników dla tego wyszukiwania."}
         </p>
       ) : (
@@ -119,7 +121,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
           {filtered.map((item) => {
             const source = imageSource(item.url);
             const expanded = expandedId === item.id;
-            return <article key={item.id} className={`overflow-hidden border bg-ink-charcoal/30 transition-colors ${expanded ? "border-ink-gold/55" : "border-ink-white/10 hover:border-ink-white/25"}`}>
+            return <article key={item.id} className={`studio-panel p-0 min-w-0 overflow-hidden transition-colors ${expanded ? "border-ink-gold/55" : "hover:border-ink-white/25"}`}>
               <div className="relative aspect-[4/3] w-full bg-ink-black">
                 <button type="button" onClick={() => setExpandedId(expanded ? null : item.id)} aria-expanded={expanded} className="absolute inset-0 z-10 w-full">
                   <span className="sr-only">{expanded ? "Zwiń informacje" : "Pokaż informacje"} o pliku {item.filename}</span>
@@ -154,6 +156,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
                   type="text"
                   defaultValue={item.alt ?? ""}
                   placeholder="Tekst alternatywny / opis"
+                  aria-label={`Tekst alternatywny: ${item.filename}`}
                   onBlur={(e) => handleAltSave(item.id, e.target.value)}
                   className="border border-ink-white/20 bg-transparent px-2 py-1.5 text-[12px] text-ink-white outline-none focus:border-ink-gold"
                 />

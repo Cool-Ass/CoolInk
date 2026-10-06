@@ -48,15 +48,15 @@ export default function MaintenanceModeCard({
   }
 
   return (
-    <section className="border border-ink-white/10 bg-ink-charcoal/40 p-5 sm:p-6" aria-labelledby="maintenance-title">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+    <section className="studio-panel" aria-labelledby="maintenance-title">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="max-w-2xl">
           <div className="flex flex-wrap items-center gap-3">
-            <p id="maintenance-title" className="text-[13px] font-medium tracking-[0.16em] text-ink-gold">
+            <p id="maintenance-title" className="studio-eyebrow">
               WIDOCZNOŚĆ STRONY
             </p>
             <span
-              className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[11px] tracking-[0.08em] ${
+              className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] tracking-[0.08em] ${
                 enabled
                   ? "border-amber-400/50 bg-amber-400/10 text-amber-200"
                   : "border-emerald-400/50 bg-emerald-400/10 text-emerald-200"
@@ -67,7 +67,7 @@ export default function MaintenanceModeCard({
               {enabled ? "TRYB BUDOWY AKTYWNY" : "STRONA PUBLICZNA"}
             </span>
           </div>
-          <p className="mt-3 text-[14px] leading-relaxed text-ink-grey">
+          <p className="studio-page-description">
             {enabled
               ? "Odwiedzający widzą ekran „Zapraszam wkrótce”. Jako zalogowany administrator nadal widzisz pełną stronę i możesz ją edytować."
               : "Odwiedzający widzą pełną stronę. Włącz tryb budowy, gdy chcesz spokojnie przygotować większe zmiany."}

@@ -1,5 +1,17 @@
 # Decyzje i ADR
 
+## ANNOUNCEMENTS-CMS-20261006
+
+- Właściciel zlecił komunikaty masowe z opcjonalnym powiadomieniem i możliwość
+  wyłączenia, następnie wskazał niespójność Pages/Portfolio/Media. MEDIUM,
+  osobny PR, zgoda na finalny zakres przed merge/publikacją pozostaje wymagana.
+- Wybór: komunikat głównego panelu + istniejący dzwonek. Nie inferujemy zgody
+  na marketing email/push ani nie wysyłamy próbnej kampanii na produkcji.
+- Istniejące SiteSetting/ClientNotification bez migracji. Markery zamknięcia
+  wykluczone z list/dzwonka i usuwane przez istniejące wykonanie privacy.
+- UI reuse WorkspaceHeader/studio tokens/AppButton; canvas buildera bez zmian.
+- Ryzyka, lifecycle i plan walidacji: docs/CLIENT_ANNOUNCEMENTS.md.
+
 ## TEXT-GROUP-20261006
 
 - ACCEPTED: właściciel odpowiedział „Tak, opublikuj po testach” na prośbę

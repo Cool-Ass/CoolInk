@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { visibleNotificationType } from "@/lib/announcementRules";
 
 export async function GET() {
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
-  const notifications = await prisma.clientNotification.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" }, take: 30 });
+  const notifications = await prisma.clientNotification.findMany({ where: { clientId: client.id, type: visibleNotificationType }, orderBy: { createdAt: "desc" }, take: 30 });
   return NextResponse.json({ notifications });
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarClock, CalendarDays, FileText, Image as ImageIcon, LayoutDashboard, LibraryBig, MessageSquare, PackageOpen, PanelsTopLeft, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarClock, CalendarDays, FileText, Image as ImageIcon, LayoutDashboard, LibraryBig, Megaphone, MessageSquare, PackageOpen, PanelsTopLeft, Settings, Users } from "lucide-react";
 import { imageSource } from "@/lib/imageSource";
 import { normalizeAdminRole, type AdminRole } from "@/lib/adminPermissions";
 
@@ -28,7 +28,7 @@ export const ADMIN_SECTIONS = [
       { href: "/admin/media", label: "Biblioteka mediów", icon: LibraryBig, roles: ["owner", "manager"] },
     ],
   },
-  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }] },
+  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/announcements", label: "Komunikaty", icon: Megaphone, roles: ["owner", "manager"] }] },
   {
     label: "USTAWIENIA",
     links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }],

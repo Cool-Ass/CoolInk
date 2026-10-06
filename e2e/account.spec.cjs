@@ -14,6 +14,7 @@ const blockIds = [];
 let slot;
 let consent;
 let cmsPage;
+const announcementIds = [];
 
 async function verifyCalendarPresentation(page) {
   const day = page.locator('[data-calendar-day="0"]').first();
@@ -77,6 +78,10 @@ test.afterAll(async () => {
   }
   await prisma.availabilityBlock.deleteMany({ where: { id: { in: blockIds } } });
   await prisma.client.deleteMany({ where: { email } });
+  for (const id of announcementIds) {
+    await prisma.clientNotification.deleteMany({ where: { type: { in: [`announcement:${id}`, `announcement-dismissed:${id}`] } } });
+    await prisma.siteSetting.deleteMany({ where: { key: `client-announcement:${id}` } });
+  }
   await prisma.$executeRawUnsafe("DELETE FROM auth.users WHERE email = $1", email);
   await prisma.contactMessage.deleteMany({ where: { email } });
   if (slot) await prisma.availableSlot.delete({ where: { id: slot.id } });
@@ -170,6 +175,53 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/app$/);
   await page.goto("/app/portal/projects");
   await expect(page).toHaveURL(/\/app(?:\?|$)/);
+});
+
+test("announcements lifecycle and consistent CMS workspace", async ({ page, browser }) => {
+  await page.goto("/admin/login");
+  await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`);
+  await page.getByLabel("HASŁO", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  for (const [path, title] of [["pages", "Strony i builder"], ["portfolio", "Portfolio / Galeria"], ["media", "Biblioteka mediów"]]) {
+    await page.goto(`/admin/${path}`);
+    await expect(page.getByRole("heading", { name: title, exact: true })).toHaveClass(/studio-page-title/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await page.goto("/admin/announcements");
+  const title = `Browser announcement ${randomUUID()}`;
+  await page.getByLabel("Tytuł", { exact: true }).fill(title);
+  await page.getByLabel("Treść", { exact: true }).fill("Nowe terminy ✨");
+  page.once("dialog", d => d.accept());
+  await page.getByRole("button", { name: "Opublikuj dla klientów", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("Komunikat opublikowany.");
+  const rows = await prisma.siteSetting.findMany({ where: { key: { startsWith: "client-announcement:" } } });
+  const announcement = rows.map(r => JSON.parse(r.value)).find(a => a.title === title);
+  expect(announcement).toBeTruthy(); announcementIds.push(announcement.id);
+  expect(await prisma.clientNotification.count({ where: { type: `announcement:${announcement.id}` } })).toBe(0);
+  const context = await browser.newContext();
+  try {
+    const clientPage = await context.newPage();
+    await clientPage.goto("http://127.0.0.1:3120/app");
+    await clientPage.getByLabel("E-MAIL", { exact: true }).fill(email);
+    await clientPage.getByLabel("HASŁO", { exact: true }).fill(password);
+    await clientPage.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
+    await expect(clientPage.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    await clientPage.getByRole("button", { name: `Zamknij komunikat: ${title}`, exact: true }).click();
+    await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
+    await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: title, exact: true })).toHaveCount(0);
+    const notifiedId = randomUUID(); announcementIds.push(notifiedId);
+    const input = { id: notifiedId, title: `${title} bell`, body: "In-app only", href: "/app/portal/calendar", notify: true, expiresAt: new Date(Date.now() + 86400000).toISOString() };
+    const response = await page.request.post("/api/admin/announcements", { headers: { origin: "http://127.0.0.1:3120" }, data: input });
+    expect(response.status()).toBe(200);
+    const duplicate = await page.request.post("/api/admin/announcements", { headers: { origin: "http://127.0.0.1:3120" }, data: input }); expect((await duplicate.json()).duplicate).toBe(true);
+    const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+    expect(await prisma.clientNotification.count({ where: { clientId: client.id, type: `announcement:${notifiedId}` } })).toBe(1);
+    await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: input.title, exact: true })).toBeVisible();
+    const disabled = await page.request.patch("/api/admin/announcements", { headers: { origin: "http://127.0.0.1:3120" }, data: { id: notifiedId } }); expect(disabled.status()).toBe(200);
+    await clientPage.reload(); await expect(clientPage.getByRole("heading", { name: input.title, exact: true })).toHaveCount(0);
+    expect(await prisma.clientNotification.count({ where: { type: `announcement:${notifiedId}` } })).toBe(0);
+  } finally { await context.close(); }
 });
 
 test("admin login, client card rendering and logout", async ({ page }) => {

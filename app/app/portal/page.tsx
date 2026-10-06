@@ -8,6 +8,8 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { CalendarDays, Images, MessageCircle, ArrowUpRight } from "lucide-react";
 import LoyaltyCard from "@/components/client/LoyaltyCard";
+import ClientAnnouncements from "@/components/client/ClientAnnouncements";
+import { getClientAnnouncements } from "@/lib/announcements";
 import { getLoyaltyCard } from "@/lib/loyalty";
 
 export const dynamic = "force-dynamic";
@@ -30,12 +32,14 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
   const nextVisit = projects.flatMap((project) => project.appointments.map((appointment) => ({ ...appointment, project }))).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
   const nextCopy = primary ? CLIENT_STATUS[primary.status as keyof typeof CLIENT_STATUS]?.next ?? "Studio wróci z kolejnym krokiem." : "";
   const loyalty = await getLoyaltyCard(current.id);
+  const announcements = await getClientAnnouncements(current.id);
 
   return <div className="studio-page">
     <header>
       <p className="studio-eyebrow">STREFA KLIENTA</p>
       <h1 className="studio-page-title">Cześć, {client.firstName}.</h1>
     </header>
+    {announcements.length > 0 && <ClientAnnouncements initial={announcements} />}
     {nextVisit && <section className="studio-hero grid items-center gap-5 sm:grid-cols-[1fr_auto]">
       <div><p className="studio-eyebrow">TWOJA NAJBLIŻSZA WIZYTA</p><h2 className="mt-3 text-2xl font-semibold sm:text-3xl">{formatCoolinkDateTime(nextVisit.startsAt)}</h2><p className="mb-3 mt-2 text-sm text-ink-grey">{nextVisit.project.title}</p><StatusBadge status={nextVisit.status} /></div>
       <Link href={`/app/portal/projects?project=${nextVisit.project.id}&appointment=${nextVisit.id}`} className="studio-primary-link">Szczegóły wizyty <ArrowUpRight aria-hidden className="h-4 w-4" /></Link>
