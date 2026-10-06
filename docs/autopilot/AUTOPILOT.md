@@ -2,7 +2,33 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 06:29 UTC / 08:29 CEST
+## Aktualny checkpoint — 2026-10-06 06:55 UTC / 08:55 CEST
+
+- FIXING, jeden root Worker ai/client-announcements, lease do07:50UTC.
+- Właściciel zatwierdził PR41 w czacie: „Zatwierdzam”. Publikacja po testach.
+- CI37423946945: CodeQL/backup PASS; verify wykrył503 przy publikacji silent
+  w nowej browser regresji. Nie scalono ani nie promowano niesprawnego pakietu.
+- Zdiagnozować transakcję publikacji, poprawić bez rozszerzenia zakresu, ponowić
+  exact-head gates. Produkcja nadalad434aa.
+
+## Historyczny checkpoint — 2026-10-06 06:35 UTC / 08:35 CEST
+
+- WAITING_APPROVAL, PR41 https://github.com/Cool-Ass/CoolInk/pull/41.
+- Exact-head7385b7846e4e7b248a9d5958aa8d7ef1221a8c4a; CI37423946945 trwa
+  (verify/typecheck, CodeQL analyze, backup concurrent writes). Vercel primary
+  pending, pomocniczy success. Nie jest to jeszcze wynik wszystkich bramek.
+- Poprzedni CI37423741671 zatrzymał się na npm audit; source-map-js1.2.2
+  naprawia advisory. Zero production lock audit; pozostałe zależności bez zmian.
+- Zgoda w czacie poproszona na komunikaty i spójność CMS; zakres obejmuje też
+  wymagany minimalny security patch opisany w PR komentarzu6010716930.
+- Brak merge/promocji PR41; produkcja nadalad434aa. Nie wysłano komunikatów
+  do realnych klientów. Lease zwolniony podczas oczekiwania na właściciela.
+- Następny krok: decyzja właściciela + wszystkie exact-head checks, normalmerge,
+  wszystkie exact-main checks, ręczna promocja, readonly smoke i15min obserwacji.
+- Ten lokalny checkpoint jest własną zmianą dokumentacyjną, jeszcze bez commita;
+  nie generować nowego SHA aplikacji tylko po to, by zapisać status CI.
+
+## Historyczny checkpoint — 2026-10-06 06:29 UTC / 08:29 CEST
 
 - VERIFYING, ai/client-announcements, jeden root Worker, lease do07:12UTC.
 - MEDIUM: nowe komunikaty (silent/dzwonek, expiry, dismiss, disable, UUID retry)

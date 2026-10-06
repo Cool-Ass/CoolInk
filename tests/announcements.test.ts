@@ -4,7 +4,7 @@ const m = vi.hoisted(() => ({ auth: vi.fn(), clientAuth: vi.fn(), origin: vi.fn(
 vi.mock("@/lib/adminApi", () => ({ requireAdminApi: m.auth }));
 vi.mock("@/lib/clientAuth", () => ({ getCurrentClient: m.clientAuth }));
 vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: m.origin, rateLimit: m.limit, tooManyRequests: () => new Response(null, { status: 429 }) }));
-vi.mock("@/lib/prisma", () => ({ prisma: { $transaction: (run: (tx: unknown) => unknown) => run({ $queryRaw: m.lock, siteSetting: { findUnique: m.find, findMany: m.list, count: m.count, create: m.create, update: m.update, delete: m.removeSetting }, client: { findMany: m.clients }, clientNotification: { createMany: m.notify, deleteMany: m.remove, upsert: m.dismiss, updateMany: m.read }, adminAuditLog: { create: m.audit } }) } }));
+vi.mock("@/lib/prisma", () => ({ prisma: { $transaction: (run: (tx: unknown) => unknown) => run({ $executeRaw: m.lock, siteSetting: { findUnique: m.find, findMany: m.list, count: m.count, create: m.create, update: m.update, delete: m.removeSetting }, client: { findMany: m.clients }, clientNotification: { createMany: m.notify, deleteMany: m.remove, upsert: m.dismiss, updateMany: m.read }, adminAuditLog: { create: m.audit } }) } }));
 import { POST, PATCH } from "@/app/api/admin/announcements/route";
 import { PATCH as dismiss } from "@/app/api/client/announcements/route";
 const id = "afba4826-3caf-4fb6-b73c-5430da21cb44";

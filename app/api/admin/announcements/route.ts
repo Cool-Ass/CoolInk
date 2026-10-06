@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   try {
     const result = await prisma.$transaction(async tx => {
       // Publication and disable share this transaction lock: retries cannot fan out twice.
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(726061006)`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(726061006)`;
       const key = `${ANNOUNCEMENT_PREFIX}${input.id}`;
       const existing = await tx.siteSetting.findUnique({ where: { key } });
       if (existing) {
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
   if (!validAnnouncementId(body?.id)) return NextResponse.json({ error: "Niepoprawny komunikat." }, { status: 400 });
   const announcement = await prisma.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(726061006)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(726061006)`;
     const key = `${ANNOUNCEMENT_PREFIX}${body.id}`;
     const row = await tx.siteSetting.findUnique({ where: { key } });
     const a = row && parseAnnouncement(row.value);

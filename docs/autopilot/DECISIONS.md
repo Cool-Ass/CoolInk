@@ -2,6 +2,13 @@
 
 ## ANNOUNCEMENTS-CMS-20261006
 
+- ACCEPTED: właściciel odpowiedział „Zatwierdzam” po opisie finalnego PR41
+  (komunikaty, spójność CMS, wymagany minimalny security patch).
+- CI37423946945 wykrył503 w nowym E2E publikacji. Advisory lock PostgreSQL
+  zwraca void; użycie queryRaw próbowało dekodować nieobsługiwany typ.
+  Przeniesiono wszystkie3 locki na executeRaw jak w bookingRules. Bez zmiany
+  funkcji/uprawnień lub pominięcia asercji; nowy exact CI wymagany.
+
 - Właściciel zlecił komunikaty masowe z opcjonalnym powiadomieniem i możliwość
   wyłączenia, następnie wskazał niespójność Pages/Portfolio/Media. MEDIUM,
   osobny PR, zgoda na finalny zakres przed merge/publikacją pozostaje wymagana.

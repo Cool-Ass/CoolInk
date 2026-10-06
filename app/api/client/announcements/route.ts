@@ -13,7 +13,7 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
   if (!validAnnouncementId(body?.id)) return NextResponse.json({ error: "Niepoprawny komunikat." }, { status: 400 });
   const dismissed = await prisma.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(726061006)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(726061006)`;
     const row = await tx.siteSetting.findUnique({ where: { key: `${ANNOUNCEMENT_PREFIX}${body.id}` } });
     const a = row && parseAnnouncement(row.value);
     if (!a || !announcementActive(a)) return false;
