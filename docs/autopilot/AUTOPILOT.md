@@ -2,7 +2,41 @@
 
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
-## Aktualny checkpoint — 2026-10-06 22:20 UTC / 2026-10-07 00:20 CEST
+## Aktualny checkpoint — 2026-10-07 00:05 UTC / 02:05 CEST
+
+- IDLE, lease zwolniony. PR43/PR42 DONE: mainc304744 wypromowany23:49UTC,
+  deployment25GuxXsM8cc9zNY22EybLzVvKEXA, www.coolinktattoo.pl.
+- Exact-head08f58c6 CI37546251186 i exact-mainc304744 CI37547371222 SUCCESS,
+  wszystkie6 desktop/mobile scenariuszy; oba Vercel contexts SUCCESS.
+- Readonly smoke23:49UTC i00:05UTC home/app/admin-login200, chronione API401.
+  Obserwacja23:49:51–00:05UTC >15min; świeże Production Last15min Error0%,
+  Timeout0%, dane obecne (Active CPU1.96s), bez produkcyjnych kampanii/fixture.
+- Evidence docs-only ai/release-pr43-evidence, nie promować SHA dokumentacji.
+  Dowody poza Git: artifacts/pr43-production-2026-10-07.png oraz
+  artifacts/pr43-observation-2026-10-07.png. Rollbackfe857c0 bez restore.
+- Stara automacja pozostaje PAUSED; jej konfiguracji ani zasad Autopilota
+  nie zmieniano podczas tego wydania. Zakres rollup PR43/PR42 zakończony.
+
+## Historyczny checkpoint — 2026-10-06 23:35 UTC / 2026-10-07 01:35 CEST
+
+- OBSERVING od23:50UTC: mainc304744/25GuxXsM8cc9zNY22EybLzVvKEXA
+  ręcznie wypromowany; overview Production Deployment Ready/c304744/domains
+  potwierdzone. Immutablecool-ktzznonmv-cool-ass.vercel.app. Pierwszy readonly
+  smoke23:49UTC home/app/admin-login200, admin announcements/calendar401.
+  Dowód artifacts/pr43-production-2026-10-07.png poza Git. Obserwacja15min
+  pozostaje wymagana, nie deklarować zakończenia przed jej końcem.
+
+- PUBLISHING: mainc304744 CI37547371222 SUCCESS, wszystkie3jobs/6desktop-mobile.
+  Oba Vercel contexts SUCCESS. Staged production25GuxXsM8cc9zNY22EybLzVvKEXA;
+  zatwierdzona ręczna promocja dokładnie tego SHA, bez zmian danych/kampanii.
+  Rollbackfe857c0/GFN7yZMAwGvcyxa47o61kYAu94kH. Po promocji smoke+15min.
+
+- PUBLISHING: exact-head08f58c6 CI37546251186 SUCCESS (wszystkie3jobs,
+  wszystkie6 desktop/mobile browser scenariuszy, security/build/typy/unit/RLS).
+  Vercel primary i pomocniczy SUCCESS. Zgoda właściciela6026311085 obejmuje rollup.
+  Jeden root Worker, lease do00:15UTC. Normalmerge PR43 z expected head SHA;
+  PR42 zamknąć jako zastąpiony. Potem pełny exact-main gate, ręczna promocja,
+  readonly smoke i min15min obserwacji. Produkcja wciążfe857c0, bez kampanii.
 
 - VERIFYING23:23UTC, lease do00:15UTC: CI37545093262 desktop komunikaty PASS
   (format/emoji/upload/render/dismiss/bell/CMS). 64px realistyczny fixture działa;

@@ -7,13 +7,23 @@
   PR42 comment6026310892. Zatwierdzone funkcje połączone w PR43, bez
   omijania bramek PR42 (zastąpiony, nie scalony niesprawny head).
 
-- Właściciel zlecił formatowanie/emoji/obrazy. MEDIUM, publikacja po zatwierdzeniu
-  finalnego pakietu i pełnych testach; aktualizacja sharp0.35.5 jeszcze niezaakceptowana.
+- Właściciel zlecił formatowanie/emoji/obrazy. MEDIUM; finalny pakiet wraz
+  z minimalnym sharp0.35.5 zatwierdzony przed scaleniem i publikacją.
 - Text-only markup renderowane elementami React, nie HTML. Format „plain”
   dla dawnych wpisów, bez migracji. Wspólny renderer preview/history/client.
 - Maks4 zdjęcia z publicznej tabeli Media, upload przez istniejący CMS endpoint.
   Nie mieszać z prywatnymi inspiracjami/czatem; ostrzeżenie przy dodawaniu pliku.
-- Nie omijać sharp audit. Produkcja PR41 pozostaje niezmieniona.
+- CI37546251186 exact-head08f58c6 i CI37547371222 exact-mainc304744 SUCCESS,
+  wszystkie6 desktop/mobile scenariuszy. Publiczny runtime fallback obsługuje
+  wyłącznie zarejestrowane UUID.webp; prywatne inspiracje nadal osobnym magazynem.
+- 1px AVIF fixture nie dekodował się w Chromium; realistyczny64px fixture PASS,
+  zachowano raw/optimized HTTP200 i browser naturalWidth. Nie zmieniono formatów
+  całej aplikacji ani nie wyłączono optymalizacji/lazy loading.
+- Obie funkcje opublikowane przez PR43; PR42 zamknięty jako zastąpiony,
+  https://github.com/Cool-Ass/CoolInk/pull/42#issuecomment-6027417407.
+- Produkcja c304744/25GuxXsM8cc9zNY22EybLzVvKEXA: readonly smoke i ponad15min
+  obserwacji PASS, świeże Production Error0%/Timeout0%. Żadnej kampanii testowej
+  do rzeczywistych klientów. Evidence docs-only, bez kolejnej promocji kodu.
 
 ## ANNOUNCEMENTS-CMS-20261006
 

@@ -8,8 +8,8 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
 | TEXT-GROUP-20261006 | P2 | MEDIUM | DONE | PR40: obrys/cień w Tekst, overlay obrazu i alpha widgetu. Exact gates PASS, ad434aa opublikowany, smoke i świeże15min metryki PASS. |
-| ANNOUNCEMENT-RICH-20261007 | P2 | MEDIUM | WAITING_APPROVAL | Formatowanie tekstowe,32 emoji,4 obrazy publicznej biblioteki; upload/picker/preview, alt, media usage i bez HTML execution. Unit11/types/lint PASS, E2E wymagane. Security gate sharp0.35.4 wymaga zatwierdzenia patch0.35.5 i całego pakietu. Rollback fe857c0 bez restore. |
-| LOYALTY-HEADER-20261006 | P2 | MEDIUM | WAITING_APPROVAL | PR42 kółka przy nazwie klienta; UI-only, typy/lint PASS. CI37537167381 zablokowany nowym advisory sharp; zgoda wymagana na patch zależności przed publikacją. |
+| ANNOUNCEMENT-RICH-20261007 | P2 | MEDIUM | DONE | PR43 mainc304744: formatowanie,32 emoji,4 publiczne obrazy/alt/upload/picker/preview. Zatwierdzony sharp0.35.5; exact head/main CI i6desktop/mobile PASS. Produkcja23:49UTC, readonly smoke i >15min obserwacji PASS, Error/Timeout0%. Rollbackfe857c0 bez restore. |
+| LOYALTY-HEADER-20261006 | P2 | MEDIUM | DONE | PR42 włączony w PR43 i zamknięty jako zastąpiony; kółka przy nazwie i kompaktowe szczegóły bez zmiany rozliczeń. Mainc304744 opublikowany po wszystkich gates; smoke/obserwacja PASS. |
 | ANNOUNCEMENTS-CMS-20261006 | P2 | MEDIUM | DONE | PR41 fe857c0 opublikowany07:44UTC, exact-head/main CI i ponad15min smoke/obserwacji PASS. Dowody PR41 comment6012028861 oraz docs-only27a4992. |
 | UX-20261005 | P2 | MEDIUM | DONE | PR39, main8a9431e, CI37388586456 SUCCESS; ręczna promocja fLYEoVMDMxwLS9B7iDeRuSJDdJAX, ponad15min smoke/obserwacji PASS. Wspólny kompaktowy inspector, globalne style, prowadnice px/drag/kąt/duplikacja, sesje malejąco i wspólne rozliczenie. UI-only, zatwierdzone przez właściciela. |
 | AP-001 | P1 | HIGH | TODO | Zweryfikować ochronę main, wyłączność Workera, hosting i gate CI/E2E/security. Dowody dla jednego SHA, lista E2E i brak promocji przed checks; zmiany ustawień dopiero po zgodzie. |

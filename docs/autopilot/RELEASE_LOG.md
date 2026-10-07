@@ -1,5 +1,30 @@
 # Rejestr wydań i rollback
 
+## 2026-10-07 — PR43 + PR42, promocja 01:49 CEST / 2026-10-06 23:49 UTC
+
+- Zakres: komunikaty z bezpiecznym formatowaniem tekstowym,32 emoji i maks4
+  publicznymi obrazami (alt/upload/picker/preview/history/client). Kółka pieczątek
+  obok nazwiska klienta i kompaktowe szczegóły; rozliczenia/zasady bez zmian.
+- Zgoda: https://github.com/Cool-Ass/CoolInk/pull/43#issuecomment-6026311085.
+  PR42 włączony do rollup i zamknięty jako zastąpiony, nie scalono failing head.
+- Minimalny sharp0.35.5/libvips patch; production lock audit0. Dodatkowo stabilna
+  etykieta textarea i runtime odczyt zarejestrowanych publicznych UUID.webp.
+  Bez migracji, zmian auth/RBAC/RLS, prywatnych mediów lub produkcyjnej kampanii.
+- Exact-head08f58c6 CI37546251186 oraz exact-mainc304744 CI37547371222 SUCCESS:
+  wszystkie3jobs i6desktop/mobile browser scenariuszy, audit/gitleaks/CodeQL,
+  build/types/unit, izolowane RLS/IDOR/role/HTTP i backup-snapshot. Vercel oba SUCCESS.
+- Vercel25GuxXsM8cc9zNY22EybLzVvKEXA, cool-ktzznonmv-cool-ass.vercel.app;
+  ręczna promocja na www.coolinktattoo.pl / cool-ink.vercel.app. Overview potwierdza
+  Production Deployment Ready/c304744. Auto-assign pozostaje Disabled.
+- Readonly smoke23:49UTC: home/app/admin-login200; admin announcements/calendar401.
+- Obserwacja PASS23:49:51–00:05UTC (>15min), okresowe odczyty Production;
+  końcowe świeże Last15min Error0%/Timeout0%, dane obecne (Active CPU1.96s).
+  Końcowy readonly smoke00:05UTC: home/app/admin-login200, chronione API401.
+- Dowody poza Git: artifacts/pr43-production-2026-10-07.png oraz
+  artifacts/pr43-observation-2026-10-07.png. Bez produkcyjnych fixture/kampanii.
+- Rollbackfe857c09b55e16574e98eb59539414004829a4f0 /
+  GFN7yZMAwGvcyxa47o61kYAu94kH, bez restore, niewykonany.
+
 ## 2026-10-06 — PR40, publikacja 02:56:43 CEST / 00:56:43 UTC
 
 - Zakres: obrys/cień tekstu w sekcji Tekst; obraz jako dekoracyjna nakładka
