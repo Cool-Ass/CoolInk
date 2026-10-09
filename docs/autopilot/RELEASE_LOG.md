@@ -1,5 +1,30 @@
 # Rejestr wydań i rollback
 
+## 2026-10-09 — PR45, publikacja01:36:32UTC /03:36:32CEST
+
+- Zgoda: https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.
+- Exact-head ce329048c76950d5971b3e8fa24be00493eb45c7 CI37868152072 SUCCESS;
+  squash main413ca66f3e4127b301ef19d32c7e82ba5407f86e CI37869186349 SUCCESS.
+  Oba cykle verify/backup-snapshot/CodeQL, oba statusy Vercel SUCCESS.
+- Ręczna promocja DbPbNeVnckttDDw2A7w9nMUo1Yz8,
+  cool-9gr1anr4i-cool-ass.vercel.app; Current Domains www.coolinktattoo.pl.
+  Auto-assign Disabled, żadnego bypass gate ani nowych migracji.
+- Alarm przypomnień rozwiązany dopiero późniejszym sukcesem, historia zachowana;
+  recovery wyjaśnia opóźnienie bez osłabienia2h; Google loguje allowlistę kodów.
+  Minimalny patch Next/eslint16.3.8; produkcyjny audit0 w CI.
+- Staged home działał w browser SSO; shell200 był login redirect, nie app smoke.
+  Staged API browser blocked, nie obchodzono blokady. CI authorization PASS.
+- Produkcja smoke po promocji i01:52UTC: /,/app,/admin/login200;
+  /api/admin/announcements401 bez sesji. Bez fixtures i ręcznych sync.
+- Obserwacja01:36:32–01:52UTC PASS: baseline68/0%Error/0%Timeout/256msCPU P75;
+  końcowe Production Last15min84/0%/0%/13ms. Dane obecne.
+- Dowody lokalne poza repo: artifacts/pr45-production-2026-10-09.png,
+  artifacts/pr45-observation-2026-10-09.png.
+- Istniejący Google queue1/EXPORT_FAILED1 pozostaje osobnym zadaniem;
+  ten pakiet nie naprawia przyczyny integracji i nie rotuje OAuth/sekretów.
+- Rollback c304744f61660037ce0932ac2fbb06af29c1a0f0,
+  25GuxXsM8cc9zNY22EybLzVvKEXA, tylko kod, bez restore; niewykonany.
+
 ## 2026-10-06 — PR40, publikacja 02:56:43 CEST / 00:56:43 UTC
 
 - Zakres: obrys/cień tekstu w sekcji Tekst; obraz jako dekoracyjna nakładka

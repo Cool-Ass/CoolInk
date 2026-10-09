@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { reserveWebhook } from "@/lib/webhookSecurity";
 import { RECOVERY_MONITOR_KEY, validateRecoveryHealth } from "@/lib/recoveryMonitor";
 import { sendPushToAdmins } from "@/lib/webPush";
+import { healthEvent } from "@/lib/operationalHealth";
 
 export async function POST(request: Request) {
   if (process.env.VERCEL_ENV !== "production") return NextResponse.json({ error: "Unavailable" }, { status: 503 });
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
   try {
     const checkedAt = new Date().toISOString();
     await prisma.$transaction(async tx => {
+      await tx.adminAuditLog.create({ data: healthEvent("recovery_monitor", health.healthy ? null : "RECOVERY_UNHEALTHY", "github_report") });
       await tx.siteSetting.upsert({ where: { key: RECOVERY_MONITOR_KEY }, create: { key: RECOVERY_MONITOR_KEY, value: JSON.stringify({ ...health, checkedAt, eventId }) }, update: { value: JSON.stringify({ ...health, checkedAt, eventId }) } });
       if (!health.healthy) await tx.adminAuditLog.create({ data: { action: "operational.recovery", targetType: "RecoveryMonitor", summary: "Kopia bezpieczeństwa lub test odtworzenia wymaga sprawdzenia.", metadata: JSON.stringify({ eventId, reasons: health.reasons }) } });
       await tx.webhookReceipt.update({ where: { id: reserved.receipt.id }, data: { status: "processed", processedAt: new Date() } });

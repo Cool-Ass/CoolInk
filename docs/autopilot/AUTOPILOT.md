@@ -1,6 +1,45 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — MODULE-HEALTH-20261009
+
+- VERIFYING, jeden root Worker ai/module-health-receipts, MEDIUM; bez promocji.
+- Diagnoza produkcji: Google queue0, lastSyncedAt09Oct03:58:16CEST;
+  ręczny endpoint zapisuje connection.lastSyncedAt, nie operational.reminders.success.
+  Recovery37872966801 SUCCESS02:06:32UTC; świeży dashboard nie pokazuje już
+  alarmu monitoringu, wciąż pokazuje dawny wspólny błąd08Oct10:18CEST.
+- Nowe niezależne audit receipts operational.google_calendar_sync,
+  reminders_worker i recovery_monitor, osobne success/failure/codes/timestamps.
+  Recovery canonical internal.recoveryMonitor i próg2h bez zmian.
+- Google wyjątek nie blokuje przypomnień; częściowy sync nie leczy alarmu.
+  Legacy combined failure bez przypisywania modułu; nowe statusy nie wygasają24h.
+- Plan: targeted isolation/manual/receipt/recovery tests, types/lint, exactCI;
+  osobny PR i zgoda właściciela na finalny commit przed merge/promocją.
+  Rollback413ca66/DbPbNeVnckttDDw2A7w9nMUo1Yz8, code-only, bez restore.
+- Lokalnie89 plików/402 testy PASS; types i targeted lint PASS. Finalny headCI
+  oraz zgoda właściciela nadal wymagane; lease zwolniony podczas oczekiwania.
+
 ## Checkpoint — 2026-10-09 OPERATIONAL-ALERTS-20261009
+
+- DONE 01:52 UTC, jeden root Worker, lease zwolniony, IDLE.
+  Właściciel zatwierdził PR45 i patch16.3.8: comment6072201812.
+  Exact-headce32904 CI37868152072 wszystkie3jobs SUCCESS, oba Vercel SUCCESS.
+  Squash main413ca66; exact-main CI37869186349 wszystkie3jobs SUCCESS.
+  Staged Production DbPbNeVnckttDDw2A7w9nMUo1Yz8/cool-9gr1anr4i Ready;
+  dokładny main413ca66 potwierdzony w Vercel.
+  Staged home zweryfikowany w browser (Vercel SSO). Shell200 to redirect na
+  Vercel login, nie dowód smoke aplikacji. StagedAPI zablokowane przez browser;
+  nie obchodzono blokady. HTTP authorization gates w CI pozostają wymagane.
+  Auto-Assign Custom Production Domains Disabled; ręczna promocja01:36UTC,
+  Current Domains www.coolinktattoo.pl potwierdzone na artefakcie413ca66.
+  Pierwszy produkcyjny smoke home/app/admin-login200, protected API401.
+  Obserwacja01:36:32–01:52UTC PASS. Końcowy readonly smoke200/401;
+  Production Last15min84 wywołania, Error0%, Timeout0%, CPU P75 13ms.
+  Dowody artifacts/pr45-production-2026-10-09.png oraz pr45-observation-2026-10-09.png.
+  Poniższe WAITING_APPROVAL/BLOCKED to historyczne checkpointy, nie aktualny stan PR45.
+  Readonly baseline home/app/admin-login200, protected API401; Production
+  Last15min invocations68, Error0%, Timeout0%, CPU P75 256ms.
+  Zalogowany właściciel: settings Google queue1, EXPORT_FAILED1, oldest08Oct16:23CEST;
+  last sync07Oct18:37CEST. Bez ręcznych produkcyjnych sync/zmian tokenów.
 
 - Jeden root Worker, ai/operational-alert-recovery, MEDIUM.
 - Alarm przypomnień rozwiązuje późniejszy sukces; historia pozostaje.

@@ -1,5 +1,18 @@
 # Decyzje i ADR
 
+## OPERATIONAL-ALERTS-20261009
+
+- ACCEPTED: właściciel zatwierdził PR45 wraz z minimalnym Next/eslint16.3.8;
+  https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.
+- Exact-head ce329048c76950d5971b3e8fa24be00493eb45c7 i main413ca66
+  przeszły verify/backup-snapshot/CodeQL oraz Vercel przed ręczną promocją.
+- Alarm przypomnień znika dopiero po późniejszym sukcesie, historia zostaje.
+  Recovery nadal wymaga raportu w2h; opóźnienie nie jest dowodem braku backupu.
+- Google worker wypisuje jedynie allowlistowany kod, nie treść odpowiedzi.
+  Nie naprawiono przyczyny istniejącego EXPORT_FAILED; bez zmian OAuth,
+  sekretów, harmonogramów, danych klientów i produkcyjnych ręcznych sync.
+- Rollback c304744/25GuxXsM8cc9zNY22EybLzVvKEXA, wyłącznie artefakt kodu.
+
 ## ANNOUNCEMENT-RICH-20261007
 
 - ACCEPTED: „tak” w odpowiedzi na publikację komunikatów i kółek wraz z

@@ -62,8 +62,8 @@ export default function GoogleCalendarIntegration() {
       if (!response.ok) throw new Error(data.error || "Synchronizacja nie powiodła się.");
       const recovered = data.result?.recovered ?? 0;
       setFeedback({
-        tone: "success",
-        text: `Synchronizacja zakończona: ${data.result?.imported ?? 0} import, ${data.result?.exported ?? 0} eksport${recovered ? `, ${recovered} odtworzono` : ""}.`,
+        tone: data.result?.healthErrorCode ? "error" : "success",
+        text: data.result?.healthErrorCode ? `Synchronizacja wykonana częściowo. Sprawdź kolejkę, konflikty i pozostałe połączenia Google. Kod: ${data.result.healthErrorCode}.` : `Synchronizacja zakończona: ${data.result?.imported ?? 0} import, ${data.result?.exported ?? 0} eksport${recovered ? `, ${recovered} odtworzono` : ""}.`,
       });
       await load();
       router.refresh();
