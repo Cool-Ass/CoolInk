@@ -62,6 +62,7 @@ jobs:
           node scripts/verifyLoyaltyMigration.cjs
           node scripts/verifyMessageVisibilityMigration.cjs
           node scripts/verifyClientAcquisitionMigration.cjs
+          node scripts/verifyClientRegistrationStats.cjs
           node scripts/verifyGoogleOutbox.cjs
           node scripts/verifyPrivacyExecutionGuard.cjs
           npm run db:security:audit

@@ -180,7 +180,6 @@ model Client {
   phone             String?
   avatarUrl         String?
   leadSource        String?
-  registeredAt      DateTime?
   birthDate         DateTime?
   notes             String?
   tags              String                  @default("") // temporary CSV; normalized tags follow with staff roles
@@ -194,7 +193,6 @@ model Client {
   waitlistEntries   WaitlistEntry[]
   deletionRequest   AccountDeletionRequest?
   loyaltyEntries    LoyaltyEntry[]
-  @@index([registeredAt])
 }
 
 /// Client-initiated privacy request. CRM and statutory records are not

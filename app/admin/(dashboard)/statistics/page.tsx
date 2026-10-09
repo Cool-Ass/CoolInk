@@ -4,7 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/adminPage";
 import { LEAD_SOURCE_LABEL, type LeadSource } from "@/lib/leadSource";
-import { summarizeRegisteredClients } from "@/lib/clientRegistrationStats";
+import { getClientRegistrationStats } from "@/lib/clientRegistrationStats";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +40,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   const from = period === "all" ? new Date(0) : new Date(now.getTime() - Number(period) * 24 * 60 * 60 * 1000);
   const dateWindow = { gte: from, lte: now };
 
-  const [allClients, newClients, appointments, upcoming, projects, inventory, waitlist, availableSlots, sourceClients, registeredClients] = await Promise.all([
+  const [allClients, newClients, appointments, upcoming, projects, inventory, waitlist, availableSlots, sourceClients, registrations] = await Promise.all([
     prisma.client.count(),
     prisma.client.count({ where: { createdAt: dateWindow } }),
     prisma.appointment.findMany({
@@ -63,12 +63,8 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     prisma.waitlistEntry.findMany({ where: { createdAt: dateWindow }, select: { status: true } }),
     prisma.availableSlot.findMany({ where: { startsAt: { lte: now }, endsAt: { gte: from } }, select: { startsAt: true, endsAt: true } }),
     prisma.client.findMany({ where: { createdAt: dateWindow, deletionRequest: { is: null } }, select: { leadSource: true } }),
-    prisma.client.findMany({
-      where: { registeredAt: dateWindow, supabaseUserId: { not: null }, deletionRequest: { is: null } },
-      select: { projects: { select: { _count: { select: { appointments: true } } } } },
-    }),
+    getClientRegistrationStats(prisma, from, now),
   ]);
-  const registrations = summarizeRegisteredClients(registeredClients);
 
   const appointmentStatusesByProject = new Map<string, Set<string>>();
   for (const appointment of appointments) {
@@ -142,7 +138,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   return <div className="studio-page">
     <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="studio-eyebrow">ANALITYKA STUDIA</p><h1 className="studio-page-title">Statystyki operacyjne</h1><p className="studio-page-description">Zgłoszenia, obsługa klientów, wizyty, obłożenie i źródła pozyskania. Wpływy według daty rozliczenia, po rabatach, bez wycofanych wpisów. To nie jest zysk po kosztach; zadatki nie są doliczane drugi raz.</p></div><nav aria-label="Zakres statystyk" className="flex flex-wrap gap-2">{PERIODS.map(([value, label]) => <Link key={value} href={`/admin/statistics?period=${value}`} className={`border px-3 py-2 text-xs ${period === value ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-white/40 hover:text-ink-white"}`}>{label}</Link>)}</nav></header>
 
-    <p className="text-xs text-ink-grey">Konta online według daty rejestracji w wybranym okresie, bez ręcznych kontaktów CRM. Brak wizyty lub projektu oznacza brak w całej historii; te grupy zachodzą na siebie i nie należy ich sumować.</p>
+    <p className="text-xs text-ink-grey">Konta online według daty rejestracji w wybranym okresie, także bez pierwszego logowania lub potwierdzenia e-maila. Bez ręcznych kontaktów CRM. Brak wizyty lub projektu oznacza brak w całej historii; te grupy zachodzą na siebie i nie należy ich sumować.</p>
     <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
 
     <AdminSections scope="statistics" initial={sectionLayout} sections={[

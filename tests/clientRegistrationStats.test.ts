@@ -1,18 +1,21 @@
-import { expect, it } from "vitest";
-import { verifiedRegistrationDate, summarizeRegisteredClients } from "../lib/clientRegistrationStats";
+import { expect, it, vi } from "vitest";
+import type { Prisma } from "@prisma/client";
+import { getClientRegistrationStats } from "../lib/clientRegistrationStats";
 
-it("accepts only a real date from the verified Auth user", () => {
-  expect(verifiedRegistrationDate("2026-10-01T10:00:00Z")).toEqual(new Date("2026-10-01T10:00:00Z"));
-  expect(verifiedRegistrationDate("invalid")).toBeNull();
-  expect(verifiedRegistrationDate(undefined)).toBeNull();
-  expect(verifiedRegistrationDate({ created_at: "2026-10-01" })).toBeNull();
+it("queries only aggregate counts, with bound dates and no registration dependency on CRM", async () => {
+  const counts = { total: 4, withoutProject: 2, withoutAppointment: 3 };
+  const query = vi.fn().mockResolvedValue([counts]);
+  const db = { $queryRaw: query } as unknown as Pick<Prisma.TransactionClient, "$queryRaw">;
+  const from = new Date("2026-10-01"), to = new Date("2026-10-09");
+  expect(await getClientRegistrationStats(db, from, to)).toEqual(counts);
+  const [strings, ...values] = query.mock.calls[0];
+  expect(values).toEqual([from, to]);
+  expect(strings.join("")).toContain("LEFT JOIN");
+  expect(strings.join("")).toContain("FROM auth.users");
+  expect(strings.join("")).not.toContain("SELECT account.*");
 });
 
-it("counts people once and distinguishes a project without a booking", () => {
-  expect(summarizeRegisteredClients([
-    { projects: [] },
-    { projects: [{ _count: { appointments: 0 } }] },
-    { projects: [{ _count: { appointments: 0 } }, { _count: { appointments: 2 } }] },
-  ])).toEqual({ total: 3, withoutProject: 1, withoutAppointment: 2 });
-  expect(summarizeRegisteredClients([])).toEqual({ total: 0, withoutProject: 0, withoutAppointment: 0 });
+it("returns zero counts for an empty aggregate response", async () => {
+  const db = { $queryRaw: vi.fn().mockResolvedValue([]) } as unknown as Pick<Prisma.TransactionClient, "$queryRaw">;
+  expect(await getClientRegistrationStats(db, new Date(0), new Date())).toEqual({ total: 0, withoutProject: 0, withoutAppointment: 0 });
 });

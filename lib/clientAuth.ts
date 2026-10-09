@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { PRIVACY_POLICY_HTML, PRIVACY_POLICY_SLUG, PRIVACY_POLICY_VERSION } from "@/lib/privacyPolicy";
 import { PRIVACY_LOCKED_STATUSES } from "@/lib/privacyExecutionPlan";
-import { verifiedRegistrationDate } from "@/lib/clientRegistrationStats";
 
 export const CLIENT_ACCESS_COOKIE = "coolink_client_access";
 export const CLIENT_REFRESH_COOKIE = "coolink_client_refresh";
@@ -27,7 +26,6 @@ export async function supabaseAuth(path: string, init: RequestInit = {}) {
 
 type SupabaseUser = {
   id: string;
-  created_at?: string;
   email?: string;
   email_confirmed_at?: string | null;
   confirmed_at?: string | null;
@@ -53,12 +51,11 @@ export async function linkAuthenticatedClient(user: SupabaseUser) {
   const firstName = String(meta.first_name ?? fullName[0] ?? "").trim().slice(0, 80);
   const lastName = String(meta.last_name ?? fullName.slice(1).join(" ") ?? "").trim().slice(0, 80);
   const privacyAccepted = Number(meta.privacy_policy_version) === PRIVACY_POLICY_VERSION;
-  const registeredAt = verifiedRegistrationDate(user.created_at);
   return prisma.$transaction(async (tx) => {
     const registeredNow = !existing?.supabaseUserId;
     const client = existing
-      ? await tx.client.update({ where: { id: existing.id, email, AND: { supabaseUserId: existing.supabaseUserId } }, data: { supabaseUserId: user.id, registeredAt, firstName: firstName || existing.firstName, lastName: lastName || existing.lastName } })
-      : await tx.client.create({ data: { email, supabaseUserId: user.id, registeredAt, firstName, lastName } });
+      ? await tx.client.update({ where: { id: existing.id, email, AND: { supabaseUserId: existing.supabaseUserId } }, data: { supabaseUserId: user.id, firstName: firstName || existing.firstName, lastName: lastName || existing.lastName } })
+      : await tx.client.create({ data: { email, supabaseUserId: user.id, firstName, lastName } });
     if (registeredNow) {
       const displayName = [client.firstName, client.lastName].filter(Boolean).join(" ") || client.email;
       await tx.contactMessage.create({
