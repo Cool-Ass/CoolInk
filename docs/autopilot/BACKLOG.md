@@ -7,6 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
+| MODULE-HEALTH-20261009 | P1 | MEDIUM | DONE | PR48/49 a2ca37c opublikowany03:04UTC, pełne exact gates PASS, ponad15min obserwacji Error0/Timeout0; prawdziwy Google sync i świeży recovery report mają osobne success. Reminders UNKNOWN do następnego własnego przebiegu; legacy combined jawnie nierozpoznany, bez sztucznego usunięcia. |
 | OPERATIONAL-ALERTS-20261009 | P1 | MEDIUM | DONE | PR45 main413ca66 opublikowany01:36UTC; exact-head/main verify/backup/CodeQL i Vercel SUCCESS, ponad15min obserwacji Error0%/Timeout0%, smoke200/401. Alarmy po sukcesie, recovery limit2h, fixed-code diagnostics, Next16.3.8. Bez migracji/sekretów/harmonogramów. |
 | GOOGLE-EXPORT-20261009 | P1 | HIGH przy OAuth/sekretach | TODO | Istniejący EXPORT_FAILED1/queue1 pozostaje. PR45 poprawia diagnostykę, nie przyczynę503. Ustalić fixed-code następnego worker run; nie deklarować invalid_grant bez dowodu ani wykonywać OAuth/sekretów/produkcji sync bez właściwej zgody. |
 | TEXT-GROUP-20261006 | P2 | MEDIUM | DONE | PR40: obrys/cień w Tekst, overlay obrazu i alpha widgetu. Exact gates PASS, ad434aa opublikowany, smoke i świeże15min metryki PASS. |

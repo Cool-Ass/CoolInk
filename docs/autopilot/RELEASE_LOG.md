@@ -1,5 +1,34 @@
 # Rejestr wydań i rollback
 
+## 2026-10-09 — PR48 + dokumentacyjny PR49, publikacja03:04:55UTC /05:04:55CEST
+
+- Zgoda właściciela6072874486, realne sprawdzenie produkcyjne6073291983 (PR48).
+- Kod PR48 d3677f6, CI37873680806 wszystkie3jobs SUCCESS; oba Vercel SUCCESS.
+  Squash d8e33ab miał odziedziczony skip directive i nie uruchomił mainCI;
+  nie promowano go. Follow-up PR49 tylko dokumentacja, bez różnic aplikacji.
+- Docs head9e07e7f CI37874777450 attempt2 SUCCESS. Attempt1 font import-map
+  Turbopack failure; retry bez zmiany fontów/testów/build mode.
+- Final maina2ca37cde9f0b5cc5d2b6a22af8d4323c98d976c CI37876369924
+  verify/backup-snapshot/CodeQL SUCCESS, oba Vercel SUCCESS, przed promocją.
+- Vercel EViPBuRL8pDg56oVmKubJqXEmy4a, cool-i8xxlssid-cool-ass.vercel.app,
+  Ready i exacta2ca37c. Staged home browser SSO działa. Ręczna promocja
+  na www.coolinktattoo.pl, Current Domains potwierdzone. Autoassign nadal Disabled.
+- Pierwszy production smoke /,/app,/admin/login200, chronione announcements401.
+- Rzeczywisty owner sync Google:7import/20export, sukces05:07:54CEST, queue0.
+  Panel zapisuje Google sukces05:07, nie zmienia reminders UNKNOWN ani daty recovery.
+- Normalny recovery dispatch37877668560 a2ca37c SUCCESS; persisted03:05:48UTC,
+  panel recovery sukces05:05CEST, bez alarmu opóźnienia. Żadnego alert_probe,
+  nie wyłączano progu2h i nie generowano sztucznego heartbeat.
+- Stary combined failure jawnie nierozpoznany, nie skasowany. Nowy worker
+  przypomnień ma swój niezależny status; nie wywoływano przypomnień klientom
+  do celów weryfikacji. Lokalnie89 plików/402 testy PASS, w tym izolacja modułów.
+- Dowody poza repo artifacts/module-health-production-2026-10-09.png oraz
+  artifacts/module-health-receipts-2026-10-09.png oraz module-health-observation-2026-10-09.png.
+- Obserwacja03:04:55–03:20:37UTC PASS. Świeże Production Last15min288invocations,
+  Error0%, Timeout0%, CPU P75 50ms; baseline7/0%/0%/300ms. Końcowy smoke200/401.
+- Rollback413ca66/DbPbNeVnckttDDw2A7w9nMUo1Yz8 code-only, bez restore;
+  nie wykonywano. Brak zmian schematu, auth, OAuth, sekretów, harmonogramów.
+
 ## 2026-10-09 — PR45, publikacja01:36:32UTC /03:36:32CEST
 
 - Zgoda: https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.

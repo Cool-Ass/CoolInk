@@ -2,8 +2,14 @@
 
 ## Checkpoint — MODULE-HEALTH-20261009
 
+- DONE03:21UTC: produkcjaa2ca37c, obserwacja03:04:55–03:20:37UTC PASS,
+  Production Last15min288invocations/Error0%/Timeout0%/CPU P75 50ms;
+  baseline7/0%/0%/300ms. Końcowy smoke200/401, Google i recovery własne
+  success potwierdzone; reminders UNKNOWN, stary nierozpoznany combined zapis
+  nie skasowany. Lease zwolniony; następne zadanie4 poprawki klienta/statystyk/mediów.
+
 - VERIFYING02:26UTC, jeden root Worker ai/release-pr48-evidence, MEDIUM;
-  lease do03:30UTC. Owner approval PR48 comment6072874486 dla d3677f6.
+  historyczny lease do03:30UTC. Owner approval PR48 comment6072874486 dla d3677f6.
   Exact-head CI37873680806 wszystkie3jobs SUCCESS, oba Vercel SUCCESS.
   Squash main d8e33ab46fc2c199e11af5d47e69d96739971271; exact-main gate
   wymagany przed promocją. Produkcja nadal413ca66. Bez nowych sync/fixture.
@@ -11,6 +17,20 @@
   docs-only commitu. Bez bypass i bez force/amend. LOW RISK docs-only follow-up
   prowadzi finalny artefakt przez nowe exact-head/main gates; kod aplikacji
   identyczny z zatwierdzonym PR48. Vercel d8e33ab Ready, ale nie promowany.
+  Finalny docs-only PR49 head9e07e7f CI37874777450 attempt2 SUCCESS.
+  Attempt1 przejściowy Turbopack font import-map failure, bez zmian fontów/asercji.
+  Final maina2ca37c CI37876369924 wszystkie3jobs SUCCESS; oba Vercel SUCCESS.
+  Staged Production EViPBuRL8pDg56oVmKubJqXEmy4a Ready, exact a2ca37c,
+  browser home działa. Promocja ręczna dopiero teraz; owner zatwierdził też
+  jeden rzeczywisty Google sync i normalny report PR48 comment6073291983.
+  Promocja03:04:55UTC: EViPBuRL8pDg56oVmKubJqXEmy4a Current Domains
+  www.coolinktattoo.pl, exacta2ca37c. Smoke200/401 PASS. Obserwacja do03:20UTC.
+  Google rzeczywisty sync:7import/20export SUCCESS05:07:54CEST, queue0;
+  dashboard Google success05:07, reminders UNKNOWN bez nowego własnego run.
+  Recovery normal dispatch37877668560 a2ca37c SUCCESS, report persisted
+  03:05:48UTC, dashboard recovery success05:05CEST. Google nie zmienił tej daty.
+  Starszy combined failure pozostał jawnie nieprzypisany; nie uruchamiano
+  przypomnień/nie wysyłano powiadomień klientom dla usunięcia alarmu.
 - Diagnoza produkcji: Google queue0, lastSyncedAt09Oct03:58:16CEST;
   ręczny endpoint zapisuje connection.lastSyncedAt, nie operational.reminders.success.
   Recovery37872966801 SUCCESS02:06:32UTC; świeży dashboard nie pokazuje już

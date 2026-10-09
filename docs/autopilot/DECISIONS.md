@@ -1,5 +1,22 @@
 # Decyzje i ADR
 
+## MODULE-HEALTH-20261009
+
+- ACCEPTED: owner approval PR48 comment6072874486 dla finalnego kodu d3677f6.
+  Osobna zgoda6073291983: jeden realny Google sync i normalny recovery report
+  po publikacji, bez testowych alarmów/przypomnień/sekretów/OAuth.
+- Nowe receipt action namespaces google_calendar_sync/reminders_worker/recovery_monitor;
+  historia append-only, osobne daty sukcesów/błędów i fixed-code, unknown nie jest green.
+  Recovery internal.recoveryMonitor i limit2h nie zmieniają się.
+- Nie przypisywać starego combined failure do modułu bez dowodu. Nie usuwać go
+  sukcesem Google; następny własny przebieg przypomnień da osobne potwierdzenie.
+- Squash PR48 odziedziczył znacznik pomijający CI z wcześniejszego docs commitu.
+  Nie omijano bramki: LOW RISK PR49 tylko checkpoint, kod aplikacji identyczny;
+  exact-head i exact-main pełne testy. Jawny squash message bez skip directive.
+- Jednorazowy Turbopack font import-map failure w docs-head retry nie zmienił
+  źródeł, fontów ani asercji. Następny verify przeszedł w całości.
+- Gałęzie aplikacji zaczynać od origin/main, nie od docs-only release evidence.
+
 ## OPERATIONAL-ALERTS-20261009
 
 - ACCEPTED: właściciel zatwierdził PR45 wraz z minimalnym Next/eslint16.3.8;
