@@ -10,7 +10,6 @@ import {
 } from "@/lib/projectWorkflow";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { hasAdminPermission } from "@/lib/adminPermissions";
-import { normalizeLeadSource } from "@/lib/leadSource";
 
 
 interface Params {
@@ -57,7 +56,6 @@ export async function PATCH(request: Request, { params }: Params) {
       : project.depositStatus;
   const converting = body?.convertConsultation === true && project.kind === "consultation";
   const kind = converting ? "tattoo" : project.kind;
-  const leadSource = typeof body?.leadSource === "string" ? normalizeLeadSource(body.leadSource) : project.leadSource;
   const nextAction = typeof body?.nextAction === "string" ? body.nextAction.trim().slice(0, 500) || null : project.nextAction;
   const dueValue = typeof body?.nextActionDueAt === "string" ? new Date(body.nextActionDueAt) : null;
   const nextActionDueAt = body?.nextActionDueAt === "" ? null : dueValue && !Number.isNaN(dueValue.getTime()) ? dueValue : project.nextActionDueAt;
@@ -70,7 +68,6 @@ export async function PATCH(request: Request, { params }: Params) {
         status,
         kind,
         consultationMode: converting ? null : project.consultationMode,
-        leadSource,
         nextAction,
         nextActionDueAt,
         internalNotes:
@@ -113,7 +110,7 @@ export async function PATCH(request: Request, { params }: Params) {
       });
     if (converting) await tx.projectActivity.create({ data: { projectId: id, type: "consultation_converted", message: "Konsultacja została przekształcona w projekt tatuażu. Zdjęcia, rozmowa i historia zostały zachowane.", visibility: "admin" } });
     if (title !== project.title || description !== project.description) await tx.projectActivity.create({ data: { projectId: id, type: "project_details_updated", message: "Studio zaktualizowało tytuł lub opis projektu.", visibility: "client" } });
-    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: converting ? "consultation.convert" : "project.update", targetType: "TattooProject", targetId: id, summary: converting ? `Przekształcono konsultację „${project.title}” w projekt.` : `Zaktualizowano projekt „${project.title}”.`, metadata: JSON.stringify({ previousStatus: project.status, status, nextAction, leadSource, titleChanged: title !== project.title, descriptionChanged: description !== project.description }) } });
+    await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: converting ? "consultation.convert" : "project.update", targetType: "TattooProject", targetId: id, summary: converting ? `Przekształcono konsultację „${project.title}” w projekt.` : `Zaktualizowano projekt „${project.title}”.`, metadata: JSON.stringify({ previousStatus: project.status, status, nextAction, titleChanged: title !== project.title, descriptionChanged: description !== project.description }) } });
     return next;
   });
   return NextResponse.json({ project: updated });

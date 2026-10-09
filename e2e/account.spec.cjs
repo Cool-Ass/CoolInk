@@ -16,6 +16,7 @@ let consent;
 let cmsPage;
 const announcementIds = [];
 const announcementMedia = [];
+const mediaLayoutIds = [];
 
 async function verifyCalendarPresentation(page) {
   const day = page.locator('[data-calendar-day="0"]').first();
@@ -78,6 +79,7 @@ test.afterAll(async () => {
     } finally { await prisma.$executeRawUnsafe(`DROP POLICY "${policy}" ON storage.objects`); }
   }
   await prisma.availabilityBlock.deleteMany({ where: { id: { in: blockIds } } });
+  await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
   await prisma.client.deleteMany({ where: { email } });
   for (const id of announcementIds) {
     await prisma.clientNotification.deleteMany({ where: { type: { in: [`announcement:${id}`, `announcement-dismissed:${id}`] } } });
@@ -268,6 +270,34 @@ test("announcements lifecycle and consistent CMS workspace", async ({ page, brow
   } finally { await context.close(); }
 });
 
+test("media details expand independently without stretching other cards", async ({ page }) => {
+  const prefix = `layout-${randomUUID()}`;
+  for (const suffix of ["first", "second"]) {
+    const media = await prisma.media.create({ data: { filename: `${prefix}-${suffix}.jpg`, url: "/images/portrait.jpg", width: 640, height: 480, size: 1200 } });
+    mediaLayoutIds.push(media.id);
+  }
+  await page.goto("/admin/login");
+  await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`);
+  await page.getByLabel("HASŁO", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/admin/media");
+  await page.getByRole("textbox", { name: "Szukaj w bibliotece mediów" }).fill(prefix);
+  const cards = page.locator(".studio-media-grid > article");
+  await expect(cards).toHaveCount(2);
+  const firstHeight = await cards.nth(0).evaluate(element => element.getBoundingClientRect().height);
+  const secondHeight = await cards.nth(1).evaluate(element => element.getBoundingClientRect().height);
+  await cards.nth(0).getByRole("button", { name: /Pokaż informacje/ }).click();
+  await expect(cards.nth(0).getByRole("textbox")).toBeVisible();
+  await expect(cards.nth(1).getByRole("textbox")).not.toBeVisible();
+  expect(await cards.nth(0).evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThan(firstHeight);
+  expect(await cards.nth(1).evaluate(element => element.getBoundingClientRect().height)).toBeCloseTo(secondHeight, 0);
+  await cards.nth(1).getByRole("button", { name: /Pokaż informacje/ }).click();
+  await expect(cards.nth(1).getByRole("textbox")).toBeVisible();
+  await expect(cards.nth(0).getByRole("textbox")).not.toBeVisible();
+  expect(await cards.nth(0).evaluate(element => element.getBoundingClientRect().height)).toBeCloseTo(firstHeight, 0);
+});
+
 test("admin login, client card rendering and logout", async ({ page }) => {
   await page.goto("/admin/login");
   await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`);
@@ -286,11 +316,18 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await expect(loyaltyDetails).not.toHaveAttribute("open", "");
   await loyaltyDetails.locator(":scope > summary").click();
   await expect(loyaltyDetails).toHaveAttribute("open", "");
+  await expect(page.getByRole("list", { name: /pieczątek w kolejnym cyklu/ })).toHaveCount(1);
+  await expect(loyaltyDetails.getByText("Przenieś papierową kartę", { exact: true })).toBeVisible();
   await loyaltyDetails.locator(":scope > summary").click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "EDYTUJ DANE", exact: true }).click();
   await expect(page.getByLabel("E-MAIL", { exact: false })).toHaveAttribute("readonly", "");
-  await page.getByRole("button", { name: "ANULUJ", exact: true }).click();
+  await page.getByLabel("ŹRÓDŁO ZGŁOSZENIA", { exact: true }).selectOption("instagram");
+  const savedClient = page.waitForResponse(response => response.url().endsWith(`/api/admin/clients/${client.id}`) && response.request().method() === "PATCH");
+  await page.getByRole("button", { name: "ZAPISZ", exact: true }).click();
+  expect((await savedClient).status()).toBe(200);
+  await expect(page.getByText("Źródło zgłoszenia: Instagram", { exact: true })).toBeVisible();
+  expect((await prisma.client.findUniqueOrThrow({ where: { id: client.id } })).leadSource).toBe("instagram");
   const sessionProject = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Browser session ordering", description: "Disposable UI regression" } });
   const oldVisit = await prisma.appointment.create({ data: { projectId: sessionProject.id, startsAt: new Date(Date.now() - 172800000), endsAt: new Date(Date.now() - 169200000), status: "completed", price: 900 } });
   const newVisit = await prisma.appointment.create({ data: { projectId: sessionProject.id, startsAt: new Date(Date.now() - 86400000), endsAt: new Date(Date.now() - 82800000), status: "confirmed", price: 1400 } });

@@ -7,7 +7,6 @@ import { useToast } from "@/components/admin/ToastProvider";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { ADMIN_STATUS_LABEL, DEPOSIT_STATUS } from "@/lib/projectWorkflow";
 import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalendarPicker";
-import { LEAD_SOURCES } from "@/lib/leadSource";
 import { imageSource } from "@/lib/imageSource";
 
 const OPTIONS = Object.entries(ADMIN_STATUS_LABEL);
@@ -20,7 +19,6 @@ export default function ProjectManager({
   initialKind,
   consultationMode,
   initialStatus,
-  initialLeadSource,
   initialNotes,
   estimatedSessionsMin,
   estimatedSessionsMax,
@@ -44,7 +42,6 @@ export default function ProjectManager({
   initialKind: string;
   consultationMode: string | null;
   initialStatus: string;
-  initialLeadSource: string | null;
   initialNotes: string | null;
   estimatedSessionsMin: number | null;
   estimatedSessionsMax: number | null;
@@ -66,7 +63,6 @@ export default function ProjectManager({
   const [status, setStatus] = useState(initialStatus);
   const [projectTitle, setProjectTitle] = useState(initialTitle);
   const [projectDescription, setProjectDescription] = useState(initialDescription);
-  const [leadSource, setLeadSource] = useState(initialLeadSource ?? "");
   const [kind, setKind] = useState(initialKind);
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [sessionsMin, setSessionsMin] = useState(String(estimatedSessionsMin ?? ""));
@@ -106,7 +102,6 @@ export default function ProjectManager({
           title: projectTitle,
           description: projectDescription,
           status,
-          leadSource,
           internalNotes: notes,
           nextAction,
           nextActionDueAt,
@@ -225,7 +220,7 @@ export default function ProjectManager({
         <label className="flex flex-col gap-1.5 text-[10px] tracking-[0.1em] text-ink-grey">TYTUŁ PROJEKTU<input value={projectTitle} maxLength={160} onChange={(event) => setProjectTitle(event.target.value)} className="border border-ink-white/20 bg-transparent px-3 py-2 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
         <label className="flex flex-col gap-1.5 text-[10px] tracking-[0.1em] text-ink-grey">OPIS PROJEKTU<textarea value={projectDescription} maxLength={5000} rows={2} onChange={(event) => setProjectDescription(event.target.value)} className="border border-ink-white/20 bg-transparent px-3 py-2 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
           STATUS
           <select
@@ -238,17 +233,6 @@ export default function ProjectManager({
                 {label}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
-          ŹRÓDŁO ZGŁOSZENIA
-          <select
-            value={leadSource}
-            onChange={(event) => setLeadSource(event.target.value)}
-            className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold"
-          >
-            <option value="">Nie podano</option>
-            {LEAD_SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">

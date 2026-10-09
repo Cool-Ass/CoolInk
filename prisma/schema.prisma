@@ -179,6 +179,7 @@ model Client {
   email             String                  @unique
   phone             String?
   avatarUrl         String?
+  leadSource        String?
   birthDate         DateTime?
   notes             String?
   tags              String                  @default("") // temporary CSV; normalized tags follow with staff roles
