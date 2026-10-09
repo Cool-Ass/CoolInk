@@ -7,6 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
+| OPERATIONAL-ALERTS-20261009 | P1 | MEDIUM | IN_PROGRESS | Późniejszy sukces zamyka alarm bez usuwania historii; recovery zachowuje limit2h i pokazuje czas ostatniego raportu; fixed-code Google diagnostics. Przyczyna produkcyjnego503 wymaga logów. Bez migracji/sekretów/harmonogramów. Targeted14 PASS; final gates i zgoda wymagane. |
 | TEXT-GROUP-20261006 | P2 | MEDIUM | DONE | PR40: obrys/cień w Tekst, overlay obrazu i alpha widgetu. Exact gates PASS, ad434aa opublikowany, smoke i świeże15min metryki PASS. |
 | ANNOUNCEMENT-RICH-20261007 | P2 | MEDIUM | WAITING_APPROVAL | Formatowanie tekstowe,32 emoji,4 obrazy publicznej biblioteki; upload/picker/preview, alt, media usage i bez HTML execution. Unit11/types/lint PASS, E2E wymagane. Security gate sharp0.35.4 wymaga zatwierdzenia patch0.35.5 i całego pakietu. Rollback fe857c0 bez restore. |
 | LOYALTY-HEADER-20261006 | P2 | MEDIUM | WAITING_APPROVAL | PR42 kółka przy nazwie klienta; UI-only, typy/lint PASS. CI37537167381 zablokowany nowym advisory sharp; zgoda wymagana na patch zależności przed publikacją. |

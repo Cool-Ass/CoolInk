@@ -29,9 +29,14 @@ jobs:
               method: 'POST', headers: identityHeaders, redirect: 'error',
               signal: AbortSignal.timeout(290000),
             });
-            if (!response.ok) throw new Error(`Export worker HTTP ${response.status}`);
-            const result = await response.json();
-            if (result.ok !== true) throw new Error('Export worker did not confirm execution');
+            const result = await response.json().catch(() => null);
+            if (!response.ok) {
+              // Fixed codes only: never print response bodies, tokens or client data.
+              const codes = ['GOOGLE_EXPORT_QUEUE_STALE', 'GOOGLE_EXPORT_WORKER_FAILED', 'Unavailable', 'Unauthorized', 'Replay rejected'];
+              const code = codes.includes(result?.error) ? result.error : 'UNKNOWN_RESPONSE';
+              throw new Error(`Export worker HTTP ${response.status}: ${code}`);
+            }
+            if (result?.ok !== true) throw new Error('Export worker did not confirm execution');
             console.log(JSON.stringify({ checked: result.checked, synced: result.synced }));
           }
           main().catch(error => { console.error(error.message); process.exitCode = 1; });

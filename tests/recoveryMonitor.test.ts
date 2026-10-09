@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateRecoveryHealth, readRecoveryMonitor } from "../lib/recoveryMonitor";
+import { validateRecoveryHealth, readRecoveryMonitor, readRecoveryMonitorReceipt } from "../lib/recoveryMonitor";
 describe("recovery dashboard health", () => {
   it("accepts only bounded fixed reasons and consistent health", () => {
     expect(validateRecoveryHealth({ healthy: true, reasons: [] })).toEqual({ healthy: true, reasons: [] });
@@ -10,6 +10,8 @@ describe("recovery dashboard health", () => {
     expect(readRecoveryMonitor(JSON.stringify(data), now)?.healthy).toBe(true);
     expect(readRecoveryMonitor(undefined, now)).toBeNull();
     expect(readRecoveryMonitor(JSON.stringify(data), now + 2 * 3600_000 + 1)).toBeNull();
+    expect(readRecoveryMonitorReceipt(JSON.stringify(data), now + 2 * 3600_000 + 1)?.checkedAt).toBe(data.checkedAt);
+    expect(readRecoveryMonitorReceipt(JSON.stringify({ ...data, checkedAt: "invalid" }), now)).toBeNull();
     expect(readRecoveryMonitor(JSON.stringify({ ...data, checkedAt: "invalid" }), now)).toBeNull();
     expect(readRecoveryMonitor(JSON.stringify({ ...data, checkedAt: new Date(now + 120_000).toISOString() }), now)).toBeNull();
   });
