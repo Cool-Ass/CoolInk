@@ -4,19 +4,31 @@ import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { sendPushToAdmins, sendPushToClient } from "@/lib/webPush";
 import { offerReleasedRange } from "@/lib/waitlistAutomation";
 import { applyOperationalDataRetention } from "@/lib/dataRetention";
-import { retryGoogleCalendarExports, refreshGoogleBusyCalendars } from "@/lib/googleCalendarSyncEngine";
+import { retryGoogleCalendarExports, refreshGoogleBusyCalendars, recordGoogleSyncOutcome } from "@/lib/googleCalendarSyncEngine";
 import { operationalJob } from "@/lib/operationalJob";
+import { recordOperationalHealth } from "@/lib/operationalHealth";
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
   if (!expected || request.headers.get("authorization") !== `Bearer ${expected}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return operationalJob(runReminders);
+  let googleFailed = false;
+  try {
+    await retryGoogleCalendarExports();
+    const busy = await refreshGoogleBusyCalendars();
+    googleFailed = Boolean(await recordGoogleSyncOutcome("cron", busy.failed));
+  } catch {
+    googleFailed = true;
+    await recordOperationalHealth("google_calendar_sync", "GOOGLE_SYNC_FAILED", "cron");
+  }
+  // Google failure must not prevent delivery or falsely mark reminders failed.
+  const reminders = await operationalJob(runReminders);
+  if (!reminders.ok) return reminders;
+  if (googleFailed) return NextResponse.json({ ok: false, error: "GOOGLE_SYNC_FAILED", reminders: "success" }, { status: 503 });
+  return reminders;
 }
 
 async function runReminders() {
   const now = new Date();
-  const googleRetry = await retryGoogleCalendarExports();
-  const googleBusy = await refreshGoogleBusyCalendars();
   const expiredOffers = await prisma.waitlistEntry.findMany({ where: { status: "offered", offerExpiresAt: { lte: now } }, include: { offeredAppointment: { select: { id: true, startsAt: true, endsAt: true } }, project: { select: { id: true, clientId: true, title: true } } } });
   let expired = 0;
   for (const entry of expiredOffers) {
@@ -88,6 +100,6 @@ async function runReminders() {
   }
   }
   const retention = await applyOperationalDataRetention();
-  if (failed || googleBusy.failed) throw new Error("OPERATIONAL_PARTIAL_FAILURE");
-  return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired, retention, googleRetry, googleBusy });
+  if (failed) throw new Error("REMINDERS_WORKER_FAILED");
+  return NextResponse.json({ ok: true, checked, delivered, expiredWaitlistOffers: expired, retention });
 }

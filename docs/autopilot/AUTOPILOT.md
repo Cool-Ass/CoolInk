@@ -1,5 +1,23 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — MODULE-HEALTH-20261009
+
+- VERIFYING, jeden root Worker ai/module-health-receipts, MEDIUM; bez promocji.
+- Diagnoza produkcji: Google queue0, lastSyncedAt09Oct03:58:16CEST;
+  ręczny endpoint zapisuje connection.lastSyncedAt, nie operational.reminders.success.
+  Recovery37872966801 SUCCESS02:06:32UTC; świeży dashboard nie pokazuje już
+  alarmu monitoringu, wciąż pokazuje dawny wspólny błąd08Oct10:18CEST.
+- Nowe niezależne audit receipts operational.google_calendar_sync,
+  reminders_worker i recovery_monitor, osobne success/failure/codes/timestamps.
+  Recovery canonical internal.recoveryMonitor i próg2h bez zmian.
+- Google wyjątek nie blokuje przypomnień; częściowy sync nie leczy alarmu.
+  Legacy combined failure bez przypisywania modułu; nowe statusy nie wygasają24h.
+- Plan: targeted isolation/manual/receipt/recovery tests, types/lint, exactCI;
+  osobny PR i zgoda właściciela na finalny commit przed merge/promocją.
+  Rollback413ca66/DbPbNeVnckttDDw2A7w9nMUo1Yz8, code-only, bez restore.
+- Lokalnie89 plików/402 testy PASS; types i targeted lint PASS. Finalny headCI
+  oraz zgoda właściciela nadal wymagane; lease zwolniony podczas oczekiwania.
+
 ## Checkpoint — 2026-10-09 OPERATIONAL-ALERTS-20261009
 
 - DONE 01:52 UTC, jeden root Worker, lease zwolniony, IDLE.

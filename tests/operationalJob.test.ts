@@ -11,19 +11,20 @@ describe("operational job reporting", () => {
   it("preserves successful responses", async () => {
     const response = new Response("done");
     expect(await operationalJob(async () => response)).toBe(response);
-    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: "operational.reminders.success" }) }));
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: "operational.reminders_worker.success" }) }));
   });
   it("does not resolve an alarm for a non-success response", async () => {
     const response = new Response("failed", { status: 503 });
     expect(await operationalJob(async () => response)).toBe(response);
-    expect(audit).not.toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: "operational.reminders_worker.failure" }) }));
+    expect(audit.mock.calls.some(([entry]) => entry.data.action.endsWith(".success"))).toBe(false);
   });
   it("does not fail completed work when recording success is unavailable", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     audit.mockRejectedValue(new Error("private database details"));
     const response = new Response("done");
     expect(await operationalJob(async () => response)).toBe(response);
-    expect(log).toHaveBeenCalledWith("operational_success_not_persisted", { job: "reminders" });
+    expect(log).toHaveBeenCalledWith("operational_health_not_persisted", { module: "reminders_worker" });
     expect(JSON.stringify(log.mock.calls)).not.toContain("private database");
   });
   it("delivers a correlatable alert without leaking the exception", async () => {

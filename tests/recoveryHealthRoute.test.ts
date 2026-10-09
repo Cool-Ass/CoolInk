@@ -15,6 +15,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("durable recovery report", () => {
+  it("fresh healthy report records recovery only and never heals Google/reminders", async () => {
+    expect((await call({healthy:true,reasons:[]})).status).toBe(200);
+    expect(m.audit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({data:expect.objectContaining({action:"operational.recovery_monitor.success"})}));
+    expect(m.setting.mock.calls[0][0].where.key).toBe("internal.recoveryMonitor");
+    expect(m.push).not.toHaveBeenCalled();
+  });
   it("rejects preview, browser authority and invalid identity before any write", async () => {
     vi.stubEnv("VERCEL_ENV", "preview"); expect((await call()).status).toBe(503);
     vi.stubEnv("VERCEL_ENV", "production"); expect((await call(body, { cookie: "owner" })).status).toBe(401); expect((await call(body, { origin: "https://example.test" })).status).toBe(401);
@@ -28,7 +34,7 @@ describe("durable recovery report", () => {
   it("persists an owner-visible alert even without push and never sends arbitrary input", async () => {
     const response = await call(); expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, persisted: true, healthy: false, pushDelivered: false });
-    expect(m.setting).toHaveBeenCalledOnce(); expect(m.audit).toHaveBeenCalledOnce(); expect(m.receipt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "processed" }) }));
+    expect(m.setting).toHaveBeenCalledOnce(); expect(m.audit).toHaveBeenCalledTimes(2); expect(m.receipt).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "processed" }) }));
     const saved = JSON.parse(m.setting.mock.calls[0][0].update.value); expect(saved.reasons).toEqual(body.reasons); expect(saved.eventId).toBe("123:1");
   });
   it("does not report delivery after a transaction failure", async () => {

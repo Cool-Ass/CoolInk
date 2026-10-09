@@ -11,6 +11,7 @@ import { hasAdminPermission } from "@/lib/adminPermissions";
 import { coolinkDayRange, formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
 import { pendingLoyaltyCorrections } from "@/lib/loyaltyCorrections";
 import { RECOVERY_MONITOR_KEY, readRecoveryMonitor, readRecoveryMonitorReceipt } from "@/lib/recoveryMonitor";
+import { readOperationalHealth } from "@/lib/operationalHealth";
 
 export const dynamic = "force-dynamic";
 const fmt = (value: Date) => formatCoolinkDateTime(value, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -43,13 +44,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   ]);
 
   const actions: ActionItem[] = [];
+  const healthCards: { name: string; status: string; lastSuccessAt: Date | null; lastFailureAt: Date | null; errorCode: string | null }[] = [];
   if (admin.role === "owner") {
     const monitorValue = (await prisma.siteSetting.findUnique({ where: { key: RECOVERY_MONITOR_KEY } }))?.value;
     const recovery = readRecoveryMonitor(monitorValue, now.getTime());
     const receipt = readRecoveryMonitorReceipt(monitorValue, now.getTime());
     if (!recovery || !recovery.healthy) actions.push({ key: "recovery-health", priority: 1, label: "BEZPIECZEŃSTWO DANYCH", title: !recovery ? receipt ? "Raport monitoringu jest opóźniony" : "Brak potwierdzenia monitoringu" : "Kopia lub test odtworzenia wymaga uwagi", detail: !recovery ? receipt ? `Ostatni raport: ${fmt(new Date(receipt.checkedAt))}. Limit świeżości to 2 godziny. Sprawdź harmonogram GitHub; opóźnienie raportu nie dowodzi utraty kopii.` : "Nie znaleziono poprawnego raportu. Sprawdź dostarczenie wyniku monitoringu." : "Sprawdź raport kopii bezpieczeństwa i odtworzenia przed zmianą danych.", href: "https://github.com/Cool-Ass/CoolInk/actions/workflows/recovery-health.yml", dueAt: receipt ? new Date(receipt.checkedAt) : now });
-    const latestReminderRun = await prisma.adminAuditLog.findFirst({ where: { action: { in: ["operational.reminders", "operational.reminders.success"] }, createdAt: { gte: new Date(now.getTime() - 24 * 3600_000) } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
-    if (latestReminderRun?.action === "operational.reminders") actions.push({ key: "operational-reminders", priority: 1, label: "AUTOMATYZACJE", title: "Przypomnienia lub synchronizacja wymagają sprawdzenia", detail: "Ostatnie zapisane wykonanie zakończyło się błędem. Późniejszy poprawny przebieg wyłącza ten alarm; historia błędu pozostaje zapisana.", href: "https://github.com/Cool-Ass/CoolInk/actions", dueAt: latestReminderRun.createdAt });
+    const [google, reminders, recoveryHistory] = await Promise.all([readOperationalHealth("google_calendar_sync"), readOperationalHealth("reminders_worker"), readOperationalHealth("recovery_monitor")]);
+    healthCards.push({ name: "Google Calendar", ...google }, { name: "Worker przypomnień", ...reminders }, { name: "Monitoring kopii i odtworzenia", ...recoveryHistory, status: !recovery ? "stale" : recovery.healthy ? "healthy" : "failed", lastSuccessAt: receipt?.healthy ? new Date(receipt.checkedAt) : recoveryHistory.lastSuccessAt, lastFailureAt: receipt && !receipt.healthy ? new Date(receipt.checkedAt) : recoveryHistory.lastFailureAt, errorCode: !recovery ? "RECOVERY_REPORT_STALE" : recovery.healthy ? null : "RECOVERY_UNHEALTHY" });
+    if (google.status === "failed") actions.push({ key: "google-health", priority: 1, label: "GOOGLE CALENDAR", title: "Synchronizacja Google Calendar wymaga sprawdzenia", detail: `Kod: ${google.errorCode ?? "GOOGLE_SYNC_FAILED"}. Pełna udana synchronizacja zamyka tylko ten alarm; nie potwierdza przypomnień ani kopii bezpieczeństwa.`, href: "/admin/settings", dueAt: google.lastFailureAt });
+    if (reminders.status === "failed") actions.push({ key: "reminders-health", priority: 1, label: "PRZYPOMNIENIA", title: "Worker przypomnień zakończył się błędem", detail: "Sprawdź zadanie przypomnień. Alarm zamknie dopiero poprawny przebieg tego workera, nie ręczna synchronizacja Google.", href: "https://github.com/Cool-Ass/CoolInk/actions", dueAt: reminders.lastFailureAt });
+    const latestLegacy = await prisma.adminAuditLog.findFirst({ where: { action: { in: ["operational.reminders", "operational.reminders.success"] }, createdAt: { gte: new Date(now.getTime() - 24 * 3600_000) } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+    const legacy = latestLegacy?.action === "operational.reminders" ? latestLegacy : null;
+    // Legacy combined errors have no module attribution. Do not relabel them as
+    // reminder failures or let a manual Google success erase an unknown failure.
+    const attemptedAfter = (health: typeof google) => Math.max(health.lastSuccessAt?.getTime() ?? 0, health.lastFailureAt?.getTime() ?? 0) >= (legacy?.createdAt.getTime() ?? 0);
+    if (legacy && !(attemptedAfter(google) && attemptedAfter(reminders))) actions.push({ key: "legacy-operational", priority: 1, label: "WCZEŚNIEJSZE WYKONANIE ŁĄCZONE", title: "Poprzedni błąd wymaga osobnej weryfikacji modułów", detail: "Dawny zapis nie wskazuje, czy zawiodły przypomnienia, czy Google. Ręczna synchronizacja nie potwierdza workera przypomnień. Nowe wykonania mają już osobne statusy.", href: "https://github.com/Cool-Ass/CoolInk/actions", dueAt: legacy.createdAt });
   }
   const latestUnreadByProject = new Map(unreadMessages.map((message) => [message.projectId, message]));
   for (const message of latestUnreadByProject.values()) actions.push({ key: `message-${message.projectId}`, priority: message.createdAt <= staleMessage ? 1 : 2, label: message.createdAt <= staleMessage ? "ODPOWIEDŹ PILNA" : "NOWA WIADOMOŚĆ", title: `${message.project.client.firstName} ${message.project.client.lastName} · ${message.project.title}`, detail: message.body || "Klient wysłał załącznik.", href: `/admin/clients/${message.project.client.id}?view=messages`, dueAt: message.createdAt });
@@ -72,6 +82,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return <div className="studio-page w-full min-w-0">
 
     {access === "denied" && <div role="alert" className="border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Twoja rola nie ma dostępu do tego obszaru. Możesz nadal korzystać z dostępnych funkcji operacyjnych.</div>}
+    {healthCards.length > 0 && <details className="studio-panel"><summary className="cursor-pointer text-sm">Stan automatyzacji — Google, przypomnienia i monitoring</summary><div className="mt-3 grid gap-3 md:grid-cols-3">{healthCards.map(card => <section key={card.name} className="min-w-0 text-xs"><h2 className="font-semibold">{card.name}</h2><p>{card.status === "healthy" ? "Ostatnie wykonanie poprawne" : card.status === "failed" ? "Wymaga sprawdzenia" : card.status === "stale" ? "Raport nieaktualny lub brak raportu" : "Brak osobnego potwierdzenia"}</p><p>Sukces: {card.lastSuccessAt ? fmt(card.lastSuccessAt) : "brak zapisu"}</p><p>Błąd: {card.lastFailureAt ? fmt(card.lastFailureAt) : "brak zapisu"}</p>{card.errorCode && <p className="break-words">Kod: {card.errorCode}</p>}</section>)}</div></details>}
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="studio-eyebrow">CENTRUM DOWODZENIA</p><h1 className="studio-page-title">Co wymaga Twojej uwagi?</h1><p className="studio-page-description">Najważniejsze sprawy są ustawione według pilności.</p></div><div className="flex gap-2"><div className="min-w-24 border border-red-400/35 bg-red-500/5 px-3 py-2"><p className="text-[9px] tracking-[.1em] text-red-200">PILNE</p><p className="mt-0.5 font-display text-2xl">{actions.filter((item) => item.priority === 1).length}</p></div><div className="min-w-24 border border-ink-white/15 bg-ink-charcoal/25 px-3 py-2"><p className="text-[9px] tracking-[.1em] text-ink-grey">DO ZROBIENIA</p><p className="mt-0.5 font-display text-2xl">{actions.length}</p></div></div></header>
 
 

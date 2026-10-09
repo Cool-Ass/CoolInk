@@ -4,6 +4,7 @@ import { reserveWebhook } from "@/lib/webhookSecurity";
 import { retryGoogleCalendarExports } from "@/lib/googleCalendarSyncEngine";
 import { prisma } from "@/lib/prisma";
 import { monitorGoogleQueue } from "@/lib/googleQueueHealth";
+import { recordOperationalHealth } from "@/lib/operationalHealth";
 
 export const maxDuration = 300;
 
@@ -20,12 +21,14 @@ export async function POST(request: Request) {
     const result = await retryGoogleCalendarExports();
     const health = await monitorGoogleQueue();
     if (!health.healthy) {
+      await recordOperationalHealth("google_calendar_sync", "GOOGLE_EXPORT_QUEUE_STALE", "export_worker");
       await prisma.webhookReceipt.update({ where: { id: reserved.receipt.id }, data: { status: "failed", error: "GOOGLE_EXPORT_QUEUE_STALE", processedAt: new Date() } });
       return NextResponse.json({ ok: false, error: "GOOGLE_EXPORT_QUEUE_STALE", eventId, ...health }, { status: 503 });
     }
     await prisma.webhookReceipt.update({ where: { id: reserved.receipt.id }, data: { status: "processed", processedAt: new Date() } });
     return NextResponse.json({ ok: true, ...result });
   } catch {
+    await recordOperationalHealth("google_calendar_sync", "GOOGLE_EXPORT_WORKER_FAILED", "export_worker");
     await prisma.webhookReceipt.update({ where: { id: reserved.receipt.id }, data: { status: "failed", error: "GOOGLE_EXPORT_WORKER_FAILED", processedAt: new Date() } });
     console.error("google_export_worker_failed", { eventId });
     return NextResponse.json({ ok: false, error: "GOOGLE_EXPORT_WORKER_FAILED", eventId }, { status: 503 });

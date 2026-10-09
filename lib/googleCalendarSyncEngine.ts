@@ -5,9 +5,11 @@ import { externalGoogleTitle, googleEventPayload } from "@/lib/googleCalendarSyn
 import { prisma } from "@/lib/prisma";
 import { claimGoogleExport, releaseGoogleExport } from "@/lib/googleExportOutbox";
 import { createIdempotentGoogleEvent } from "@/lib/googleCalendarCreate";
+import { recordOperationalHealth } from "@/lib/operationalHealth";
+import { googleExportQueueStatus } from "@/lib/googleExportOutbox";
 
 type GoogleEventsResponse = { items?: GoogleEvent[]; nextPageToken?: string };
-type SyncResult = { exported: number; imported: number; conflicts: number; remoteDeletes: number; recovered: number };
+type SyncResult = { exported: number; imported: number; conflicts: number; remoteDeletes: number; recovered: number; healthErrorCode?: string | null };
 type ExportToken = { connectionId: string; accessToken: string };
 
 // Existing appointments retain their original connection. Never route by updatedAt,
@@ -98,6 +100,31 @@ async function exportAppointmentToGoogle(appointmentId: string, cachedToken?: Ex
  * silently. External busy events become private CalendarEvent records.
  */
 export async function syncGoogleCalendarForAdmin(adminId: string): Promise<SyncResult> {
+  try {
+    const result = await syncGoogleCalendarForAdminRun(adminId);
+    result.healthErrorCode = await recordGoogleSyncOutcome("manual");
+    return result;
+  } catch (error) {
+    await recordOperationalHealth("google_calendar_sync", "GOOGLE_SYNC_FAILED", "manual");
+    throw error;
+  }
+}
+
+// Full sync can recover the Google alarm, but not reminders or monitoring.
+// A partial export is swallowed by the existing outbox; do not treat it as healthy.
+export async function recordGoogleSyncOutcome(source: "manual" | "cron", busyFailed = 0) {
+  if (source === "manual" && await prisma.googleCalendarConnection.count({ where: { active: true, encryptedRefreshToken: { not: "REVOKED" } } }) > 1) return "GOOGLE_SYNC_INCOMPLETE";
+  // Busy refresh batches are limited to five connections. A partial batch must
+  // not erase a failure belonging to a connection it did not inspect.
+  if (source === "cron" && !busyFailed && await prisma.googleCalendarConnection.count({ where: { active: true, encryptedRefreshToken: { not: "REVOKED" } } }) > 5) return "GOOGLE_SYNC_INCOMPLETE";
+  const queue = await googleExportQueueStatus();
+  const conflicts = await prisma.googleCalendarEventSync.count({ where: { syncStatus: { in: ["ERROR", "CONFLICT"] } } });
+  const code = busyFailed ? "GOOGLE_BUSY_REFRESH_FAILED" : queue.pending ? "GOOGLE_EXPORT_PENDING" : conflicts ? "GOOGLE_SYNC_CONFLICT" : null;
+  await recordOperationalHealth("google_calendar_sync", code, source);
+  return code;
+}
+
+async function syncGoogleCalendarForAdminRun(adminId: string): Promise<SyncResult> {
   const connection = await prisma.googleCalendarConnection.findUnique({ where: { adminUserId: adminId }, include: { selections: true } });
   if (!connection?.active || connection.encryptedRefreshToken === "REVOKED") throw new Error("Najpierw połącz Google Calendar.");
   const primary = connection.selections.find((selection) => selection.role === "primary" && selection.enabled);
