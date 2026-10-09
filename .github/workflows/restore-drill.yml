@@ -38,7 +38,7 @@ jobs:
           BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
         run: |
           test "${#BACKUP_ENCRYPTION_PASSWORD}" -ge 32 || { echo "::error::BACKUP_ENCRYPTION_PASSWORD must contain at least 32 characters"; exit 1; }
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install PostgreSQL 17 client
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
