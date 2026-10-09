@@ -2,7 +2,7 @@
 
 ## Checkpoint — CLIENT-WORKFLOW-MEDIA-20261009
 
-- IMPLEMENTING: jeden root Worker, ai/client-workflow-media-fixes, base a2ca37c.
+- VERIFYING: jeden root Worker, ai/client-workflow-media-fixes, base a2ca37c.
   Poprzedni pakiet MODULE-HEALTH jest DONE na produkcji a2ca37c; dowody
   i obserwacja 03:04–03:20 UTC na ai/release-health-production-evidence/0eb598b.
 - Zakres: źródło pozyskania w danych klienta zamiast projektu; pojedynczy
@@ -23,8 +23,30 @@
   schemacie z rollbackiem w CI; brak lokalnych/produkcyjnych operacji DB.
 - Przed skutkiem produkcyjnym: osobny PR, zgoda właściciela na finalny commit
   i zakres migracji, backup gate. Bez produkcyjnych fixtures, db:push lub restore.
-  PR50: pytanie dla 91bf0cf nie dotyczy nowego head; wymagane odświeżenie zgody
-  po finalnej walidacji uproszczonego zakresu.
+  PR50 final head6662730 właściciel zatwierdził w czacie; comment6079277905.
+  Exact-head CI37919134137 oczekuje za superseded91bf0cf/37918657307.
+  Backup main37919368959 uruchomiony10:43UTC przed merge/migracją, runtime
+  capture wyłączony, bez zmian konfiguracji. Migracje uruchamia istniejący
+  Vercel production buildCommand, więc backup gate musi być PRZED merge.
+  Backup37919368959 SUCCESS, encrypted artifact11610034202 nieprzeterminowany,
+  digest321dace1e453c17846e7c6362e6d0a741aebe0d1f9af47b098a31b785df73f28.
+  Head ea94380 dodaje tylko aria-label pola źródła po rzeczywistym E2E timeout;
+  finalna zgoda oczekiwana. CI37919650705: wszystkie 3 jobs SUCCESS 11:02UTC;
+  407 unit/API testów i 8 browser E2E desktop/mobile PASS. Oba Vercel SUCCESS.
+  VERIFYING11:09UTC: właściciel zatwierdził finalnyea94380 w czacie:
+  "publikuj ea94380". Exact-head gates i świeży backup ponownie potwierdzone.
+  Następnie merge, exact-main gates i ręczna promocja domeny.
+  PR50 merged d3a6ec0fb11c7bfdb6a6124b83cd10a22b25266b; approval comment6079682651.
+  Main CI37921982270 w toku. Production staged HTg3pxqKhH3pRTVnokSFsicGDGhV
+  /cool-ovic885v5 Ready. Build log13:09:30CEST zastosował migrację
+  20261009040000_client_lead_source, All migrations successfully applied.
+  Custom Domains Skipped; immutable homepage smoke PASS. Baseline Error0%,
+  Timeout0%,50 wywołań,CPU P75122ms. Domena niepromowana do exact-main gates.
+  Superseded6662730 CIFAIL w niezmienionym Next/Turbopack Google font import map,
+  bez zmian fontów/build mode/test bypass. Nowy head build i testy SQL przeszły.
+  Brak automatycznych Vercel checks dla ea94380: utworzono przez istniejący UI
+  dwa Preview dokładnego SHA, bez production migration: cool-ink5nPDieLzvFG2AnxNwE9NN9zfSNKX
+  i cool-ink-buildDHscMtDNskv92hkorBT2yyPGS6jD. Brak zmian infrastruktury.
 - Rollback kodu: a2ca37c / EViPBuRL8pDg56oVmKubJqXEmy4a.
   Kolumnę i przeniesione wartości zachować; nie wykonywać destructive down.
   Po promocji smoke i co najmniej 15 min obserwacji.

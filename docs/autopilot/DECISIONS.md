@@ -199,6 +199,17 @@
 
 ## Rejestr przyszłej zgody
 
+## CLIENT-WORKFLOW-MEDIA-20261009 — ACCEPTED
+
+- Właściciel zatwierdził finalny PR50 ea943806cfe0129358650e711e2afd5d41f496d4:
+  „publikuj ea94380”. [Zapis zgody](https://github.com/Cool-Ass/CoolInk/pull/50#issuecomment-6079682651).
+- HIGH: addytywne Client.leadSource i backfill z najstarszego poprawnego źródła projektu;
+  readonly statystyki kont online, pojedynczy progres lojalności, niezależne karty mediów.
+  Bez zmian Auth, płatności, sekretów ani usuwania danych.
+- Warunki: pełne CI exact-head/main, świeży backup przed migracją, ręczna promocja,
+  smoke i 15 min obserwacji. Rollback kodu a2ca37c/EViPBuRL8pDg56oVmKubJqXEmy4a,
+  zachować addytywną kolumnę i dane. Nie odtwarzać produkcyjnej bazy.
+
 Każdy wpis: ID, data UTC, autor/właściciel, problem, warianty, decyzja,
 uzasadnienie, ryzyko, zakres/branch/commit, link do jawnej zgody, warunki,
 plan rollback, skutki i decyzja zastępująca. Statusy: PROPOSED, ACCEPTED,
