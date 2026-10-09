@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/adminPage";
 import { LEAD_SOURCE_LABEL, type LeadSource } from "@/lib/leadSource";
+import { summarizeRegisteredClients } from "@/lib/clientRegistrationStats";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   const from = period === "all" ? new Date(0) : new Date(now.getTime() - Number(period) * 24 * 60 * 60 * 1000);
   const dateWindow = { gte: from, lte: now };
 
-  const [allClients, newClients, appointments, upcoming, projects, inventory, waitlist, availableSlots] = await Promise.all([
+  const [allClients, newClients, appointments, upcoming, projects, inventory, waitlist, availableSlots, sourceClients, registeredClients] = await Promise.all([
     prisma.client.count(),
     prisma.client.count({ where: { createdAt: dateWindow } }),
     prisma.appointment.findMany({
@@ -54,7 +55,6 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
         kind: true,
         status: true,
         styles: true,
-        leadSource: true,
         createdAt: true,
         messages: { where: { author: "admin" }, orderBy: { createdAt: "asc" }, take: 1, select: { createdAt: true } },
       },
@@ -62,7 +62,13 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     prisma.inventoryItem.findMany({ where: { active: true }, select: { quantity: true, minimumStock: true } }),
     prisma.waitlistEntry.findMany({ where: { createdAt: dateWindow }, select: { status: true } }),
     prisma.availableSlot.findMany({ where: { startsAt: { lte: now }, endsAt: { gte: from } }, select: { startsAt: true, endsAt: true } }),
+    prisma.client.findMany({ where: { createdAt: dateWindow, deletionRequest: { is: null } }, select: { leadSource: true } }),
+    prisma.client.findMany({
+      where: { registeredAt: dateWindow, supabaseUserId: { not: null }, deletionRequest: { is: null } },
+      select: { projects: { select: { _count: { select: { appointments: true } } } } },
+    }),
   ]);
+  const registrations = summarizeRegisteredClients(registeredClients);
 
   const appointmentStatusesByProject = new Map<string, Set<string>>();
   for (const appointment of appointments) {
@@ -103,17 +109,19 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   const styleRows = countRows(projects.flatMap((project) => project.styles.split(",").map((style) => style.trim()).filter(Boolean))).slice(0, 7);
   const weekdayNames = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
   const weekdayRows = weekdayNames.map((name, index) => [name, appointments.filter((appointment) => !["cancelled", "no_show"].includes(appointment.status) && appointment.startsAt.getDay() === index).length] as [string, number]).filter(([, count]) => count > 0);
-  const sourceRows = Object.entries(tattooProjects.reduce<Record<string, { all: number; converted: number }>>((result, project) => {
-    const source = project.leadSource || "unknown";
-    result[source] ??= { all: 0, converted: 0 };
+  const sourceRows = Object.entries(sourceClients.reduce<Record<string, { all: number }>>((result, client) => {
+    const source = client.leadSource || "unknown";
+    result[source] ??= { all: 0 };
     result[source].all += 1;
-    if (isConverted(project)) result[source].converted += 1;
     return result;
   }, {})).map(([source, values]) => ({ source, label: source === "unknown" ? "Nie podano" : LEAD_SOURCE_LABEL[source as LeadSource] ?? source, ...values })).sort((a, b) => b.all - a.all);
 
   const revenue = await prisma.loyaltyEntry.aggregate({ where: { kind: "visit", voidedAt: null, createdAt: dateWindow }, _sum: { paidCents: true, discountCents: true }, _count: true });
   const money = (cents: number) => (cents / 100).toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
   const cards = [
+    { label: "NOWE KONTA ONLINE", value: String(registrations.total), hint: "Rejestracja konta w wybranym okresie" },
+    { label: "KONTA BEZ WIZYTY", value: String(registrations.withoutAppointment), hint: "Z nowych kont · żadnej wizyty w historii" },
+    { label: "KONTA BEZ PROJEKTU", value: String(registrations.withoutProject), hint: "Z nowych kont · żadnego projektu w historii" },
     { label: "ROZLICZONE WPŁYWY", value: money(revenue._sum.paidCents ?? 0), hint: `${revenue._count} opłaconych wizyt · po rabatach` },
     { label: "RABATY LOJALNOŚCIOWE", value: money(revenue._sum.discountCents ?? 0), hint: "W wybranym okresie rozliczeń" },
     { label: "ŚREDNIA WPŁATA", value: revenue._count ? money(Math.round((revenue._sum.paidCents ?? 0) / revenue._count)) : "—", hint: "Na jedną rozliczoną wizytę" },
@@ -134,6 +142,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   return <div className="studio-page">
     <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="studio-eyebrow">ANALITYKA STUDIA</p><h1 className="studio-page-title">Statystyki operacyjne</h1><p className="studio-page-description">Zgłoszenia, obsługa klientów, wizyty, obłożenie i źródła pozyskania. Wpływy według daty rozliczenia, po rabatach, bez wycofanych wpisów. To nie jest zysk po kosztach; zadatki nie są doliczane drugi raz.</p></div><nav aria-label="Zakres statystyk" className="flex flex-wrap gap-2">{PERIODS.map(([value, label]) => <Link key={value} href={`/admin/statistics?period=${value}`} className={`border px-3 py-2 text-xs ${period === value ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey hover:border-ink-white/40 hover:text-ink-white"}`}>{label}</Link>)}</nav></header>
 
+    <p className="text-xs text-ink-grey">Konta online według daty rejestracji w wybranym okresie, bez ręcznych kontaktów CRM. Brak wizyty lub projektu oznacza brak w całej historii; te grupy zachodzą na siebie i nie należy ich sumować.</p>
     <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
 
     <AdminSections scope="statistics" initial={sectionLayout} sections={[
@@ -156,11 +165,11 @@ function Chart({ title, rows, empty }: { title: string; rows: [string, number][]
   return <section className="min-w-0 border border-ink-white/15 bg-ink-charcoal/35 p-4"><h2 className="font-display text-xl">{title}</h2>{rows.length ? <div className="mt-4 space-y-3">{rows.map(([label, value]) => <div key={label}><div className="mb-1 flex justify-between text-[11px]"><span className="truncate text-ink-grey">{label}</span><span>{value}</span></div><div className="h-1.5 bg-ink-white/10"><div className="h-full bg-ink-gold" style={{ width: `${Math.max(4, value / max * 100)}%` }} /></div></div>)}</div> : <p className="mt-4 text-sm text-ink-grey">{empty}</p>}</section>;
 }
 
-function SourceChart({ rows }: { rows: { source: string; label: string; all: number; converted: number }[] }) {
+function SourceChart({ rows }: { rows: { source: string; label: string; all: number }[] }) {
   const total = rows.reduce((sum, row) => sum + row.all, 0);
   const colors = ["#c99a4a", "#50bfa5", "#6b9ee6", "#b791d4", "#df826d", "#a7b76a", "#a5afb8"];
   const slices = rows.map((row, index) => { const start = rows.slice(0, index).reduce((sum, previous) => sum + previous.all, 0) / (total || 1) * 100; const end = start + row.all / (total || 1) * 100; return `${colors[index % colors.length]} ${start}% ${end}%`; });
-  return <section className="min-w-0 p-4"><h2 className="font-display text-xl">Skąd trafiają klienci</h2>{total ? <div className="mt-3 flex flex-wrap items-center gap-5"><div role="img" aria-label={rows.map((row) => `${row.label}: ${row.all} (${percentage(row.all, total)}%)`).join(", ")} className="h-36 w-36 shrink-0 rounded-full" style={{ background: `conic-gradient(${slices.join(",")})` }} /><ul className="min-w-0 flex-1 space-y-2">{rows.map((row, index) => <li key={row.source} className="flex items-start gap-2 text-xs"><span aria-hidden className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: colors[index % colors.length] }} /><span className="flex-1">{row.label}</span><span>{row.all} · {percentage(row.all, total)}%</span></li>)}</ul></div> : <p className="mt-3 text-sm text-ink-grey">Brak danych o źródłach klientów.</p>}</section>;
+  return <section className="min-w-0 p-4"><h2 className="font-display text-xl">Skąd trafiają klienci</h2><p className="mt-1 text-xs text-ink-grey">Profile utworzone w wybranym okresie. Każdy klient liczony raz, niezależnie od liczby projektów.</p>{total ? <div className="mt-3 flex flex-wrap items-center gap-5"><div role="img" aria-label={rows.map((row) => `${row.label}: ${row.all} (${percentage(row.all, total)}%)`).join(", ")} className="h-36 w-36 shrink-0 rounded-full" style={{ background: `conic-gradient(${slices.join(",")})` }} /><ul className="min-w-0 flex-1 space-y-2">{rows.map((row, index) => <li key={row.source} className="flex items-start gap-2 text-xs"><span aria-hidden className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: colors[index % colors.length] }} /><span className="flex-1">{row.label}</span><span>{row.all} · {percentage(row.all, total)}%</span></li>)}</ul></div> : <p className="mt-3 text-sm text-ink-grey">Brak danych o źródłach klientów.</p>}</section>;
 }
 
 function countRows(values: string[]): [string, number][] {

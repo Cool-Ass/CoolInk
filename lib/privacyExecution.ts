@@ -117,7 +117,7 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       await tx.projectActivity.deleteMany({ where: projects });
       if (!keep.has("appointments")) await tx.appointment.deleteMany({ where: projects });
       if (!keep.has("profile")) {
-        await tx.client.update({ where: { id: job.clientId }, data: { firstName: "Usunięty", lastName: "profil", email: `erased-${job.clientId}@privacy.invalid`, phone: null, avatarUrl: null, birthDate: null, notes: null, tags: "", bookingDraft: Prisma.DbNull, supabaseUserId: keep.has("auth") ? job.authId : null } });
+        await tx.client.update({ where: { id: job.clientId }, data: { firstName: "Usunięty", lastName: "profil", email: `erased-${job.clientId}@privacy.invalid`, phone: null, avatarUrl: null, leadSource: null, registeredAt: null, birthDate: null, notes: null, tags: "", bookingDraft: Prisma.DbNull, supabaseUserId: keep.has("auth") ? job.authId : null } });
         await tx.tattooProject.updateMany({ where: { clientId: job.clientId }, data: { title: "Zamknięty projekt", description: "", styles: "", placement: null, size: null, colorPreference: null, preferredDateNote: null, internalNotes: null, nextAction: null, nextActionDueAt: null, leadSource: null, status: "closed", clientArchivedAt: new Date() } });
       } else {
         await tx.client.update({ where: { id: job.clientId }, data: { bookingDraft: Prisma.DbNull, supabaseUserId: keep.has("auth") ? job.authId : null } });

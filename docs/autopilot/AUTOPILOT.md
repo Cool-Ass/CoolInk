@@ -1,5 +1,31 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — CLIENT-WORKFLOW-MEDIA-20261009
+
+- IMPLEMENTING: jeden root Worker, ai/client-workflow-media-fixes, base a2ca37c.
+  Poprzedni pakiet MODULE-HEALTH jest DONE na produkcji a2ca37c; dowody
+  i obserwacja 03:04–03:20 UTC na ai/release-health-production-evidence/0eb598b.
+- Zakres: źródło pozyskania w danych klienta zamiast projektu; pojedynczy
+  zestaw pieczątek w nagłówku; kohorta kont online bez wizyty/projektu;
+  niezależna wysokość i rozwijanie kart mediów.
+- HIGH RISK: addytywne Client.leadSource i registeredAt; deterministyczny
+  backfill źródła z najstarszego znanego projektu oraz daty rejestracji z auth.users.
+  Nie usuwa starej kolumny projektu. Zapis daty przy zweryfikowanym powiązaniu
+  konta bez zmiany zasad logowania. Brak zmian płatności, OAuth i sekretów.
+- Rejestracje: prawdziwa data Auth, nie createdAt kontaktu CRM ani publicznie
+  edytowalna wiadomość. Wykluczone kontakty bez konta i profile z wnioskiem
+  prywatności. Segmenty zachodzą na siebie; wyjaśnione w kartach.
+- Walidacja: targeted unit/API, typecheck/lint, nowe izolowane scenariusze E2E
+  dla mediów, edycji źródła i pojedynczego progresu; pełne exact-head/main CI.
+  Lokalny typecheck PASS; targeted unit/API PASS, lint bez błędów (istniejące
+  ostrzeżenie img w ProjectManager). SQL migracji sprawdzany na izolowanym
+  schemacie z rollbackiem w CI; brak lokalnych/produkcyjnych operacji DB.
+- Przed skutkiem produkcyjnym: osobny PR, zgoda właściciela na finalny commit
+  i zakres migracji, backup gate. Bez produkcyjnych fixtures, db:push lub restore.
+- Rollback kodu: a2ca37c / EViPBuRL8pDg56oVmKubJqXEmy4a.
+  Kolumnę i przeniesione wartości zachować; nie wykonywać destructive down.
+  Po promocji smoke i co najmniej 15 min obserwacji.
+
 ## Checkpoint — MODULE-HEALTH-20261009
 
 - VERIFYING02:26UTC, jeden root Worker ai/release-pr48-evidence, MEDIUM;

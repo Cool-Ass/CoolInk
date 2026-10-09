@@ -27,3 +27,11 @@ it("rejects a concurrently linked account and does not record success", async ()
 it("rejects a missing client", async () => {
   m.find.mockResolvedValue(null); expect((await save("old@example.com")).status).toBe(409); expect(m.update).not.toHaveBeenCalled();
 });
+it("saves the acquisition source on the client and rejects unknown options", async () => {
+  const request = (leadSource: string) => new Request("https://coolink.test/api/admin/clients/client", { method: "PATCH", body: JSON.stringify({ firstName: "Test", lastName: "Client", email: "old@example.com", leadSource }) });
+  expect((await PATCH(request("instagram"), { params: Promise.resolve({ id: "client" }) })).status).toBe(200);
+  expect(m.update.mock.calls[0][0].data.leadSource).toBe("instagram");
+  m.update.mockClear();
+  expect((await PATCH(request("forged"), { params: Promise.resolve({ id: "client" }) })).status).toBe(400);
+  expect(m.update).not.toHaveBeenCalled();
+});

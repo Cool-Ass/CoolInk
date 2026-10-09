@@ -3,6 +3,7 @@ import { requireAdminApi } from "@/lib/adminApi";
 
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { prisma } from "@/lib/prisma";
+import { normalizeLeadSource } from "@/lib/leadSource";
 
 
 type Params = { params: Promise<{ id: string }> };
@@ -17,6 +18,8 @@ export async function PATCH(request: Request, { params }: Params) {
   const firstName = String(body?.firstName ?? "").trim();
   const lastName = String(body?.lastName ?? "").trim();
   const email = String(body?.email ?? "").trim().toLowerCase();
+  const leadSource = normalizeLeadSource(body?.leadSource);
+  if (body?.leadSource !== undefined && body.leadSource !== "" && body.leadSource !== null && !leadSource) return NextResponse.json({ error: "Wybierz źródło z listy." }, { status: 400 });
   if (!firstName || !lastName || !email.includes("@")) return NextResponse.json({ error: "Uzupełnij imię, nazwisko i e-mail." }, { status: 400 });
   try {
     const client = await prisma.$transaction(async (tx) => {
@@ -26,7 +29,7 @@ export async function PATCH(request: Request, { params }: Params) {
         throw new ClientEditConflict("Adres jest powiązany z kontem logowania. Nie można zmienić go tylko w karcie klienta.");
       }
       // Compare-and-swap also protects against linking an account during this edit.
-      const changed = await tx.client.updateMany({ where: { id, email: current.email, supabaseUserId: current.supabaseUserId }, data: { firstName, lastName, ...(current.supabaseUserId ? {} : { email }), phone: String(body?.phone ?? "").trim() || null, tags: String(body?.tags ?? "").trim() } });
+      const changed = await tx.client.updateMany({ where: { id, email: current.email, supabaseUserId: current.supabaseUserId }, data: { firstName, lastName, ...(body?.leadSource !== undefined ? { leadSource } : {}), ...(current.supabaseUserId ? {} : { email }), phone: String(body?.phone ?? "").trim() || null, tags: String(body?.tags ?? "").trim() } });
       if (changed.count !== 1) throw new ClientEditConflict("Dane konta zmieniły się. Odśwież kartę klienta i spróbuj ponownie.");
       const updated = await tx.client.findUniqueOrThrow({ where: { id } });
       await tx.adminAuditLog.create({ data: { adminUserId: access.admin.id, action: "client.update", targetType: "Client", targetId: id, summary: `Zaktualizowano dane klienta ${firstName} ${lastName}.` } });

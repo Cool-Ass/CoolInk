@@ -609,6 +609,7 @@ button.calendar-entry:hover { filter: brightness(1.2); }
 .studio-panel.p-0 { padding: 0; }
 .studio-media-grid {
   display: grid;
+  align-items: start;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
   gap: .75rem;
 }

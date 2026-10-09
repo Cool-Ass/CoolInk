@@ -123,7 +123,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
             const expanded = expandedId === item.id;
             return <article key={item.id} className={`studio-panel p-0 min-w-0 overflow-hidden transition-colors ${expanded ? "border-ink-gold/55" : "hover:border-ink-white/25"}`}>
               <div className="relative aspect-[4/3] w-full bg-ink-black">
-                <button type="button" onClick={() => setExpandedId(expanded ? null : item.id)} aria-expanded={expanded} className="absolute inset-0 z-10 w-full">
+                <button type="button" onClick={() => setExpandedId(expanded ? null : item.id)} aria-expanded={expanded} aria-controls={`media-details-${item.id}`} className="absolute inset-0 z-10 w-full">
                   <span className="sr-only">{expanded ? "Zwiń informacje" : "Pokaż informacje"} o pliku {item.filename}</span>
                 </button>
                 {source ? <Image src={source} alt={item.alt ?? ""} fill className="object-cover" sizes="(max-width: 639px) 50vw, (max-width: 1279px) 33vw, 20vw" /> : <span className="flex h-full items-center justify-center text-xs text-ink-grey">Brak podglądu</span>}
@@ -140,7 +140,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
                 <p className="min-w-0 truncate text-[11px] text-ink-grey">{item.filename}</p>
                 <span className="shrink-0 text-[9px] text-ink-gold">{item.usedIn.length ? "UŻYWANY" : "WOLNY"}</span>
               </div>
-              {expanded && <div className="flex flex-col gap-2 border-t border-ink-white/10 p-3">
+              <div id={`media-details-${item.id}`} hidden={!expanded} className={expanded ? "flex flex-col gap-2 border-t border-ink-white/10 p-3" : "hidden"}>
                 <p className="text-[11px] text-ink-grey/70">
                   {item.width && item.height ? `${item.width}×${item.height} · ` : ""}
                   {formatSize(item.size)}
@@ -161,7 +161,7 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
                   className="border border-ink-white/20 bg-transparent px-2 py-1.5 text-[12px] text-ink-white outline-none focus:border-ink-gold"
                 />
                 {item.usedIn.length > 0 && <p className="text-[10.5px] text-ink-grey/70">Aby usunąć plik, najpierw usuń wszystkie jego użycia.</p>}
-              </div>}
+              </div>
             </article>;
           })}
         </div>

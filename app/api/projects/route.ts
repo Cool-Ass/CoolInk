@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { activityMessage } from "@/lib/projectWorkflow";
-import { normalizeLeadSource } from "@/lib/leadSource";
+import { captureClientLeadSource } from "@/lib/clientAcquisition";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -29,21 +29,23 @@ export async function POST(request: Request) {
     update: { firstName, lastName, phone: String(body.phone ?? "").trim() || undefined },
     create: { firstName, lastName, email, phone: String(body.phone ?? "").trim() || null },
   });
-  const project = await prisma.tattooProject.create({
-    data: {
-      clientId: client.id,
-      title: String(body.title ?? "Nowy projekt tatuażu").trim().slice(0, 160) || "Nowy projekt tatuażu",
-      description,
-      styles: Array.isArray(body.styles) ? (body.styles as unknown[]).filter((item: unknown): item is string => typeof item === "string").join(", ") : "",
-      placement: String(body.placement ?? "").trim() || null,
-      size: String(body.size ?? "").trim() || null,
-      colorPreference: String(body.colorPreference ?? "").trim() || null,
-      leadSource: normalizeLeadSource(body.leadSource),
-      preferredDateNote: String(body.preferredDateNote ?? "").trim().slice(0, 500) || null,
-      status: "inquiry",
-      nextAction: "Przejrzyj nowe zgłoszenie i odpowiedz klientowi",
-      activities: { create: { type: "project_created", message: activityMessage("project_created"), visibility: "admin" } },
-    },
+  const project = await prisma.$transaction(async (tx) => {
+    await captureClientLeadSource(tx, client.id, body.leadSource);
+    return tx.tattooProject.create({
+      data: {
+        clientId: client.id,
+        title: String(body.title ?? "Nowy projekt tatuażu").trim().slice(0, 160) || "Nowy projekt tatuażu",
+        description,
+        styles: Array.isArray(body.styles) ? (body.styles as unknown[]).filter((item: unknown): item is string => typeof item === "string").join(", ") : "",
+        placement: String(body.placement ?? "").trim() || null,
+        size: String(body.size ?? "").trim() || null,
+        colorPreference: String(body.colorPreference ?? "").trim() || null,
+        preferredDateNote: String(body.preferredDateNote ?? "").trim().slice(0, 500) || null,
+        status: "inquiry",
+        nextAction: "Przejrzyj nowe zgłoszenie i odpowiedz klientowi",
+        activities: { create: { type: "project_created", message: activityMessage("project_created"), visibility: "admin" } },
+      },
+    });
   });
   return NextResponse.json({ projectId: project.id }, { status: 201 });
 }
