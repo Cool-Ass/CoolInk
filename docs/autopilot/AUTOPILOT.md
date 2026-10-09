@@ -42,6 +42,14 @@
   20261009040000_client_lead_source, All migrations successfully applied.
   Custom Domains Skipped; immutable homepage smoke PASS. Baseline Error0%,
   Timeout0%,50 wywołań,CPU P75122ms. Domena niepromowana do exact-main gates.
+  Exact-main CI37921982270 wszystkie3jobs SUCCESS11:20UTC; oba Vercel SUCCESS.
+  Ręczna promocja HTg3pxqKhH3pRTVnokSFsicGDGhV zlecona11:21UTC.
+  Wymagane potwierdzenie Current Domains, production smoke i15min obserwacji.
+  Current Domains www.coolinktattoo.pl potwierdzone11:21UTC exactd3a6ec0.
+  Production smoke /,/app,/admin/login200, protectedAPI401. Owner statistics
+  pokazuje nowe3kohorty; klient1progress również po rozwinięciu, source edit
+  widoczny w danych klienta. Media align-items:start, expanded1; heights323/180/180.
+  Bez zapisu danych klientów; modal zamknięty ANULUJ. Obserwacja do>=11:36UTC.
   Superseded6662730 CIFAIL w niezmienionym Next/Turbopack Google font import map,
   bez zmian fontów/build mode/test bypass. Nowy head build i testy SQL przeszły.
   Brak automatycznych Vercel checks dla ea94380: utworzono przez istniejący UI

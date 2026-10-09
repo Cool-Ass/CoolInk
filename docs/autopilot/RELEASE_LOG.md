@@ -1,5 +1,25 @@
 # Rejestr wydań i rollback
 
+## 2026-10-09 — PR50, publikacja11:21UTC /13:21CEST
+
+- Zgoda finalnyea94380: https://github.com/Cool-Ass/CoolInk/pull/50#issuecomment-6079682651.
+- Head ea943806cfe0129358650e711e2afd5d41f496d4 CI37919650705 SUCCESS;
+  main d3a6ec0fb11c7bfdb6a6124b83cd10a22b25266b CI37921982270 SUCCESS.
+  Wszystkieverify/backup-snapshot/CodeQL, obaVercelSUCCESS; 407unit/API i8browserPASS.
+- Backup37919368959 SUCCESS przed migracją; encrypted artifact11610034202,
+  sha256:321dace1e453c17846e7c6362e6d0a741aebe0d1f9af47b098a31b785df73f28.
+  Restore drill37113647881 SUCCESS03Oct; bez produkcyjnego restore/fixtures.
+- Production HTg3pxqKhH3pRTVnokSFsicGDGhV, cool-ovic885v5-cool-ass.vercel.app.
+  Build13:09:30CEST zastosował20261009040000_client_lead_source, All migrations
+  successfully applied. Current Domains www.coolinktattoo.pl po ręcznej promocji.
+- Readonly smoke /,/app,/admin/login200, protectedAPI401. Owner: nowe statystyki
+  kont online działają; source select w danych klienta, pojedynczy progres
+  również po rozwinięciu; media expanded1 i heights323/180/180 zamiast stretching.
+  Bez modyfikacji danych klientów. Baseline50invocations/Error0%/Timeout0%/CPU122ms.
+- Obserwacja11:21–>=11:36UTC PENDING. Dowód artifacts/pr50-production-2026-10-09.png.
+- Rollback code-only a2ca37c/EViPBuRL8pDg56oVmKubJqXEmy4a; zachować nową
+  kolumnę i backfill. Brak destrukcyjnej migracji w dół ani restore danych.
+
 ## 2026-10-09 — PR45, publikacja01:36:32UTC /03:36:32CEST
 
 - Zgoda: https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.
