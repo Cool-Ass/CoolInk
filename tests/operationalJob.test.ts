@@ -1,15 +1,30 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const push = vi.hoisted(() => vi.fn());
 const audit = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/webPush", () => ({ sendPushToAdmins: push }));
 vi.mock("@/lib/prisma", () => ({ prisma: { adminAuditLog: { create: audit } } }));
 import { operationalJob } from "../lib/operationalJob";
 afterEach(() => vi.restoreAllMocks());
+beforeEach(() => { vi.resetAllMocks(); audit.mockResolvedValue({}); });
 
 describe("operational job reporting", () => {
   it("preserves successful responses", async () => {
     const response = new Response("done");
     expect(await operationalJob(async () => response)).toBe(response);
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: "operational.reminders.success" }) }));
+  });
+  it("does not resolve an alarm for a non-success response", async () => {
+    const response = new Response("failed", { status: 503 });
+    expect(await operationalJob(async () => response)).toBe(response);
+    expect(audit).not.toHaveBeenCalled();
+  });
+  it("does not fail completed work when recording success is unavailable", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    audit.mockRejectedValue(new Error("private database details"));
+    const response = new Response("done");
+    expect(await operationalJob(async () => response)).toBe(response);
+    expect(log).toHaveBeenCalledWith("operational_success_not_persisted", { job: "reminders" });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private database");
   });
   it("delivers a correlatable alert without leaking the exception", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});

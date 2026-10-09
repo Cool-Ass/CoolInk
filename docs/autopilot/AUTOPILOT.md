@@ -1,5 +1,23 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — 2026-10-09 OPERATIONAL-ALERTS-20261009
+
+- Jeden root Worker, ai/operational-alert-recovery, MEDIUM.
+- Alarm przypomnień rozwiązuje późniejszy sukces; historia pozostaje.
+  Raport recovery pokazuje czas ostatniego wyniku bez zmiany limitu2h.
+- Worker Google loguje tylko allowlistowany kod odpowiedzi, nigdy pełną treść.
+  Run37852622723 i37816270356 HTTP503; dokładna przyczyna niepotwierdzona.
+- Targeted14 tests, typecheck i targeted lint PASS dla pierwszej poprawki.
+  CI37867395337 FAIL audit Next16.3.6. Minimalny patch Next/eslint16.3.8
+  (GHSA-cjq9-62q9-8jv4 i powiązane advisory) przygotowany; targeted14 i audit0 PASS.
+  PR45: nowy exact-head CI wymagany. Bez zmian auth, danych klientów,
+  migracji, OAuth, sekretów i harmonogramów. Bez ręcznych produkcyjnych jobów.
+- Publikacja wymaga zgody na finalny commit i exact-head/main gates.
+  Browser działa po restarcie. Vercel dostępny; Hobby przechowuje tylko1h logów,
+  wcześniejsze503 poza zakresem. Panel CoolInk wymaga logowania/MFA właściciela.
+  WAITING_APPROVAL: PR45+minimalny patch16.3.8; pytanie w czacie. Lease zwolniony.
+  Nie deklarować naprawy integracji ani wdrożenia. Rollback: c304744 bez restore.
+
 Zasady nadrzędne: [AUTOPILOT_RULES](../../AUTOPILOT_RULES.md).
 
 ## Aktualny checkpoint — 2026-10-06 22:20 UTC / 2026-10-07 00:20 CEST

@@ -7,12 +7,16 @@ export function validateRecoveryHealth(input: unknown) {
   if (!Array.isArray(data.reasons) || data.reasons.length > RECOVERY_REASONS.length || data.reasons.some(reason => !RECOVERY_REASONS.includes(reason)) || new Set(data.reasons).size !== data.reasons.length || data.healthy !== (data.reasons.length === 0)) throw new Error("Invalid health report");
   return { healthy: data.healthy as boolean, reasons: data.reasons as string[] };
 }
-export function readRecoveryMonitor(value: string | undefined, now = Date.now()) {
+export function readRecoveryMonitorReceipt(value: string | undefined, now = Date.now()) {
   try {
     const data = JSON.parse(value || "null") as RecoveryMonitor;
     const health = validateRecoveryHealth(data);
     const age = now - Date.parse(data.checkedAt);
-    if (!Number.isFinite(age) || age < -60_000 || age > 2 * 3600_000 || !/^\d{1,30}:\d{1,10}$/.test(data.eventId)) return null;
+    if (!Number.isFinite(age) || age < -60_000 || !/^\d{1,30}:\d{1,10}$/.test(data.eventId)) return null;
     return { ...health, checkedAt: data.checkedAt, eventId: data.eventId };
   } catch { return null; }
+}
+export function readRecoveryMonitor(value: string | undefined, now = Date.now()) {
+  const receipt = readRecoveryMonitorReceipt(value, now);
+  return receipt && now - Date.parse(receipt.checkedAt) <= 2 * 3600_000 ? receipt : null;
 }

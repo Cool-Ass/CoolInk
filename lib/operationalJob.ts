@@ -6,7 +6,14 @@ import { prisma } from "@/lib/prisma";
 /** Report fixed diagnostic codes only; exceptions may contain secrets or PII. */
 export async function operationalJob(task: () => Promise<Response>) {
   try {
-    return await task();
+    const response = await task();
+    if (response.ok) {
+      // A later success resolves the active alarm; failure history remains intact.
+      try {
+        await prisma.adminAuditLog.create({ data: { action: "operational.reminders.success", targetType: "OperationalJob", summary: "Zadanie przypomnień i synchronizacji zakończone poprawnie." } });
+      } catch { console.error("operational_success_not_persisted", { job: "reminders" }); }
+    }
+    return response;
   } catch {
     const eventId = randomUUID();
     console.error("operational_job_failed", { job: "reminders", eventId });
