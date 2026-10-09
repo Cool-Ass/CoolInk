@@ -16,7 +16,9 @@
   kont online działają; source select w danych klienta, pojedynczy progres
   również po rozwinięciu; media expanded1 i heights323/180/180 zamiast stretching.
   Bez modyfikacji danych klientów. Baseline50invocations/Error0%/Timeout0%/CPU122ms.
-- Obserwacja11:21–>=11:36UTC PENDING. Dowód artifacts/pr50-production-2026-10-09.png.
+- Obserwacja skrócona na wyraźne polecenie właściciela „juz nie opbserwuj.
+  OPszczedzaj tokeny”; pełnych15min nie potwierdzono. Ostatni odczyt136wywołań,
+  Error0%,Timeout0%,CPU P7576ms. Dowód artifacts/pr50-production-2026-10-09.png.
 - Rollback code-only a2ca37c/EViPBuRL8pDg56oVmKubJqXEmy4a; zachować nową
   kolumnę i backfill. Brak destrukcyjnej migracji w dół ani restore danych.
 

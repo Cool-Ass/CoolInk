@@ -49,7 +49,11 @@
   Production smoke /,/app,/admin/login200, protectedAPI401. Owner statistics
   pokazuje nowe3kohorty; klient1progress również po rozwinięciu, source edit
   widoczny w danych klienta. Media align-items:start, expanded1; heights323/180/180.
-  Bez zapisu danych klientów; modal zamknięty ANULUJ. Obserwacja do>=11:36UTC.
+  Bez zapisu danych klientów; modal zamknięty ANULUJ.
+  DONE: właściciel przerwał dalszą obserwację poleceniem „juz nie opbserwuj.
+  OPszczedzaj tokeny”. Nie twierdzić, że pełne15min zakończono. Ostatni odczyt
+  Production136invocations/Error0%/Timeout0%/CPU P7576ms. Produkcja opublikowana,
+  smoke i funkcje PASS, dalszego monitorowania nie prowadzić bez nowego zlecenia.
   Superseded6662730 CIFAIL w niezmienionym Next/Turbopack Google font import map,
   bez zmian fontów/build mode/test bypass. Nowy head build i testy SQL przeszły.
   Brak automatycznych Vercel checks dla ea94380: utworzono przez istniejący UI
