@@ -3,7 +3,7 @@
 ## Checkpoint — STUDIO-WORKFLOW-20261010
 
 - VERIFYING: jeden root Worker, ai/studio-workflow-cleanup, base d3a6ec0.
-  Lease do03:15UTC, 10Oct; nie uruchamiać równoległego Workera.
+  Lease do01:15UTC, 10Oct; nie uruchamiać równoległego Workera.
 - MEDIUM, zgoda właściciela w bieżącym czacie: „zezwalam na zmiany.
   Daj znać jak wdrożysz na produkcję” dla wskazanego kierunku UX.
 - Zakres: kategorie kolejki i daty wizyt, monitoring tylko w ustawieniach,

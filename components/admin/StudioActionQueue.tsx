@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ACTION_GROUPS, type ActionGroup } from "@/lib/studioActions";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 type Item = { key: string; group: ActionGroup; priority: number; title: string; detail: string; href: string; cta: string; visitAt?: string | null; visitLabel?: string; dueAt?: string | null; receivedAt?: string | null };
-const fmt = (value: string) => formatCoolinkDateTime(value, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmt = (value: string) => formatCoolinkDateTime(value, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 export default function StudioActionQueue({ items }: { items: Item[] }) {
   const [group, setGroup] = useState<ActionGroup | "all">("all");
   return <section aria-label="Kolejka działań" className="space-y-4">

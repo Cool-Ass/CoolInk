@@ -24,6 +24,7 @@ export function projectActions(project: WorkflowProject, now: Date): StudioActio
   const visitAt = visitContext(project.appointments, now);
   const overdue = Boolean(project.nextActionDueAt && project.nextActionDueAt < now);
   if (project.status === "awaiting_next_session") {
+    if (visitAt) return []; // The next session is already arranged.
     // Settlement and the decision about the next session are different stages.
     if (project.appointments.some(v => v.status === "completed" && !v.loyaltyEntry)) return [];
     const last = project.appointments.filter(v => v.status === "completed").sort((a, b) => +b.startsAt - +a.startsAt)[0];

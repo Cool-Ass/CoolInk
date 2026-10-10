@@ -13,7 +13,7 @@ import StudioActionQueue from "@/components/admin/StudioActionQueue";
 import StatusBadge from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
-const fmt = (value: Date) => formatCoolinkDateTime(value, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmt = (value: Date) => formatCoolinkDateTime(value, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ access?: string }> }) {
   const { access } = await searchParams;
   const admin = await getCurrentAdmin();

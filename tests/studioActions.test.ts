@@ -29,6 +29,9 @@ describe("studio action queue", () => {
     expect(projectActions({ ...project, status: "awaiting_next_session", appointments: [completed] }, now)).toEqual([]);
     expect(projectActions({ ...project, status: "awaiting_next_session", appointments: [{ ...completed, loyaltyEntry: { id: "paid" } }] }, now)[0]).toMatchObject({ group: "continuations", visitAt: completed.startsAt, visitLabel: "Ostatnia sesja" });
   });
+  it("does not ask for continuation when a future session already exists", () => {
+    expect(projectActions({ ...project, status: "awaiting_next_session", appointments: [visit("next", "2026-10-12", "confirmed")] }, now)).toEqual([]);
+  });
   it("ignores past and cancelled visits when finding the next session", () => {
     expect(visitContext([visit("past", "2026-10-09", "confirmed"), visit("cancelled", "2026-10-11", "cancelled"), visit("next", "2026-10-12", "confirmed")], now)).toEqual(new Date("2026-10-12"));
   });
