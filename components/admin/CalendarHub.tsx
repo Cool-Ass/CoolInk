@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import CalendarItemEditor, { type CalendarEditorItem } from "@/components/admin/calendar/CalendarItemEditor";
 import CalendarSettingsEditor from "@/components/admin/calendar/CalendarSettingsEditor";
@@ -33,16 +33,13 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [editor, setEditor] = useState<CalendarEditorItem | null>(() => initialVisit ? { ...initialVisit, kind: "appointment" } : null);
-  const openedAppointmentId = useRef(initialAppointmentId);
-  useEffect(() => {
-    if (openedAppointmentId.current === initialAppointmentId) return;
-    openedAppointmentId.current = initialAppointmentId;
+  const [openedAppointmentId, setOpenedAppointmentId] = useState(initialAppointmentId);
+  if (openedAppointmentId !== initialAppointmentId) {
+    setOpenedAppointmentId(initialAppointmentId);
     const visit = appointments.find(item => item.id === initialAppointmentId);
-    if (!visit) { setEditor(null); return; }
-    setEditor({ ...visit, kind: "appointment" });
-    const date = new Date(visit.startsAt);
-    setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
-  }, [initialAppointmentId, appointments]);
+    setEditor(visit ? { ...visit, kind: "appointment" } : null);
+    if (visit) { const date = new Date(visit.startsAt); setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }
+  }
   function closeEditor() {
     setEditor(null);
     if (initialAppointmentId) router.replace("/admin/calendar", { scroll: false });
