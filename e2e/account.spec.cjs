@@ -363,11 +363,26 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     // Dragging is only a proposal until the owner explicitly confirms it.
     const week = page.getByTestId("studio-week");
-    await week.locator(".studio-week-visit").filter({ hasText: "Browser queue dates" }).first().dragTo(week.getByRole("button", { name: /^Zaplanuj .*18:00$/ }).last());
-    const moveConfirmation = page.getByRole("dialog");
-    await expect(moveConfirmation).toContainText("Przenieść wizytę");
-    await moveConfirmation.getByRole("button", { name: "Anuluj", exact: true }).click();
-    await expect(moveConfirmation).toHaveCount(0);
+    const visitCard = week.locator(".studio-week-visit").filter({ hasText: "Browser queue dates" }).first();
+    if (page.viewportSize().width >= 1024) {
+      await visitCard.dragTo(week.getByRole("button", { name: /^Zaplanuj .*18:00$/ }).last());
+      const moveConfirmation = page.getByRole("dialog");
+      await expect(moveConfirmation).toContainText("Przenieść wizytę");
+      await moveConfirmation.getByRole("button", { name: "Anuluj", exact: true }).click();
+      await expect(moveConfirmation).toHaveCount(0);
+    } else {
+      // Touch users change the date in the same drawer; no off-screen mouse drag.
+      await visitCard.click();
+      const dateEditor = page.getByRole("dialog");
+      const startField = dateEditor.getByLabel("DATA I GODZINA OD", { exact: true });
+      const originalStart = await startField.inputValue();
+      await startField.fill(originalStart.slice(0, 11) + "18:00");
+      await expect(startField).toHaveValue(originalStart.slice(0, 11) + "18:00");
+      await dateEditor.getByRole("button", { name: "Dokumenty", exact: true }).click();
+      await expect(dateEditor.getByRole("button", { name: "Wizyta", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await page.keyboard.press("Escape");
+      await expect(dateEditor).toHaveCount(0);
+    }
     expect((await prisma.appointment.findUniqueOrThrow({ where: { id: queueVisits[0].id } })).startsAt.toISOString()).toBe(dates[0].toISOString());
     expect((await prisma.appointment.findUniqueOrThrow({ where: { id: queueVisits[1].id } })).startsAt.toISOString()).toBe(dates[1].toISOString());
   } finally { await prisma.tattooProject.delete({ where: { id: queueProject.id } }); }
