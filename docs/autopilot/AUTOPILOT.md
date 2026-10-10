@@ -2,8 +2,12 @@
 
 ## Checkpoint — STUDIO-WORKFLOW-20261010
 
-- VERIFYING: jeden root Worker, ai/studio-workflow-cleanup, base d3a6ec0.
-  Lease do01:15UTC, 10Oct; nie uruchamiać równoległego Workera.
+- VERIFYING00:50UTC: jeden root Worker, ai/release-pr51-production-evidence.
+  Lease do01:45UTC, 10Oct; nie uruchamiać równoległego Workera.
+  PR51 merged: main121b63e; head31a5785 CI38009607955 wszystkie3jobs SUCCESS.
+  Main CI38010491001 w toku, oba Vercel SUCCESS; nie promować przed verify.
+  Produkcja nadal d3a6ec0. Staged AFr8yMzZPgBLEvDtksarXUwGMkVw Ready,
+  Source121b63e i Assigning Custom Domains Skipped potwierdzone w Vercel.
 - MEDIUM, zgoda właściciela w bieżącym czacie: „zezwalam na zmiany.
   Daj znać jak wdrożysz na produkcję” dla wskazanego kierunku UX.
 - Zakres: kategorie kolejki i daty wizyt, monitoring tylko w ustawieniach,
