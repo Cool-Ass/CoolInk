@@ -19,6 +19,8 @@ const announcementMedia = [];
 const mediaLayoutIds = [];
 
 async function verifyCalendarPresentation(page) {
+  const monthSwitch = page.getByRole("button", { name: "Miesiąc", exact: true });
+  if (await monthSwitch.count()) await monthSwitch.click();
   const day = page.locator('[data-calendar-day="0"]').first();
   await expect(day).toBeVisible();
   await day.focus();
@@ -328,6 +330,14 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Ukryj: Plan dnia", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: /^Dostosuj sekcje/ }).click();
     await expect(page.getByRole("button", { name: "Ukryj: Plan dnia", exact: true })).toBeVisible();
+    const width = page.getByRole("button", { name: "Szerokość: Plan dnia", exact: true });
+    const widthSaved = page.waitForResponse(r => r.url().endsWith("/api/admin/section-layout") && r.request().method() === "PUT");
+    await width.click();
+    expect((await widthSaved).status()).toBe(200);
+    await expect(width).toHaveAttribute("aria-pressed", "true");
+    const widthRestored = page.waitForResponse(r => r.url().endsWith("/api/admin/section-layout") && r.request().method() === "PUT");
+    await width.click();
+    expect((await widthRestored).status()).toBe(200);
     await page.getByRole("button", { name: /^Zakończ dostosowanie/ }).click();
     await page.getByRole("button", { name: "Powiadomienia", exact: true }).click();
     const requestNotice = page.getByRole("region", { name: "Prośby o wizytę" }).getByRole("link").filter({ hasText: "Browser queue dates" }).first();
@@ -337,6 +347,11 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(editor).toBeVisible();
     await expect(editor).toHaveClass(/studio-drawer/);
     await expect(editor).toContainText("Browser queue dates");
+    await editor.getByRole("button", { name: "Dokumenty", exact: true }).click();
+    await expect(editor.getByText(consent.title, { exact: true })).toBeVisible();
+    await editor.getByRole("button", { name: "Rozmowa", exact: true }).click();
+    await expect(editor.getByRole("textbox").first()).toBeVisible();
+    await editor.getByRole("button", { name: "Wizyta", exact: true }).click();
     await page.keyboard.press("Escape");
     await expect(editor).toHaveCount(0);
     await expect(page).toHaveURL(/\/admin\/calendar$/);
@@ -348,6 +363,10 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   } finally { await prisma.tattooProject.delete({ where: { id: queueProject.id } }); }
   await page.goto("/admin/calendar");
+  await expect(page.getByTestId("studio-week")).toBeVisible();
+  await page.getByRole("button", { name: "Następny tydzień", exact: true }).click();
+  await expect(page.getByTestId("studio-week").locator("section")).toHaveCount(7);
+  await page.getByRole("button", { name: "Dziś", exact: true }).click();
   await verifyCalendarPresentation(page);
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   await page.goto(`/admin/clients/${client.id}`);
@@ -374,6 +393,16 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   const sessionProject = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Browser session ordering", description: "Disposable UI regression" } });
   const oldVisit = await prisma.appointment.create({ data: { projectId: sessionProject.id, startsAt: new Date(Date.now() - 172800000), endsAt: new Date(Date.now() - 169200000), status: "completed", price: 900 } });
   const newVisit = await prisma.appointment.create({ data: { projectId: sessionProject.id, startsAt: new Date(Date.now() - 86400000), endsAt: new Date(Date.now() - 82800000), status: "confirmed", price: 1400 } });
+  await page.goto(`/admin/calendar?appointment=${newVisit.id}`);
+  const visitDrawer = page.getByRole("dialog");
+  await visitDrawer.getByRole("button", { name: "Zakończ / rozlicz", exact: true }).click();
+  await expect(visitDrawer.getByLabel("Wizyta do zakończenia lub rozliczenia")).toHaveValue(newVisit.id);
+  await expect(visitDrawer.getByRole("button", { name: "Zakończ i zapisz rozliczenie", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(visitDrawer).toHaveCount(0);
+  await page.goto("/admin/finance");
+  await expect(page.getByRole("heading", { name: "Finanse", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Browser Fixture/ }).first()).toBeVisible();
   await page.goto(`/admin/clients/${client.id}?view=appointments`);
   const sessions = page.locator("section").filter({ has: page.getByText("Browser session ordering", { exact: true }) }).last();
   await expect(sessions.getByRole("button").nth(0)).toContainText("POTWIERDZONA");

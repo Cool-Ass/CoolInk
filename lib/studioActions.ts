@@ -7,7 +7,7 @@ export const ACTION_GROUPS = [
   { id: "waiting", title: "Oczekujące", empty: "Brak oczekujących spraw." },
 ] as const;
 export type ActionGroup = typeof ACTION_GROUPS[number]["id"];
-export type StudioAction = { key: string; group: ActionGroup; priority: 1 | 2 | 3; title: string; detail: string; href: string; cta: string; visitAt?: Date | null; visitLabel?: string; dueAt?: Date | null; receivedAt?: Date | null };
+export type StudioAction = { key: string; group: ActionGroup; priority: 1 | 2 | 3; title: string; detail: string; href: string; cta: string; projectId?: string; visitAt?: Date | null; visitLabel?: string; dueAt?: Date | null; receivedAt?: Date | null };
 type Visit = { id: string; startsAt: Date; createdAt?: Date; status: string; loyaltyEntry?: { id: string } | null };
 export type WorkflowProject = { id: string; title: string; description: string; kind: string; status: string; createdAt: Date; updatedAt: Date; nextAction: string | null; nextActionDueAt: Date | null; client: { id: string; firstName: string; lastName: string }; appointments: Visit[] };
 const active = new Set(["requested", "proposed", "confirmed"]);
@@ -18,13 +18,13 @@ export function projectActions(project: WorkflowProject, now: Date): StudioActio
   if (["completed", "cancelled"].includes(project.status)) return [];
   const title = `${project.client.firstName} ${project.client.lastName} · ${project.title}`;
   const href = `/admin/clients/${project.client.id}?view=projects`;
-  const base = { title, href, dueAt: project.nextActionDueAt };
+  const base = { title, href, projectId: project.id, dueAt: project.nextActionDueAt };
   const requests = project.appointments.filter(v => v.status === "requested");
   if (requests.length) return requests.map(visit => ({ ...base, key: `request-${visit.id}`, group: "requests", priority: +visit.startsAt <= +now + 48 * 3600_000 ? 1 : 2, detail: project.kind === "consultation" ? "Prośba o konsultację" : "Prośba o wizytę", cta: "Sprawdź termin", href: `/admin/calendar?appointment=${encodeURIComponent(visit.id)}`, visitAt: visit.startsAt, visitLabel: "Proponowany termin", receivedAt: visit.createdAt ?? project.createdAt }));
   const visitAt = visitContext(project.appointments, now);
   const overdue = Boolean(project.nextActionDueAt && project.nextActionDueAt < now);
   if (project.status === "awaiting_next_session") {
-    if (visitAt) return []; // The next session is already arranged.
+    if (visitAt || (project.nextActionDueAt && project.nextActionDueAt > now)) return []; // Arranged or deliberately deferred.
     // Settlement and the decision about the next session are different stages.
     if (project.appointments.some(v => v.status === "completed" && !v.loyaltyEntry)) return [];
     const last = project.appointments.filter(v => v.status === "completed").sort((a, b) => +b.startsAt - +a.startsAt)[0];

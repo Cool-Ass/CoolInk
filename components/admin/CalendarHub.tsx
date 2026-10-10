@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import CalendarItemEditor, { type CalendarEditorItem } from "@/components/admin/calendar/CalendarItemEditor";
+import CalendarWeek from "@/components/admin/calendar/CalendarWeek";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { useToast } from "@/components/admin/ToastProvider";
+import { formatCoolinkDateTime, toCoolinkDateTimeInput } from "@/lib/dateTime";
+import { movedVisitRange, shiftStudioDate, studioWeekDays } from "@/lib/studioWeek";
 import CalendarSettingsEditor from "@/components/admin/calendar/CalendarSettingsEditor";
 import CalendarMonthGrid, { calendarEntryClassName } from "@/components/calendar/CalendarMonthGrid";
 import AppModal from "@/components/ui/AppModal";
@@ -26,6 +31,18 @@ const time = (value: string) => new Date(value).toLocaleTimeString("pl-PL", { ti
 
 export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats, initialAppointmentId }: { initialAppointmentId?: string; appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
   const router = useRouter();
+  const { showToast } = useToast();
+  const [view, setView] = useState<"week" | "month">("week");
+  const [weekAnchor, setWeekAnchor] = useState(() => toCoolinkDateTimeInput(appointments.find(v => v.id === initialAppointmentId)?.startsAt ?? new Date()).slice(0, 10));
+  const [move, setMove] = useState<{ visit: Appointment; startsAt: string; endsAt: string } | null>(null);
+  const [moving, setMoving] = useState(false);
+  async function confirmMove() {
+    if (!move || moving) return;
+    setMoving(true);
+    try { const response = await fetch(`/api/admin/appointments/${move.visit.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ startsAt: move.startsAt, endsAt: move.endsAt }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Nie udało się zmienić terminu."); setMove(null); showToast("Termin zmieniony."); router.refresh(); }
+    catch (error) { showToast(error instanceof Error ? error.message : "Błąd połączenia.", "error"); }
+    finally { setMoving(false); }
+  }
   const today = startOfLocalDay(new Date());
   const initialVisit = appointments.find(visit => visit.id === initialAppointmentId);
   const [cursor, setCursor] = useState(() => { const date = initialVisit ? new Date(initialVisit.startsAt) : today; return new Date(date.getFullYear(), date.getMonth(), 1); });
@@ -38,7 +55,7 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
     setOpenedAppointmentId(initialAppointmentId);
     const visit = appointments.find(item => item.id === initialAppointmentId);
     setEditor(visit ? { ...visit, kind: "appointment" } : null);
-    if (visit) { const date = new Date(visit.startsAt); setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }
+    if (visit) { setWeekAnchor(toCoolinkDateTimeInput(visit.startsAt).slice(0, 10)); const date = new Date(visit.startsAt); setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }
   }
   function closeEditor() {
     setEditor(null);
@@ -52,9 +69,10 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
   const dates = useMemo(() => { const start = new Date(cursor); start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return date; }); }, [cursor]);
   const itemDates = selectedDays.length > 1 ? selectedDays.map((date) => date.toISOString()) : undefined;
   const dayModels = useMemo(() => {
-    const normalizedBlocks = blocks.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) }));
+    const normalizedBlocks = [...blocks, ...events.filter(event => event.google)].map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt) }));
     const normalizedAppointments = appointments.map((item) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt), status: item.status }));
-    return new Map(dates.map((date) => {
+    const modelDates = [...dates, ...studioWeekDays(weekAnchor).map(day => new Date(day + "T12:00:00"))];
+    return new Map(modelDates.map((date) => {
       const dayBlocks = blocks.filter((item) => inDay(item, date));
       const daySlots = slots.filter((item) => inDay(item, date));
       const availableRanges = resolveAvailableRanges({
@@ -74,7 +92,7 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
       const appearance = resolveCalendarDayAppearance({ hasAvailability: availableRanges.length > 0, hasUnavailable, customColor });
       return [localDateKey(date), { dayBlocks, availableRanges, dayPromos, dayEvents, dayAppointments, appearance }] as const;
     }));
-  }, [appointments, blocks, bufferMinutes, dates, events, promotions, slots]);
+  }, [appointments, blocks, bufferMinutes, dates, events, promotions, slots, weekAnchor]);
   const dayFor = (date: Date) => dayModels.get(localDateKey(date))!;
 
   useEffect(() => {
@@ -118,8 +136,12 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
 
   return <section className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-3 border border-ink-white/10 bg-ink-charcoal/35 px-3 py-2.5 sm:px-4"><p className="text-xs text-ink-grey"><strong className="font-medium text-ink-white">{stats.appointments} wizyty</strong> · {stats.blocks} niedostępne dni · {stats.newProjects} nowe zgłoszenia</p><div className="flex items-center gap-1"><button type="button" onClick={() => { if (selectMode && selectedDays.length) setDayMenuOpen(true); setSelectMode((value) => !value); }} className={`min-h-9 border px-3 py-2 text-[10px] tracking-[.1em] ${selectMode ? "border-ink-gold bg-ink-gold/10 text-ink-gold" : "border-ink-white/15 text-ink-grey"}`}>{selectMode ? "GOTOWE" : "ZAZNACZ WIELE"}</button><button type="button" onClick={() => setSettingsOpen(true)} className="min-h-9 px-3 py-2 text-[10px] tracking-[.08em] text-ink-grey hover:text-ink-gold">USTAWIENIA</button></div></div>
-    <div className="border border-ink-white/10 bg-ink-charcoal/30 p-2.5 sm:p-4">
-      <CalendarMonthGrid
+    <div className="studio-panel p-3 sm:p-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div className="flex gap-1" role="group" aria-label="Widok kalendarza">{(["week", "month"] as const).map(mode => <button key={mode} type="button" aria-pressed={view === mode} onClick={() => setView(mode)} className={`studio-view-switch ${view === mode ? "is-active" : ""}`}>{mode === "week" ? "Tydzień" : "Miesiąc"}</button>)}</div>{view === "week" && <div className="flex flex-wrap items-center gap-2"><button type="button" aria-label="Poprzedni tydzień" className="studio-view-switch" onClick={() => setWeekAnchor(shiftStudioDate(weekAnchor, -7))}>←</button><span className="text-sm">{formatCoolinkDateTime(studioWeekDays(weekAnchor)[0] + "T12:00:00Z", { day: "numeric", month: "short" })} – {formatCoolinkDateTime(studioWeekDays(weekAnchor)[6] + "T12:00:00Z", { day: "numeric", month: "short", year: "numeric" })}</span><button type="button" className="studio-view-switch" onClick={() => setWeekAnchor(toCoolinkDateTimeInput(new Date()).slice(0, 10))}>Dziś</button><button type="button" aria-label="Następny tydzień" className="studio-view-switch" onClick={() => setWeekAnchor(shiftStudioDate(weekAnchor, 7))}>→</button></div>}</div>
+      {view === "week" ? <CalendarWeek anchor={weekAnchor} onOpenNote={id => { const block = blocks.find(b => b.id === id); const slot = slots.find(s => s.id === id); const promo = promotions.find(p => p.id === id); const event = events.find(e => e.id === id); if (block) setEditor({ ...block, kind: isOccupiedBlock(block) ? "occupied" : "dayOff" }); else if (slot) setEditor({ ...slot, kind: "freeTerm" }); else if (promo) setEditor({ ...promo, kind: "promotion" }); else if (event && !event.google) setEditor({ ...event, kind: "event" }); }} appointments={appointments.filter(v => isOperationalCalendarAppointment(v.status))} notes={studioWeekDays(weekAnchor).flatMap(day => {
+        const model = dayFor(new Date(day + "T12:00:00"));
+        return [...model.availableRanges.map(range => ({ id: `${range.startsAt.toISOString()}-free`, editorId: range.source?.id, startsAt: range.startsAt.toISOString(), endsAt: range.endsAt.toISOString(), label: "Wolne", kind: "available" as const })), ...model.dayBlocks.map(b => ({ ...b, label: isOccupiedBlock(b) ? "Zajęty" : "Niedostępny", kind: "busy" as const })), ...model.dayEvents.map(e => ({ ...e, label: e.title, kind: "event" as const })), ...model.dayPromos.map(p => ({ ...p, label: p.title, kind: "event" as const }))];
+      })} onOpen={id => { const visit = appointments.find(v => v.id === id); if (visit) setEditor({ ...visit, kind: "appointment" }); }} onCreate={startsAt => window.dispatchEvent(new CustomEvent("coolink:new-appointment", { detail: { startsAt } }))} onMove={(id, day, hour) => { const visit = appointments.find(v => v.id === id); if (visit && !["completed", "cancelled", "no_show"].includes(visit.status)) { const range = movedVisitRange(visit, day, hour); if (range.startsAt !== visit.startsAt) setMove({ visit, ...range }); } }} /> : <CalendarMonthGrid
         cursor={cursor}
         dates={dates}
         selectedKeys={selectedKeys}
@@ -143,8 +165,9 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
             {dayAppointments.map((item) => <button type="button" key={item.id} onClick={() => setEditor({ ...item, kind: "appointment" })} className={calendarEntryClassName("unavailable")}>{item.clientName} · {time(item.startsAt)}</button>)}
           </>;
         }}
-      />
+      />}
     </div>
+    {move && <ConfirmModal message={`Przenieść wizytę ${move.visit.clientName} z ${formatCoolinkDateTime(move.visit.startsAt)} na ${formatCoolinkDateTime(move.startsAt)}? Zachowamy długość wizyty. System sprawdzi dostępność i powiadomi klienta o zmianie.`} onConfirm={confirmMove} onCancel={() => { if (!moving) setMove(null); }} pending={moving} pendingLabel="Zmienianie terminu…" />}
     {dayMenuOpen && selectedDays.length > 0 && <AppModal title={selectedDays.length === 1 ? "Ustaw dzień" : `Ustaw dla ${selectedDays.length} dni`} size="sm" onClose={() => setDayMenuOpen(false)}><div className="grid gap-2">{selectedDays.length === 1 && <button type="button" onClick={() => { setDayMenuOpen(false); window.dispatchEvent(new CustomEvent("coolink:new-appointment", { detail: { startsAt: `${localDateKey(selected)}T${defaultFreeStart}` } })); }} className="rounded border border-ink-gold bg-ink-gold/10 px-3 py-3 text-left text-sm text-ink-gold">+ Zapisz klienta na wizytę</button>}<button type="button" onClick={() => { setDayMenuOpen(false); create("freeTerm"); }} className="border border-emerald-400/70 px-3 py-3 text-left text-sm text-emerald-300">WOLNY TERMIN</button><button type="button" onClick={() => { setDayMenuOpen(false); create("consultation"); }} className="border border-emerald-400/70 px-3 py-3 text-left text-sm text-emerald-300">KONSULTACJA <span className="ml-2 text-xs text-ink-grey">09:00–09:30</span></button><button type="button" onClick={() => { setDayMenuOpen(false); create("occupied"); }} className="border border-red-400/70 px-3 py-3 text-left text-sm text-red-200">ZAJĘTY</button><button type="button" onClick={() => { setDayMenuOpen(false); create("dayOff"); }} className="border border-red-400/70 px-3 py-3 text-left text-sm text-red-200">NIEDOSTĘPNE</button><button type="button" onClick={() => { setDayMenuOpen(false); create("promotion"); }} className="border border-ink-gold/70 px-3 py-3 text-left text-sm text-ink-gold">PROMO</button><button type="button" onClick={() => { setDayMenuOpen(false); create("event"); }} className="border border-ink-white/20 px-3 py-3 text-left text-sm">EVENT</button><button type="button" disabled={clearing} onClick={clearStatus} className="px-3 py-3 text-left text-sm text-ink-grey hover:text-ink-white">{clearing ? "CZYSZCZENIE…" : "WYCZYŚĆ"}</button></div></AppModal>}
     {editor && <CalendarItemEditor item={editor} onClose={closeEditor} />}
     {settingsOpen && <AppModal title="Ustawienia kalendarza" onClose={() => setSettingsOpen(false)}><CalendarSettingsEditor bufferMinutes={bufferMinutes} bufferRules={bufferRules} visibleMonths={visibleMonths} defaultFreeStart={defaultFreeStart} defaultFreeEnd={defaultFreeEnd} /></AppModal>}

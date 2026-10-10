@@ -1,4 +1,4 @@
-export type SectionLayout = { order: string[]; collapsed: string[]; hidden: string[] };
+export type SectionLayout = { order: string[]; collapsed: string[]; hidden: string[]; wide?: string[] };
 export const emptySectionLayout: SectionLayout = { order: [], collapsed: [], hidden: [] };
 export function parseSectionLayout(input: unknown): SectionLayout {
   if (!input || typeof input !== "object") throw new Error("Nieprawidłowy układ.");
@@ -8,7 +8,7 @@ export function parseSectionLayout(input: unknown): SectionLayout {
     if (!Array.isArray(items) || items.length > 50 || items.some((id) => typeof id !== "string" || !/^[a-z0-9_-]{1,60}$/.test(id))) throw new Error("Nieprawidłowe sekcje.");
     return [...new Set(items)] as string[];
   };
-  return { order: list("order"), collapsed: list("collapsed"), hidden: list("hidden") };
+  return { order: list("order"), collapsed: list("collapsed"), hidden: list("hidden"), ...(value.wide === undefined ? {} : { wide: list("wide") }) };
 }
 export function orderedSections(ids: string[], order: string[]) {
   return [...new Set([...order.filter((id) => ids.includes(id)), ...ids])];

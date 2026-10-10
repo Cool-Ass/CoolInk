@@ -826,6 +826,29 @@ button.calendar-entry:hover { filter: brightness(1.2); }
   }
 }
 
+.studio-view-switch {
+  min-height: 44px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  color: var(--color-ink-grey);
+  background: color-mix(in srgb, var(--color-ink-white) 4%, transparent);
+  font-size: 0.8rem;
+  transition: background 150ms, color 150ms;
+}
+.studio-view-switch:hover, .studio-view-switch.is-active {
+  color: var(--color-ink-gold);
+  background: color-mix(in srgb, var(--color-ink-gold) 12%, transparent);
+}
+.studio-view-switch:focus-visible, .studio-week-visit:focus-visible {
+  outline: 2px solid var(--color-ink-gold);
+  outline-offset: 3px;
+}
+.studio-week-visit { transition: border-color 150ms, background 150ms; }
+.studio-week-visit:hover { border-color: var(--color-ink-gold); }
+@media (prefers-reduced-motion: reduce) {
+  .studio-view-switch, .studio-week-visit { transition: none; }
+}
+
 .portrait-fade {
   -webkit-mask-image: linear-gradient(
     to right,

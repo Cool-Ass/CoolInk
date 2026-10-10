@@ -7,6 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
+| STUDIO-WORKSPACE-20261010 | P2 | MEDIUM | IN_PROGRESS | Pozostały zatwierdzony kierunek Studio: tydzień, drawer obsługi, finanse, kontekst klienta, następna czynność i spójny UI. Exact CI/E2E/security i ręczna publikacja. |
 | STUDIO-WORKFLOW-20261010 | P2 | MEDIUM | IN_PROGRESS | Zatwierdzone kategorie i daty kolejki, health w ustawieniach, masonry i wspólny boczny panel. Exact CI/E2E i ręczna promocja wymagane. Bez migracji/reguł płatności. |
 | OPERATIONAL-ALERTS-20261009 | P1 | MEDIUM | DONE | PR45 main413ca66 opublikowany01:36UTC; exact-head/main verify/backup/CodeQL i Vercel SUCCESS, ponad15min obserwacji Error0%/Timeout0%, smoke200/401. Alarmy po sukcesie, recovery limit2h, fixed-code diagnostics, Next16.3.8. Bez migracji/sekretów/harmonogramów. |
 | GOOGLE-EXPORT-20261009 | P1 | HIGH przy OAuth/sekretach | TODO | Istniejący EXPORT_FAILED1/queue1 pozostaje. PR45 poprawia diagnostykę, nie przyczynę503. Ustalić fixed-code następnego worker run; nie deklarować invalid_grant bez dowodu ani wykonywać OAuth/sekretów/produkcji sync bez właściwej zgody. |

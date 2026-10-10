@@ -10,6 +10,7 @@ import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
 import { projectActions, sortStudioActions, visitContext, type StudioAction } from "@/lib/studioActions";
 import AdminSections from "@/components/admin/AdminSections";
 import StudioActionQueue from "@/components/admin/StudioActionQueue";
+import FreeStudioSlots from "@/components/admin/FreeStudioSlots";
 import StatusBadge from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       { id: "today", title: "Plan dnia", content: visits(today, "Brak wizyt na dziś.") },
       { id: "actions", title: "Wymaga decyzji", content: <StudioActionQueue items={ordered.map(item => ({ ...item, visitAt: item.visitAt?.toISOString(), dueAt: item.dueAt?.toISOString(), receivedAt: item.receivedAt?.toISOString() }))} /> },
       { id: "upcoming", title: "Najbliższe wizyty", content: visits(upcoming, "Brak wizyt w najbliższych 14 dniach.") },
+      { id: "free", title: "Wolne okna", content: <FreeStudioSlots /> },
     ]} />
     {projects.length === 100 && <p className="text-xs text-ink-grey">Wyświetlono pierwsze 100 aktywnych spraw. Wszystkie znajdziesz w zakładce Klienci.</p>}
   </div>;

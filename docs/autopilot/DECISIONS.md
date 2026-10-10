@@ -1,5 +1,16 @@
 # Decyzje i ADR
 
+## STUDIO-WORKSPACE-20261010
+
+- ACCEPTED MEDIUM: „Teraz wdroż resztę zmian o których pisałeś. Zrealizuj”,
+  adnotacja „Mój pomysł: Studio, nie panel administracyjny”,10Oct2026.
+- Kontynuacja PR51, nie powtórzenie wydania: tydzień, wspólny drawer wizyty,
+  istniejące rozliczenia/dokumenty/rozmowa, finanse, następna czynność klienta,
+  wolne miejsca/szerokości pulpitu oraz nawigacja. Finanse zachowują dotychczasowe
+  reguły i permission; przeniesienie wymaga jawnego zatwierdzenia.
+- Nowy interfejs korzysta z istniejących danych; bez migracji lub automatycznych
+  mutacji produkcji. Nie dodaje AI/social ani nowych reguł finansowych.
+
 ## STUDIO-WORKFLOW-20261010
 
 - ACCEPTED MEDIUM: właściciel zatwierdził oznaczoną propozycję kolejka →
