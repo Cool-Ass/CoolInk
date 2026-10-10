@@ -2,15 +2,17 @@
 
 ## Checkpoint — STUDIO-WORKFLOW-20261010
 
-- VERIFYING00:50UTC: jeden root Worker, ai/release-pr51-production-evidence.
-  Lease do01:45UTC, 10Oct; nie uruchamiać równoległego Workera.
+- DONE01:16UTC: root ai/release-pr51-production-evidence, lease zwolniony, IDLE.
   PR51 merged: main121b63e; head31a5785 CI38009607955 wszystkie3jobs SUCCESS.
   Main CI38010491001 wszystkie3jobs SUCCESS, oba Vercel SUCCESS.
   Ręczna promocja01:00UTC: AFr8yMzZPgBLEvDtksarXUwGMkVw Ready/Current,
   Source121b63e i domena www.coolinktattoo.pl potwierdzone w Vercel.
   Smoke200/401 PASS; owner dashboard: kategorie, daty, brak health alarmów,
   masonry gap14px, deeplink właściwej wizyty/drawer/Escape PASS bez zapisów.
-  Settings pokazują health niezależnie. Obserwacja15min w toku, nie DONE.
+  Settings pokazują health niezależnie. Obserwacja01:00–01:16UTC PASS;
+  Production Last15min110 wywołań, Error0%, Timeout0%, CPU P7581ms.
+  Końcowy readonly smoke200/401 PASS. Rollback niepotrzebny.
+  Dowody: artifacts/pr51-production-2026-10-10.png i pr51-observation-2026-10-10.png.
 - MEDIUM, zgoda właściciela w bieżącym czacie: „zezwalam na zmiany.
   Daj znać jak wdrożysz na produkcję” dla wskazanego kierunku UX.
 - Zakres: kategorie kolejki i daty wizyt, monitoring tylko w ustawieniach,

@@ -1,5 +1,40 @@
 # Rejestr wydań i rollback
 
+## 2026-10-10 — PR51, publikacja01:00UTC /03:00CEST
+
+- MEDIUM, zgoda właściciela w czacie na kierunek UX; bramka publikacji:
+  https://github.com/Cool-Ass/CoolInk/pull/51#issuecomment-6091916135.
+- Zatwierdzony head31a5785394fed569f4bbe93b19e81e7fc382f042,
+  squash main121b63e287ef390375cbc0baee70d177e119d609.
+- Exact-head https://github.com/Cool-Ass/CoolInk/actions/runs/38009607955
+  i exact-main https://github.com/Cool-Ass/CoolInk/actions/runs/38010491001:
+  verify, CodeQL, backup-snapshot SUCCESS; izolowane desktop/mobile E2E PASS.
+  Oba konteksty Vercel SUCCESS dla obu SHA. Bez pomijania bramek.
+- Scope: kategorie i daty kolejki, daty prośby w powiadomieniach,
+  monitoring przeniesiony do ustawień (backend/progi bez zmian), masonry
+  sekcji i wspólna prezentacja drawer edycji/rozliczeń. Nie jest to zmiana
+  zasad płatności ani pełna przebudowa finansowego workflow.
+- Backup migracyjny N/A: brak migracji, zmian danych lub auth/sekretów.
+  Backup-snapshot CI PASS; bez produkcyjnych fixtures i ręcznych sync.
+- Auto-Assign Custom Production Domains Disabled. Ręcznie promowany
+  Ready/Staged AFr8yMzZPgBLEvDtksarXUwGMkVw, Source121b63e potwierdzone;
+  po promocji Current/domain www.coolinktattoo.pl potwierdzone.
+  Immutable https://cool-2wxx98sor-cool-ass.vercel.app/.
+- Smoke przed i po obserwacji: /, /app, /admin/login200;
+  /polityka-prywatnosci200; niezalogowane /api/admin/calendar-snapshot
+  i /api/admin/settings/loyalty401. Media11/11 załadowane w owner preview.
+  Owner dashboard:4 realne działania/0 technicznych alarmów, daty, kategorie,
+  masonry gap14px; deeplink otwiera właściwą wizytę w prawym drawer,
+  Escape zamyka i usuwa query. Settings pokazują niezależny health.
+  Bez zapisów/mutujących smoke na produkcji.
+- Obserwacja01:00–01:16UTC PASS. Końcowe Production Last15min01:01–01:16:
+  110 wywołań, Error0%, Timeout0%, Active CPU P7581ms. Baseline0%/0%.
+  Dowody lokalne artifacts/pr51-production-2026-10-10.png i
+  artifacts/pr51-observation-2026-10-10.png. Brak incydentu/rollbacku.
+- Rollback code-only: d3a6ec0 /HTg3pxqKhH3pRTVnokSFsicGDGhV,
+  https://cool-ovic885v5-cool-ass.vercel.app/; bez restore danych.
+- Dokumentacyjny branch evidence nie jest nowym wydaniem aplikacji.
+
 ## 2026-10-09 — PR45, publikacja01:36:32UTC /03:36:32CEST
 
 - Zgoda: https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.
