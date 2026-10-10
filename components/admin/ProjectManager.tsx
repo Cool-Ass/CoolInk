@@ -1,4 +1,5 @@
 "use client";
+import { localDateTimeToIso, toCoolinkDateTimeInput } from "@/lib/dateTime";
 import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
 import { useRef, useState, type FormEvent } from "react";
 import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
@@ -77,7 +78,7 @@ export default function ProjectManager({
     depositPaymentMethod ?? "",
   );
   const [nextAction, setNextAction] = useState(initialNextAction ?? "");
-  const [nextActionDueAt, setNextActionDueAt] = useState(initialNextActionDueAt?.slice(0, 16) ?? "");
+  const [nextActionDueAt, setNextActionDueAt] = useState(initialNextActionDueAt ? toCoolinkDateTimeInput(initialNextActionDueAt) : "");
   const [saving, setSaving] = useState(false);
   const [proposalOpen, setProposalOpen] = useState(false);
   const [proposal, setProposal] = useState({
@@ -104,7 +105,7 @@ export default function ProjectManager({
           status,
           internalNotes: notes,
           nextAction,
-          nextActionDueAt,
+          nextActionDueAt: nextActionDueAt ? localDateTimeToIso(nextActionDueAt) : "",
           ...(canManageFinance ? { estimatedSessionsMin: sessionsMin, estimatedSessionsMax: sessionsMax, sessionPriceCents: sessionPrice ? Math.round(Number(sessionPrice.replace(",", ".")) * 100) : null, estimatedPrice: estimate, estimatedPriceMax: estimateMax, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
         }),
       });
@@ -144,7 +145,7 @@ export default function ProjectManager({
   async function convertConsultation() {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/projects/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ convertConsultation: true, status: "reviewing", nextAction: "Uzupełnij zakres projektu i zaproponuj kolejny krok", nextActionDueAt }) });
+      const res = await fetch(`/api/admin/projects/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ convertConsultation: true, status: "reviewing", nextAction: "Uzupełnij zakres projektu i zaproponuj kolejny krok", nextActionDueAt: nextActionDueAt ? localDateTimeToIso(nextActionDueAt) : "" }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setKind("tattoo");

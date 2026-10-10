@@ -3,8 +3,17 @@ import { studioWeekDays, shiftStudioDate, movedVisitRange } from "../lib/studioW
 import { clientNextAction } from "../lib/clientNextAction";
 import { parseSectionLayout } from "../lib/adminSectionLayout";
 import { projectActions, type WorkflowProject } from "../lib/studioActions";
+import { studioRangesOverlap } from "../lib/studioAvailability";
 
 describe("Studio workspace", () => {
+  it("keeps recently ended visits and Google busy time inside the required buffer", () => {
+    const range = (start: string, end: string) => ({ startsAt: new Date(start), endsAt: new Date(end) });
+    const slot = range("2026-10-10T10:00:00Z", "2026-10-10T11:00:00Z");
+    const previous = range("2026-10-10T08:00:00Z", "2026-10-10T09:45:00Z");
+    expect(studioRangesOverlap(slot, previous, 30)).toBe(true);
+    expect(studioRangesOverlap(slot, previous, 15)).toBe(false);
+    expect(studioRangesOverlap(slot, range("2026-10-10T10:30:00Z", "2026-10-10T12:00:00Z"))).toBe(true);
+  });
   it("uses Monday weeks across year and daylight-saving boundaries", () => {
     expect(studioWeekDays("2027-01-01")).toEqual(["2026-12-28", "2026-12-29", "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03"]);
     expect(shiftStudioDate("2026-10-25", 7)).toBe("2026-11-01");
