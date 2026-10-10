@@ -2,7 +2,20 @@
 
 ## Checkpoint — STUDIO-WORKSPACE-20261010
 
-- VERIFYING03:06UTC root ai/studio-workspace, base121b63e; lease do04:00UTC.
+- VERIFYING03:45UTC jeden root Worker; lease do04:40UTC.
+  App branch ai/studio-workspace, final b84169b, CI38020329845 trwa.
+  Evidence-only branch ai/release-pr52-production-evidence nie jest SHA wydania.
+  Prod nadal121b63e/AFr8yMzZPgBLEvDtksarXUwGMkVw, PR51 zakończony wcześniej.
+- PR52 zgoda właściciela i checkpoint: comment6093263160.
+  Starsze16cb5f6/7ee9e76: desktop4 + mobile3 PASS, mobile mouse-drag FAIL.
+  Final test rozdziela desktop drag-confirm-cancel i touch drawer date edit;
+  oba wymagają niezmienionych terminów w DB. Bez osłabienia reguł płatności.
+  Starsze3d9e1c9/1721d4c: Gitleaks invalid revision po zmianie head w trakcie;
+  nie jest pełnym skanem. Aktywnych izolowanych przebiegów nie anulowano.
+  Oba Vercel finalnego head SUCCESS. Auto-assign Disabled potwierdzone UI.
+  Lokalnie final typy/lint0errors,16 targeted date/workspace PASS.
+  Gdy final CI3jobs SUCCESS: merge, exact-main gates, manual promotion,
+  readonly smoke +15min obserwacji. Rollback code-only121b63e, bez restore.
 - Lokalnie typecheck/lint0errors i42 targeted testy PASS; pełne CI wymagane.
   Dodane izolowane desktop/mobile E2E: tydzień/miesiąc, workspace dokumenty/
   rozmowa/rozliczenie bez zapisu, szerokości sekcji i Finanse.
