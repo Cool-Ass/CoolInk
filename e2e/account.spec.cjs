@@ -304,6 +304,42 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   await page.getByLabel("HASŁO", { exact: true }).fill(password);
   await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
+  const queueClient = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const queueProject = await prisma.tattooProject.create({ data: { clientId: queueClient.id, title: "Browser queue dates", description: "Disposable queue regression", status: "awaiting_confirmation" } });
+  try {
+    const dates = [10, 5].map(days => new Date(Date.now() + days * 86400000));
+    const queueVisits = [];
+    for (const startsAt of dates) queueVisits.push(await prisma.appointment.create({ data: { projectId: queueProject.id, startsAt, endsAt: new Date(+startsAt + 3600000), status: "requested" } }));
+    await page.reload();
+    const queue = page.getByRole("region", { name: "Kolejka działań", exact: true });
+    await expect(queue).toBeVisible();
+    await expect(queue.getByText(/Raport monitoringu/)).toHaveCount(0);
+    await page.getByRole("button", { name: /^Zgłoszenia ·/ }).click();
+    const requests = queue.getByRole("link").filter({ hasText: "Browser queue dates" });
+    await expect(requests).toHaveCount(2);
+    await expect(requests.first()).toHaveAttribute("href", `/admin/calendar?appointment=${queueVisits[1].id}`);
+    await expect(requests.first().locator("time").first()).toHaveAttribute("datetime", dates[1].toISOString());
+    await page.getByRole("button", { name: /^Wszystkie ·/ }).click();
+    if (page.viewportSize().width >= 1024) await expect.poll(async () => {
+      const today = await page.locator('[data-section-id="today"]').boundingBox();
+      const upcoming = await page.locator('[data-section-id="upcoming"]').boundingBox();
+      return upcoming.y - (today.y + today.height);
+    }).toBeLessThan(35);
+    await expect(page.getByRole("button", { name: "Ukryj: Plan dnia", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: /^Dostosuj sekcje/ }).click();
+    await expect(page.getByRole("button", { name: "Ukryj: Plan dnia", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /^Zakończ dostosowanie/ }).click();
+    await page.getByRole("button", { name: "Powiadomienia", exact: true }).click();
+    const requestNotice = page.getByRole("region", { name: "Prośby o wizytę" }).getByRole("link").filter({ hasText: "Browser queue dates" }).first();
+    await expect(requestNotice).toContainText("Proponowany termin:");
+    await requestNotice.click();
+    const editor = page.getByRole("dialog");
+    await expect(editor).toBeVisible();
+    await expect(editor).toHaveClass(/studio-drawer/);
+    await expect(editor).toContainText("Browser queue dates");
+    await page.keyboard.press("Escape");
+    await expect(editor).toHaveCount(0);
+  } finally { await prisma.tattooProject.delete({ where: { id: queueProject.id } }); }
   await page.goto("/admin/calendar");
   await verifyCalendarPresentation(page);
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });

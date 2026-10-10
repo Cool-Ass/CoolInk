@@ -24,14 +24,15 @@ const isOccupiedBlock = (item: { reason?: string | null }) => item.reason?.trim(
 // environments even though their persisted UTC range was correct.
 const time = (value: string) => new Date(value).toLocaleTimeString("pl-PL", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit" });
 
-export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats }: { appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
+export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats, initialAppointmentId }: { initialAppointmentId?: string; appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
   const router = useRouter();
   const today = startOfLocalDay(new Date());
-  const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const initialVisit = appointments.find(visit => visit.id === initialAppointmentId);
+  const [cursor, setCursor] = useState(() => { const date = initialVisit ? new Date(initialVisit.startsAt) : today; return new Date(date.getFullYear(), date.getMonth(), 1); });
   const [selectedDays, setSelectedDays] = useState<Date[]>([]);
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [selectMode, setSelectMode] = useState(false);
-  const [editor, setEditor] = useState<CalendarEditorItem | null>(null);
+  const [editor, setEditor] = useState<CalendarEditorItem | null>(() => initialVisit ? { ...initialVisit, kind: "appointment" } : null);
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clearing, setClearing] = useState(false);

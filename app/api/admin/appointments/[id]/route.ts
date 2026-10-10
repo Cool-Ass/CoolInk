@@ -42,12 +42,12 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!changed) return item;
     const cancelled = status === "cancelled" && appointment.status !== "cancelled";
     const proposed = status === "proposed";
-    const message = cancelled ? "Wizyta została anulowana przez studio." : proposed ? `Studio zaproponowało nowy termin: ${formatCoolinkDateTime(startsAt)}.` : status !== appointment.status ? "Zmieniono status wizyty." : `Zmieniono termin wizyty na ${formatCoolinkDateTime(startsAt)}.`;
+    const message = cancelled ? `Wizyta z ${formatCoolinkDateTime(startsAt)} została anulowana przez studio.` : proposed ? `Studio zaproponowało nowy termin: ${formatCoolinkDateTime(startsAt)}.` : status !== appointment.status ? `Zmieniono status wizyty z ${formatCoolinkDateTime(startsAt)}.` : `Zmieniono termin wizyty na ${formatCoolinkDateTime(startsAt)}.`;
     await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: proposed ? "appointment_proposed" : cancelled ? "appointment_cancelled" : "appointment_updated", message, visibility: "admin" } });
     const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true } });
     const project = await tx.tattooProject.findUniqueOrThrow({ where: { id: appointment.projectId }, select: { status: true } });
     await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: projectStatusAfterAppointmentChange(sessions, appointment.project.depositStatus, project.status) } });
-    if (cancelled) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal/visits" } });
+    if (cancelled) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: `${message} Skontaktuj się, aby ustalić nowy termin.`, href: "/app/portal/visits" } });
     else if (proposed) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_PROPOSED", title: "Studio zaproponowało nowy termin", body: `Sprawdź propozycję: ${formatCoolinkDateTime(startsAt)}.`, href: "/app/portal/visits" } });
     else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: status === "confirmed" ? "Wizyta potwierdzona" : "Aktualizacja wizyty", body: message, href: "/app/portal/visits" } });
     return item;
@@ -76,7 +76,7 @@ export async function DELETE(request: Request, { params }: Params) {
     const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true } });
     const project = await tx.tattooProject.findUniqueOrThrow({ where: { id: appointment.projectId }, select: { status: true, depositStatus: true } });
     await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: projectStatusAfterAppointmentChange(sessions, project.depositStatus, project.status) } });
-    await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: "Studio anulowało wizytę. Skontaktuj się, aby ustalić nowy termin.", href: "/app/portal" } });
+    await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_CANCELLED", title: "Wizyta anulowana", body: `Studio anulowało wizytę z ${formatCoolinkDateTime(appointment.startsAt)}. Skontaktuj się, aby ustalić nowy termin.`, href: "/app/portal" } });
     return true;
   });
   if (!cancelled) return NextResponse.json({ error: "Najpierw wycofaj rozliczenie w karcie lojalnościowej klienta." }, { status: 409 });

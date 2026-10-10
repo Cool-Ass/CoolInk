@@ -1,5 +1,24 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — STUDIO-WORKFLOW-20261010
+
+- VERIFYING: jeden root Worker, ai/studio-workflow-cleanup, base d3a6ec0.
+  Lease do03:15UTC, 10Oct; nie uruchamiać równoległego Workera.
+- MEDIUM, zgoda właściciela w bieżącym czacie: „zezwalam na zmiany.
+  Daj znać jak wdrożysz na produkcję” dla wskazanego kierunku UX.
+- Zakres: kategorie kolejki i daty wizyt, monitoring tylko w ustawieniach,
+  masonry sekcji bez pustych rzędów, narzędzia układu w trybie dostosowania,
+  prośby z datą w dzwonku oraz boczny panel edycji/rozliczenia wizyty.
+  Bez migracji, zmian autoryzacji, sekretów, harmonogramów i reguł płatności.
+  Monitoring nadal działa; jego progi i backend pozostają bez zmian.
+- Lokalnie typy i10 targeted testów PASS; pełne exact-head/main CI,
+  izolowane E2E desktop/mobile i oba konteksty Vercel wymagane.
+- Kryteria: zgłoszenia według terminu, oddzielne kontynuacje i rozliczenia,
+  brak technicznych alarmów/liczników w kolejce, daty w powiadomieniach,
+  niezależne wysokości sekcji, deeplink do właściwej wizyty i Escape/focus.
+- Publikacja ręczna dopiero po bramkach; rollback code-only d3a6ec0 /
+  HTg3pxqKhH3pRTVnokSFsicGDGhV. Bez produkcyjnych fixtures/restore.
+
 ## Checkpoint — CLIENT-WORKFLOW-MEDIA-20261009
 
 - IMPLEMENTING: jeden root Worker, ai/client-workflow-media-fixes, base a2ca37c.

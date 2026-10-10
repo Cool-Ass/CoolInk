@@ -1,5 +1,19 @@
 # Decyzje i ADR
 
+## STUDIO-WORKFLOW-20261010
+
+- ACCEPTED MEDIUM: właściciel zatwierdził oznaczoną propozycję kolejka →
+  daty → układ sekcji → boczny panel: „zezwalam na zmiany. Daj znać jak
+  wdrożysz na produkcję” w bieżącym czacie 10Oct2026.
+- Priorytet daty w obrębie kategorii; brak automatycznych wiecznych zadań
+  tylko z powodu statusu confirmed. Kontynuacja oddzielona od rozliczenia.
+- Techniczne zdrowie pozostaje dostępne właścicielowi w ustawieniach,
+  bez wyłączania monitoringu ani osłabiania limitu świeżości2h.
+- Edycja i istniejące rozliczenie używają wspólnej podstawy bocznego dialogu
+  z focus trap, blokadą przewijania i reduced motion. Reguły finansowe bez zmian.
+- Bez migracji; odwracalne wycofanie artefaktu do d3a6ec0.
+
+
 ## OPERATIONAL-ALERTS-20261009
 
 - ACCEPTED: właściciel zatwierdził PR45 wraz z minimalnym Next/eslint16.3.8;
