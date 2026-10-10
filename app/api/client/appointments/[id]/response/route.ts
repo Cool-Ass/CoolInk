@@ -1,3 +1,4 @@
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
@@ -40,15 +41,15 @@ export async function POST(request: Request, { params }: Params) {
     const updated = await tx.appointment.update({ where: { id }, data: { status: accepted ? "confirmed" : "cancelled" } });
     await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: nextProjectStatus, ...(appointment.waitlistOffer ? { nextAction: accepted ? "Przygotuj potwierdzoną wizytę" : "Zaproponuj kolejny termin z listy rezerwowej", nextActionDueAt: null } : {}) } });
     if (appointment.waitlistOffer) await tx.waitlistEntry.update({ where: { id: appointment.waitlistOffer.id }, data: accepted ? { status: "booked" } : { status: "active", offeredAppointmentId: null, offeredAt: null, offerExpiresAt: null } });
-    await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: accepted ? "appointment_confirmed" : "appointment_cancelled", message: activityMessage(accepted ? "appointment_confirmed" : "appointment_cancelled"), visibility: "admin" } });
+    await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: accepted ? "appointment_confirmed" : "appointment_cancelled", message: activityMessage(accepted ? "appointment_confirmed" : "appointment_cancelled", formatCoolinkDateTime(updated.startsAt)), visibility: "admin" } });
     return updated;
   }).catch((error: unknown) => {
     if (error instanceof Error && ["STALE_PROPOSAL", "BOOKING_CONFLICT"].includes(error.message)) return null;
     throw error;
   });
   if (!nextAppointment) return NextResponse.json({ error: "Ta propozycja nie jest już aktualna. Odśwież stronę i skontaktuj się ze studiem." }, { status: 409 });
-  await recordWorkflowEvent({ projectId: appointment.projectId, type: accepted ? "APPOINTMENT_ACCEPTED" : "APPOINTMENT_REJECTED", notification: accepted ? { title: "Termin potwierdzony", body: "Twoja odpowiedź została zapisana. Szczegóły wizyty są widoczne na koncie.", appointmentId: id } : undefined });
-  await sendPushToAdmins({ title: accepted ? "Klient zaakceptował termin" : "Klient odrzucił termin", body: `${client.firstName} ${client.lastName} odpowiedział na propozycję wizyty.`, url: `/admin/clients/${client.id}`, tag: `client-response-${id}` }).catch(() => undefined);
+  await recordWorkflowEvent({ projectId: appointment.projectId, type: accepted ? "APPOINTMENT_ACCEPTED" : "APPOINTMENT_REJECTED", notification: accepted ? { title: "Termin potwierdzony", body: `Potwierdzony termin: ${formatCoolinkDateTime(nextAppointment.startsAt)}. Szczegóły wizyty są widoczne na koncie.`, appointmentId: id } : undefined });
+  await sendPushToAdmins({ title: accepted ? "Klient zaakceptował termin" : "Klient odrzucił termin", body: `${client.firstName} ${client.lastName} odpowiedział na propozycję: ${formatCoolinkDateTime(nextAppointment.startsAt)}.`, url: `/admin/clients/${client.id}`, tag: `client-response-${id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(id).catch(() => undefined);
   if (!accepted) await offerReleasedRange(appointment.startsAt, appointment.endsAt, appointment.waitlistOffer?.id).catch(() => undefined);
   return NextResponse.json({ appointment: nextAppointment });

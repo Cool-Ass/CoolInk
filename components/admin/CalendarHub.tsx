@@ -24,14 +24,26 @@ const isOccupiedBlock = (item: { reason?: string | null }) => item.reason?.trim(
 // environments even though their persisted UTC range was correct.
 const time = (value: string) => new Date(value).toLocaleTimeString("pl-PL", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit" });
 
-export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats }: { appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
+export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats, initialAppointmentId }: { initialAppointmentId?: string; appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
   const router = useRouter();
   const today = startOfLocalDay(new Date());
-  const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const initialVisit = appointments.find(visit => visit.id === initialAppointmentId);
+  const [cursor, setCursor] = useState(() => { const date = initialVisit ? new Date(initialVisit.startsAt) : today; return new Date(date.getFullYear(), date.getMonth(), 1); });
   const [selectedDays, setSelectedDays] = useState<Date[]>([]);
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [selectMode, setSelectMode] = useState(false);
-  const [editor, setEditor] = useState<CalendarEditorItem | null>(null);
+  const [editor, setEditor] = useState<CalendarEditorItem | null>(() => initialVisit ? { ...initialVisit, kind: "appointment" } : null);
+  const [openedAppointmentId, setOpenedAppointmentId] = useState(initialAppointmentId);
+  if (openedAppointmentId !== initialAppointmentId) {
+    setOpenedAppointmentId(initialAppointmentId);
+    const visit = appointments.find(item => item.id === initialAppointmentId);
+    setEditor(visit ? { ...visit, kind: "appointment" } : null);
+    if (visit) { const date = new Date(visit.startsAt); setCursor(new Date(date.getFullYear(), date.getMonth(), 1)); }
+  }
+  function closeEditor() {
+    setEditor(null);
+    if (initialAppointmentId) router.replace("/admin/calendar", { scroll: false });
+  }
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -134,7 +146,7 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
       />
     </div>
     {dayMenuOpen && selectedDays.length > 0 && <AppModal title={selectedDays.length === 1 ? "Ustaw dzień" : `Ustaw dla ${selectedDays.length} dni`} size="sm" onClose={() => setDayMenuOpen(false)}><div className="grid gap-2">{selectedDays.length === 1 && <button type="button" onClick={() => { setDayMenuOpen(false); window.dispatchEvent(new CustomEvent("coolink:new-appointment", { detail: { startsAt: `${localDateKey(selected)}T${defaultFreeStart}` } })); }} className="rounded border border-ink-gold bg-ink-gold/10 px-3 py-3 text-left text-sm text-ink-gold">+ Zapisz klienta na wizytę</button>}<button type="button" onClick={() => { setDayMenuOpen(false); create("freeTerm"); }} className="border border-emerald-400/70 px-3 py-3 text-left text-sm text-emerald-300">WOLNY TERMIN</button><button type="button" onClick={() => { setDayMenuOpen(false); create("consultation"); }} className="border border-emerald-400/70 px-3 py-3 text-left text-sm text-emerald-300">KONSULTACJA <span className="ml-2 text-xs text-ink-grey">09:00–09:30</span></button><button type="button" onClick={() => { setDayMenuOpen(false); create("occupied"); }} className="border border-red-400/70 px-3 py-3 text-left text-sm text-red-200">ZAJĘTY</button><button type="button" onClick={() => { setDayMenuOpen(false); create("dayOff"); }} className="border border-red-400/70 px-3 py-3 text-left text-sm text-red-200">NIEDOSTĘPNE</button><button type="button" onClick={() => { setDayMenuOpen(false); create("promotion"); }} className="border border-ink-gold/70 px-3 py-3 text-left text-sm text-ink-gold">PROMO</button><button type="button" onClick={() => { setDayMenuOpen(false); create("event"); }} className="border border-ink-white/20 px-3 py-3 text-left text-sm">EVENT</button><button type="button" disabled={clearing} onClick={clearStatus} className="px-3 py-3 text-left text-sm text-ink-grey hover:text-ink-white">{clearing ? "CZYSZCZENIE…" : "WYCZYŚĆ"}</button></div></AppModal>}
-    {editor && <CalendarItemEditor item={editor} onClose={() => setEditor(null)} />}
+    {editor && <CalendarItemEditor item={editor} onClose={closeEditor} />}
     {settingsOpen && <AppModal title="Ustawienia kalendarza" onClose={() => setSettingsOpen(false)}><CalendarSettingsEditor bufferMinutes={bufferMinutes} bufferRules={bufferRules} visibleMonths={visibleMonths} defaultFreeStart={defaultFreeStart} defaultFreeEnd={defaultFreeEnd} /></AppModal>}
   </section>;
 }

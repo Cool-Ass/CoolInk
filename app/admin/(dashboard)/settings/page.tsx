@@ -1,4 +1,5 @@
 import AdminSections from "@/components/admin/AdminSections";
+import SystemHealth from "@/components/admin/SystemHealth";
 import GoogleSyncRetry from "@/components/admin/GoogleSyncRetry";
 import GoogleReviewsSettings from "@/components/admin/GoogleReviewsSettings";
 import { getGoogleReviewsSettings } from "@/lib/googleReviewsSettings";
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
         <p className="mb-1 text-[11px] font-medium tracking-[0.22em] text-ink-gold">USTAWIENIA</p>
         <h1 className="font-display text-3xl text-ink-white">Konto</h1>
       </div>
+      <SystemHealth />
       <AdminSections scope="settings" initial={await getAdminSectionLayout(admin.id, "settings")} sections={[{ id: "settings-0", title: "GOOGLE CALENDAR", content: (<CompactDisclosure title="GOOGLE CALENDAR" summary="Automatyczny eksport wizyt i prywatne blokady zajętości" bodyClassName="[&>section]:border-0">
         <GoogleCalendarIntegration />
         <GoogleSyncRetry />

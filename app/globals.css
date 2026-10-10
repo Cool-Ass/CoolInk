@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+.studio-action-filter {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--color-ink-grey);
+  transition: background-color .15s, border-color .15s;
+}
+.studio-action-filter:hover, .studio-action-filter[aria-pressed="true"] {
+  color: var(--color-ink-gold);
+  border-color: var(--color-ink-gold);
+  background: rgb(201 154 74 / 10%);
+}
+.studio-drawer { animation: studio-drawer-in .2s ease-out; }
+@keyframes studio-drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .studio-drawer { animation: none; }
+  .studio-action-filter { transition: none; }
+}
+
 @theme {
   --color-ink-black: #0a0908;
   --color-ink-charcoal: #131211;

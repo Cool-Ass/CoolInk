@@ -5,6 +5,7 @@ import { getSiteContent } from "@/lib/content";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import { ToastProvider } from "@/components/admin/ToastProvider";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { prisma } from "@/lib/prisma";
 
 // Middleware already blocks unauthenticated requests to everything under
@@ -18,7 +19,7 @@ export default async function DashboardLayout({
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
   const visible = visibleMessages(messageRecipient("admin", admin.id));
-  const [content, unreadProjectMessages, unreadDirectMessages, unreadNotifications, inbox, directInbox, notifications] = await Promise.all([getSiteContent(), prisma.projectMessage.count({ where: { ...visible, author: "client", readAt: null } }), prisma.directMessage.count({ where: { ...visible, author: "client", readAt: null } }), prisma.contactMessage.count({ where: { isRead: false } }), prisma.projectMessage.findMany({ where: { ...visible, author: "client" }, include: { project: { include: { client: { select: { id: true, firstName: true, lastName: true } } } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.directMessage.findMany({ where: { ...visible, author: "client" }, include: { client: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 8 })]);
+  const [content, unreadProjectMessages, unreadDirectMessages, unreadNotifications, inbox, directInbox, notifications, appointmentRequests] = await Promise.all([getSiteContent(), prisma.projectMessage.count({ where: { ...visible, author: "client", readAt: null } }), prisma.directMessage.count({ where: { ...visible, author: "client", readAt: null } }), prisma.contactMessage.count({ where: { isRead: false } }), prisma.projectMessage.findMany({ where: { ...visible, author: "client" }, include: { project: { include: { client: { select: { id: true, firstName: true, lastName: true } } } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.directMessage.findMany({ where: { ...visible, author: "client" }, include: { client: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "desc" }, take: 100 }), prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 8 }), prisma.appointment.findMany({ where: { status: "requested", project: { clientArchivedAt: null } }, include: { project: { include: { client: { select: { firstName: true, lastName: true } } } } }, orderBy: { startsAt: "asc" }, take: 100 })]);
   const conversations = Array.from(new Map(inbox.map((item) => [item.projectId, item])).values()).slice(0, 8);
   const directConversations = Array.from(new Map(directInbox.map((item) => [item.clientId, item])).values());
   const messageItems = [
@@ -32,7 +33,7 @@ export default async function DashboardLayout({
         <a href="#workspace" className="studio-skip-link">Przejdź do treści</a>
         <Sidebar logoUrl={content.brand.logoUrl} role={admin?.role} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar adminEmail={admin?.email ?? ""} adminRole={admin?.role} unreadMessages={unreadProjectMessages + unreadDirectMessages} unreadNotifications={unreadNotifications} inbox={messageItems} notifications={notifications.map((item) => ({ id: item.id, title: item.subject || "Nowe zapytanie", body: item.message, createdAt: item.createdAt.toISOString(), unread: !item.isRead }))} />
+          <Topbar appointmentRequests={appointmentRequests.map(visit => ({ id: visit.id, title: `${visit.project.client.firstName} ${visit.project.client.lastName} · ${visit.project.title}`, body: `Proponowany termin: ${formatCoolinkDateTime(visit.startsAt)}`, href: `/admin/calendar?appointment=${encodeURIComponent(visit.id)}` }))} adminEmail={admin?.email ?? ""} adminRole={admin?.role} unreadMessages={unreadProjectMessages + unreadDirectMessages} unreadNotifications={unreadNotifications} inbox={messageItems} notifications={notifications.map((item) => ({ id: item.id, title: item.subject || "Nowe zapytanie", body: item.message, createdAt: item.createdAt.toISOString(), unread: !item.isRead }))} />
           <main id="workspace" tabIndex={-1} className="admin-workspace studio-workspace"><div className="mx-auto w-full max-w-[1600px]">{children}</div></main>
         </div>
       </div>
