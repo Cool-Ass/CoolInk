@@ -1,5 +1,33 @@
 # Rejestr wydań i rollback
 
+## 2026-10-12 — PR53, publikacja 2026-10-11 23:06UTC /01:06CEST
+
+- Zgoda właściciela na dc491bd i numer BLIK: PR53 comment6114660741.
+- Exact-head dc491bddabe6156b2c0232848c4a91eca7183372 CI38180949182 SUCCESS;
+  squash main9ebb598f57719062343d14eaca605a1d1a958dd3 CI38181966798 SUCCESS.
+  verify, backup-snapshot, CodeQL i oba statusy Vercel SUCCESS dla obu SHA.
+  Osiem desktop/mobile E2E PASS, w tym BLIK home/detail/paid hide,
+  kopiowanie i odmowa schowka oraz brak zmiany statusu płatności.
+- Ręczna promocja gnJqbQAKw1fyysnKFT3e4wzwNLj1,
+  cool-c984amq8h-cool-ass.vercel.app. Świeży UI potwierdził Source9ebb598,
+  Ready, Production i www.coolinktattoo.pl bez Staged.
+  Auto-assign Disabled potwierdzone przed publikacją; bez bypass gates.
+- Instrukcja przelewu BLIK na telefon dla ustalonego oczekującego zadatku;
+  potwierdzenie wpływu pozostaje ręczne. Bez bank API, kodów BLIK,
+  migracji, sekretów, nowych uprawnień i produkcyjnych fixtures.
+- Pierwszy smoke: /,/app,/admin/login200; /app/portal/projects307 bez sesji;
+  /api/admin/announcements i nieistniejący appointment workspace401.
+  Browser: istniejący publiczny tryb budowy, zalogowany pusty panel klienta
+  oraz lista projektów PASS; brak kwalifikującego zadatku na tym koncie.
+  Nowy stan oczekującego zadatku zweryfikowano w izolowanych E2E, nie przez
+  tworzenie finansowych danych na produkcji.
+- OBSERVING: końcowy smoke i co najmniej15min obserwacji po promocji wymagane.
+  Baseline22:36UTC Production Last15min119/0%Error/0%Timeout/134msCPU P75;
+  pierwszy odczyt po promocji23:08UTC4/0%/0%/160ms. Dane obecne.
+- Dowód lokalny poza repo: artifacts/pr53-production-2026-10-12.png.
+- Rollback f0b27bdd40466b4039fa8a9cde0c22d0db3664ca /
+  4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU, tylko kod, bez restore; niewykonany.
+
 ## 2026-10-09 — PR45, publikacja01:36:32UTC /03:36:32CEST
 
 - Zgoda: https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.

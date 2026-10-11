@@ -8,8 +8,10 @@
   Exact-head CI38180949182 SUCCESS verify/E2E desktop+mobile,CodeQL,backup;
   oba Vercel SUCCESS. Auto-assign Disabled UI22:35UTC. Zgoda PRcomment6114660741.
   PR53 merged jako9ebb598f57719062343d14eaca605a1d1a958dd3.
-  Exact-main CI38181966798 trwa; primary gnJqbQAKw1fyysnKFT3e4wzwNLj1 pending.
-  Brak promocji przed full exact-main gates. Produkcja nadal f0b27bd.
+  Exact-main CI38181966798 SUCCESS wszystkich3jobs; oba Vercel SUCCESS.
+  Ręczna promocja gnJqbQAKw1fyysnKFT3e4wzwNLj1 wykonana23:06UTC;
+  świeży UI potwierdził www.coolinktattoo.pl + Source9ebb598 bez Staged.
+  Trwa wymagana obserwacja po publikacji do co najmniej23:21UTC.
   Baseline Production Last15min119/0%Error/0%Timeout/CPU P75 134ms.
   lease od2026-10-11 22:59UTC do23:50UTC. Poprzedni PR52 merged i promowany
   11Oct02:01UTC; obserwacja tamtej sesji została przerwana, nie deklarować DONE.
@@ -33,8 +35,9 @@
   Production Staged / domainsSkipped; home i wejście klienta browser PASS.
   Exact-main CI38181966798 pełne3jobs SUCCESS23:05UTC, oba Vercel SUCCESS.
   Main9ebb598 bez zmian. Wszystkie gates przed ręczną promocją spełnione.
-- Aktualna produkcja znana:4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU/f0b27bd.
-  Nie ponawiać jej promocji w ramach tego zadania.
+- Aktualna produkcja:gnJqbQAKw1fyysnKFT3e4wzwNLj1/9ebb598.
+  Rollback wyłącznie kodu:4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU/f0b27bd;
+  brak migracji lub podstaw do restore danych.
 
 ## Checkpoint — STUDIO-WORKSPACE-20261010
 
