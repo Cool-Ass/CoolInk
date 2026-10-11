@@ -5,7 +5,10 @@
 - VERIFYING 2026-10-11 01:50UTC, jeden root Worker; lease do03:00UTC.
   App branch ai/studio-workspace, final b84169b, CI38020329845 SUCCESS.
   PR52 merged jako main f0b27bdd40466b4039fa8a9cde0c22d0db3664ca.
-  Exact-main CI38103137870 trwa; Vercel4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU pending.
+  Exact-main CI38103137870 verify/backup-snapshot/CodeQL SUCCESS02:00UTC.
+  Oba Vercel SUCCESS;4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU Ready Production Staged,
+  Source f0b27bd, Assigning Custom Domains Skipped. Staged home/client/admin-login
+  oraz logo PASS w przeglądarce. Przed ręczną promocją: gates spełnione.
   Auto-assign Disabled potwierdzone ponownie01:51UTC; bez promocji przed gates.
   PR comment6104350020. Prod nadal121b63e do ręcznej promocji.
   Evidence-only branch ai/release-pr52-production-evidence nie jest SHA wydania.
