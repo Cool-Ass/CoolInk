@@ -10,7 +10,11 @@
   Source f0b27bd, Assigning Custom Domains Skipped. Staged home/client/admin-login
   oraz logo PASS w przeglądarce. Przed ręczną promocją: gates spełnione.
   Auto-assign Disabled potwierdzone ponownie01:51UTC; bez promocji przed gates.
-  PR comment6104350020. Prod nadal121b63e do ręcznej promocji.
+  PR comment6104350020. Ręczna promocja02:01:09UTC na www.coolinktattoo.pl;
+  UI potwierdza Production + domenę i Source f0b27bd. Obserwacja do>=02:16:09UTC.
+  Owner session wygasła (login), nie obchodzono MFA. Client session działa;
+  nowa nawigacja Tatuaże/Start i właściwy pusty stan home PASS.
+  Baseline Production Last15min:4 invocations, Error0%,Timeout0%,CPU P75 380ms.
   Evidence-only branch ai/release-pr52-production-evidence nie jest SHA wydania.
   Prod nadal121b63e/AFr8yMzZPgBLEvDtksarXUwGMkVw, PR51 zakończony wcześniej.
 - PR52 zgoda właściciela i checkpoint: comment6093263160.
