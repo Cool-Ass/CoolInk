@@ -2,8 +2,9 @@
 
 ## Checkpoint — STUDIO-WORKSPACE-20261010
 
-- VERIFYING03:45UTC jeden root Worker; lease do04:40UTC.
-  App branch ai/studio-workspace, final b84169b, CI38020329845 trwa.
+- VERIFYING 2026-10-11 01:50UTC, jeden root Worker; lease do03:00UTC.
+  App branch ai/studio-workspace, final b84169b, CI38020329845 SUCCESS.
+  PR52 nadal open, main121b63e; wznowienie po przerwie, merge po head gates.
   Evidence-only branch ai/release-pr52-production-evidence nie jest SHA wydania.
   Prod nadal121b63e/AFr8yMzZPgBLEvDtksarXUwGMkVw, PR51 zakończony wcześniej.
 - PR52 zgoda właściciela i checkpoint: comment6093263160.
