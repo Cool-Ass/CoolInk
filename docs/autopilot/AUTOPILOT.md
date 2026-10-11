@@ -5,7 +5,10 @@
 - VERIFYING, jeden root Worker; app ai/blik-phone-deposit dc491bd, base f0b27bd;
   Evidence-only branch ai/release-pr53-evidence nie jest targetem promocji.
   Właściciel zatwierdził PR53/dc491bd i odbiorcę w czacie: „tak”.
-  Exact-head CI38180949182 trwa; Auto-assign Disabled UI22:35UTC.
+  Exact-head CI38180949182 SUCCESS verify/E2E desktop+mobile,CodeQL,backup;
+  oba Vercel SUCCESS. Auto-assign Disabled UI22:35UTC. Zgoda PRcomment6114660741.
+  Przed merge main nadal f0b27bd, headdc491bd mergeable, branch unprotected.
+  Baseline Production Last15min119/0%Error/0%Timeout/CPU P75 134ms.
   lease 2026-10-11 22:30–23:25UTC. Poprzedni PR52 merged i promowany
   11Oct02:01UTC; obserwacja tamtej sesji została przerwana, nie deklarować DONE.
 - Właściciel wybrał BLIK na telefon i podał numer odbiorcy w bieżącym czacie.
