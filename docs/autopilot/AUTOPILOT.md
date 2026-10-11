@@ -11,7 +11,7 @@
   Exact-main CI38181966798 trwa; primary gnJqbQAKw1fyysnKFT3e4wzwNLj1 pending.
   Brak promocji przed full exact-main gates. Produkcja nadal f0b27bd.
   Baseline Production Last15min119/0%Error/0%Timeout/CPU P75 134ms.
-  lease 2026-10-11 22:30–23:25UTC. Poprzedni PR52 merged i promowany
+  lease od2026-10-11 22:59UTC do23:50UTC. Poprzedni PR52 merged i promowany
   11Oct02:01UTC; obserwacja tamtej sesji została przerwana, nie deklarować DONE.
 - Właściciel wybrał BLIK na telefon i podał numer odbiorcy w bieżącym czacie.
   Wyłącznie instrukcja w koncie klienta dla ustalonego oczekującego zadatku,
@@ -27,7 +27,11 @@
 - Lokalnie16 unit PASS, typecheck PASS, targeted lint0errors (1 istniejące img
   warning), browser spec syntax i diff check PASS. Izolowane desktop/mobile E2E
   dodane: home/detail/paid hide, copy success/denial, status DB bez zmiany.
-  Pełne exact-head/main CI wymagane. Lease aktywny do23:25UTC.
+  Pełne exact-head/main CI wymagane. Lease aktywny do23:50UTC.
+  22:58UTC exact-main verify w HTTP/E2E, CodeQL+backup SUCCESS; oba Vercel SUCCESS.
+  Staged main gnJqbQAKw1fyysnKFT3e4wzwNLj1 Source9ebb598 Ready,
+  Production Staged / domainsSkipped; home i wejście klienta browser PASS.
+  Bez promocji do końca verify; nie zmieniono app SHA.
 - Aktualna produkcja znana:4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU/f0b27bd.
   Nie ponawiać jej promocji w ramach tego zadania.
 
