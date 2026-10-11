@@ -2,7 +2,10 @@
 
 ## Checkpoint — BLIK-PHONE-20261012
 
-- WAITING_APPROVAL / VERIFYING, jeden root Worker, ai/blik-phone-deposit, base f0b27bd;
+- VERIFYING, jeden root Worker; app ai/blik-phone-deposit dc491bd, base f0b27bd;
+  Evidence-only branch ai/release-pr53-evidence nie jest targetem promocji.
+  Właściciel zatwierdził PR53/dc491bd i odbiorcę w czacie: „tak”.
+  Exact-head CI38180949182 trwa; Auto-assign Disabled UI22:35UTC.
   lease 2026-10-11 22:30–23:25UTC. Poprzedni PR52 merged i promowany
   11Oct02:01UTC; obserwacja tamtej sesji została przerwana, nie deklarować DONE.
 - Właściciel wybrał BLIK na telefon i podał numer odbiorcy w bieżącym czacie.
@@ -19,7 +22,7 @@
 - Lokalnie16 unit PASS, typecheck PASS, targeted lint0errors (1 istniejące img
   warning), browser spec syntax i diff check PASS. Izolowane desktop/mobile E2E
   dodane: home/detail/paid hide, copy success/denial, status DB bez zmiany.
-  Pełne exact-head CI wymagane. Lease zwolniony podczas oczekiwania na zgodę.
+  Pełne exact-head/main CI wymagane. Lease aktywny do23:25UTC.
 - Aktualna produkcja znana:4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU/f0b27bd.
   Nie ponawiać jej promocji w ramach tego zadania.
 
