@@ -1,5 +1,13 @@
 # Decyzje i ADR
 
+## BLIK-PHONE-20261012
+
+- Właściciel zlecił opcję zadatku BLIK, wybrał „telefon” i podał numer odbiorcy.
+- Instrukcja przelewu na telefon, nie checkout z kodem BLIK. Brak wysyłania
+  płatności przez system lub potwierdzania paid przez klienta/clipboard.
+- Kwota wyłącznie z ustalonego zadatku własnego aktywnego projektu.
+  Ostateczna zgoda na SHA/odbiorcę przed publikacją; bez zmian zasad finansowych.
+
 ## STUDIO-WORKSPACE-20261010
 
 - ACCEPTED MEDIUM: „Teraz wdroż resztę zmian o których pisałeś. Zrealizuj”,

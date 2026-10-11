@@ -109,7 +109,33 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/portal/);
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   projectTitle = `Browser project ${randomUUID().slice(0, 8)}`;
-  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description: "Isolated browser fixture" } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description: "Isolated browser fixture", depositStatus: "awaiting", depositAmount: 300 } });
+  await page.goto("/app/portal");
+  const blik = page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true });
+  await expect(blik).toBeVisible();
+  await expect(blik.getByText("530 178 346", { exact: true })).toBeVisible();
+  await expect(blik.getByText("300 zł", { exact: true })).toBeVisible();
+  await expect(blik.getByText(`Zadatek ${project.id}`, { exact: true })).toBeVisible();
+  // Mock only the clipboard in this isolated browser document, never banking/payment APIs.
+  await page.evaluate(() => { window.__blikCopied = []; Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async value => { window.__blikCopied.push(value); } } }); });
+  for (const label of ["Numer telefonu", "Kwota zadatku", "Tytuł przelewu"]) {
+    await blik.getByRole("button", { name: `Kopiuj: ${label}`, exact: true }).click();
+    await expect(blik.getByRole("status")).toHaveText(`${label} — skopiowano.`);
+  }
+  expect(await page.evaluate(() => window.__blikCopied)).toEqual(["530178346", "300", `Zadatek ${project.id}`]);
+  await page.evaluate(() => { Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("Clipboard denied fixture"); } } }); });
+  await blik.getByRole("button", { name: "Kopiuj: Numer telefonu", exact: true }).click();
+  await expect(blik.getByRole("status")).toHaveText("Nie udało się skopiować. Przepisz dane widoczne powyżej.");
+  expect((await prisma.tattooProject.findUniqueOrThrow({ where: { id: project.id } })).depositStatus).toBe("awaiting");
+  await page.goto(`/app/portal/projects?project=${project.id}`);
+  await expect(blik).toBeVisible();
+  await prisma.tattooProject.update({ where: { id: project.id }, data: { depositStatus: "paid" } });
+  await page.reload();
+  await expect(blik).toHaveCount(0);
+  await page.goto("/app/portal");
+  await expect(blik).toHaveCount(0);
+  // Restore this test fixture for the existing project flow; no real transfer is executed.
+  await prisma.tattooProject.update({ where: { id: project.id }, data: { depositStatus: "not_required", depositAmount: null } });
   await page.goto("/app/portal/projects");
   await expect(page.getByText(projectTitle, { exact: true }).first()).toBeVisible();
   await page.goto(`/app/portal/projects?project=${project.id}`);
