@@ -1,5 +1,22 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — STUDIO-WORKSPACE-20261010
+
+- VERIFYING03:06UTC root ai/studio-workspace, base121b63e; lease do04:00UTC.
+- Lokalnie typecheck/lint0errors i42 targeted testy PASS; pełne CI wymagane.
+  Dodane izolowane desktop/mobile E2E: tydzień/miesiąc, workspace dokumenty/
+  rozmowa/rozliczenie bez zapisu, szerokości sekcji i Finanse.
+- MEDIUM: właściciel zlecił resztę propozycji „Studio” w bieżącym czacie.
+  Tydzień/miesiąc kalendarza, potwierdzane przenoszenie, jeden drawer wizyty
+  z istniejącym rozliczeniem, dane klienta i komunikacja w kontekście,
+  finanse jako odczyt istniejących rozliczeń, następna czynność klienta,
+  wolne miejsca i szerokości pulpitu, spójna nawigacja i powierzchnie.
+- Bez migracji, zmian zasad finansowych/auth/sekretów/monitoringu.
+  Zapisy wyłącznie istniejącymi endpointami i uprawnieniami.
+- Exact-head/main CI3jobs, oba Vercel, izolowane E2E i manual promotion;
+  smoke200/401 oraz15min obserwacji przed DONE.
+- Rollback121b63e/AFr8yMzZPgBLEvDtksarXUwGMkVw code-only, bez restore.
+
 ## Checkpoint — STUDIO-WORKFLOW-20261010
 
 - VERIFYING: jeden root Worker, ai/studio-workflow-cleanup, base d3a6ec0.

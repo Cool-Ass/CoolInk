@@ -11,7 +11,7 @@ import { imageSource } from "@/lib/imageSource";
 
 const links = [
   { href: "/app/portal", label: "Start", icon: Home, exact: true },
-  { href: "/app/portal/projects", label: "Projekty", icon: FileText, exact: false },
+  { href: "/app/portal/projects", label: "Tatuaże", icon: FileText, exact: false },
   { href: "/app/portal/calendar", label: "Kalendarz", icon: CalendarCheck, exact: false },
   { href: "/app/portal/messages", label: "Wiadomości", icon: MessageCircle, exact: false },
   { href: "/app/portal/documents", label: "Dokumenty", icon: FileText, exact: false },

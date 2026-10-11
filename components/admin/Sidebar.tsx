@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarClock, CalendarDays, FileText, Image as ImageIcon, LayoutDashboard, LibraryBig, Megaphone, MessageSquare, PackageOpen, PanelsTopLeft, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarClock, CalendarDays, FileText, Image as ImageIcon, LayoutDashboard, LibraryBig, Megaphone, MessageSquare, PackageOpen, PanelsTopLeft, Settings, Users, Wallet } from "lucide-react";
 import { imageSource } from "@/lib/imageSource";
 import { normalizeAdminRole, type AdminRole } from "@/lib/adminPermissions";
 
@@ -13,22 +13,20 @@ export const ADMIN_SECTIONS = [
     links: [
       { href: "/admin", label: "Dziś", icon: LayoutDashboard, exact: true },
       { href: "/admin/calendar", label: "Kalendarz", icon: CalendarDays },
-      { href: "/admin/waitlist", label: "Lista rezerwowa", icon: CalendarClock },
       { href: "/admin/clients", label: "Klienci", icon: Users },
-      { href: "/admin/messages", label: "Wiadomości", icon: MessageSquare },
-      { href: "/admin/statistics", label: "Statystyki", icon: BarChart3, roles: ["owner", "manager"] },
-      { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen, roles: ["owner", "manager"] },
+      { href: "/admin/messages", label: "Skrzynka", icon: MessageSquare },
+      { href: "/admin/finance", label: "Finanse", icon: Wallet, roles: ["owner", "manager"] },
     ],
   },
   {
-    label: "STRONA / CMS",
+    label: "PUBLIKACJA",
     links: [
       { href: "/admin/pages", label: "Strony i builder", icon: PanelsTopLeft, roles: ["owner", "manager"] },
       { href: "/admin/portfolio", label: "Portfolio / Galeria", icon: ImageIcon, roles: ["owner", "manager"] },
       { href: "/admin/media", label: "Biblioteka mediów", icon: LibraryBig, roles: ["owner", "manager"] },
     ],
   },
-  { label: "OBSŁUGA", links: [{ href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/announcements", label: "Komunikaty", icon: Megaphone, roles: ["owner", "manager"] }] },
+  { label: "NARZĘDZIA", links: [{ href: "/admin/waitlist", label: "Lista rezerwowa", icon: CalendarClock }, { href: "/admin/statistics", label: "Statystyki", icon: BarChart3, roles: ["owner", "manager"] }, { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen, roles: ["owner", "manager"] }, { href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/announcements", label: "Komunikaty", icon: Megaphone, roles: ["owner", "manager"] }] },
   {
     label: "USTAWIENIA",
     links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }],

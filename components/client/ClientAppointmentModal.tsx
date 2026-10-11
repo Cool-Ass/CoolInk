@@ -80,7 +80,7 @@ export default function ClientAppointmentModal({
 
   return (
     <>
-      <AppModal title="Szczegóły wizyty" subtitle={projectTitle} onClose={onClose} size="md">
+      <AppModal presentation="drawer" title="Szczegóły wizyty" subtitle={projectTitle} onClose={onClose} size="md">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="border border-ink-white/10 p-4">
             <p className="text-[10px] tracking-widest text-ink-gold">TERMIN</p>

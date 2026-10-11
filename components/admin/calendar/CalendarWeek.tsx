@@ -1,0 +1,19 @@
+"use client";
+import { useState, type DragEvent } from "react";
+import { formatCoolinkDateTime, formatCoolinkTime, toCoolinkDateTimeInput } from "@/lib/dateTime";
+import { studioWeekDays } from "@/lib/studioWeek";
+
+type Entry = { id: string; startsAt: string; endsAt: string; status: string; clientName: string; projectTitle: string };
+type Note = { id: string; editorId?: string; startsAt: string; endsAt: string; label: string; kind: "available" | "busy" | "event" };
+export default function CalendarWeek({ anchor, appointments, notes, onOpen, onOpenNote, onCreate, onMove }: { anchor: string; appointments: Entry[]; notes: Note[]; onOpen: (id: string) => void; onOpenNote: (id: string) => void; onCreate: (date: string) => void; onMove: (id: string, date: string, hour?: number) => void }) {
+  const [dragged, setDragged] = useState<string | null>(null);
+  const days = studioWeekDays(anchor);
+  const hasDay = (item: { startsAt: string; endsAt: string }, day: string) => toCoolinkDateTimeInput(item.startsAt).slice(0, 10) <= day && toCoolinkDateTimeInput(new Date(+new Date(item.endsAt) - 1)).slice(0, 10) >= day;
+  const drop = (event: DragEvent, day: string, hour?: number) => { event.preventDefault(); const id = dragged; setDragged(null); if (id) onMove(id, day, hour); };
+  return <div data-testid="studio-week" className="grid gap-3 xl:grid-cols-7">{days.map(day => <section key={day} aria-label={formatCoolinkDateTime(day + "T12:00:00Z", { weekday: "long", day: "numeric", month: "long" })} className="min-w-0 rounded-xl bg-ink-black/25 p-2" onDragOver={event => { if (dragged) event.preventDefault(); }} onDrop={event => drop(event, day)}>
+    <h3 className="mb-3 border-b border-ink-white/10 pb-2 text-sm font-medium">{formatCoolinkDateTime(day + "T12:00:00Z", { weekday: "short", day: "numeric", month: "short" })}</h3>
+    <div className="space-y-2">{[...new Map(notes.filter(note => hasDay(note, day)).map(note => [note.id, note])).values()].map(note => <button type="button" onClick={() => onOpenNote(note.editorId ?? note.id)} key={note.id} className={`w-full rounded-md px-2 py-2 text-left text-xs ${note.kind === "available" ? "bg-emerald-400/10 text-emerald-200" : "bg-ink-white/5 text-ink-grey"}`}>{note.label} · {formatCoolinkTime(note.startsAt)}–{formatCoolinkTime(note.endsAt)}</button>)}
+    {appointments.filter(visit => hasDay(visit, day)).map(visit => <button key={visit.id} type="button" draggable={!["completed", "cancelled", "no_show"].includes(visit.status)} onDragStart={event => { setDragged(visit.id); event.dataTransfer.setData("text/plain", visit.id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDragged(null)} onClick={() => onOpen(visit.id)} className="studio-week-visit w-full rounded-lg border border-ink-white/10 bg-ink-charcoal p-3 text-left"><time className="text-xs text-ink-gold">{formatCoolinkTime(visit.startsAt)}–{formatCoolinkTime(visit.endsAt)}</time><strong className="mt-1 block break-words text-sm">{visit.clientName}</strong><span className="mt-1 block break-words text-xs text-ink-grey">{visit.projectTitle}</span><span className="mt-2 block text-[10px] text-ink-grey">{visit.status === "requested" ? "Zgłoszenie" : visit.status === "proposed" ? "Propozycja" : visit.status === "completed" ? "Zakończona" : visit.status === "no_show" ? "Nieobecność" : "Potwierdzona"}</span></button>)}</div>
+    <div className="mt-3 grid grid-cols-4 gap-1 xl:grid-cols-2">{[9,10,11,12,13,14,15,16,17,18].map(hour => <button key={hour} type="button" aria-label={`Zaplanuj ${day} ${hour}:00`} onDragOver={event => { if (dragged) { event.preventDefault(); event.stopPropagation(); } }} onDrop={event => { event.stopPropagation(); drop(event, day, hour); }} onClick={() => onCreate(day + "T" + String(hour).padStart(2,"0") + ":00")} className="rounded py-2 text-xs text-ink-grey hover:bg-ink-gold/10 hover:text-ink-gold">{hour}:00 +</button>)}</div>
+  </section>)}</div>;
+}
