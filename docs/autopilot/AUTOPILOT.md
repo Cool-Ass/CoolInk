@@ -31,7 +31,8 @@
   22:58UTC exact-main verify w HTTP/E2E, CodeQL+backup SUCCESS; oba Vercel SUCCESS.
   Staged main gnJqbQAKw1fyysnKFT3e4wzwNLj1 Source9ebb598 Ready,
   Production Staged / domainsSkipped; home i wejście klienta browser PASS.
-  Bez promocji do końca verify; nie zmieniono app SHA.
+  Exact-main CI38181966798 pełne3jobs SUCCESS23:05UTC, oba Vercel SUCCESS.
+  Main9ebb598 bez zmian. Wszystkie gates przed ręczną promocją spełnione.
 - Aktualna produkcja znana:4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU/f0b27bd.
   Nie ponawiać jej promocji w ramach tego zadania.
 
