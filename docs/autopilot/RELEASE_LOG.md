@@ -21,10 +21,12 @@
   oraz lista projektów PASS; brak kwalifikującego zadatku na tym koncie.
   Nowy stan oczekującego zadatku zweryfikowano w izolowanych E2E, nie przez
   tworzenie finansowych danych na produkcji.
-- OBSERVING: końcowy smoke i co najmniej15min obserwacji po promocji wymagane.
+- DONE: obserwacja23:06–23:21UTC PASS, końcowy smoke23:19UTC taki sam.
   Baseline22:36UTC Production Last15min119/0%Error/0%Timeout/134msCPU P75;
-  pierwszy odczyt po promocji23:08UTC4/0%/0%/160ms. Dane obecne.
-- Dowód lokalny poza repo: artifacts/pr53-production-2026-10-12.png.
+  pierwszy odczyt po promocji23:08UTC4/0%/0%/160ms; końcowy23:21UTC
+  Production Last15min44/0%/0%/92ms. Dane obecne, bez błędów konsoli klienta.
+- Dowody lokalne poza repo: artifacts/pr53-production-2026-10-12.png
+  i artifacts/pr53-observation-2026-10-12.png.
 - Rollback f0b27bdd40466b4039fa8a9cde0c22d0db3664ca /
   4Ky4Yr1QDHqhLV3w3uYKwPaFKJeU, tylko kod, bez restore; niewykonany.
 

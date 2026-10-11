@@ -2,7 +2,7 @@
 
 ## Checkpoint — BLIK-PHONE-20261012
 
-- VERIFYING, jeden root Worker; app ai/blik-phone-deposit dc491bd, base f0b27bd;
+- DONE23:21UTC, root Worker zakończony; app ai/blik-phone-deposit dc491bd, base f0b27bd;
   Evidence-only branch ai/release-pr53-evidence nie jest targetem promocji.
   Właściciel zatwierdził PR53/dc491bd i odbiorcę w czacie: „tak”.
   Exact-head CI38180949182 SUCCESS verify/E2E desktop+mobile,CodeQL,backup;
@@ -11,9 +11,12 @@
   Exact-main CI38181966798 SUCCESS wszystkich3jobs; oba Vercel SUCCESS.
   Ręczna promocja gnJqbQAKw1fyysnKFT3e4wzwNLj1 wykonana23:06UTC;
   świeży UI potwierdził www.coolinktattoo.pl + Source9ebb598 bez Staged.
-  Trwa wymagana obserwacja po publikacji do co najmniej23:21UTC.
+  Obserwacja23:06–23:21UTC PASS: Production Last15min44 invocations,
+  Error0%, Timeout0%, CPU P75 92ms; końcowy smoke23:19UTC200/307/401 PASS.
+  Browser public home i zalogowane puste konto klienta/projekty PASS;
+  stan zadatku wyłącznie izolowane E2E. RELEASE_LOG uzupełniony.
   Baseline Production Last15min119/0%Error/0%Timeout/CPU P75 134ms.
-  lease od2026-10-11 22:59UTC do23:50UTC. Poprzedni PR52 merged i promowany
+  lease zwolniony2026-10-11 23:21UTC. Poprzedni PR52 merged i promowany
   11Oct02:01UTC; obserwacja tamtej sesji została przerwana, nie deklarować DONE.
 - Właściciel wybrał BLIK na telefon i podał numer odbiorcy w bieżącym czacie.
   Wyłącznie instrukcja w koncie klienta dla ustalonego oczekującego zadatku,
@@ -29,7 +32,7 @@
 - Lokalnie16 unit PASS, typecheck PASS, targeted lint0errors (1 istniejące img
   warning), browser spec syntax i diff check PASS. Izolowane desktop/mobile E2E
   dodane: home/detail/paid hide, copy success/denial, status DB bez zmiany.
-  Pełne exact-head/main CI wymagane. Lease aktywny do23:50UTC.
+  Pełne exact-head/main CI zakończone sukcesem. Lease zwolniony23:21UTC.
   22:58UTC exact-main verify w HTTP/E2E, CodeQL+backup SUCCESS; oba Vercel SUCCESS.
   Staged main gnJqbQAKw1fyysnKFT3e4wzwNLj1 Source9ebb598 Ready,
   Production Staged / domainsSkipped; home i wejście klienta browser PASS.

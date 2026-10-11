@@ -7,7 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
-| BLIK-PHONE-20261012 | P2 | MEDIUM, final approval odbiorcy | IN_PROGRESS | Instrukcja BLIK na telefon dla oczekującego zadatku, copy i brak automatycznego potwierdzenia. Final SHA approval, exact gates i manual promotion. |
+| BLIK-PHONE-20261012 | P2 | MEDIUM, final approval odbiorcy | DONE | PR53/dc491bd zatwierdzony; main9ebb598 opublikowany23:06UTC, exact-head/main CI3jobs i oba Vercel SUCCESS. BLIK na telefon, copy i ręczne potwierdzanie; ponad15min obserwacji Error0%/Timeout0%, smoke PASS. Bez zmian danych/reguł płatności. |
 | STUDIO-WORKSPACE-20261010 | P2 | MEDIUM | IN_PROGRESS | Pozostały zatwierdzony kierunek Studio: tydzień, drawer obsługi, finanse, kontekst klienta, następna czynność i spójny UI. Exact CI/E2E/security i ręczna publikacja. |
 | STUDIO-WORKFLOW-20261010 | P2 | MEDIUM | IN_PROGRESS | Zatwierdzone kategorie i daty kolejki, health w ustawieniach, masonry i wspólny boczny panel. Exact CI/E2E i ręczna promocja wymagane. Bez migracji/reguł płatności. |
 | OPERATIONAL-ALERTS-20261009 | P1 | MEDIUM | DONE | PR45 main413ca66 opublikowany01:36UTC; exact-head/main verify/backup/CodeQL i Vercel SUCCESS, ponad15min obserwacji Error0%/Timeout0%, smoke200/401. Alarmy po sukcesie, recovery limit2h, fixed-code diagnostics, Next16.3.8. Bez migracji/sekretów/harmonogramów. |
