@@ -7,7 +7,9 @@
   Właściciel zatwierdził PR53/dc491bd i odbiorcę w czacie: „tak”.
   Exact-head CI38180949182 SUCCESS verify/E2E desktop+mobile,CodeQL,backup;
   oba Vercel SUCCESS. Auto-assign Disabled UI22:35UTC. Zgoda PRcomment6114660741.
-  Przed merge main nadal f0b27bd, headdc491bd mergeable, branch unprotected.
+  PR53 merged jako9ebb598f57719062343d14eaca605a1d1a958dd3.
+  Exact-main CI38181966798 trwa; primary gnJqbQAKw1fyysnKFT3e4wzwNLj1 pending.
+  Brak promocji przed full exact-main gates. Produkcja nadal f0b27bd.
   Baseline Production Last15min119/0%Error/0%Timeout/CPU P75 134ms.
   lease 2026-10-11 22:30–23:25UTC. Poprzedni PR52 merged i promowany
   11Oct02:01UTC; obserwacja tamtej sesji została przerwana, nie deklarować DONE.
