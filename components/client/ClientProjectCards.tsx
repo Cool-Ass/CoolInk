@@ -1,5 +1,7 @@
 "use client";
 import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
+import BlikDeposit from "@/components/client/BlikDeposit";
+import { blikDepositDetails } from "@/lib/blikDeposit";
 
 import { useRef, useState } from "react";
 import { sessionEstimateLabel } from "@/lib/sessionEstimate";
@@ -206,6 +208,7 @@ export default function ClientProjectCards({
                 <p className="mt-1.5 line-clamp-1 text-[11px] text-ink-grey">
                   {project.next}
                 </p>
+                {!archivedView && blikDepositDetails(project) && <p className="mt-2 text-xs font-medium text-ink-gold">Zadatek {project.depositAmount} zł · BLIK na telefon →</p>}
                 <p className="mt-2 text-[10px] text-ink-gold">
                   {project.appointments.length}{" "}
                   {project.kind === "consultation" ? "termin konsultacji" : project.appointments.length === 1 ? "sesja" : "sesje"}
@@ -235,6 +238,7 @@ export default function ClientProjectCards({
               {editingDetails ? <div className="mt-3 grid gap-3"><label className="text-[10px] tracking-[.1em] text-ink-grey">TYTUŁ<input value={details.title} maxLength={160} onChange={(event) => setDetails({ ...details, title: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><label className="text-[10px] tracking-[.1em] text-ink-grey">OPIS<textarea value={details.description} maxLength={5000} rows={3} onChange={(event) => setDetails({ ...details, description: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><div className="flex items-center gap-3"><AppButton type="button" disabled={savingDetails} onClick={() => void saveDetails()}>{savingDetails ? "ZAPISYWANIE…" : "ZAPISZ"}</AppButton><button type="button" onClick={() => { setEditingDetails(false); setDetails({ title: selected.title, description: selected.description }); }} className="text-xs text-ink-grey">ANULUJ</button></div>{detailsError && <p role="alert" className="text-xs text-red-300">{detailsError}</p>}</div> : <><p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-grey">{selected.description}</p><p className="mt-2 text-xs text-ink-gold">{selected.next}</p></>}
             </section>
             {selected.kind !== "consultation" && <section className="border-y border-ink-white/10 py-4"><p className="text-xs tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{sessionEstimateLabel(selected) || (selected.estimatedPrice && selected.estimatedPriceMax ? `${selected.estimatedPrice}–${selected.estimatedPriceMax} zł` : selected.estimatedPrice ? `od ${selected.estimatedPrice} zł` : selected.estimatedPriceMax ? `do ${selected.estimatedPriceMax} zł` : "W trakcie ustalania")}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div><div><p className="text-xs text-ink-grey">ZADATEK</p><p className="mt-1 text-sm text-ink-white">{selected.depositStatus === "not_required" && !selected.depositAmount ? "Jeszcze nieustalony" : selected.depositStatus === "not_required" ? "Zadatek niewymagany" : `${selected.depositAmount ?? 0} zł · ${({ awaiting: "Do zapłaty", paid: "Opłacony", refunded: "Zwrócony", forfeited: "Utracony" } as Record<string, string>)[selected.depositStatus] || "Jeszcze nieustalony"}`}</p></div></div></section>}
+            {!archivedView && <BlikDeposit key={selected.id} project={selected} />}
             <section>
               <p className="text-xs tracking-widest text-ink-gold">{selected.kind === "consultation" ? "TERMIN KONSULTACJI" : "SESJE"}</p>
               {selected.appointments.length ? (

@@ -1,4 +1,5 @@
 import { clientNextAction } from "@/lib/clientNextAction";
+import BlikDeposit from "@/components/client/BlikDeposit";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentClient } from "@/lib/clientAuth";
@@ -18,7 +19,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
   if (!current) redirect("/app");
   const { booking } = await searchParams;
   const now = new Date();
-  const [client, projects, nextVisit, documents] = await Promise.all([
+  const [client, projects, nextVisit, documents, pendingDeposit] = await Promise.all([
     prisma.client.findUniqueOrThrow({ where: { id: current.id }, select: { firstName: true } }),
     prisma.tattooProject.findMany({
       where: { clientId: current.id, clientArchivedAt: null, status: { not: "cancelled" } },
@@ -28,6 +29,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
     }),
     prisma.appointment.findFirst({ where: { project: { clientId: current.id, clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } }, endsAt: { gte: now }, status: { in: ["requested", "proposed", "confirmed"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: now } } } } }, include: { project: { select: { id: true, title: true, status: true } } }, orderBy: { startsAt: "asc" } }),
     prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { version: true, acceptances: { where: { clientId: current.id }, select: { version: true } } } }),
+    prisma.tattooProject.findFirst({ where: { clientId: current.id, clientArchivedAt: null, kind: "tattoo", status: { notIn: ["completed", "cancelled"] }, depositStatus: "awaiting", depositAmount: { gt: 0 } }, select: { id: true, title: true, kind: true, status: true, depositStatus: true, depositAmount: true }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }] }),
   ]);
   const primary = projects.find(project => project.id === nextVisit?.project.id) ?? projects.find(project => project.status === "awaiting_client") ?? projects.find(project => !["completed", "cancelled"].includes(project.status)) ?? projects[0];
   const missingConsents = documents.filter(doc => !doc.acceptances.some(a => a.version === doc.version)).length;
@@ -49,6 +51,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
     </section>}
     {action && <section aria-label="Twój następny krok" className="studio-panel flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">{action.label}</h2>{focusProject && <p className="mt-1 text-sm text-ink-grey">{focusProject.title}</p>}</div><Link className="studio-primary-link" href={action.destination === "documents" ? "/app/portal/documents" : action.destination === "visit" ? visitHref : projectHref}>{action.destination === "documents" ? "Otwórz formularze" : action.destination === "visit" ? "Sprawdź propozycję" : "Otwórz tatuaż"} <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}
     {nextVisit?.status === "requested" && <p role="status" className="text-sm text-ink-grey">Twoje zgłoszenie czeka na odpowiedź studia. Proponowany termin nie jest jeszcze potwierdzony.</p>}
+    {pendingDeposit && <div className="space-y-2"><Link href={`/app/portal/projects?project=${pendingDeposit.id}`} className="text-sm text-ink-gold">Zadatek · {pendingDeposit.title} →</Link><BlikDeposit project={pendingDeposit} /></div>}
     {announcements.length > 0 && <ClientAnnouncements initial={announcements} />}
 
     {!focusProject && <section className="studio-hero"><p className="studio-eyebrow">TWÓJ POMYSŁ. TWOJA HISTORIA.</p><h2 className="mt-3 text-2xl font-semibold">Zacznij od wolnego terminu.</h2><p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-grey">Wybierz termin w kalendarzu, opisz swój pomysł i dodaj inspiracje. Szczegóły ustalimy razem.</p><Link href={`/app/portal/calendar${booking ? `?booking=${encodeURIComponent(booking)}` : ""}`} className="studio-primary-link mt-5">Sprawdź terminy <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}
