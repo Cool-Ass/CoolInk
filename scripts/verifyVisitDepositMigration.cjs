@@ -17,7 +17,8 @@ async function main() {
       await tx.$executeRawUnsafe('CREATE TABLE "Appointment" (id TEXT PRIMARY KEY, "projectId" TEXT, status TEXT)');
       await tx.$executeRawUnsafe(`INSERT INTO "TattooProject" VALUES ('p', 'paid', 300, '2026-01-01', 'BLIK')`);
       await tx.$executeRawUnsafe(`INSERT INTO "Appointment" VALUES ('v1', 'p', 'completed'), ('v2', 'p', 'confirmed')`);
-      const before = await tx.$queryRawUnsafe('SELECT * FROM "TattooProject"');
+      // Avoid reusing a SELECT * prepared plan across an ALTER TABLE result-shape change.
+      const before = await tx.$queryRawUnsafe('SELECT id, "depositStatus", "depositAmount", "depositPaidAt", "depositPaymentMethod" FROM "TattooProject"');
       const sql = readFileSync("prisma/migrations/20261013010000_visit_deposits/migration.sql", "utf8");
       for (const statement of sql.split(";").map(value => value.trim()).filter(Boolean)) await tx.$executeRawUnsafe(statement);
       const rows = await tx.$queryRawUnsafe('SELECT * FROM "Appointment" ORDER BY id');
