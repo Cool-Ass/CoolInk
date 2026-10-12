@@ -82,9 +82,11 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
   if (claimed.completed) return { completed: true };
   const { job } = claimed;
   const keep = new Set(job.review.retainedScopes);
+  let completionStage = "media";
   try {
     const media = await deletePrivateProjectMedia(job.locations);
     if (media.failures.length) throw new Error("Nie potwierdzono usunięcia wszystkich plików. Profil pozostaje zablokowany; ponów wykonanie.");
+    completionStage = "auth";
     if (job.authId) {
       const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -97,6 +99,7 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       });
       if (!response.ok && !(response.status === 404 && !keep.has("auth"))) throw new Error("Nie potwierdzono zamknięcia konta Auth. Profil pozostaje zablokowany.");
     }
+    completionStage = "database-completion";
     await prisma.$transaction(async tx => {
       await locked(tx, job.clientId, id);
       const stored = await tx.siteSetting.findUnique({ where: { key: jobKey(id) } });
@@ -146,7 +149,8 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       await tx.adminAuditLog.create({ data: { adminUserId: ownerId, action: "privacy.execution_failed", targetType: "AccountDeletionRequest", targetId: id, summary: "Wykonanie niepotwierdzone. Profil zablokowany do ponowienia; brak fałszywego potwierdzenia usunięcia." } });
     }).catch(() => {});
     // Provider/database exceptions may contain tokens, URLs or personal data.
-    void error;
+    const code = error instanceof Prisma.PrismaClientKnownRequestError && /^P\d{4}$/.test(error.code) ? error.code : "WITHHELD";
+    console.error("Privacy execution completion failed", { stage: completionStage, code });
     throw new Error("Wykonanie nie zostało w pełni potwierdzone. Profil pozostaje zablokowany; sprawdź dziennik i ponów wykonanie.");
   }
 }
