@@ -94,6 +94,12 @@ async function main() {
       assert.equal((await prisma.appointment.findUniqueOrThrow({ where: { id: depositVisit.id } })).depositStatus, "paid");
       // Clear only this disposable fixture's artificial payment to test the existing zero-record erasure path.
       await prisma.appointment.update({ where: { id: depositVisit.id }, data: { depositStatus: "not_required", depositAmount: null } });
+      stage = "fixture-export-rejection";
+      // Creating this isolated appointment also enqueues its Google export.
+      // Prove that boundary, then remove only the disposable fixture's marker:
+      // this visit has no external Google copy and must never contact a provider.
+      await assert.rejects(executePrivacyRequest(executionId, null, privacyRevision(request), "123"), /oczekujące eksporty Google/);
+      await prisma.siteSetting.deleteMany({ where: { key: `google_retry:${depositVisit.id}` } });
       stage = "zero-payment-execution";
       const result = await executePrivacyRequest(executionId, null, privacyRevision(request), "123");
       assert.equal(result.completed, true);
