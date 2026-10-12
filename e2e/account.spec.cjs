@@ -248,7 +248,9 @@ test("visit deposits, explicit legacy assignment and editable client instruction
   try {
     await page.goto("/admin/settings");
     await page.locator("summary").filter({ hasText: "Instrukcje BLIK, gotówka i podgląd klienta" }).click();
-    await page.getByLabel("Instrukcja BLIK", { exact: true }).fill("Instrukcja testowa: sprawdź numer i kwotę.");
+    // The wrapping label includes the SSR textarea value in its text content.
+    // Match the stable label prefix, not the editable initial instructions.
+    await page.getByLabel(/^Instrukcja BLIK/).fill("Instrukcja testowa: sprawdź numer i kwotę.");
     await page.getByLabel("Pokaż gotówkę w studiu", { exact: true }).uncheck();
     const preview = page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true });
     await expect(preview.getByText("Instrukcja testowa: sprawdź numer i kwotę.", { exact: true })).toBeVisible();
