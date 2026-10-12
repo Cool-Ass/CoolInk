@@ -129,7 +129,7 @@ async function main() {
     const edited = await call(`/api/admin/appointments/${proposed.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: "2034-01-10T10:30:00.000Z", endsAt: "2034-01-10T12:00:00.000Z", status: "confirmed", price: 750, notes: "Zmieniona długość, cena i notatka" }) }, cookie);
     assert(edited.response.status === 200, `appointment edit returned ${edited.response.status}`);
     const visitBeforeDeposit = await prisma.appointment.findUniqueOrThrow({ where: { id: proposed.id } });
-    const visitDeposit = await call(`/api/admin/appointments/${proposed.id}/deposit`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ depositStatus: "paid", depositAmount: 150, depositPaymentMethod: "BLIK", expectedUpdatedAt: visitBeforeDeposit.updatedAt.toISOString() }) }, cookie);
+    const visitDeposit = await call(`/api/admin/appointments/${proposed.id}/deposit`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "paid", amount: 150, paymentMethod: "BLIK", expectedUpdatedAt: visitBeforeDeposit.updatedAt.toISOString() }) }, cookie);
     assert(visitDeposit.response.status === 200, `visit deposit returned ${visitDeposit.response.status}`);
     const paidVisit = await prisma.appointment.findUniqueOrThrow({ where: { id: proposed.id } });
     assert(paidVisit.depositStatus === "paid" && paidVisit.depositAmount === 150 && paidVisit.depositPaidAt, "visit deposit was not persisted");
