@@ -6,7 +6,7 @@ import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/ToastProvider";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { ADMIN_STATUS_LABEL, DEPOSIT_STATUS } from "@/lib/projectWorkflow";
+import { ADMIN_STATUS_LABEL } from "@/lib/projectWorkflow";
 import AdminProposalCalendarPicker from "@/components/admin/AdminProposalCalendarPicker";
 import { imageSource } from "@/lib/imageSource";
 
@@ -27,9 +27,6 @@ export default function ProjectManager({
   estimatedPrice,
   estimatedPriceMax,
   finalPrice,
-  initialDepositStatus,
-  depositAmount,
-  depositPaymentMethod,
   initialNextAction,
   initialNextActionDueAt,
   canManageFinance,
@@ -50,9 +47,6 @@ export default function ProjectManager({
   estimatedPrice: number | null;
   estimatedPriceMax: number | null;
   finalPrice: number | null;
-  initialDepositStatus: string;
-  depositAmount: number | null;
-  depositPaymentMethod: string | null;
   initialNextAction: string | null;
   initialNextActionDueAt: string | null;
   canManageFinance: boolean;
@@ -72,11 +66,6 @@ export default function ProjectManager({
   const [estimate, setEstimate] = useState(estimatedPrice?.toString() ?? "");
   const [estimateMax, setEstimateMax] = useState(estimatedPriceMax?.toString() ?? "");
   const [final, setFinal] = useState(finalPrice?.toString() ?? "");
-  const [depositStatus, setDepositStatus] = useState(initialDepositStatus);
-  const [deposit, setDeposit] = useState(depositAmount?.toString() ?? "");
-  const [depositMethod, setDepositMethod] = useState(
-    depositPaymentMethod ?? "",
-  );
   const [nextAction, setNextAction] = useState(initialNextAction ?? "");
   const [nextActionDueAt, setNextActionDueAt] = useState(initialNextActionDueAt ? toCoolinkDateTimeInput(initialNextActionDueAt) : "");
   const [saving, setSaving] = useState(false);
@@ -106,7 +95,7 @@ export default function ProjectManager({
           internalNotes: notes,
           nextAction,
           nextActionDueAt: nextActionDueAt ? localDateTimeToIso(nextActionDueAt) : "",
-          ...(canManageFinance ? { estimatedSessionsMin: sessionsMin, estimatedSessionsMax: sessionsMax, sessionPriceCents: sessionPrice ? Math.round(Number(sessionPrice.replace(",", ".")) * 100) : null, estimatedPrice: estimate, estimatedPriceMax: estimateMax, finalPrice: final, depositStatus, depositAmount: deposit, depositPaymentMethod: depositMethod } : {}),
+          ...(canManageFinance ? { estimatedSessionsMin: sessionsMin, estimatedSessionsMax: sessionsMax, sessionPriceCents: sessionPrice ? Math.round(Number(sessionPrice.replace(",", ".")) * 100) : null, estimatedPrice: estimate, estimatedPriceMax: estimateMax, finalPrice: final } : {}),
         }),
       });
       const data = await res.json();
@@ -273,53 +262,7 @@ export default function ProjectManager({
         <label className="flex flex-col gap-2 text-xs tracking-[0.08em] text-ink-grey">NASTĘPNE DZIAŁANIE<input value={nextAction} onChange={(event) => setNextAction(event.target.value)} maxLength={500} placeholder="Np. oddzwonić i potwierdzić termin" className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
         <label className="flex flex-col gap-2 text-xs tracking-[0.08em] text-ink-grey">TERMIN DZIAŁANIA<input type="datetime-local" value={nextActionDueAt} onChange={(event) => setNextActionDueAt(event.target.value)} className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" /></label>
       </div>
-      <div className="mt-4 grid gap-4 border-t border-ink-white/10 pt-4 sm:grid-cols-3">
-        <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
-          ZADATEK
-          <select
-            disabled={!canManageFinance}
-            value={depositStatus}
-            onChange={(e) => setDepositStatus(e.target.value)}
-            className="border border-ink-white/20 bg-ink-black px-3 py-2.5 text-sm text-ink-white"
-          >
-            {DEPOSIT_STATUS.map((value) => (
-              <option key={value} value={value}>
-                {
-                  (
-                    {
-                      not_required: "Niewymagany",
-                      awaiting: "Oczekuje",
-                      paid: "Opłacony",
-                      refunded: "Zwrócony",
-                      forfeited: "Utracony",
-                    } as Record<string, string>
-                  )[value]
-                }
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
-          KWOTA ZADATKU (PLN)
-          <input
-            disabled={!canManageFinance}
-            inputMode="numeric"
-            value={deposit}
-            onChange={(e) => setDeposit(e.target.value)}
-            className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm text-ink-white"
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
-          METODA PŁATNOŚCI
-          <input
-            disabled={!canManageFinance}
-            value={depositMethod}
-            onChange={(e) => setDepositMethod(e.target.value)}
-            placeholder="np. przelew, gotówka"
-            className="border border-ink-white/20 bg-transparent px-3 py-2.5 text-sm text-ink-white"
-          />
-        </label>
-      </div>
+      <p className="mt-4 border-t border-ink-white/10 pt-4 text-sm text-ink-grey">Zadatek ustawisz w szczegółach konkretnej wizyty.</p>
       <label className="mt-4 flex flex-col gap-2 text-[11px] tracking-[0.1em] text-ink-grey">
         NOTATKI WEWNĘTRZNE
         <textarea

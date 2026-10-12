@@ -43,6 +43,7 @@ async function main() {
     for (const work of [
       () => prisma.client.update({ where: { id }, data: { firstName: "Changed" } }),
       () => prisma.tattooProject.update({ where: { id }, data: { description: "Changed" } }),
+      () => prisma.appointment.update({ where: { id }, data: { depositStatus: "paid", depositAmount: 100 } }),
       () => prisma.projectImage.create({ data: { projectId: id, url: "test-path" } }),
       () => prisma.directMessage.create({ data: { clientId: id, author: "client", body: "Changed" } }),
       () => prisma.loyaltyEntry.create({ data: { clientId: id, key: id, kind: "paper", stamps: 1, note: "test", adminId: "fixture" } }),
@@ -84,6 +85,13 @@ async function main() {
         throw new Error("EXPECTED_CALLBACK_FAILURE");
       }));
       assert.equal(await prisma.projectActivity.count({ where: { projectId: executionId } }), 0, "Failed upload transaction must roll back");
+      const depositVisit = await prisma.appointment.create({ data: { projectId: executionId, startsAt: new Date("2000-01-01T10:00:00Z"), endsAt: new Date("2000-01-01T11:00:00Z"), status: "completed", depositStatus: "paid", depositAmount: 100 } });
+      await prisma.tattooProject.update({ where: { id: executionId }, data: { depositAssignedAppointmentId: depositVisit.id } });
+      await assert.rejects(executePrivacyRequest(executionId, null, privacyRevision(request), "123"), /Zadatki wizyt wymagają/);
+      assert.equal((await prisma.accountDeletionRequest.findUniqueOrThrow({ where: { id: executionId } })).status, "awaiting_execution", "Deposit retention fails before quarantine or external deletion");
+      assert.equal((await prisma.appointment.findUniqueOrThrow({ where: { id: depositVisit.id } })).depositStatus, "paid");
+      // Clear only this disposable fixture's artificial payment to test the existing zero-record erasure path.
+      await prisma.appointment.update({ where: { id: depositVisit.id }, data: { depositStatus: "not_required", depositAmount: null } });
       const result = await executePrivacyRequest(executionId, null, privacyRevision(request), "123");
       assert.equal(result.completed, true);
       const client = await prisma.client.findUniqueOrThrow({ where: { id: executionId } });
@@ -101,6 +109,7 @@ async function main() {
     await prisma.$transaction(async tx => {
       for (const target of [id, executionId]) {
         await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${target}, true)`;
+        await tx.tattooProject.updateMany({ where: { clientId: target }, data: { depositAssignedAppointmentId: null } });
         await tx.client.deleteMany({ where: { id: target } });
       }
       await tx.siteSetting.deleteMany({ where: { key: `internal.privacyExecution:${executionId}` } });

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { privateImageUrl } from "@/lib/privateMedia";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { CLIENT_STATUS } from "@/lib/projectWorkflow";
+import { getDepositInstructions } from "@/lib/depositSettings";
 import ClientProjectCards from "@/components/client/ClientProjectCards";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     orderBy: { updatedAt: "desc" },
   });
 
-  return <><nav className="mb-4 flex gap-4 text-sm" aria-label="Lista projektów"><Link href="/app/portal/projects" aria-current={query.archive !== "1" ? "page" : undefined}>Projekty</Link><Link href="/app/portal/projects?archive=1" aria-current={query.archive === "1" ? "page" : undefined}>Archiwum</Link></nav><ClientProjectCards key={`${query.archive || ""}:${query.project || ""}:${query.appointment || ""}`} archivedView={query.archive === "1"} initialProjectId={query.project} initialAppointmentId={query.appointment} projects={projects.map((project) => ({
+  const depositInstructions = await getDepositInstructions();
+  return <><nav className="mb-4 flex gap-4 text-sm" aria-label="Lista projektów"><Link href="/app/portal/projects" aria-current={query.archive !== "1" ? "page" : undefined}>Projekty</Link><Link href="/app/portal/projects?archive=1" aria-current={query.archive === "1" ? "page" : undefined}>Archiwum</Link></nav><ClientProjectCards key={`${query.archive || ""}:${query.project || ""}:${query.appointment || ""}`} depositInstructions={depositInstructions} archivedView={query.archive === "1"} initialProjectId={query.project} initialAppointmentId={query.appointment} projects={projects.map((project) => ({
     id: project.id,
     kind: project.kind,
     title: project.title,
@@ -36,7 +38,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     finalPrice: project.finalPrice,
     depositStatus: project.depositStatus,
     depositAmount: project.depositAmount,
-    appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, price: item.price, createdAt: item.createdAt.toISOString(), confirmationRequestedAt: item.confirmationRequestedAt?.toISOString() ?? null, clientConfirmedAt: item.clientConfirmedAt?.toISOString() ?? null })),
+    depositAssignedAppointmentId: project.depositAssignedAppointmentId,
+    appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, price: item.price, depositStatus: item.depositStatus, depositAmount: item.depositAmount, createdAt: item.createdAt.toISOString(), confirmationRequestedAt: item.confirmationRequestedAt?.toISOString() ?? null, clientConfirmedAt: item.clientConfirmedAt?.toISOString() ?? null })),
     images: project.images.map((image) => ({ id: image.id, url: privateImageUrl(image.id, "client", current.id), caption: image.caption, createdAt: image.createdAt.toISOString() })),
     messages: project.messages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: message.attachment ? { id: message.attachment.id, caption: message.attachment.caption, url: privateImageUrl(message.attachment.id, "client", current.id) } : null })),
     activities: project.activities.map((activity) => ({ id: activity.id, type: activity.type, message: activity.message, createdAt: activity.createdAt.toISOString() })),

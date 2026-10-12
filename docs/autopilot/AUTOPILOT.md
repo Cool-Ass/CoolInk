@@ -1,5 +1,31 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint — VISIT-DEPOSITS-20261013
+
+- VERIFYING / WAITING_APPROVAL, jeden root Worker, ai/visit-deposits, base9ebb598.
+  Lease2026-10-12 22:48UTC do23:45UTC. Właściciel zatwierdził podgląd
+  „okej jest super. wdrażamy”: gotówka pierwsza, BLIK drugi, ikony copy,
+  edytowalne instrukcje i opcjonalna informacja o gotówce.
+- HIGH: zadatek konkretnej wizyty, addytywne pola Appointment, bez usuwania
+  starych pól projektu i automatycznego backfill. Jednorazowe ręczne przypisanie
+  starego zadatku przez finance admina, bez zmiany kwoty/statusu i z audytem.
+  Finalny commit i zakres migracji wymagają zgody przed merge/build produkcyjnym.
+- Plan: unit/API walidacja kwot, uprawnień, niezależności sesji, przypisania;
+  typecheck/lint, izolowane migracje i desktop/mobile E2E, exact-head/main gates.
+  Świeży backup i restore proof przed produkcyjną migracją.
+- Implementacja: lokalnie485 unit PASS, typecheck PASS, lint0 errors (15 istniejących
+  img warnings); schema validate PASS, browser/script syntax i diff check PASS.
+  CI dodaje izolowany test addytywnej migracji, zachowania legacy, explicit assign,
+  niezależności sesji, retencji i desktop/mobile payment/settings E2E.
+  Retencja obejmuje nowe zadatki; bez automatycznych kasowań lub wykonania
+  wniosku na produkcji. Żadnej zmiany danych produkcyjnych w tej sesji.
+- Następnie PR/exact-head CI; pending final SHA approval przed merge/build
+  produkcyjnym. Vercel Preview nie migruje wspólnej bazy, więc izolowane CI
+  potwierdza nowe pola przed migracją; nie testować finansowych zapisów na produkcji.
+  Rollback kodu9ebb598/gnJqbQAKw1fyysnKFT3e4wzwNLj1 zgodny ze starymi
+  zachowanymi polami, ale po użyciu nowego modelu wymaga wstrzymania zmian
+  zadatków i uzgodnienia UI odczytu nowych wpisów; bez down/restore danych.
+
 ## Checkpoint — BLIK-PHONE-20261012
 
 - WAITING_APPROVAL / VERIFYING, jeden root Worker, ai/blik-phone-deposit, base f0b27bd;

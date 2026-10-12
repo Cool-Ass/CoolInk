@@ -2,6 +2,7 @@ import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
+import { projectStatusAfterAppointmentChange } from "@/lib/projectLifecycle";
 import { activityMessage } from "@/lib/projectWorkflow";
 import { recordWorkflowEvent } from "@/lib/workflowEvents";
 import { isSameOrigin } from "@/lib/requestSecurity";
@@ -29,16 +30,19 @@ export async function POST(request: Request, { params }: Params) {
   if (appointment.waitlistOffer?.offerExpiresAt && appointment.waitlistOffer.offerExpiresAt <= new Date()) return NextResponse.json({ error: "Ta oferta z listy rezerwowej już wygasła. Termin wróci do puli." }, { status: 409 });
 
   const accepted = response === "accept";
-  const nextProjectStatus = accepted ? (appointment.project.depositStatus === "awaiting" ? "awaiting_deposit" : "confirmed") : "awaiting_client";
+
   const nextAppointment = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
-    const current = await tx.appointment.findUnique({ where: { id }, select: { status: true, startsAt: true, endsAt: true } });
+    const current = await tx.appointment.findUnique({ where: { id }, select: { status: true, startsAt: true, endsAt: true, depositStatus: true } });
     if (!current || current.status !== "proposed") throw new Error("STALE_PROPOSAL");
     if (accepted) {
       const conflict = await bookingConflict(current.startsAt, current.endsAt, id, true, tx);
       if (conflict.appointment || conflict.block) throw new Error("BOOKING_CONFLICT");
     }
     const updated = await tx.appointment.update({ where: { id }, data: { status: accepted ? "confirmed" : "cancelled" } });
+    const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true, depositStatus: true } });
+    const derivedStatus = projectStatusAfterAppointmentChange(sessions, "not_required", accepted ? "confirmed" : "awaiting_client");
+    const nextProjectStatus = !accepted && derivedStatus === "cancelled" ? "awaiting_client" : derivedStatus;
     await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: nextProjectStatus, ...(appointment.waitlistOffer ? { nextAction: accepted ? "Przygotuj potwierdzoną wizytę" : "Zaproponuj kolejny termin z listy rezerwowej", nextActionDueAt: null } : {}) } });
     if (appointment.waitlistOffer) await tx.waitlistEntry.update({ where: { id: appointment.waitlistOffer.id }, data: accepted ? { status: "booked" } : { status: "active", offeredAppointmentId: null, offeredAt: null, offerExpiresAt: null } });
     await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: accepted ? "appointment_confirmed" : "appointment_cancelled", message: activityMessage(accepted ? "appointment_confirmed" : "appointment_cancelled", formatCoolinkDateTime(updated.startsAt)), visibility: "admin" } });

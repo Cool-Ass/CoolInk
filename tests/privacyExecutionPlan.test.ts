@@ -7,6 +7,10 @@ describe("privacy execution safeguards", () => {
     expect(privacyExecutionPlan(JSON.stringify(review), counts).retainedScopes).toEqual([]);
     for (const change of [{ decision: "review" }, { identityConfirmed: false }, { retainedScopes: ["financial"], retainUntil: "2000-01-01" }, { retainedScopes: ["auth"], retainUntil: "2099-01-01" }, { retainedScopes: ["chat"], retainUntil: "2099-01-01" }]) expect(() => privacyExecutionPlan(JSON.stringify({ ...review, ...change }), counts)).toThrow();
   });
+  it("requires explicit financial and visit retention for visit deposits", () => {
+    for (const retainedScopes of [[], ["profile", "financial"], ["profile", "appointments"]]) expect(() => privacyExecutionPlan(JSON.stringify({ ...review, retainedScopes, retainUntil: "2099-01-01" }), { ...counts, visitDeposits: 1 })).toThrow();
+    expect(privacyExecutionPlan(JSON.stringify({ ...review, retainedScopes: ["profile", "financial", "appointments"], retainUntil: "2099-01-01" }), { ...counts, visitDeposits: 1 }).retainedScopes).toHaveLength(3);
+  });
   it("does not cascade statutory records or ignore future appointments or Google", () => {
     for (const key of Object.keys(counts)) expect(() => privacyExecutionPlan(JSON.stringify(review), { ...counts, [key]: 1 })).toThrow();
     const retained = { ...review, retainedScopes: ["financial", "consents", "profile"], retainUntil: "2099-01-01" };

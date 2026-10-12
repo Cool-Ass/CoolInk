@@ -1,3 +1,5 @@
+import DepositInstructionsSettings from "@/components/admin/DepositInstructionsSettings";
+import { getDepositInstructions } from "@/lib/depositSettings";
 import AdminSections from "@/components/admin/AdminSections";
 import SystemHealth from "@/components/admin/SystemHealth";
 import GoogleSyncRetry from "@/components/admin/GoogleSyncRetry";
@@ -35,6 +37,7 @@ export default async function SettingsPage() {
         <GoogleSyncRetry />
       </CompactDisclosure>) },
 { id: "google-reviews", title: "OPINIE GOOGLE", content: (<CompactDisclosure title="OPINIE GOOGLE" summary="Klucz API i wizytówka studia"><GoogleReviewsSettings initial={await getGoogleReviewsSettings()} /></CompactDisclosure>) },
+{ id: "deposit-instructions", title: "ZADATKI", content: (<CompactDisclosure title="ZADATKI" summary="Instrukcje BLIK, gotówka i podgląd klienta"><DepositInstructionsSettings initial={await getDepositInstructions()} /></CompactDisclosure>) },
 { id: "settings-1", title: "Aplikacja", content: (<AdminAppSettings />) },
 { id: "settings-2", title: "PROGRAM LOJALNOŚCIOWY", content: (<CompactDisclosure title="PROGRAM LOJALNOŚCIOWY" summary="Cena sesji, próg pieczątki i zasady rabatu">
         <LoyaltySettings initial={await getLoyaltyRules()} initialDescription={await getLoyaltyDescription()} />

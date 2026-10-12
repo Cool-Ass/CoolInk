@@ -7,6 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
+| VISIT-DEPOSITS-20261013 | P2 | HIGH | WAITING_APPROVAL | Zadatek wizyty, edytowalne instrukcje BLIK/gotówki, zachowana historia projektów i jawne przypisanie. Zabezpieczenie retencji wizyt z zadatkami. Final SHA/migration approval, exact gates, backup i manual promotion wymagane. |
 | BLIK-PHONE-20261012 | P2 | MEDIUM, final approval odbiorcy | IN_PROGRESS | Instrukcja BLIK na telefon dla oczekującego zadatku, copy i brak automatycznego potwierdzenia. Final SHA approval, exact gates i manual promotion. |
 | STUDIO-WORKSPACE-20261010 | P2 | MEDIUM | IN_PROGRESS | Pozostały zatwierdzony kierunek Studio: tydzień, drawer obsługi, finanse, kontekst klienta, następna czynność i spójny UI. Exact CI/E2E/security i ręczna publikacja. |
 | STUDIO-WORKFLOW-20261010 | P2 | MEDIUM | IN_PROGRESS | Zatwierdzone kategorie i daty kolejki, health w ustawieniach, masonry i wspólny boczny panel. Exact CI/E2E i ręczna promocja wymagane. Bez migracji/reguł płatności. |

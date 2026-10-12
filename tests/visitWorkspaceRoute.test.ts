@@ -11,7 +11,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.access.mockResolvedValue({ ok: true, admin: { id: "a", role: "owner" } });
   m.permission.mockReturnValue(true);
-  m.visit.mockResolvedValue({ id: "v", projectId: "p", startsAt: new Date("2026-01-01T10:00:00Z"), status: "confirmed", price: 1400, loyaltyRequested: false, loyaltyEntry: null, serviceType: "tattoo", project: { id: "p", clientId: "c", kind: "tattoo", title: "Tattoo", depositStatus: "paid", depositAmount: 200 } });
+  m.visit.mockResolvedValue({ id: "v", projectId: "p", updatedAt: new Date("2026-01-01T00:00:00Z"), depositStatus: "awaiting", depositAmount: 300, depositPaymentMethod: "BLIK", startsAt: new Date("2026-01-01T10:00:00Z"), status: "confirmed", price: 1400, loyaltyRequested: false, loyaltyEntry: null, serviceType: "tattoo", project: { id: "p", clientId: "c", kind: "tattoo", title: "Tattoo", depositStatus: "paid", depositAmount: 200, depositPaymentMethod: "gotówka", depositAssignedAppointmentId: null } });
   m.messages.mockResolvedValue([]); m.documents.mockResolvedValue([{ id: "d", title: "Consent", category: "consent", version: 2, acceptances: [{ version: 1 }] }]); m.card.mockResolvedValue({ progress: 1 });
 });
 describe("visit workspace read boundary", () => {
@@ -26,13 +26,15 @@ describe("visit workspace read boundary", () => {
   it("never exposes amounts or the loyalty ledger to non-finance roles", async () => {
     m.permission.mockReturnValue(false);
     const response = await call(); const data = await response.json();
-    expect(data.card).toBeNull(); expect(data.deposit.amount).toBeNull(); expect(data.visit.price).toBeNull(); expect(data.settleable).toBe(false); expect(m.card).not.toHaveBeenCalled();
+    expect(data.legacyDeposit).toBeNull(); expect(data.deposit.paymentMethod).toBeNull(); expect(data.card).toBeNull(); expect(data.deposit.amount).toBeNull(); expect(data.visit.price).toBeNull(); expect(data.settleable).toBe(false); expect(m.card).not.toHaveBeenCalled();
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
   it("checks current document version and preserves recipient message visibility", async () => {
     const data = await (await call()).json();
     expect(data.documents).toEqual([{ id: "d", title: "Consent", category: "consent", accepted: false }]);
     expect(data.settleable).toBe(true);
+    expect(data.deposit).toEqual({ status: "awaiting", amount: 300, paymentMethod: "BLIK" });
+    expect(data.legacyDeposit.amount).toBe(200);
     expect(m.messages).toHaveBeenCalledWith(expect.objectContaining({ where: { projectId: "p", NOT: { hiddenFor: { has: "admin:a" } } } }));
     expect(m.documents.mock.calls[0][0].select.acceptances.select).toEqual({ version: true });
   });
