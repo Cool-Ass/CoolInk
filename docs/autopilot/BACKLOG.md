@@ -7,6 +7,7 @@ Status zadania: TODO, IN_PROGRESS, WAITING_APPROVAL, BLOCKED, DONE.
 
 | ID | Priorytet | Ryzyko | Status | Zadanie / kryterium odbioru |
 |---|---|---|---|---|
+| WAITLIST-INTEGRITY-20261013 | P1 | MEDIUM | IN_PROGRESS | PR55: calendar-lock fresh reads, accepted-visit protection, shared availability, current preferences and expiry/Google cancellation. 520 tests/types/lint/build/audit PASS; CI found transaction contention, a084e4d rerun plus admin-status expiry follow-up pending exact-head CI. Code-only rollback; no deployment. Run and scope: docs/autopilot-state.md. |
 | VISIT-DEPOSITS-20261013 | P2 | HIGH | WAITING_APPROVAL | Zadatek wizyty, edytowalne instrukcje BLIK/gotówki, zachowana historia projektów i jawne przypisanie. Zabezpieczenie retencji wizyt z zadatkami. Final SHA/migration approval, exact gates, backup i manual promotion wymagane. |
 | BLIK-PHONE-20261012 | P2 | MEDIUM, final approval odbiorcy | IN_PROGRESS | Instrukcja BLIK na telefon dla oczekującego zadatku, copy i brak automatycznego potwierdzenia. Final SHA approval, exact gates i manual promotion. |
 | STUDIO-WORKSPACE-20261010 | P2 | MEDIUM | IN_PROGRESS | Pozostały zatwierdzony kierunek Studio: tydzień, drawer obsługi, finanse, kontekst klienta, następna czynność i spójny UI. Exact CI/E2E/security i ręczna publikacja. |
