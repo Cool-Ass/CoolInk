@@ -465,6 +465,15 @@ test("session consents support handwritten signatures, immutable PDFs and appoin
   const pdfPath = await (await download).path(); expect(pdfPath).toBeTruthy();
   expect((await require("node:fs/promises").readFile(pdfPath)).subarray(0, 4).toString()).toBe("%PDF");
   const outsider = await browser.newContext(); const denied = await outsider.request.get(`http://127.0.0.1:3120/api/client/documents/signatures/${signature.id}/pdf`); expect(denied.status()).toBe(401); await outsider.close();
+  const staff = await browser.newContext();
+  try {
+    const admin = await staff.newPage(); await admin.goto("http://127.0.0.1:3120/admin/login");
+    await admin.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await admin.getByLabel("HASŁO", { exact: true }).fill(password); await admin.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click(); await expect(admin).toHaveURL(/\/admin$/);
+    await admin.goto(`http://127.0.0.1:3120/admin/appointments/${visit.id}/documents`);
+    await expect(admin.getByRole("heading", { name: "Dokumenty kompletne", exact: true })).toBeVisible();
+    const qr = admin.getByRole("img", { name: "Kod QR formularza tej sesji", exact: true }); await expect(qr).toBeVisible(); await expect.poll(() => qr.evaluate(element => element.naturalWidth)).toBeGreaterThan(0);
+    const target = new URL(await admin.getByRole("link", { name: "Otwórz formularz klienta", exact: true }).getAttribute("href")); expect(target.pathname).toBe("/app/portal/documents"); expect(target.searchParams.get("appointment")).toBe(visit.id);
+  } finally { await staff.close(); }
   await expect(prisma.sessionDocumentSignature.update({ where: { id: signature.id }, data: { signature: "tampered" } })).rejects.toThrow();
   await prisma.appointment.delete({ where: { id: visit.id } });
   const archived = await prisma.sessionDocumentSignature.findUniqueOrThrow({ where: { id: signature.id } }); expect(archived.appointmentId).toBeNull(); expect(JSON.parse(archived.snapshot).appointmentId).toBe(visit.id); expect(archived.digest).toBe(signature.digest);
