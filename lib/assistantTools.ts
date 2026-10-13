@@ -54,7 +54,7 @@ export async function runAssistantTool(role: string, value: unknown) {
     if (!project) throw new AssistantToolError("Nie znaleziono projektu.", 404);
     return { projectId: project.id, draft: `Cześć! Piszę w sprawie projektu „${project.title}”. ${project.appointments[0] ? `Przypominam o sesji ${formatCoolinkDateTime(project.appointments[0].startsAt)}. ` : ""}Daj znać, jeśli potrzebujesz omówić szczegóły. Do zobaczenia w CoolInk!` };
   }
-  if (input.tool.name === "unsettled") return { visits: await prisma.appointment.findMany({ where: { startsAt: { lte: now }, status: { in: ["confirmed", "completed"] }, loyaltyEntry: { is: null }, project: { kind: "tattoo", client: { deletionRequest: { is: null } } } }, select: { id: true, startsAt: true, project: { select: { title: true } } }, orderBy: { startsAt: "asc" }, take: 50 }) };
+  if (input.tool.name === "unsettled") return { visits: await prisma.appointment.findMany({ where: { startsAt: { lte: now }, status: { in: ["confirmed", "completed"] }, loyaltyEntry: { is: null }, OR: [{ serviceType: null }, { serviceType: "tattoo" }], project: { kind: "tattoo", client: { deletionRequest: { is: null } } } }, select: { id: true, startsAt: true, project: { select: { title: true } } }, orderBy: { startsAt: "asc" }, take: 50 }) };
   const [visits, slots] = await Promise.all([prisma.appointment.count({ where: { startsAt: { gte: now, lt: until }, status: { notIn: ["cancelled", "no_show"] } } }), prisma.availableSlot.count({ where: { isPublic: true, startsAt: { lt: until }, endsAt: { gt: now } } })]);
   return { visits, explicitSlots: slots, days: input.days, note: "Liczba wizyt i jawnie otwartych zakresów. Szczegółowe wykorzystanie godzin znajdziesz w statystykach." };
 }

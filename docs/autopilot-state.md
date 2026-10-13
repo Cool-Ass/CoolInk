@@ -51,6 +51,9 @@
   Review also fixed assistant date links to open the actual calendar week and
   distinguishes resolved aftercare consultations. CI7cc1242 already running;
   keep serialized test DB jobs; final exact-head CI still required.
+- Domain review: aftercare, marketing history, forecast and unsettled-tool
+  exclude consultation services even when attached to a tattoo project,
+  matching the existing finance boundary. Targeted45 tests/typecheck PASS.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

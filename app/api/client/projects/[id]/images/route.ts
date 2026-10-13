@@ -40,14 +40,14 @@ export async function POST(
   const form = await request.formData();
   const healing = form.get("kind") === "healing";
   const healingAppointmentId = healing ? String(form.get("appointmentId") || "") : null;
-  if (healing && !await prisma.appointment.findFirst({ where: { id: healingAppointmentId!, status: "completed", projectId: project.id, project: { clientId: client.id, kind: "tattoo" } }, select: { id: true } })) return NextResponse.json({ error: "Nie znaleziono zakończonej sesji." }, { status: 404 });
+  if (healing && !await prisma.appointment.findFirst({ where: { id: healingAppointmentId!, status: "completed", AND: [{ OR: [{ serviceType: null }, { serviceType: "tattoo" }] }], projectId: project.id, project: { clientId: client.id, kind: "tattoo" } }, select: { id: true } })) return NextResponse.json({ error: "Nie znaleziono zakończonej sesji." }, { status: 404 });
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Nie przesłano pliku." }, { status: 400 });
   let prepared: Awaited<ReturnType<typeof preparePrivateImage>>;
   try { prepared = await preparePrivateImage(file); }
   catch (error) { return NextResponse.json({ error: error instanceof PrivateImageUploadError ? error.message : "Nie udało się odczytać obrazu." }, { status: 422 }); }
   const { image, chatMessage } = await withClientMediaWrite(client.id, async (tx, track) => {
-  if (healing && !await tx.appointment.findFirst({ where: { id: healingAppointmentId!, status: "completed", projectId: project.id, project: { clientId: client.id } }, select: { id: true } })) throw Error("AFTERCARE_VISIT_UNAVAILABLE");
+  if (healing && !await tx.appointment.findFirst({ where: { id: healingAppointmentId!, status: "completed", AND: [{ OR: [{ serviceType: null }, { serviceType: "tattoo" }] }], projectId: project.id, project: { clientId: client.id } }, select: { id: true } })) throw Error("AFTERCARE_VISIT_UNAVAILABLE");
   if (healing && await tx.projectImage.count({ where: { appointmentId: healingAppointmentId, kind: "healing" } }) >= 24) throw Error("AFTERCARE_IMAGE_LIMIT");
   const objectPath = `${client.supabaseUserId}/${randomUUID()}.${prepared.extension}`;
   let storedLocation = objectPath;

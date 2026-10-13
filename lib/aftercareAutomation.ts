@@ -10,7 +10,7 @@ export async function processAftercare(now = new Date()) {
   const settings = await getAftercareSettings();
   if (!settings.enabled) return 0;
   const plans = aftercarePlans(settings);
-  const visits = await prisma.appointment.findMany({ where: { status: "completed", project: { kind: "tattoo", client: { deletionRequest: { is: null } } }, OR: plans.map((plan, index) => ({ aftercareStartedAt: { lte: new Date(now.getTime() - plan.day * 86400000), ...(plans[index + 1] ? { gt: new Date(now.getTime() - plans[index + 1].day * 86400000) } : {}) }, reminderDeliveries: { none: { channel: `aftercare:${plan.type}`, offsetHours: 0 } } })) }, orderBy: { aftercareStartedAt: "asc" }, take: 200, select: { id: true, aftercareStartedAt: true, project: { select: { id: true, clientId: true } } } });
+  const visits = await prisma.appointment.findMany({ where: { status: "completed", AND: [{ OR: [{ serviceType: null }, { serviceType: "tattoo" }] }], project: { kind: "tattoo", client: { deletionRequest: { is: null } } }, OR: plans.map((plan, index) => ({ aftercareStartedAt: { lte: new Date(now.getTime() - plan.day * 86400000), ...(plans[index + 1] ? { gt: new Date(now.getTime() - plans[index + 1].day * 86400000) } : {}) }, reminderDeliveries: { none: { channel: `aftercare:${plan.type}`, offsetHours: 0 } } })) }, orderBy: { aftercareStartedAt: "asc" }, take: 200, select: { id: true, aftercareStartedAt: true, project: { select: { id: true, clientId: true } } } });
   let count = 0;
   for (const visit of visits) {
     // One current-stage message per visit; missed old stages never produce a burst.

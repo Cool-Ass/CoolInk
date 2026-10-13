@@ -15,7 +15,7 @@ export async function marketingSegments(now = new Date()) {
       SELECT c.id, count(a.id)::int AS visits, max(a."startsAt") AS last_visit
       FROM "Client" c
       LEFT JOIN "TattooProject" p ON p."clientId" = c.id AND p.kind = 'tattoo'
-      LEFT JOIN "Appointment" a ON a."projectId" = p.id AND a.status = 'completed' AND a."startsAt" <= ${now}
+      LEFT JOIN "Appointment" a ON a."projectId" = p.id AND a.status = 'completed' AND (a."serviceType" IS NULL OR a."serviceType" = 'tattoo') AND a."startsAt" <= ${now}
       WHERE NOT EXISTS (SELECT 1 FROM "AccountDeletionRequest" r WHERE r."clientId" = c.id)
       GROUP BY c.id
     )

@@ -16,10 +16,10 @@ export async function businessReports(from: Date, now: Date) {
     prisma.$queryRaw<{ clients: number }[]>`
       SELECT count(DISTINCT p."clientId")::int AS clients
       FROM "Appointment" a JOIN "TattooProject" p ON p.id = a."projectId"
-      WHERE a.status = 'completed' AND p.kind = 'tattoo' AND a."startsAt" >= ${from} AND a."startsAt" <= ${now}
+      WHERE a.status = 'completed' AND (a."serviceType" IS NULL OR a."serviceType" = 'tattoo') AND p.kind = 'tattoo' AND a."startsAt" >= ${from} AND a."startsAt" <= ${now}
       AND EXISTS (
         SELECT 1 FROM "Appointment" old JOIN "TattooProject" op ON op.id = old."projectId"
-        WHERE op."clientId" = p."clientId" AND op.kind = 'tattoo' AND old.status = 'completed'
+        WHERE op."clientId" = p."clientId" AND op.kind = 'tattoo' AND old.status = 'completed' AND (old."serviceType" IS NULL OR old."serviceType" = 'tattoo')
         AND old."startsAt" < a."startsAt"
       )
     `,
@@ -40,7 +40,7 @@ export async function businessReports(from: Date, now: Date) {
       WHERE a."createdAt" >= ${from} AND a."createdAt" <= ${now}
       GROUP BY p.id, p.title ORDER BY count(a.id) DESC, p.id LIMIT 50
     `,
-    prisma.appointment.findMany({ where: { startsAt: { gt: now, lte: new Date(now.getTime() + 30 * 86400000) }, status: { in: ["confirmed", "deposit_required", "deposit_paid"] }, loyaltyEntry: { is: null }, project: { kind: "tattoo" } }, select: { price: true, depositStatus: true, depositAmount: true } }),
+    prisma.appointment.findMany({ where: { startsAt: { gt: now, lte: new Date(now.getTime() + 30 * 86400000) }, status: { in: ["confirmed", "deposit_required", "deposit_paid"] }, loyaltyEntry: { is: null }, OR: [{ serviceType: null }, { serviceType: "tattoo" }], project: { kind: "tattoo" } }, select: { price: true, depositStatus: true, depositAmount: true } }),
   ]);
   const hours = (work[0]?.minutes || 0) / 60;
   return { returningClients: returning[0]?.clients || 0, workHours: hours, hourlyCents: hours ? Math.round(work[0].paidCents / hours) : null, missingSessions: work[0]?.missingSessions || 0, promotions, forecast: forecastReceipts(forecast) };
