@@ -118,6 +118,7 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       await tx.waitlistEntry.deleteMany({ where: { clientId: job.clientId } });
       await tx.pushSubscription.deleteMany({ where: { clientId: job.clientId } });
       await tx.clientNotification.deleteMany({ where: { clientId: job.clientId } });
+      await tx.reminderDelivery.deleteMany({ where: { appointment: projects } });
       await tx.projectActivity.deleteMany({ where: projects });
       if (!keep.has("appointments")) {
         if (keep.has("financial") && await tx.appointment.count({ where: { ...projects, OR: [{ depositStatus: { not: "not_required" } }, { depositAmount: { gt: 0 } }] } })) throw new Error("Zachowane zadatki wymagają zachowania powiązanych wizyt.");

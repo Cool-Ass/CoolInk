@@ -16,7 +16,10 @@ export async function applyOperationalDataRetention() {
     prisma.rateLimitBucket.deleteMany({ where: { resetAt: { lt: rateLimitBefore } } }),
     prisma.webhookReceipt.deleteMany({ where: { receivedAt: { lt: webhookBefore } } }),
     prisma.clientNotification.deleteMany({ where: { readAt: { not: null, lt: notificationBefore } } }),
-    prisma.reminderDelivery.deleteMany({ where: { createdAt: { lt: reminderBefore } } }),
+    // Aftercare receipts are durable idempotency markers, not message content.
+    // Removing one while its session exists would send the same final stage again.
+    // Session deletion and the approved privacy executor remove these markers.
+    prisma.reminderDelivery.deleteMany({ where: { createdAt: { lt: reminderBefore }, NOT: { channel: { startsWith: "aftercare:" } } } }),
   ]);
 
   return {

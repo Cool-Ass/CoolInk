@@ -54,6 +54,10 @@
 - Domain review: aftercare, marketing history, forecast and unsettled-tool
   exclude consultation services even when attached to a tattoo project,
   matching the existing finance boundary. Targeted45 tests/typecheck PASS.
+- Aftercare idempotency review: ordinary reminder retention must not remove
+  aftercare receipts while a session remains (otherwise its final stage repeats).
+  Receipts remain minimal markers, deleted with the session or approved erasure.
+  New regression test PASS; typecheck PASS. CI72e03e9 run38403362151 in progress.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;
