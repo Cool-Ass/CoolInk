@@ -18,6 +18,8 @@ async function main() {
     await prisma.client.create({ data: { id, firstName: "Privacy", lastName: "Fixture", email: `${id}@example.test` } });
     await prisma.tattooProject.create({ data: { id, clientId: id, title: "Disposable fixture", description: "Private data" } });
     await prisma.appointment.create({ data: { id, projectId: id, startsAt: new Date("2000-01-01T10:00:00Z"), endsAt: new Date("2000-01-01T11:00:00Z"), status: "completed" } });
+    await prisma.studioDocument.create({ data: { id, title: "Private signature fixture", slug: id, content: "Disposable consent", category: "consent" } });
+    await prisma.documentAcceptance.create({ data: { id, clientId: id, documentId: id, version: 1 } });
     await prisma.siteSetting.deleteMany({ where: { key: `google_retry:${id}` } });
     await prisma.accountDeletionRequest.create({ data: { id, clientId: id, status: "awaiting_execution" } });
     stage = "upload-erasure-race";
@@ -45,6 +47,8 @@ async function main() {
       () => prisma.tattooProject.update({ where: { id }, data: { description: "Changed" } }),
       () => prisma.appointment.update({ where: { id }, data: { depositStatus: "paid", depositAmount: 100 } }),
       () => prisma.projectImage.create({ data: { projectId: id, url: "test-path" } }),
+      () => prisma.assistantDraft.create({ data: { projectId: id, clientId: id, adminUserId: "fixture", body: "Quarantined draft" } }),
+      () => prisma.sessionDocumentSignature.create({ data: { clientId: id, acceptanceId: id, appointmentId: id, signature: "[]", snapshot: "{}", digest: "fixture" } }),
       () => prisma.directMessage.create({ data: { clientId: id, author: "client", body: "Changed" } }),
       () => prisma.loyaltyEntry.create({ data: { clientId: id, key: id, kind: "paper", stamps: 1, note: "test", adminId: "fixture" } }),
       () => prisma.accountDeletionRequest.delete({ where: { id } }),
@@ -64,6 +68,7 @@ async function main() {
     stage = "isolated-executor";
     await prisma.client.create({ data: { id: executionId, firstName: "Erasure", lastName: "Fixture", email: `${executionId}@example.test` } });
     await prisma.tattooProject.create({ data: { id: executionId, clientId: executionId, title: "Private disposable brief", description: "Disposable private description" } });
+    await prisma.assistantDraft.create({ data: { projectId: executionId, clientId: executionId, adminUserId: "fixture", body: "Private unsent draft must be erased" } });
     const review = { version: 1, decision: "approve", identityConfirmed: true, reason: "Disposable isolated test, no statutory records.", response: "Approved disposable test only.", retainedScopes: [], retainUntil: null, reviewerId: "fixture", reviewedAt: new Date().toISOString() };
     const request = await prisma.accountDeletionRequest.create({ data: { id: executionId, clientId: executionId, status: "awaiting_execution", note: JSON.stringify(review) } });
     // Fixture proof tests the executor boundary, NOT real backup freshness.
@@ -103,6 +108,7 @@ async function main() {
       stage = "zero-payment-execution";
       const result = await executePrivacyRequest(executionId, null, privacyRevision(request), "123");
       assert.equal(result.completed, true);
+      assert.equal(await prisma.assistantDraft.count({ where: { clientId: executionId } }), 0, "Erasure must remove unsent drafts even when projects are retained");
       const client = await prisma.client.findUniqueOrThrow({ where: { id: executionId } });
       assert.equal(client.firstName, "Usunięty"); assert.equal(client.email, `erased-${executionId}@privacy.invalid`);
       const resolved = await prisma.accountDeletionRequest.findUniqueOrThrow({ where: { id: executionId } });
@@ -123,6 +129,7 @@ async function main() {
         await tx.client.deleteMany({ where: { id: target } });
       }
       await tx.siteSetting.deleteMany({ where: { key: `internal.privacyExecution:${executionId}` } });
+      await tx.studioDocument.deleteMany({ where: { id } });
       await tx.adminAuditLog.deleteMany({ where: { targetId: executionId } });
     });
     await prisma.$disconnect();

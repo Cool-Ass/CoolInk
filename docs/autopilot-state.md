@@ -39,7 +39,12 @@
 - Końcowa walidacja w toku: pełne602 testy/106 plików, typecheck i Turbopack
   build PASS. Font PDF obecny w trace. Lint0errors/19warnings (głównie istniejące
   obrazy). Review ograniczył sondowanie terminów i agreguje segmenty w SQL;
-  nowy index promotionId. Izolowane CI/HTTP/RLS/browser pending.
+  nowy index promotionId. PR57 draft, head17b1bf7: CodeQL i backup-snapshot PASS;
+  izolowane RLS/IDOR PASS, HTTP/browser w toku (run38400975554).
+- Review hardening: wspólne pola formularzy według design-system, eksport danych
+  obejmuje podpisane snapshoty; rozszerzone testy kwarantanny/erasure szkiców
+  i endpointów zatwierdzania kampanii. Lokalnie609 testów/107 plików PASS,
+  typecheck PASS; smoke zbudowanego serwera10/10 auth/CSRF PASS (serwer zatrzymany).
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

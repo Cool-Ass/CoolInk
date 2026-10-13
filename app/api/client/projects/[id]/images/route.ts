@@ -97,7 +97,7 @@ export async function POST(
     await tx.projectActivity.create({ data: { projectId: project.id, type: healing ? "aftercare_photo" : "inspiration_added_by_client", message: healing ? "Klient dodał prywatne zdjęcie gojenia." : "Klient dodał nową inspirację do projektu.", visibility: "admin" } });
     return { image: created, chatMessage };
   });
-  await sendPushToAdmins({ title: "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: `/admin/clients/${client.id}?view=projects`, tag: `client-image-${image.id}` }).catch(() => undefined);
+  await sendPushToAdmins({ title: healing ? "Nowe zdjęcie gojenia" : "Nowa inspiracja od klienta", body: `${client.firstName} ${client.lastName} dodał zdjęcie do projektu.`, url: healing ? "/admin/aftercare" : `/admin/clients/${client.id}?view=projects`, tag: `client-image-${image.id}` }).catch(() => undefined);
   if (!chatMessage && form.get("chat") !== "true")
     return NextResponse.json({ imageId: image.id, image: { id: image.id, caption: image.caption, createdAt: image.createdAt.toISOString(), url: privateImageUrl(image.id, "client", client.id) } }, { status: 201 });
   const message = await prisma.projectMessage.create({

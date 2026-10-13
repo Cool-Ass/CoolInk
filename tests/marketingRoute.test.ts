@@ -1,0 +1,22 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const m = vi.hoisted(() => ({ access: vi.fn(), origin: vi.fn(), rate: vi.fn(), lock: vi.fn(), available: vi.fn(), find: vi.fn(), create: vi.fn(), update: vi.fn(), audit: vi.fn() }));
+vi.mock("@/lib/adminApi", () => ({ requireAdminApi: m.access }));
+vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: m.origin, rateLimit: m.rate, tooManyRequests: () => new Response(null, { status: 429 }) }));
+vi.mock("@/lib/bookingRules", () => ({ lockBookingCalendar: m.lock }));
+vi.mock("@/lib/appointmentAvailability", () => ({ verifyExplicitAppointmentAvailability: m.available }));
+vi.mock("@/lib/prisma", () => ({ prisma: { $transaction: (work: (tx: unknown) => unknown) => work({ promotion: { findFirst: m.find, create: m.create, update: m.update }, adminAuditLog: { create: m.audit } }) } }));
+import { POST } from "../app/api/admin/marketing/route";
+import { PATCH } from "../app/api/admin/marketing/[id]/route";
+const input = () => { const start = Math.ceil((Date.now() + 86400000) / 1800000) * 1800000; return { title: "Oferta", audience: "returning", startsAt: new Date(start).toISOString(), endsAt: new Date(start + 7200000).toISOString(), discount: 10 }; };
+const post = () => POST(new Request("https://coolink.test/api/admin/marketing", { method: "POST", body: JSON.stringify(input()) }));
+const patch = (body: unknown) => PATCH(new Request("https://coolink.test/api/admin/marketing/campaign", { method: "PATCH", body: JSON.stringify(body) }), { params: Promise.resolve({ id: "campaign" }) });
+beforeEach(() => { vi.resetAllMocks(); m.access.mockResolvedValue({ ok: true, admin: { id: "owner" } }); m.origin.mockReturnValue(true); m.rate.mockResolvedValue({ allowed: true }); m.available.mockResolvedValue({ ok: true }); m.create.mockResolvedValue({ id: "campaign" }); m.update.mockResolvedValue({ id: "campaign" }); const range = input(); m.find.mockResolvedValue({ id: "campaign", startsAt: new Date(range.startsAt), endsAt: new Date(range.endsAt), updatedAt: new Date(0) }); });
+describe("campaign write and approval boundary", () => {
+  it("rejects cross-origin before access or writes", async () => { m.origin.mockReturnValue(false); expect((await post()).status).toBe(403); expect(m.access).not.toHaveBeenCalled(); });
+  it("requires content management, not just an authenticated staff user", async () => { m.access.mockResolvedValue({ ok: false, response: new Response(null, { status: 403 }) }); expect((await post()).status).toBe(403); expect(m.create).not.toHaveBeenCalled(); expect(m.access).toHaveBeenCalledWith("content.manage"); });
+  it("serializes availability and saves only inactive private drafts", async () => { expect((await post()).status).toBe(201); expect(m.lock).toHaveBeenCalled(); expect(m.create.mock.calls[0][0].data).toMatchObject({ active: false, isPublic: false, campaignStatus: "draft" }); expect(m.audit).toHaveBeenCalledTimes(1); });
+  it("does not prepare an offer for a now-conflicting slot", async () => { m.available.mockResolvedValue({ ok: false, error: "Zajęty" }); expect((await post()).status).toBe(409); expect(m.create).not.toHaveBeenCalled(); });
+  it("cannot approve a stale revision", async () => { expect((await patch({ action: "approve", updatedAt: new Date(1).toISOString() })).status).toBe(409); expect(m.update).not.toHaveBeenCalled(); });
+  it("rechecks availability before approval", async () => { m.available.mockResolvedValue({ ok: false }); expect((await patch({ action: "approve", updatedAt: new Date(0).toISOString() })).status).toBe(409); expect(m.update).not.toHaveBeenCalled(); });
+  it("approval never activates, publishes or sends", async () => { expect((await patch({ action: "approve", updatedAt: new Date(0).toISOString() })).status).toBe(200); expect(m.update.mock.calls[0][0].data).toMatchObject({ active: false, isPublic: false, campaignStatus: "approved", campaignApprovedBy: "owner" }); expect(m.find.mock.calls[0][0].where).toEqual({ id: "campaign", campaignStatus: "draft" }); });
+});
