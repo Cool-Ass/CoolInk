@@ -1,5 +1,44 @@
 # Rejestr wydań i rollback
 
+## 2026-10-13 — PR54, zadatki wizyt; produkcja zawiera również PR55
+
+- Zgoda final32f46ae: https://github.com/Cool-Ass/CoolInk/pull/54#issuecomment-6135007741.
+  Exact-head32f46ae9b685e390e693a5603bbc5dda041e6d30 CI38323925474 SUCCESS;
+  squashmainab52372dcca198f9f0c56859e892b2d66057abbf CI38325719355 SUCCESS.
+  Wszystkie3jobs,485 unit,10 desktop/mobile E2E, bezpieczeństwo i oba Vercel PASS.
+- Pre-migration backup38325560880, artifact11781021443,
+  sha256567701d2290506d062db17f105c201b250dd5d990143f3b9a57a6b02b11f9f5c;
+  spójny snapshot+counts,17media i sealedruntime,00:07UTC.
+  Staged47kxnro75nWATLtX6HPkQveZykTX zastosował jedynie addytywną migrację
+  20261013010000_visit_deposits; wszystkie migracje zakończone poprawnie.
+- Postschema backup38325881445, artifact11780867400,
+  sha256678d40a0bb7a56d6f4efa0c73d0c1295176ea72d0ef51d4518e01eef228c2074;
+  restore saved-artifact38326042673 SUCCESS: checksum/decryption/counts/media,
+  42Authusers/31linkedclients, MFA/session i logowanie aplikacji w izolacji.
+  Bez restore na produkcji ani rotacji kluczy; bez nowych wpłat/testowych klientów.
+- Zadatki przypisane do wizyt, jawne jednorazowe przypisanie starych wpłat,
+  edytowalne instrukcje gotówka/BLIK i podgląd klienta; gotówka pierwsza,
+  równorzędne nagłówki i ikonki copy. Legacy historia pozostaje zachowana.
+  Bez bank API, kodów BLIK, automatycznego paid lub naliczania pieczątek.
+- Przerwanie przed promocją PR54; przy wznowieniu inne upoważnione zadanie
+  opublikowało nowszy PR55. Current Production acd7cb1fd60cda2441898a7e8bf0701c72c540dc,
+  7P9unKagdUbwguVA1VF4jkBo134N/cool-8oyero8mm-cool-ass.vercel.app,
+  www.coolinktattoo.pl, potwierdzony07:49UTC. PR54 jest jego przodkiem.
+  Nie promowano ponownie starszegoab52372. LatestmainCI38362388433 SUCCESS;
+  recovery38364151128 SUCCESS. AutoassignDisabled ponownie potwierdzone07:55UTC.
+- Smoke07:49UTC: home/app/adminlogin/privacy200, chronioneadminappointments
+  i depositsettings401. Istniejąca sesja klienta/projekty renderują się poprawnie;
+  brak kwalifikującej wpłaty na tym koncie, stan wpłat potwierdzony izolowanym E2E.
+- DONE: obserwacja07:50–08:05UTC PASS. ProductionLast15min223invocations,
+  Error0%,Timeout0%,CPUP7571ms (wcześniejszybaseline210ms).
+  Finalny smoke08:03UTC200/401 PASS; żadnych nowych finansowych zapisów.
+- Dowody lokalne poza repo: artifacts/pr54-production-2026-10-13.png,
+  artifacts/pr54-client-production-2026-10-13.png i pr54-observation-2026-10-13.png.
+  Rollback sprzed PR54:9ebb598/gnJqbQAKw1fyysnKFT3e4wzwNLj1; po użyciu
+  nowego modelu najpierw zatrzymać edycję zadatków i uzgodnić odczyt nowych wpłat.
+  Nie usuwać nowych kolumn/historycznych wpisów i nie przywracać bazy bez zgody.
+  Ten evidence branch nie jest artefaktem aplikacji do publikacji.
+
 ## 2026-10-09 — PR45, publikacja01:36:32UTC /03:36:32CEST
 
 - Zgoda: https://github.com/Cool-Ass/CoolInk/pull/45#issuecomment-6072201812.

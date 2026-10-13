@@ -2,6 +2,12 @@
 
 ## VISIT-DEPOSITS-20261013
 
+- ACCEPTED: final32f46ae9b685e390e693a5603bbc5dda041e6d30, odpowiedź „tak”
+  na publikację po testach i backupie,13Oct2026; [dowód zgody](https://github.com/Cool-Ass/CoolInk/pull/54#issuecomment-6135007741).
+  Kolejne różnice od wcześniej zatwierdzonego7dbe1fe dotyczą wyłącznie testów.
+  Squashmainab52372; zachowane legacy, explicit assign i retencja bez zmian.
+  Wznowienie nie cofa produkcyjnego PR55 acd7cb1, który zawiera PR54.
+
 - Właściciel zatwierdził podgląd: „okej jest super. wdrażamy” w bieżącym czacie.
   Gotówka pierwsza, BLIK drugi, równorzędne nagłówki/ikony, ikony kopiowania.
 - HIGH: addytywne pola zadatku wizyty i jawne jednorazowe przypisanie starego

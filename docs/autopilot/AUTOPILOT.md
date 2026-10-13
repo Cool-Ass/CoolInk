@@ -1,5 +1,27 @@
 # CoolInk Autopilot v1 — pamięć i runbook
 
+## Checkpoint produkcyjny — PR54 / 2026-10-13
+
+- DONE08:05UTC, root z pierwotnego zadania; lease publikacji zwolniony.
+  Właściciel zatwierdził końcowy32f46ae: [zgoda](https://github.com/Cool-Ass/CoolInk/pull/54#issuecomment-6135007741).
+  Exact-headCI38323925474 i squashmainab52372 CI38325719355 SUCCESS;
+  485 unit i10 desktop/mobile E2E, security i oba Vercel PASS.
+- Przed migracją spójny backup38325560880 SUCCESS; addytywna migracja
+  20261013010000_visit_deposits zastosowana poprawnie przez stagedbuild47kxnro75.
+  Postschema backup38325881445 i saved-artifact isolatedrestore38326042673
+  SUCCESS, włącznie z Auth/MFA/session/application login; bez restore produkcji.
+- Wznowienie07:46UTC: inne zadanie, za zgodą właściciela, opublikowało PR55
+  acd7cb1 zawierający PR54. Current Production7P9unKagdUbwguVA1VF4jkBo134N,
+  www.coolinktattoo.pl, potwierdzony UI; exact-mainCI38362388433 SUCCESS.
+  Nie promować starszegoab52372 nad poprawkami listy oczekujących.
+- Readonly smoke07:49UTC: home/app/adminlogin/privacy200, protected admin
+  appointments/depositsettings401. Istniejąca sesja klienta i pusta lista projektów
+  renderują się poprawnie; nie tworzono finansowych fixtures na produkcji.
+  Obserwacja07:50–08:05UTC PASS; końcowy smoke08:03UTC200/401 PASS.
+  Production Last15min223 invocations/Error0%/Timeout0%/CPU P7571ms.
+- Evidence-only branch ai/release-pr54-production-evidence nie jest targetem
+  wdrożenia. Historyczne WAITING_APPROVAL poniżej zostały zastąpione zgodą i CI.
+
 ## Checkpoint — WAITLIST-INTEGRITY-20261013
 
 - VERIFYING PR55, root run01a1334a-fc98-7bc2-ad41-7a20cdb15d13, ai/waitlist-integrity-20261013, baseab52372, initial coded24b0c0.
