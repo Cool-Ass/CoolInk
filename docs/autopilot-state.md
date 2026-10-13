@@ -58,6 +58,10 @@
   aftercare receipts while a session remains (otherwise its final stage repeats).
   Receipts remain minimal markers, deleted with the session or approved erasure.
   New regression test PASS; typecheck PASS. CI72e03e9 run38403362151 in progress.
+- CI72e03e9: full Flash flow PASS. New reports browser case raced login:
+  error-context proves it stayed on the login screen, not a SQL/page failure.
+  Added URL/session completion assertion after login in new F/E/D cases.
+  No auth bypass or relaxed assertions. Final CI must cover the corrected head.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

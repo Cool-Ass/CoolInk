@@ -397,7 +397,7 @@ test("business reports execute historical return, hourly receipts, promotion att
   await prisma.appointment.create({ data: { projectId: project.id, startsAt: old, endsAt: new Date(old.getTime() + 7200000), status: "completed" } });
   const future = new Date(Date.now() + 20 * 86400000);
   await prisma.appointment.create({ data: { projectId: project.id, startsAt: future, endsAt: new Date(future.getTime() + 7200000), status: "confirmed", price: 1400, depositStatus: "paid", depositAmount: 300 } });
-  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click(); await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/statistics?period=90"); await expect(page.getByRole("heading", { name: "Statystyki operacyjne", exact: true })).toBeVisible();
   await expect(page.getByText("WPŁYW NA GODZINĘ SESJI", { exact: true })).toBeVisible(); await expect(page.getByText("PROGNOZA DOPŁAT · 30 DNI", { exact: true })).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: promotion.title }); await expect(row).toContainText("100%"); await expect(row).toContainText(/1\s?400/);
@@ -407,7 +407,7 @@ test("marketing prepares editable dated campaigns and approval never publishes o
   const startsAt = new Date(); startsAt.setUTCDate(startsAt.getUTCDate() + 55); startsAt.setUTCHours(10, 0, 0, 0);
   const endsAt = new Date(startsAt.getTime() + 7200000);
   const free = await prisma.availableSlot.create({ data: { startsAt, endsAt, isPublic: true, title: "Marketing fixture" } }); flashSlotIds.push(free.id);
-  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click(); await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/marketing");
   const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   // Browser context timezone is used for datetime-local, not the worker's zone.
@@ -426,7 +426,7 @@ test("assistant tools persist private drafts without delivering client messages"
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Assistant isolated fixture", description: "Unsent draft test" } });
   const before = await prisma.projectMessage.count({ where: { projectId: project.id } });
-  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click(); await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/assistant"); await expect(page.getByRole("heading", { name: "Asystent AI", exact: true })).toBeVisible();
   await page.getByLabel("Narzędzie", { exact: true }).selectOption("message_draft"); await page.getByLabel("ID projektu", { exact: true }).fill(project.id); await page.getByRole("button", { name: "Uruchom narzędzie", exact: true }).click();
   await expect(page.getByLabel("Szkic — sprawdź przed użyciem", { exact: true })).toHaveValue(/Assistant isolated fixture/);
