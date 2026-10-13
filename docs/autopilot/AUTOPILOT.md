@@ -2,10 +2,10 @@
 
 ## Checkpoint — WAITLIST-INTEGRITY-20261013
 
-- READY FOR REVIEW, root run01a1334a-fc98-7bc2-ad41-7a20cdb15d13, ai/waitlist-integrity-20261013, baseab52372, coded24b0c0.
+- VERIFYING PR55, root run01a1334a-fc98-7bc2-ad41-7a20cdb15d13, ai/waitlist-integrity-20261013, baseab52372, initial coded24b0c0.
 - MEDIUM: existing waitlist race fixes; no migration/auth/financial rule changes. Scope, audit A–H, tests and rollback: [autopilot-state](../autopilot-state.md).
 - Local worker inventory checked; no second active CoolInk task or open waitlist PR. No production writes, merge or deployment authorized by this run.
-- Local518 tests/types/lint/build/audit PASS; no local isolated credentials. Next: draft PR, isolated exact-head CI/browser verification and owner review. No merge/promotion; worker released after PR preparation.
+- Local518 tests/types/lint/build/audit PASS; no local isolated credentials. CI38342933533 passed security/DB/HTTP but concurrent-offer browser test returned2x500. Bounded transaction acquisition/lifetime fix prepared; full exact-head rerun required. No merge/promotion; see state for details.
 
 ## Checkpoint — VISIT-DEPOSITS-20261013
 

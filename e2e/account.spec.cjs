@@ -262,6 +262,12 @@ test("waitlist concurrent offers, acceptance, leaving and archived project safet
     const archived = await page.evaluate(async ({ id, startsAt }) => (await fetch(`/api/admin/waitlist/${id}/offer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ startsAt, durationMinutes: 60 }) })).status, { id: entry.id, startsAt: slots[1].startsAt.toISOString() });
     expect(archived).toBe(409);
     expect(await prisma.appointment.count({ where: { projectId: project.id } })).toBe(1);
+  } catch (error) {
+    // Only fixed Prisma error codes may leave the server log; never log its
+    // contents, request bodies, session credentials or customer records.
+    const log = await require("node:fs/promises").readFile("/tmp/coolink-app.log", "utf8").catch(() => "");
+    console.error("Waitlist server error codes", [...new Set(log.match(/\bP\d{4}\b/g) || [])]);
+    throw error;
   } finally {
     await context.close();
     await prisma.tattooProject.delete({ where: { id: project.id } });

@@ -1,8 +1,8 @@
 # Autopilot — 2026-10-13
 
 - Run: przeprowad-audyt-ui-ux-aplikacji / 01a1334a-fc98-7bc2-ad41-7a20cdb15d13.
-- Base: ab52372dcca198f9f0c56859e892b2d66057abbf; code commit d24b0c0e563216ce4eb9d55e0a896afc06a4eb14; branch ai/waitlist-integrity-20261013.
-- READY FOR REVIEW: WAITLIST-INTEGRITY-20261013, MEDIUM (existing booking behavior; no schema/auth/finance changes).
+- Base: ab52372dcca198f9f0c56859e892b2d66057abbf; initial code d24b0c0e563216ce4eb9d55e0a896afc06a4eb14; branch ai/waitlist-integrity-20261013, PR55.
+- VERIFYING PR55: WAITLIST-INTEGRITY-20261013, MEDIUM (existing booking behavior; no schema/auth/finance changes).
 - One local worker; app thread inventory shows no other active CoolInk worker; no open waitlist PR.
 - Acceptance: concurrent offers cannot orphan reservations; join/leave/status/expiry/response reread under the existing calendar lock; confirmed appointments survive leaving the waitlist; automation uses current preferences and the existing availability gate.
 - Validation: deterministic race regression tests, full Vitest, types, lint, build; isolated HTTP/browser checks only when test credentials are available.
@@ -23,3 +23,4 @@
 
 - Security review: existing same-origin/session/operations permission and owner-scoped client reads retained; writes/notifications remain transactional; external push/Google run after commit. No production requests or writes.
 - Next: exact-head isolated CI/browser/RLS/security, review; no merge/deployment. Code-only rollback. Optional modules above are unimplemented, not production defects proven by this run.
+- CI38342933533 / 5daabc3: CodeQL, backup-snapshot, all unit/build/audit/gitleaks, isolated DB/RLS/IDOR/roles and HTTP smoke PASS; browser concurrency FAIL (201/409/500/500). The 2-connection pool and Prisma's default 2s acquisition/5s interactive transaction budgets are the suspected cause; no claim of confirmed Prisma error code. Manual offers now have bounded 10s acquisition / 15s transaction budgets; the 4-request assertion is unchanged. Failure diagnostics expose only fixed Prisma error codes. Rerun required before review. Both Vercel previews passed the initial head. No promotion.

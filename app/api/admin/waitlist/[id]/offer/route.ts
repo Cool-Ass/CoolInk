@@ -36,7 +36,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await tx.projectActivity.create({ data: { projectId: entry.projectId, type: "waitlist_offer_sent", message: `Wysłano ofertę terminu z listy rezerwowej: ${formatCoolinkDateTime(startsAt)}.`, visibility: "client" } });
     await tx.clientNotification.create({ data: { clientId: entry.clientId, projectId: entry.projectId, appointmentId: created.id, type: "WAITLIST_OFFER", title: "Zwolnił się pasujący termin", body: `Termin ${formatCoolinkDateTime(startsAt)} czeka na Twoją odpowiedź przez 24 godziny.`, href: "/app/portal/projects" } });
     return { appointment: created, entry };
-  }).catch((error: unknown) => {
+  // The calendar lock serializes offers; give queued requests time to obtain
+  // a connection and then observe the winner, even with a two-connection pool.
+  }, { maxWait: 10_000, timeout: 15_000 }).catch((error: unknown) => {
     if (error instanceof Error && error.message.startsWith("BOOKING_CONFLICT:")) return null;
     throw error;
   });
