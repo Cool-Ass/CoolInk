@@ -628,6 +628,22 @@ button.calendar-entry:hover { filter: brightness(1.2); }
   padding: 0.75rem;
 }
 .studio-panel.p-0 { padding: 0; }
+/* Shared compact field: native label/validation semantics, existing focus ring,
+   and identical tokens for staff and client forms. */
+.studio-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-ink-white) 30%, transparent);
+  border-radius: .5rem;
+  background: var(--color-ink-black);
+  color: var(--color-ink-white);
+  padding: .625rem .75rem;
+  font-size: .875rem;
+  line-height: 1.5;
+}
+.studio-input:disabled { opacity: .6; cursor: not-allowed; }
 .studio-media-grid {
   display: grid;
   align-items: start;

@@ -29,11 +29,11 @@ const isOccupiedBlock = (item: { reason?: string | null }) => item.reason?.trim(
 // environments even though their persisted UTC range was correct.
 const time = (value: string) => new Date(value).toLocaleTimeString("pl-PL", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit" });
 
-export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats, initialAppointmentId }: { initialAppointmentId?: string; appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
+export default function CalendarHub({ appointments, blocks, slots, promotions, events, bufferMinutes, bufferRules, visibleMonths, defaultFreeStart, defaultFreeEnd, stats, initialAppointmentId, initialDate }: { initialDate?: string; initialAppointmentId?: string; appointments: Appointment[]; blocks: Block[]; slots: Slot[]; promotions: Promotion[]; events: Event[]; bufferMinutes: number; bufferRules: BookingBufferRules; visibleMonths: number; defaultFreeStart: string; defaultFreeEnd: string; stats: { appointments: number; blocks: number; newProjects: number } }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [view, setView] = useState<"week" | "month">("week");
-  const [weekAnchor, setWeekAnchor] = useState(() => toCoolinkDateTimeInput(appointments.find(v => v.id === initialAppointmentId)?.startsAt ?? new Date()).slice(0, 10));
+  const [weekAnchor, setWeekAnchor] = useState(() => toCoolinkDateTimeInput(appointments.find(v => v.id === initialAppointmentId)?.startsAt ?? initialDate ?? new Date()).slice(0, 10));
   const [move, setMove] = useState<{ visit: Appointment; startsAt: string; endsAt: string } | null>(null);
   const [moving, setMoving] = useState(false);
   async function confirmMove() {
@@ -45,7 +45,7 @@ export default function CalendarHub({ appointments, blocks, slots, promotions, e
   }
   const today = startOfLocalDay(new Date());
   const initialVisit = appointments.find(visit => visit.id === initialAppointmentId);
-  const [cursor, setCursor] = useState(() => { const date = initialVisit ? new Date(initialVisit.startsAt) : today; return new Date(date.getFullYear(), date.getMonth(), 1); });
+  const [cursor, setCursor] = useState(() => { const date = initialVisit ? new Date(initialVisit.startsAt) : initialDate ? new Date(initialDate) : today; return new Date(date.getFullYear(), date.getMonth(), 1); });
   const [selectedDays, setSelectedDays] = useState<Date[]>([]);
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [selectMode, setSelectMode] = useState(false);

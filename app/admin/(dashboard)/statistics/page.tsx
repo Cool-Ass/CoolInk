@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/adminPage";
 import { LEAD_SOURCE_LABEL, type LeadSource } from "@/lib/leadSource";
+import { businessReports } from "@/lib/businessReports";
 import { getClientRegistrationStats } from "@/lib/clientRegistrationStats";
 
 export const dynamic = "force-dynamic";
@@ -83,8 +84,8 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   const noShows = appointments.filter((item) => item.status === "no_show").length;
   const cancellationRate = percentage(cancelled, appointments.length);
   const noShowRate = percentage(noShows, appointments.length);
-  const completedByClient = completed.reduce<Map<string, number>>((result, item) => result.set(item.project.clientId, (result.get(item.project.clientId) ?? 0) + 1), new Map());
-  const returningClients = [...completedByClient.values()].filter((count) => count >= 2).length;
+  const reports = await businessReports(from, now);
+  const returningClients = reports.returningClients;
 
   const answeredProjects = projects.flatMap((project) => project.messages[0] ? [(project.messages[0].createdAt.getTime() - project.createdAt.getTime()) / 3_600_000] : []);
   const responseTime = answeredProjects.length ? answeredProjects.reduce((sum, value) => sum + value, 0) / answeredProjects.length : null;
@@ -115,6 +116,8 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
   const revenue = await prisma.loyaltyEntry.aggregate({ where: { kind: "visit", voidedAt: null, createdAt: dateWindow }, _sum: { paidCents: true, discountCents: true }, _count: true });
   const money = (cents: number) => (cents / 100).toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
   const cards = [
+    { label: "WPŁYW NA GODZINĘ SESJI", value: reports.hourlyCents === null ? "—" : money(reports.hourlyCents), hint: `${Math.round(reports.workHours * 10) / 10} godz. rozliczonych sesji · nie zysk` },
+    { label: "PROGNOZA DOPŁAT · 30 DNI", value: money(reports.forecast.remainingCents), hint: `${reports.forecast.priced} wycenionych · ${reports.forecast.unpriced} bez ceny` },
     { label: "NOWE KONTA ONLINE", value: String(registrations.total), hint: "Rejestracja konta w wybranym okresie" },
     { label: "KONTA BEZ WIZYTY", value: String(registrations.withoutAppointment), hint: "Z nowych kont · żadnej wizyty w historii" },
     { label: "KONTA BEZ PROJEKTU", value: String(registrations.withoutProject), hint: "Z nowych kont · żadnego projektu w historii" },
@@ -123,7 +126,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     { label: "ŚREDNIA WPŁATA", value: revenue._count ? money(Math.round((revenue._sum.paidCents ?? 0) / revenue._count)) : "—", hint: "Na jedną rozliczoną wizytę" },
     { label: "NOWE ZGŁOSZENIA", value: String(tattooProjects.length), hint: `${consultations.length} konsultacji` },
     { label: "KONWERSJA NA WIZYTĘ", value: `${conversion}%`, hint: `${converted} z ${tattooProjects.length || 0} zgłoszeń` },
-    { label: "ZREALIZOWANE WIZYTY", value: String(completed.length), hint: `${returningClients} klientów wróciło min. 2 razy` },
+    { label: "ZREALIZOWANE WIZYTY", value: String(completed.length), hint: `${returningClients} klientów z wcześniejszą zakończoną sesją` },
     { label: "ŚREDNI CZAS ODPOWIEDZI", value: responseTime === null ? "—" : formatHours(responseTime), hint: unanswered ? `${unanswered} bez odpowiedzi` : "Brak zaległych odpowiedzi" },
     { label: "OBŁOŻENIE TERMINÓW", value: utilization === null ? "—" : `${utilization}%`, hint: utilization === null ? "Brak historycznych wolnych terminów" : `${Math.round(occupiedMinutes / 60)} z ${Math.round(availableMinutes / 60)} godz.` },
     { label: "ANULOWANIA", value: `${cancellationRate}%`, hint: `${cancelled} wizyt` },
@@ -141,7 +144,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     <p className="text-xs text-ink-grey">Konta online według daty rejestracji w wybranym okresie, także bez pierwszego logowania lub potwierdzenia e-maila. Bez ręcznych kontaktów CRM. Brak wizyty lub projektu oznacza brak w całej historii; te grupy zachodzą na siebie i nie należy ich sumować.</p>
     <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{cards.map((card) => <StatCard key={card.label} {...card} />)}</section>
 
-    <AdminSections scope="statistics" initial={sectionLayout} sections={[
+    <section className="studio-panel"><h2 className="font-display text-xl">Skuteczność promocji</h2><p className="mt-2 text-xs text-ink-grey">Zgłoszenia z kodem promocji według daty zgłoszenia. Realizacje i wpłaty według aktualnego stanu przypisanych wizyt. Bez wyświetleń i kosztów reklam nie wyliczamy ROI.</p>{reports.promotions.length ? <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Promocja</th><th className="p-2">Zgłoszenia</th><th className="p-2">Zrealizowane</th><th className="p-2">Anulowane / nieobecności</th><th className="p-2">Rozliczone wpłaty</th></tr></thead><tbody>{reports.promotions.map(promotion => <tr key={promotion.id} className="border-t border-ink-white/10"><td className="p-2">{promotion.title}</td><td className="p-2">{promotion.requests}</td><td className="p-2">{promotion.completed} · {percentage(promotion.completed, promotion.requests)}%</td><td className="p-2">{promotion.cancelled}</td><td className="p-2">{money(promotion.paidCents)}</td></tr>)}</tbody></table></div> : <p className="mt-3 text-sm text-ink-grey">Brak zgłoszeń z przypisanym kodem promocji. Nie przypisujemy starych wizyt na podstawie domysłów.</p>}</section><section className="studio-panel text-xs leading-relaxed text-ink-grey"><p>Prognoza obejmuje znane ceny nierozliczonych, potwierdzonych sesji tatuażu w najbliższych 30 dniach, pomniejszone o potwierdzone zadatki. Nie uwzględnia przyszłych rabatów ani niepewnych zgłoszeń; to nie gwarancja wpływów.</p><p className="mt-2">Wpływ na godzinę dotyczy rozliczeń z wybranego okresu i czasu przypisanych sesji, bez podwójnego doliczania zadatku. {reports.missingSessions > 0 ? `${reports.missingSessions} rozliczeń bez zachowanej sesji pominięto w liczniku i mianowniku.` : "Wszystkie uwzględnione rozliczenia mają czas sesji."}</p><p className="mt-2">Powody anulowania nie są zbierane w ujednoliconym polu — nie tworzymy rankingu z prywatnych notatek.</p></section><AdminSections scope="statistics" initial={sectionLayout} sections={[
       { id: "statuses", title: "Statusy wizyt", content: <Chart title="Statusy wizyt" rows={statusRows} empty="Brak wizyt w wybranym okresie." /> },
       { id: "styles", title: "Style tatuaży", content: <Chart title="Najczęściej wybierane style" rows={styleRows} empty="Brak danych o stylach." /> },
       { id: "weekdays", title: "Dni tygodnia", content: <Chart title="Ruch według dnia tygodnia" rows={weekdayRows} empty="Brak danych o wizytach." /> },

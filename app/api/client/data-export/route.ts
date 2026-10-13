@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     where: { id: client.id },
     include: {
       projects: { include: { appointments: true, activities: true, messages: { select: { id: true, author: true, body: true, readAt: true, createdAt: true, attachmentId: true } }, images: { select: { id: true, caption: true, order: true, createdAt: true } }, waitlistEntry: true } },
-      acceptances: { include: { document: { select: { id: true, title: true, category: true, version: true } } } },
+      acceptances: { include: { document: { select: { id: true, title: true, category: true, version: true } }, sessionSignatures: { select: { id: true, appointmentId: true, snapshot: true, signature: true, digest: true, acceptedAt: true } } } },
       notifications: true,
       directMessages: { select: { id: true, author: true, body: true, readAt: true, createdAt: true } },
       deletionRequest: true,

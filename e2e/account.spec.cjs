@@ -17,6 +17,22 @@ let cmsPage;
 const announcementIds = [];
 const announcementMedia = [];
 const mediaLayoutIds = [];
+const flashIds = [], flashSlotIds = [];
+const campaignIds = [];
+const featureAdminIds = [];
+
+// Each new feature has an independent disposable operator. Log in through the
+// actual form; never reset rate buckets, raise limits or inject session cookies.
+async function loginFeatureAdmin(page) {
+  const admin = await prisma.adminUser.create({ data: { email: `feature-${randomUUID()}@example.com`, name: "Browser feature fixture", role: "owner", passwordHash: await bcrypt.hash(password, 12) } });
+  featureAdminIds.push(admin.id);
+  await page.goto("http://127.0.0.1:3120/admin/login");
+  await page.getByLabel("EMAIL", { exact: true }).fill(admin.email);
+  await page.getByLabel("HASŁO", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  return admin.id;
+}
 
 async function verifyCalendarPresentation(page) {
   const monthSwitch = page.getByRole("button", { name: "Miesiąc", exact: true });
@@ -84,6 +100,9 @@ test.afterAll(async () => {
   await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
   if (fixture) await prisma.tattooProject.updateMany({ where: { clientId: fixture.id }, data: { depositAssignedAppointmentId: null } });
   await prisma.client.deleteMany({ where: { email } });
+  await prisma.promotion.deleteMany({ where: { id: { in: campaignIds } } });
+  await prisma.portfolioItem.deleteMany({ where: { id: { in: flashIds } } });
+  await prisma.availableSlot.deleteMany({ where: { id: { in: flashSlotIds } } });
   for (const id of announcementIds) {
     await prisma.clientNotification.deleteMany({ where: { type: { in: [`announcement:${id}`, `announcement-dismissed:${id}`] } } });
     await prisma.siteSetting.deleteMany({ where: { key: `client-announcement:${id}` } });
@@ -98,6 +117,7 @@ test.afterAll(async () => {
   if (slot) await prisma.availableSlot.delete({ where: { id: slot.id } });
   if (consent) await prisma.studioDocument.delete({ where: { id: consent.id } });
   if (cmsPage) await prisma.page.delete({ where: { id: cmsPage.id } });
+  await prisma.adminUser.deleteMany({ where: { id: { in: featureAdminIds } } });
   if (adminId) await prisma.adminUser.delete({ where: { id: adminId } });
   await prisma.$disconnect();
 });
@@ -196,8 +216,8 @@ test("client login, own project navigation and logout", async ({ page }) => {
   const bookedResponse = page.waitForResponse((response) => response.url().endsWith("/api/client/appointments") && response.request().method() === "POST");
   await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click();
   const booked = await bookedResponse;
-  expect(booked.status()).toBe(201);
-  const booking = await booked.json();
+  const booking = await booked.json().catch(() => ({ errorCode: "BOOKING_NON_JSON_RESPONSE" }));
+  expect(booked.status(), booking.errorCode || "BOOKING_HTTP_STATUS").toBe(201);
   await page.goto(`/app/portal/projects?project=${booking.projectId}&appointment=${booking.appointment.id}`);
   await page.getByRole("button", { name: "ANULUJ TĘ WIZYTĘ", exact: true }).click();
   await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
@@ -334,6 +354,176 @@ test("visit deposits, explicit legacy assignment and editable client instruction
     await context.close();
     if (original) await prisma.siteSetting.upsert({ where: { key: original.key }, create: { key: original.key, value: original.value }, update: { value: original.value } });
     else await prisma.siteSetting.deleteMany({ where: { key: "deposit_instructions" } });
+  }
+});
+
+test("Flash gallery, booking, visit deposit and unique concurrent claims", async ({ page }) => {
+  const when = new Date(); when.setUTCDate(when.getUTCDate() + 30); when.setUTCHours(10, 0, 0, 0);
+  const flash = await prisma.portfolioItem.create({ data: { title: `Flash ${randomUUID()}`, description: "Gotowy wzór testowy Flash", imageUrl: "/images/logo-white.jpg", published: true, flashEnabled: true, flashUnique: true, flashPrice: 700, flashSize: "10 cm", flashDurationMinutes: 60, flashDepositAmount: 100 } });
+  flashIds.push(flash.id);
+  const ranges = [];
+  for (let day = 0; day < 4; day++) {
+    const startsAt = new Date(when.getTime() + day * 86400000), endsAt = new Date(startsAt.getTime() + 3600000);
+    const free = await prisma.availableSlot.create({ data: { startsAt, endsAt, isPublic: true, title: "Flash fixture" } }); flashSlotIds.push(free.id); ranges.push({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
+  }
+  await page.goto("/app"); await page.getByLabel("E-MAIL", { exact: true }).fill(email); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click(); await expect(page).toHaveURL(/\/app\/portal/);
+  await page.goto("/app/portal/flash"); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toBeVisible();
+  await page.getByRole("heading", { name: flash.title, exact: true }).locator("xpath=../..").getByRole("link", { name: "Wybierz termin", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`flash=${flash.id}`));
+  // The actual four-step booking form is shared with normal appointments.
+  await page.goto(`/app/portal/calendar?flash=${flash.id}`);
+  const consentVersions = (await prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, version: true } })).map(item => ({ ...item, answers: {} }));
+  const claims = await page.evaluate(async ({ ranges, flash, consents }) => Promise.all(ranges.map(async range => {
+    const response = await fetch("/api/client/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...range, flashId: flash.id, flashUpdatedAt: flash.updatedAt, confirmationAcknowledged: true, consents, description: "Wybrany gotowy wzór Flash", price: 1, depositAmount: 1 }) });
+    return { status: response.status, data: await response.json() };
+  })), { ranges, flash: { id: flash.id, updatedAt: flash.updatedAt.toISOString() }, consents: consentVersions });
+  expect(claims.map(result => result.status).sort()).toEqual([201, 409, 409, 409]);
+  const booked = claims.find(result => result.status === 201).data;
+  expect(await prisma.tattooProject.count({ where: { flashPortfolioId: flash.id } })).toBe(1);
+  const visit = await prisma.appointment.findUniqueOrThrow({ where: { id: booked.appointment.id } });
+  expect(visit.price).toBe(700); expect(visit.depositAmount).toBe(100); expect(visit.depositStatus).toBe("awaiting");
+  await page.goto(`/app/portal/projects?project=${booked.projectId}&appointment=${visit.id}`);
+  await expect(page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true }).getByText("100 zł", { exact: true })).toBeVisible();
+  await page.goto("/app/portal/flash"); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toHaveCount(0);
+  // A cancelled project label cannot make an already used unique design bookable.
+  await prisma.appointment.update({ where: { id: visit.id }, data: { status: "completed" } });
+  await prisma.tattooProject.update({ where: { id: booked.projectId }, data: { status: "cancelled" } });
+  await page.reload(); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toHaveCount(0);
+  // Restore only this disposable fixture before testing other independent flows.
+  await prisma.tattooProject.update({ where: { id: booked.projectId }, data: { status: "awaiting_confirmation" } });
+  await prisma.appointment.update({ where: { id: visit.id }, data: { status: "requested" } });
+  const uiFlash = await prisma.portfolioItem.create({ data: { title: `UI Flash ${randomUUID()}`, description: "Gotowy wzór rezerwowany w kreatorze", imageUrl: "/images/logo-white.jpg", published: true, flashEnabled: true, flashUnique: true, flashPrice: 600, flashSize: "8 cm", flashDurationMinutes: 60 } }); flashIds.push(uiFlash.id);
+  const uiStart = new Date(when.getTime() + 5 * 86400000);
+  const uiSlot = await prisma.availableSlot.create({ data: { startsAt: uiStart, endsAt: new Date(uiStart.getTime() + 3600000), isPublic: true, title: "Flash UI fixture" } }); flashSlotIds.push(uiSlot.id);
+  await page.goto(`/app/portal/calendar?flash=${uiFlash.id}&booking=${encodeURIComponent(uiStart.toISOString())}`);
+  await expect(page.getByRole("region", { name: "Wybrany wzór Flash", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click(); await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  const required = page.getByRole("dialog", { name: "Umów wizytę", exact: true }).getByRole("group", { name: "WYMAGANE ZGODY", exact: true }).getByRole("checkbox");
+  for (const checkbox of await required.all()) if (await checkbox.isEnabled() && !await checkbox.isChecked()) await checkbox.check();
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.", exact: true }).check();
+  const created = page.waitForResponse(response => response.url().endsWith("/api/client/appointments") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click(); expect((await created).status()).toBe(201);
+  expect(await prisma.tattooProject.count({ where: { flashPortfolioId: uiFlash.id } })).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("business reports execute historical return, hourly receipts, promotion attribution and forecasts", async ({ page }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Report fixture", description: "Isolated business reporting" } });
+  const startsAt = new Date(Date.now() - 10 * 86400000), endsAt = new Date(startsAt.getTime() + 7200000);
+  const promotion = await prisma.promotion.create({ data: { title: `Report promotion ${randomUUID()}`, startsAt, endsAt, active: false, isPublic: false } }); campaignIds.push(promotion.id);
+  const visit = await prisma.appointment.create({ data: { projectId: project.id, promotionId: promotion.id, startsAt, endsAt, status: "completed", price: 1400 } });
+  await prisma.loyaltyEntry.create({ data: { appointmentId: visit.id, clientId: client.id, key: `report-${randomUUID()}`, kind: "visit", stamps: 0, paidCents: 140000, grossCents: 140000, note: "Disposable reporting fixture", adminId } });
+  const old = new Date(Date.now() - 200 * 86400000);
+  await prisma.appointment.create({ data: { projectId: project.id, startsAt: old, endsAt: new Date(old.getTime() + 7200000), status: "completed" } });
+  const future = new Date(Date.now() + 20 * 86400000);
+  await prisma.appointment.create({ data: { projectId: project.id, startsAt: future, endsAt: new Date(future.getTime() + 7200000), status: "confirmed", price: 1400, depositStatus: "paid", depositAmount: 300 } });
+  await loginFeatureAdmin(page);
+  await page.goto("/admin/statistics?period=90"); await expect(page.getByRole("heading", { name: "Statystyki operacyjne", exact: true })).toBeVisible();
+  await expect(page.getByText("WPŁYW NA GODZINĘ SESJI", { exact: true })).toBeVisible(); await expect(page.getByText("PROGNOZA DOPŁAT · 30 DNI", { exact: true })).toBeVisible();
+  const row = page.getByRole("row").filter({ hasText: promotion.title }); await expect(row).toContainText("100%"); await expect(row).toContainText(/1\s?400/);
+});
+
+test("marketing prepares editable dated campaigns and approval never publishes or broadcasts", async ({ page }) => {
+  const startsAt = new Date(); startsAt.setUTCDate(startsAt.getUTCDate() + 55); startsAt.setUTCHours(10, 0, 0, 0);
+  const endsAt = new Date(startsAt.getTime() + 7200000);
+  const free = await prisma.availableSlot.create({ data: { startsAt, endsAt, isPublic: true, title: "Marketing fixture" } }); flashSlotIds.push(free.id);
+  const operatorId = await loginFeatureAdmin(page);
+  await page.goto("/admin/marketing");
+  const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  // Browser context timezone is used for datetime-local, not the worker's zone.
+  const inputDate = value => new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(value).replace(" ", "T");
+  await page.getByLabel("Tytuł oferty", { exact: true }).fill("Marketing isolated campaign");
+  await page.getByLabel("Początek terminu", { exact: true }).fill(inputDate(startsAt)); await page.getByLabel("Koniec terminu", { exact: true }).fill(inputDate(endsAt)); await page.getByLabel("Proponowany rabat (%)", { exact: true }).fill("10");
+  await page.getByRole("button", { name: "Wygeneruj i zapisz szkic kampanii", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Nic nie opublikowano");
+  const campaign = await prisma.promotion.findFirstOrThrow({ where: { title: "Marketing isolated campaign" } }); campaignIds.push(campaign.id); expect(campaign.campaignStatus).toBe("draft"); expect(campaign.active).toBe(false); expect(campaign.isPublic).toBe(false);
+  await page.getByRole("button", { name: "Edytuj szkic", exact: true }).click(); await page.getByLabel("Treść promocji", { exact: true }).fill("Zredagowany post testowy"); await page.getByRole("button", { name: "Zapisz zmiany szkicu", exact: true }).click(); await expect.poll(async () => (await prisma.promotion.findUniqueOrThrow({ where: { id: campaign.id } })).campaignCaption).toBe("Zredagowany post testowy");
+  page.once("dialog", dialog => dialog.accept()); await page.getByRole("button", { name: "Zatwierdź bez publikacji", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Zatwierdzono");
+  const approved = await prisma.promotion.findUniqueOrThrow({ where: { id: campaign.id } }); expect(approved.campaignStatus).toBe("approved"); expect(approved.active).toBe(false); expect(approved.isPublic).toBe(false); expect(approved.campaignApprovedBy).toBe(operatorId);
+  expect(await prisma.clientNotification.count({ where: { type: { contains: campaign.id } } })).toBe(0);
+});
+
+test("assistant tools persist private drafts without delivering client messages", async ({ page }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Assistant isolated fixture", description: "Unsent draft test" } });
+  const before = await prisma.projectMessage.count({ where: { projectId: project.id } });
+  const operatorId = await loginFeatureAdmin(page);
+  await page.goto("/admin/assistant"); await expect(page.getByRole("heading", { name: "Asystent AI", exact: true })).toBeVisible();
+  await page.getByLabel("Narzędzie", { exact: true }).selectOption("message_draft"); await page.getByLabel("ID projektu", { exact: true }).fill(project.id); await page.getByRole("button", { name: "Uruchom narzędzie", exact: true }).click();
+  await expect(page.getByLabel("Szkic — sprawdź przed użyciem", { exact: true })).toHaveValue(/Assistant isolated fixture/);
+  await page.getByRole("button", { name: "Zapisz szkic bez wysyłania", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Nic nie wysłano");
+  expect(await prisma.assistantDraft.count({ where: { projectId: project.id, adminUserId: operatorId } })).toBe(1); expect(await prisma.projectMessage.count({ where: { projectId: project.id } })).toBe(before);
+  await page.reload(); await expect(page.getByText(project.title, { exact: true })).toBeVisible();
+});
+
+test("session consents support handwritten signatures, immutable PDFs and appointment ownership", async ({ page, browser }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Signature fixture", description: "Isolated consent flow" } });
+  const startsAt = new Date(Date.now() + 45 * 86400000);
+  const visit = await prisma.appointment.create({ data: { projectId: project.id, startsAt, endsAt: new Date(startsAt.getTime() + 3600000), status: "confirmed" } });
+  await page.goto("/app"); await page.getByLabel("E-MAIL", { exact: true }).fill(email); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click(); await expect(page).toHaveURL(/\/app\/portal/);
+  await page.goto(`/app/portal/documents?appointment=${visit.id}`);
+  await page.getByRole("button").filter({ hasText: consent.title }).click();
+  const pad = page.getByLabel("Pole podpisu odręcznego"), box = await pad.boundingBox(); expect(box).toBeTruthy();
+  await page.mouse.move(box.x + box.width * .1, box.y + box.height * .4); await page.mouse.down(); await page.mouse.move(box.x + box.width * .3, box.y + box.height * .7, { steps: 8 }); await page.mouse.move(box.x + box.width * .6, box.y + box.height * .2, { steps: 8 }); await page.mouse.up();
+  await page.getByLabel("Potwierdzam przeczytanie dokumentu", { exact: false }).check();
+  const saved = page.waitForResponse(response => response.url().includes(`/documents/${consent.id}/sign`) && response.request().method() === "POST");
+  await page.getByRole("button", { name: "PRZECZYTAŁEM(-AM) I AKCEPTUJĘ", exact: true }).click(); expect((await saved).status()).toBe(201);
+  const signature = await prisma.sessionDocumentSignature.findFirstOrThrow({ where: { appointmentId: visit.id, clientId: client.id } });
+  // Use the real browser download. APIRequestContext does not share Chromium's
+  // localhost exception for Secure session cookies on the isolated HTTP server.
+  const pdfResponse = page.waitForResponse(response => response.url().endsWith(`/api/client/documents/signatures/${signature.id}/pdf`));
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Pobierz PDF", exact: true }).click();
+  const pdf = await pdfResponse; expect(pdf.status()).toBe(200); expect(pdf.headers()["content-type"]).toContain("application/pdf");
+  const pdfPath = await (await download).path(); expect(pdfPath).toBeTruthy();
+  expect((await require("node:fs/promises").readFile(pdfPath)).subarray(0, 4).toString()).toBe("%PDF");
+  const outsider = await browser.newContext(); const denied = await outsider.request.get(`http://127.0.0.1:3120/api/client/documents/signatures/${signature.id}/pdf`); expect(denied.status()).toBe(401); await outsider.close();
+  const staff = await browser.newContext();
+  try {
+    const admin = await staff.newPage(); await loginFeatureAdmin(admin);
+    await admin.goto(`http://127.0.0.1:3120/admin/appointments/${visit.id}/documents`);
+    await expect(admin.getByRole("heading", { name: "Dokumenty kompletne", exact: true })).toBeVisible();
+    const qr = admin.getByRole("img", { name: "Kod QR formularza tej sesji", exact: true }); await expect(qr).toBeVisible(); await expect.poll(() => qr.evaluate(element => element.naturalWidth)).toBeGreaterThan(0);
+    const target = new URL(await admin.getByRole("link", { name: "Otwórz formularz klienta", exact: true }).getAttribute("href")); expect(target.pathname).toBe("/app/portal/documents"); expect(target.searchParams.get("appointment")).toBe(visit.id);
+  } finally { await staff.close(); }
+  await expect(prisma.sessionDocumentSignature.update({ where: { id: signature.id }, data: { signature: "tampered" } })).rejects.toThrow();
+  await prisma.appointment.delete({ where: { id: visit.id } });
+  const archived = await prisma.sessionDocumentSignature.findUniqueOrThrow({ where: { id: signature.id } }); expect(archived.appointmentId).toBeNull(); expect(JSON.parse(archived.snapshot).appointmentId).toBe(visit.id); expect(archived.digest).toBe(signature.digest);
+});
+
+test("aftercare starts on completion, notifies once, stores private healing photos and requests consultation", async ({ page, browser }) => {
+  if (!process.env.CRON_SECRET) throw Error("Isolated runtime cron credential required");
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: `Healing ${randomUUID()}`, description: "Disposable aftercare fixture" } });
+  const visit = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date(Date.now() - 5 * 86400000), endsAt: new Date(Date.now() - 5 * 86400000 + 3600000), status: "confirmed" } });
+  const completed = await prisma.appointment.update({ where: { id: visit.id }, data: { status: "completed" } });
+  expect(completed.aftercareStartedAt).toBeTruthy();
+  const original = await prisma.siteSetting.findUnique({ where: { key: "aftercare_settings" } });
+  const staff = await browser.newContext();
+  try {
+    await prisma.siteSetting.upsert({ where: { key: "aftercare_settings" }, create: { key: "aftercare_settings", value: JSON.stringify({ enabled: true, checkInDay: 2, photoDay: 21, reviewDay: 30, reviewUrl: "https://g.page/test/review" }) }, update: { value: JSON.stringify({ enabled: true, checkInDay: 2, photoDay: 21, reviewDay: 30, reviewUrl: "https://g.page/test/review" }) } });
+    const cron = () => page.request.get("/api/cron/aftercare", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+    const results = await Promise.all([cron(), cron()]); expect(results.every(result => result.status() === 200)).toBe(true);
+    expect(await prisma.clientNotification.count({ where: { appointmentId: visit.id, type: "AFTERCARE_instructions" } })).toBe(1);
+    await page.goto("/app"); await page.getByLabel("E-MAIL", { exact: true }).fill(email); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click(); await expect(page).toHaveURL(/\/app\/portal/);
+    await page.goto(`/app/portal/aftercare?appointment=${visit.id}`); await expect(page.getByRole("heading", { name: project.title, exact: true })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser"); await page.getByRole("button", { name: "+ DODAJ ZDJĘCIE GOJENIA", exact: true }).click();
+    const uploaded = page.waitForResponse(response => response.url().endsWith(`/api/client/projects/${project.id}/images`) && response.request().method() === "POST");
+    const png = await require("sharp")({ create: { width: 64, height: 64, channels: 3, background: "#777777" } }).png().toBuffer();
+    await (await chooser).setFiles({ name: "healing.png", mimeType: "image/png", buffer: png }); expect((await uploaded).status()).toBe(201);
+    const image = page.getByRole("img", { name: "Prywatne zdjęcie gojenia", exact: true }); await expect(image).toBeVisible(); await expect.poll(() => image.evaluate(element => element.naturalWidth)).toBeGreaterThan(0);
+    expect(await prisma.projectImage.count({ where: { projectId: project.id, appointmentId: visit.id, kind: "healing" } })).toBe(1);
+    await page.getByRole("button", { name: "Poproś studio o konsultację", exact: true }).click(); await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Konsultacja zgłoszona", exact: true })).toBeDisabled();
+    expect(await prisma.projectMessage.count({ where: { projectId: project.id } })).toBe(1);
+    const admin = await staff.newPage(); await loginFeatureAdmin(admin);
+    await admin.goto("http://127.0.0.1:3120/admin/aftercare"); await admin.getByRole("button", { name: "Oznacz konsultację jako obsłużoną", exact: true }).click(); await admin.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+    await expect.poll(async () => Boolean((await prisma.appointment.findUniqueOrThrow({ where: { id: visit.id } })).aftercareConsultationResolvedAt)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  } finally {
+    await staff.close(); if (original) await prisma.siteSetting.upsert({ where: { key: original.key }, create: { key: original.key, value: original.value }, update: { value: original.value } }); else await prisma.siteSetting.deleteMany({ where: { key: "aftercare_settings" } });
   }
 });
 

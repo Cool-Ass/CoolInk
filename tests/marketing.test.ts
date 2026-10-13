@@ -1,0 +1,16 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const m = vi.hoisted(() => ({ query: vi.fn(), promotions: vi.fn() }));
+vi.mock("@/lib/prisma", () => ({ prisma: { $queryRaw: m.query } }));
+import { campaignInput, marketingSegment, marketingSegments, resolveBookingPromotion } from "@/lib/marketing";
+const now = new Date("2026-10-13T10:00:00Z"), valid = { title: "Wolny termin", audience: "returning", startsAt: "2026-10-14T10:00:00Z", endsAt: "2026-10-14T12:00:00Z", discount: 10 };
+beforeEach(() => vi.resetAllMocks());
+describe("marketing proposals, not delivery or automatic pricing", () => {
+  it.each([{ title: "" }, { audience: "__proto__" }, { discount: 31 }, { discount: -1 }, { discount: "10" }, { startsAt: "invalid" }, { startsAt: "2026-10-01" }, { endsAt: "2026-10-16" }, { caption: "a".repeat(4001) }])("rejects invalid campaign %j", patch => expect(() => campaignInput({ ...valid, ...patch }, now)).toThrow());
+  it("generates both editable drafts, clearly marking proposed terms", () => { const value = campaignInput(valid, now); expect(value.campaignCaption).toContain("10%"); expect(value.campaignStory).toContain("WOLNY TERMIN"); expect(value.campaignCaption).toContain("wymaga potwierdzenia"); expect(value).not.toHaveProperty("active"); });
+  it("preserves manual edits without generating content over them", () => { expect(campaignInput({ ...valid, caption: "Mój post", story: "Moja relacja" }, now)).toMatchObject({ campaignCaption: "Mój post", campaignStory: "Moja relacja" }); });
+  it("uses disjoint completed-history segments", () => { expect(marketingSegment(0, null, now)).toBe("no_visits"); expect(marketingSegment(1, now, now)).toBe("first_visit"); expect(marketingSegment(2, now, now)).toBe("returning"); expect(marketingSegment(10, new Date("2025-01-01"), now)).toBe("dormant"); });
+  it("returns counts, not recipients or contact details", async () => { m.query.mockResolvedValue([{ no_visits: 1, first_visit: 0, returning: 1, dormant: 0 }]); expect(await marketingSegments(now)).toEqual({ no_visits: 1, first_visit: 0, returning: 1, dormant: 0 }); const sql = m.query.mock.calls[0][0].join(""); expect(sql).toContain("NOT EXISTS"); expect(sql).toContain("a.status = 'completed'"); });
+  it("does not resolve a promotion unless explicitly supplied", async () => { const tx = { promotion: { findMany: m.promotions } }; expect(await resolveBookingPromotion(tx as never, "", now, now)).toBeNull(); expect(m.promotions).not.toHaveBeenCalled(); });
+  it("rejects missing and ambiguous promotion codes", async () => { const tx = { promotion: { findMany: m.promotions } }; m.promotions.mockResolvedValue([]); await expect(resolveBookingPromotion(tx as never, "CODE", now, now)).rejects.toThrow("PROMOTION_INVALID"); m.promotions.mockResolvedValue([{ id: "a" }, { id: "b" }]); await expect(resolveBookingPromotion(tx as never, "CODE", now, now)).rejects.toThrow("PROMOTION_INVALID"); });
+  it("requires active/public approved date coverage and never applies a discount", async () => { m.promotions.mockResolvedValue([{ id: "promotion" }]); expect(await resolveBookingPromotion({ promotion: { findMany: m.promotions } } as never, "CODE", now, now)).toBe("promotion"); expect(m.promotions.mock.calls[0][0].where).toMatchObject({ active: true, isPublic: true, startsAt: { lte: now }, endsAt: { gte: now } }); });
+});

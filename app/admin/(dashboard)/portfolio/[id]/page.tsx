@@ -28,6 +28,9 @@ export default async function EditPortfolioItemPage({ params }: Props) {
           category: item.category ?? "",
           tags: item.tags ?? "",
           published: item.published,
+          flashEnabled: item.flashEnabled, flashUnique: item.flashUnique,
+          flashSize: item.flashSize, flashPrice: item.flashPrice,
+          flashDurationMinutes: item.flashDurationMinutes, flashDepositAmount: item.flashDepositAmount,
         }}
       />
     </div>

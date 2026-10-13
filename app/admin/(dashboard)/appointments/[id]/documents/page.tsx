@@ -1,0 +1,16 @@
+import { notFound } from "next/navigation";
+import QRCode from "qrcode";
+import { requireAdminPage } from "@/lib/adminPage";
+import { prisma } from "@/lib/prisma";
+import { formatCoolinkDateTime } from "@/lib/dateTime";
+export const dynamic = "force-dynamic";
+export default async function SessionDocumentsPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdminPage("operations.manage");
+  const visit = await prisma.appointment.findUnique({ where: { id: (await params).id }, include: { project: { select: { title: true, client: { select: { firstName: true, lastName: true } } } }, documentSignatures: { include: { acceptance: { select: { documentId: true, version: true } } }, orderBy: { acceptedAt: "desc" } } } });
+  if (!visit) notFound();
+  const documents = await prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, title: true, version: true } });
+  const missing = documents.filter(doc => !visit.documentSignatures.some(sig => sig.acceptance.documentId === doc.id && sig.acceptance.version === doc.version));
+  const url = new URL("/app/portal/documents", process.env.NEXT_PUBLIC_APP_URL || "https://www.coolinktattoo.pl"); url.searchParams.set("appointment", visit.id);
+  const qr = await QRCode.toDataURL(url.toString(), { width: 240, margin: 2, errorCorrectionLevel: "M" });
+  return <div className="studio-page space-y-5"><header><p className="studio-eyebrow">DOKUMENTACJA SESJI</p><h1 className="studio-page-title">{visit.project.title}</h1><p className="text-sm text-ink-grey">{visit.project.client.firstName} {visit.project.client.lastName} · {formatCoolinkDateTime(visit.startsAt)}</p></header><section className="studio-panel flex flex-wrap items-center gap-6"><div><h2 className="font-semibold">{missing.length ? `Brakuje ${missing.length} podpisów przed zabiegiem` : documents.length ? "Dokumenty kompletne" : "Brak opublikowanych formularzy zgód"}</h2><p className="mt-2 text-sm text-ink-grey">Klient skanuje kod i loguje się na swoje konto. Każda zgoda dotyczy tej sesji.</p><a className="studio-primary-link" href={url.toString()}>Otwórz formularz klienta</a></div>{/* QR is a local data URL, never a credential or private document. */}<img src={qr} width={240} height={240} alt="Kod QR formularza tej sesji" /></section><section className="studio-panel">{documents.map(doc => { const signature = visit.documentSignatures.find(sig => sig.acceptance.documentId === doc.id && sig.acceptance.version === doc.version); return <div key={doc.id} className="flex justify-between gap-3 border-b border-ink-white/10 py-3"><span>{doc.title} · v{doc.version}</span>{signature ? <a className="text-ink-gold" href={`/api/admin/documents/signatures/${signature.id}/pdf`}>Podpisano · PDF</a> : <span className="text-amber-200">Brak podpisu</span>}</div>; })}</section><section className="studio-panel"><h2 className="font-semibold">Archiwum sesji</h2>{visit.documentSignatures.map(signature => { const snapshot = JSON.parse(signature.snapshot); return <p key={signature.id} className="mt-3 text-sm"><a href={`/api/admin/documents/signatures/${signature.id}/pdf`} className="text-ink-gold">{snapshot.title} · v{snapshot.version} · {formatCoolinkDateTime(signature.acceptedAt)} · PDF</a></p>; })}</section></div>;
+}

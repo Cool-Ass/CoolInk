@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import { useToast } from "@/components/admin/ToastProvider";
+import FlashSettingsFields from "@/components/admin/FlashSettingsFields";
+import type { FlashConfiguration } from "@/lib/flashBooking";
 
-export interface PortfolioFormData {
+export interface PortfolioFormData extends FlashConfiguration {
   id?: string;
   title: string;
   description: string;
@@ -29,6 +31,12 @@ export default function PortfolioForm({
   const isEdit = Boolean(initial?.id);
 
   const [form, setForm] = useState<PortfolioFormData>({
+    flashEnabled: initial?.flashEnabled ?? false,
+    flashUnique: initial?.flashUnique ?? true,
+    flashSize: initial?.flashSize ?? null,
+    flashPrice: initial?.flashPrice ?? null,
+    flashDurationMinutes: initial?.flashDurationMinutes ?? 120,
+    flashDepositAmount: initial?.flashDepositAmount ?? null,
     title: initial?.title ?? "",
     description: initial?.description ?? "",
     imageUrl: initial?.imageUrl ?? "",
@@ -136,6 +144,7 @@ export default function PortfolioForm({
         Opublikowany (widoczny w publicznym portfolio)
       </label>
 
+      <FlashSettingsFields value={form} onChange={next => setForm(current => ({ ...current, ...next }))} />
       {error && (
         <p className="border border-red-500/40 bg-red-500/10 px-3 py-2 text-[13px] text-red-400">
           {error}

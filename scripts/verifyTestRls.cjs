@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 const privateTables = [
   "LoyaltyEntry",
   "AdminUser", "AdminAuditLog", "AdminPushSubscription", "Page", "PageRevision", "PortfolioItem", "Media", "SiteSetting", "NavItem", "ContactMessage",
-  "Client", "AccountDeletionRequest", "StudioDocument", "StudioDocumentVersion", "DocumentAcceptance", "TattooProject", "Appointment", "WebhookReceipt",
+  "Client", "AccountDeletionRequest", "StudioDocument", "StudioDocumentVersion", "DocumentAcceptance", "SessionDocumentSignature", "AssistantDraft", "TattooProject", "Appointment", "WebhookReceipt",
   "WaitlistEntry", "PushSubscription", "ReminderDelivery", "InventoryItem", "InventoryMovement", "RateLimitBucket", "ProjectActivity", "ClientNotification",
   "AvailabilityBlock", "WorkingHours", "AvailableSlot", "WorkingHoursOverride", "Promotion", "CalendarEvent", "GoogleCalendarConnection",
   "GoogleCalendarSelection", "GoogleCalendarEventSync", "ProjectImage", "ProjectMessage", "DirectMessage",

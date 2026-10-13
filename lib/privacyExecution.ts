@@ -102,6 +102,8 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       const stored = await tx.siteSetting.findUnique({ where: { key: jobKey(id) } });
       if ((JSON.parse(stored?.value || "null") as Job)?.lease !== lease) throw new Error("Zmieniony dziennik wykonania.");
       const projects = { project: { clientId: job.clientId } };
+      // Unsent assistant text is operational, never retained legal evidence.
+      await tx.assistantDraft.deleteMany({ where: { clientId: job.clientId } });
       if (!keep.has("chat")) {
         await tx.projectMessage.deleteMany({ where: projects });
         if (keep.has("inspirations")) {
@@ -116,6 +118,7 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       await tx.waitlistEntry.deleteMany({ where: { clientId: job.clientId } });
       await tx.pushSubscription.deleteMany({ where: { clientId: job.clientId } });
       await tx.clientNotification.deleteMany({ where: { clientId: job.clientId } });
+      await tx.reminderDelivery.deleteMany({ where: { appointment: projects } });
       await tx.projectActivity.deleteMany({ where: projects });
       if (!keep.has("appointments")) {
         if (keep.has("financial") && await tx.appointment.count({ where: { ...projects, OR: [{ depositStatus: { not: "not_required" } }, { depositAmount: { gt: 0 } }] } })) throw new Error("Zachowane zadatki wymagają zachowania powiązanych wizyt.");

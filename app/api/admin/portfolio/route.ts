@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/adminApi";
 import { isSameOrigin } from "@/lib/requestSecurity";
+import { validateFlashConfiguration } from "@/lib/flashBooking";
 
 export async function GET() {
   const access = await requireAdminApi("content.manage"); if (!access.ok) return access.response;
@@ -21,9 +22,13 @@ export async function POST(request: Request) {
   }
 
   const maxOrder = await prisma.portfolioItem.aggregate({ _max: { order: true } });
+  let flash;
+  try { flash = validateFlashConfiguration(body); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Sprawdź Flash." }, { status: 400 }); }
 
   const item = await prisma.portfolioItem.create({
     data: {
+      ...flash,
       title: body.title,
       description: body.description || null,
       imageUrl: body.imageUrl,
