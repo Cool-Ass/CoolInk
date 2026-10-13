@@ -82,6 +82,7 @@ test.afterAll(async () => {
   }
   await prisma.availabilityBlock.deleteMany({ where: { id: { in: blockIds } } });
   await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
+  if (fixture) await prisma.tattooProject.updateMany({ where: { clientId: fixture.id }, data: { depositAssignedAppointmentId: null } });
   await prisma.client.deleteMany({ where: { email } });
   for (const id of announcementIds) {
     await prisma.clientNotification.deleteMany({ where: { type: { in: [`announcement:${id}`, `announcement-dismissed:${id}`] } } });
@@ -109,27 +110,31 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/portal/);
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   projectTitle = `Browser project ${randomUUID().slice(0, 8)}`;
-  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description: "Isolated browser fixture", depositStatus: "awaiting", depositAmount: 300 } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: projectTitle, description: "Isolated browser fixture" } });
+  const depositVisit = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date("2030-01-08T10:00:00Z"), endsAt: new Date("2030-01-08T11:00:00Z"), status: "confirmed", depositStatus: "awaiting", depositAmount: 300 } });
+  const sibling = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date("2030-01-09T10:00:00Z"), endsAt: new Date("2030-01-09T11:00:00Z"), status: "confirmed", depositStatus: "paid", depositAmount: 500 } });
   await page.goto("/app/portal");
   const blik = page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true });
   await expect(blik).toBeVisible();
   await expect(blik.getByText("530 178 346", { exact: true })).toBeVisible();
   await expect(blik.getByText("300 zł", { exact: true })).toBeVisible();
-  await expect(blik.getByText(`Zadatek ${project.id}`, { exact: true })).toBeVisible();
+  await expect(blik.getByText(`Zadatek ${depositVisit.id}`, { exact: true })).toBeVisible();
   // Mock only the clipboard in this isolated browser document, never banking/payment APIs.
   await page.evaluate(() => { window.__blikCopied = []; Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async value => { window.__blikCopied.push(value); } } }); });
   for (const label of ["Numer telefonu", "Kwota zadatku", "Tytuł przelewu"]) {
     await blik.getByRole("button", { name: `Kopiuj: ${label}`, exact: true }).click();
     await expect(blik.getByRole("status")).toHaveText(`${label} — skopiowano.`);
   }
-  expect(await page.evaluate(() => window.__blikCopied)).toEqual(["530178346", "300", `Zadatek ${project.id}`]);
+  expect(await page.evaluate(() => window.__blikCopied)).toEqual(["530178346", "300", `Zadatek ${depositVisit.id}`]);
   await page.evaluate(() => { Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("Clipboard denied fixture"); } } }); });
   await blik.getByRole("button", { name: "Kopiuj: Numer telefonu", exact: true }).click();
   await expect(blik.getByRole("status")).toHaveText("Nie udało się skopiować. Przepisz dane widoczne powyżej.");
-  expect((await prisma.tattooProject.findUniqueOrThrow({ where: { id: project.id } })).depositStatus).toBe("awaiting");
-  await page.goto(`/app/portal/projects?project=${project.id}`);
+  expect((await prisma.appointment.findUniqueOrThrow({ where: { id: depositVisit.id } })).depositStatus).toBe("awaiting");
+  expect((await prisma.appointment.findUniqueOrThrow({ where: { id: sibling.id } })).depositStatus).toBe("paid");
+  await page.goto(`/app/portal/projects?project=${project.id}&appointment=${depositVisit.id}`);
   await expect(blik).toBeVisible();
-  await prisma.tattooProject.update({ where: { id: project.id }, data: { depositStatus: "paid" } });
+  expect(await blik.getByRole("heading", { level: 4 }).allTextContents()).toEqual(["Gotówka w studiu", "Przelew BLIK na telefon"]);
+  await prisma.appointment.update({ where: { id: depositVisit.id }, data: { depositStatus: "paid" } });
   await page.reload();
   await expect(blik).toHaveCount(0);
   await page.goto("/app/portal");
@@ -211,6 +216,68 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/app$/);
   await page.goto("/app/portal/projects");
   await expect(page).toHaveURL(/\/app(?:\?|$)/);
+});
+
+test("visit deposits, explicit legacy assignment and editable client instructions", async ({ page, browser }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Visit deposit fixture", description: "Disposable isolated payment instructions", depositStatus: "paid", depositAmount: 250, depositPaidAt: new Date("2026-10-01T10:00:00Z"), depositPaymentMethod: "gotówka" } });
+  const first = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date("2030-02-08T10:00:00Z"), endsAt: new Date("2030-02-08T11:00:00Z"), status: "confirmed" } });
+  const second = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date("2030-02-09T10:00:00Z"), endsAt: new Date("2030-02-09T11:00:00Z"), status: "confirmed" } });
+  await page.goto("/admin/login");
+  await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`);
+  await page.getByLabel("HASŁO", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto(`/admin/calendar?appointment=${first.id}`);
+  await page.getByRole("button", { name: "Zakończ / rozlicz", exact: true }).click();
+  await page.getByRole("button", { name: "Przypisz do tej wizyty", exact: true }).click();
+  await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+  await expect.poll(async () => (await prisma.tattooProject.findUniqueOrThrow({ where: { id: project.id } })).depositAssignedAppointmentId).toBe(first.id);
+  expect((await prisma.appointment.findUniqueOrThrow({ where: { id: first.id } })).depositStatus).toBe("paid");
+  await page.goto(`/admin/calendar?appointment=${second.id}`);
+  await page.getByRole("button", { name: "Zakończ / rozlicz", exact: true }).click();
+  await page.getByLabel("Status zadatku", { exact: true }).selectOption("awaiting");
+  await page.getByLabel("Kwota (zł)", { exact: true }).fill("200");
+  await page.getByLabel("Metoda płatności", { exact: true }).fill("BLIK");
+  await page.getByRole("button", { name: "Zapisz zadatek", exact: true }).click();
+  await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+  await expect.poll(async () => (await prisma.appointment.findUniqueOrThrow({ where: { id: second.id } })).depositAmount).toBe(200);
+  expect((await prisma.appointment.findUniqueOrThrow({ where: { id: first.id } })).depositAmount).toBe(250);
+  const original = await prisma.siteSetting.findUnique({ where: { key: "deposit_instructions" } });
+  const context = await browser.newContext();
+  try {
+    await page.goto("/admin/settings");
+    await page.locator("summary").filter({ hasText: "Instrukcje BLIK, gotówka i podgląd klienta" }).click();
+    // The wrapping label includes the SSR textarea value in its text content.
+    // Match the stable label prefix, not the editable initial instructions.
+    await page.getByLabel(/^Instrukcja BLIK/).fill("Instrukcja testowa: sprawdź numer i kwotę.");
+    await page.getByLabel("Pokaż gotówkę w studiu", { exact: true }).uncheck();
+    const preview = page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true });
+    await expect(preview.getByText("Instrukcja testowa: sprawdź numer i kwotę.", { exact: true })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "Gotówka w studiu", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Zapisz instrukcje", exact: true }).click();
+    await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+    await expect(page.getByText("Instrukcje zapisane. Są widoczne klientom przy zadatkach wizyt.", { exact: true })).toBeVisible();
+    const customer = await context.newPage();
+    await customer.goto("http://127.0.0.1:3120/app");
+    await customer.getByLabel("E-MAIL", { exact: true }).fill(email);
+    await customer.getByLabel("HASŁO", { exact: true }).fill(password);
+    await customer.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
+    await expect(customer).toHaveURL(/\/app\/portal/);
+    await customer.goto(`http://127.0.0.1:3120/app/portal/projects?project=${project.id}&appointment=${second.id}`);
+    const payment = customer.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true });
+    await expect(payment.getByText("200 zł", { exact: true })).toBeVisible();
+    await expect(payment.getByText("Instrukcja testowa: sprawdź numer i kwotę.", { exact: true })).toBeVisible();
+    await expect(payment.getByRole("heading", { name: "Gotówka w studiu", exact: true })).toHaveCount(0);
+    expect(await customer.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    const forbidden = await customer.request.patch(`http://127.0.0.1:3120/api/admin/appointments/${second.id}/deposit`, { headers: { origin: "http://127.0.0.1:3120" }, data: { status: "paid", amount: 200, paymentMethod: "BLIK", expectedUpdatedAt: second.updatedAt.toISOString() } });
+    expect([401, 403]).toContain(forbidden.status());
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: second.id } })).depositStatus).toBe("awaiting");
+  } finally {
+    await context.close();
+    if (original) await prisma.siteSetting.upsert({ where: { key: original.key }, create: { key: original.key, value: original.value }, update: { value: original.value } });
+    else await prisma.siteSetting.deleteMany({ where: { key: "deposit_instructions" } });
+  }
 });
 
 test("announcements lifecycle and consistent CMS workspace", async ({ page, browser }) => {

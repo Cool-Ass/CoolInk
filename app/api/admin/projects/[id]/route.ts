@@ -6,7 +6,6 @@ import { requireAdminApi } from "@/lib/adminApi";
 import {
   activityMessage,
   isProjectStatus,
-  DEPOSIT_STATUS,
 } from "@/lib/projectWorkflow";
 import { isSameOrigin } from "@/lib/requestSecurity";
 import { hasAdminPermission } from "@/lib/adminPermissions";
@@ -23,6 +22,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   const body = await request.json().catch(() => null);
+  if (["depositStatus", "depositAmount", "depositPaymentMethod"].some(field => Object.prototype.hasOwnProperty.call(body ?? {}, field))) return NextResponse.json({ error: "Zadatek edytuj w konkretnej wizycie." }, { status: 400 });
   const financialFields = ["estimatedSessionsMin", "estimatedSessionsMax", "sessionPriceCents", "estimatedPrice", "estimatedPriceMax", "finalPrice", "depositStatus", "depositAmount", "depositPaymentMethod"];
   if (financialFields.some((field) => Object.prototype.hasOwnProperty.call(body ?? {}, field)) && !hasAdminPermission(access.admin.role, "finance.manage")) return NextResponse.json({ error: "Twoja rola nie ma uprawnień do danych finansowych." }, { status: 403 });
   const project = await prisma.tattooProject.findUnique({ where: { id } });
@@ -35,7 +35,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const title = typeof body?.title === "string" ? body.title.trim().slice(0, 160) : project.title;
   const description = typeof body?.description === "string" ? body.description.trim().slice(0, 5_000) : project.description;
   if (!title || !description) return NextResponse.json({ error: "Tytuł i opis projektu nie mogą być puste." }, { status: 400 });
-  const money = (key: "estimatedPrice" | "estimatedPriceMax" | "finalPrice" | "depositAmount", current: number | null) => {
+  const money = (key: "estimatedPrice" | "estimatedPriceMax" | "finalPrice", current: number | null) => {
     if (!Object.prototype.hasOwnProperty.call(body ?? {}, key)) return current;
     if (body?.[key] === "" || body?.[key] === null) return null;
     const value = Number(body?.[key]);
@@ -46,14 +46,8 @@ export async function PATCH(request: Request, { params }: Params) {
   const estimatedPrice = money("estimatedPrice", project.estimatedPrice);
   const estimatedPriceMax = money("estimatedPriceMax", project.estimatedPriceMax);
   const finalPrice = money("finalPrice", project.finalPrice);
-  const depositAmount = money("depositAmount", project.depositAmount);
-  if ([estimatedPrice, estimatedPriceMax, finalPrice, depositAmount].some((value) => typeof value === "number" && Number.isNaN(value))) return NextResponse.json({ error: "Kwoty muszą być pełnymi, nieujemnymi wartościami." }, { status: 400 });
+  if ([estimatedPrice, estimatedPriceMax, finalPrice].some((value) => typeof value === "number" && Number.isNaN(value))) return NextResponse.json({ error: "Kwoty muszą być pełnymi, nieujemnymi wartościami." }, { status: 400 });
   if (estimatedPrice !== null && estimatedPriceMax !== null && estimatedPrice > estimatedPriceMax) return NextResponse.json({ error: "Dolna granica wyceny nie może być wyższa od górnej." }, { status: 400 });
-  const depositStatus =
-    typeof body?.depositStatus === "string" &&
-    (DEPOSIT_STATUS as readonly string[]).includes(body.depositStatus)
-      ? body.depositStatus
-      : project.depositStatus;
   const converting = body?.convertConsultation === true && project.kind === "consultation";
   const kind = converting ? "tattoo" : project.kind;
   const nextAction = typeof body?.nextAction === "string" ? body.nextAction.trim().slice(0, 500) || null : project.nextAction;
@@ -78,16 +72,6 @@ export async function PATCH(request: Request, { params }: Params) {
         estimatedPrice,
         estimatedPriceMax,
         finalPrice,
-        depositStatus,
-        depositAmount,
-        depositPaymentMethod:
-          typeof body?.depositPaymentMethod === "string"
-            ? body.depositPaymentMethod.slice(0, 80) || null
-            : project.depositPaymentMethod,
-        depositPaidAt:
-          depositStatus === "paid" && project.depositStatus !== "paid"
-            ? new Date()
-            : project.depositPaidAt,
       },
     });
     if (status !== project.status)
@@ -96,15 +80,6 @@ export async function PATCH(request: Request, { params }: Params) {
           projectId: id,
           type: "status_changed",
           message: activityMessage("status_changed", status),
-          visibility: "admin",
-        },
-      });
-    if (depositStatus !== project.depositStatus)
-      await tx.projectActivity.create({
-        data: {
-          projectId: id,
-          type: "deposit_updated",
-          message: activityMessage("deposit_updated", depositStatus),
           visibility: "admin",
         },
       });

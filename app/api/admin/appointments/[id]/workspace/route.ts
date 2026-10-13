@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const access = await requireAdminApi("operations.manage");
   if (!access.ok) return access.response;
   const { id } = await params;
-  const visit = await prisma.appointment.findUnique({ where: { id }, include: { loyaltyEntry: { select: { id: true } }, project: { select: { id: true, clientId: true, kind: true, title: true, depositStatus: true, depositAmount: true } } } });
+  const visit = await prisma.appointment.findUnique({ where: { id }, include: { loyaltyEntry: { select: { id: true } }, project: { select: { id: true, clientId: true, kind: true, title: true, depositStatus: true, depositAmount: true, depositPaymentMethod: true, depositAssignedAppointmentId: true } } } });
   if (!visit) return NextResponse.json({ error: "Nie znaleziono wizyty." }, { status: 404 });
   const finance = hasAdminPermission(access.admin.role, "finance.manage");
   const [card, messages, documents] = await Promise.all([
@@ -20,9 +20,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   ]);
   return NextResponse.json({
     projectId: visit.projectId, clientId: visit.project.clientId,
-    deposit: { status: visit.project.depositStatus, amount: finance ? visit.project.depositAmount : null },
+    canManageFinance: finance,
+    deposit: { status: visit.depositStatus, amount: finance ? visit.depositAmount : null, paymentMethod: finance ? visit.depositPaymentMethod : null },
+    legacyDeposit: finance && !visit.project.depositAssignedAppointmentId && visit.project.depositStatus !== "not_required" && visit.project.depositAmount ? { status: visit.project.depositStatus, amount: visit.project.depositAmount, paymentMethod: visit.project.depositPaymentMethod } : null,
     card, settleable: finance && !visit.loyaltyEntry && ["confirmed", "completed"].includes(visit.status) && visit.startsAt <= new Date() && visit.project.kind !== "consultation" && (!visit.serviceType || visit.serviceType === "tattoo"),
-    visit: { id: visit.id, title: visit.project.title, date: visit.startsAt.toISOString(), price: finance ? visit.price : null, status: visit.status, loyaltyRequested: visit.loyaltyRequested },
+    visit: { id: visit.id, title: visit.project.title, date: visit.startsAt.toISOString(), updatedAt: visit.updatedAt.toISOString(), price: finance ? visit.price : null, status: visit.status, loyaltyRequested: visit.loyaltyRequested },
     documents: documents.map(doc => ({ id: doc.id, title: doc.title, category: doc.category, accepted: doc.acceptances.some(a => a.version === doc.version) })),
     messages: messages.reverse().map(message => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: message.attachment ? { ...message.attachment, url: privateImageUrl(message.attachment.id, "admin", access.admin.id) } : null })),
   }, { headers: { "Cache-Control": "private, no-store" } });

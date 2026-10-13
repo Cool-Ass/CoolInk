@@ -1,5 +1,8 @@
 "use client";
 
+import BlikDeposit from "@/components/client/BlikDeposit";
+import type { DepositInstructions } from "@/lib/depositInstructions";
+import { depositStatusLabel } from "@/lib/workflowStatus";
 import { useState } from "react";
 import AppModal from "@/components/ui/AppModal";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -16,6 +19,8 @@ type Appointment = {
   endsAt: string;
   status: string;
   price: number | null;
+  depositStatus: string;
+  depositAmount: number | null;
   confirmationRequestedAt?: string | null;
   clientConfirmedAt?: string | null;
 };
@@ -23,11 +28,17 @@ type Appointment = {
 export default function ClientAppointmentModal({
   appointment,
   projectTitle,
+  projectKind,
+  projectStatus,
+  depositInstructions,
   onClose,
   onCancelled,
 }: {
   appointment: Appointment;
   projectTitle: string;
+  projectKind: string;
+  projectStatus: string;
+  depositInstructions: DepositInstructions;
   onClose: () => void;
   onCancelled: (appointmentId: string, projectStatus: string) => void;
 }) {
@@ -98,6 +109,7 @@ export default function ClientAppointmentModal({
             )}
           </div>
         </div>
+        {projectKind === "tattoo" && <section className="mt-4 space-y-3"><p className="text-sm text-ink-grey">Zadatek: {depositStatusLabel(appointment.depositStatus)}{appointment.depositAmount !== null ? ` · ${appointment.depositAmount} zł` : ""}</p><BlikDeposit visit={{ ...appointment, projectKind, projectStatus }} instructions={depositInstructions} /></section>}
         <p className="mt-5 text-sm leading-relaxed text-ink-grey">
           {waitingForStudio
             ? "Studio sprawdzi szczegóły i potwierdzi termin."

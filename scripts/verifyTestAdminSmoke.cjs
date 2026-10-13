@@ -90,7 +90,10 @@ async function main() {
       assert(library.response.status === 200 && JSON.parse(library.body).stickers.some((item) => item.id === sticker.id), "sticker library lost uploaded image");
     } finally { await prisma.siteSetting.deleteMany({ where: { key: sticker.id } }); }
 
-    const settings = await call(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "scheduled", internalNotes: "Prywatna notatka testowa", estimatedPrice: 600, finalPrice: 750, depositStatus: "paid", depositAmount: 150, depositPaymentMethod: "BLIK" }) }, cookie);
+    const rejectedProjectDeposit = await call(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ depositStatus: "paid", depositAmount: 150, depositPaymentMethod: "BLIK" }) }, cookie);
+    assert(rejectedProjectDeposit.response.status === 400, "project endpoint must reject visit deposit fields");
+    assert((await prisma.tattooProject.findUniqueOrThrow({ where: { id: project.id } })).depositAmount === null, "rejected project deposit mutated history");
+    const settings = await call(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "scheduled", internalNotes: "Prywatna notatka testowa", estimatedPrice: 600, finalPrice: 750 }) }, cookie);
     assert(settings.response.status === 200, `project edit returned ${settings.response.status}`);
 
     const message = await call(`/api/admin/projects/${project.id}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: "Prywatna wiadomość testowa 🙂" }) }, cookie);
@@ -125,10 +128,16 @@ async function main() {
 
     const edited = await call(`/api/admin/appointments/${proposed.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: "2034-01-10T10:30:00.000Z", endsAt: "2034-01-10T12:00:00.000Z", status: "confirmed", price: 750, notes: "Zmieniona długość, cena i notatka" }) }, cookie);
     assert(edited.response.status === 200, `appointment edit returned ${edited.response.status}`);
+    const visitBeforeDeposit = await prisma.appointment.findUniqueOrThrow({ where: { id: proposed.id } });
+    const visitDeposit = await call(`/api/admin/appointments/${proposed.id}/deposit`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "paid", amount: 150, paymentMethod: "BLIK", expectedUpdatedAt: visitBeforeDeposit.updatedAt.toISOString() }) }, cookie);
+    assert(visitDeposit.response.status === 200, `visit deposit returned ${visitDeposit.response.status}`);
+    const paidVisit = await prisma.appointment.findUniqueOrThrow({ where: { id: proposed.id } });
+    assert(paidVisit.depositStatus === "paid" && paidVisit.depositAmount === 150 && paidVisit.depositPaidAt, "visit deposit was not persisted");
 
     const extra = await call("/api/admin/appointments", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId: project.id, startsAt: "2034-01-12T10:00:00.000Z", endsAt: "2034-01-12T11:00:00.000Z", price: 500 }) }, cookie);
     assert(extra.response.status === 201, `second session returned ${extra.response.status}`);
     const extraAppointment = JSON.parse(extra.body).appointment;
+    assert((await prisma.appointment.findUniqueOrThrow({ where: { id: extraAppointment.id } })).depositStatus === "not_required", "another session inherited the deposit");
     const completed = await call(`/api/admin/appointments/${extraAppointment.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "completed" }) }, cookie);
     assert(completed.response.status === 200, `completed returned ${completed.response.status}`);
 

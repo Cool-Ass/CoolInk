@@ -76,7 +76,7 @@ export async function POST(request: Request, { params }: Params) {
 
     const sessions = await tx.appointment.findMany({
       where: { projectId: current.projectId },
-      select: { status: true },
+      select: { status: true, depositStatus: true },
     });
     const projectStatus = projectStatusAfterAppointmentChange(
       sessions,

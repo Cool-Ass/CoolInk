@@ -286,6 +286,8 @@ model TattooProject {
   depositAmount        Int?
   depositPaidAt        DateTime?
   depositPaymentMethod String?
+  depositAssignedAppointmentId String? @unique
+  legacyDepositAppointment Appointment? @relation("LegacyDeposit", fields: [depositAssignedAppointmentId], references: [id], onDelete: Restrict)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
   images               ProjectImage[]
@@ -313,6 +315,11 @@ model Appointment {
   price              Int?
   serviceType        String?
   loyaltyRequested   Boolean @default(false)
+  depositStatus      String @default("not_required")
+  depositAmount      Int?
+  depositPaidAt      DateTime?
+  depositPaymentMethod String?
+  legacyDepositProject TattooProject? @relation("LegacyDeposit")
   workstation        String?
   confirmationRequestedAt DateTime?
   clientConfirmedAt  DateTime?

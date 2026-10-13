@@ -43,6 +43,7 @@ async function main() {
     for (const work of [
       () => prisma.client.update({ where: { id }, data: { firstName: "Changed" } }),
       () => prisma.tattooProject.update({ where: { id }, data: { description: "Changed" } }),
+      () => prisma.appointment.update({ where: { id }, data: { depositStatus: "paid", depositAmount: 100 } }),
       () => prisma.projectImage.create({ data: { projectId: id, url: "test-path" } }),
       () => prisma.directMessage.create({ data: { clientId: id, author: "client", body: "Changed" } }),
       () => prisma.loyaltyEntry.create({ data: { clientId: id, key: id, kind: "paper", stamps: 1, note: "test", adminId: "fixture" } }),
@@ -84,6 +85,22 @@ async function main() {
         throw new Error("EXPECTED_CALLBACK_FAILURE");
       }));
       assert.equal(await prisma.projectActivity.count({ where: { projectId: executionId } }), 0, "Failed upload transaction must roll back");
+      stage = "deposit-fixture";
+      const depositVisit = await prisma.appointment.create({ data: { projectId: executionId, startsAt: new Date("2000-01-01T10:00:00Z"), endsAt: new Date("2000-01-01T11:00:00Z"), status: "completed", depositStatus: "paid", depositAmount: 100 } });
+      await prisma.tattooProject.update({ where: { id: executionId }, data: { depositAssignedAppointmentId: depositVisit.id } });
+      stage = "deposit-retention-rejection";
+      await assert.rejects(executePrivacyRequest(executionId, null, privacyRevision(request), "123"), /Zadatki wizyt wymagają/);
+      assert.equal((await prisma.accountDeletionRequest.findUniqueOrThrow({ where: { id: executionId } })).status, "awaiting_execution", "Deposit retention fails before quarantine or external deletion");
+      assert.equal((await prisma.appointment.findUniqueOrThrow({ where: { id: depositVisit.id } })).depositStatus, "paid");
+      // Clear only this disposable fixture's artificial payment to test the existing zero-record erasure path.
+      await prisma.appointment.update({ where: { id: depositVisit.id }, data: { depositStatus: "not_required", depositAmount: null } });
+      stage = "fixture-export-rejection";
+      // Creating this isolated appointment also enqueues its Google export.
+      // Prove that boundary, then remove only the disposable fixture's marker:
+      // this visit has no external Google copy and must never contact a provider.
+      await assert.rejects(executePrivacyRequest(executionId, null, privacyRevision(request), "123"), /oczekujące eksporty Google/);
+      await prisma.siteSetting.deleteMany({ where: { key: `google_retry:${depositVisit.id}` } });
+      stage = "zero-payment-execution";
       const result = await executePrivacyRequest(executionId, null, privacyRevision(request), "123");
       assert.equal(result.completed, true);
       const client = await prisma.client.findUniqueOrThrow({ where: { id: executionId } });
@@ -92,6 +109,7 @@ async function main() {
       assert.equal(resolved.status, "completed"); assert(resolved.resolvedAt);
       const journal = await prisma.siteSetting.findUniqueOrThrow({ where: { key: `internal.privacyExecution:${executionId}` } });
       assert(!journal.value.includes("@example.test"), "Completion journal must not retain erased contact data");
+      stage = "completed-execution-replay";
       const replay = await executePrivacyRequest(executionId, null, privacyRevision(request), "123");
       assert.equal(replay.completed, true);
       assert.equal(await prisma.adminAuditLog.count({ where: { targetId: executionId, action: "privacy.execution_completed" } }), 1);
@@ -101,6 +119,7 @@ async function main() {
     await prisma.$transaction(async tx => {
       for (const target of [id, executionId]) {
         await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${target}, true)`;
+        await tx.tattooProject.updateMany({ where: { clientId: target }, data: { depositAssignedAppointmentId: null } });
         await tx.client.deleteMany({ where: { id: target } });
       }
       await tx.siteSetting.deleteMany({ where: { key: `internal.privacyExecution:${executionId}` } });
@@ -109,4 +128,9 @@ async function main() {
     await prisma.$disconnect();
   }
 }
-main().catch(() => { console.error("Privacy guard verification failed", { stage }); process.exitCode = 1; });
+main().catch(error => {
+  // Fixed codes only: database/provider messages can contain private records.
+  const code = /^(P\d{4}|ERR_ASSERTION)$/.test(error?.code || "") ? error.code : "WITHHELD";
+  const actualCode = /^(P\d{4})$/.test(error?.actual?.code || "") ? error.actual.code : undefined;
+  console.error("Privacy guard verification failed", { stage, code, actualCode }); process.exitCode = 1;
+});

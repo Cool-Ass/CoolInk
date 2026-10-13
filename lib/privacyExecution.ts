@@ -38,13 +38,14 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       if (!["awaiting_execution", "awaiting_retention_execution"].includes(request.status)) throw new Error("Najpierw zatwierdź ocenę wniosku.");
       const client = await tx.client.findUniqueOrThrow({ where: { id: request.clientId } });
       const projectWhere = { project: { clientId: client.id } };
-      const [financial, consents, futureAppointments, googleLinks, images, directImages] = await Promise.all([
+      const [financial, consents, futureAppointments, googleLinks, images, directImages, visitDeposits] = await Promise.all([
         tx.loyaltyEntry.count({ where: { clientId: client.id } }),
         tx.documentAcceptance.count({ where: { clientId: client.id } }),
         tx.appointment.count({ where: { ...projectWhere, endsAt: { gt: new Date() }, status: { notIn: ["cancelled", "no_show", "completed"] } } }),
         tx.googleCalendarEventSync.count({ where: { appointment: projectWhere } }),
         tx.projectImage.findMany({ where: projectWhere, select: { url: true } }),
         tx.directMessage.findMany({ where: { clientId: client.id, imageUrl: { not: null } }, select: { imageUrl: true } }),
+        tx.appointment.count({ where: { ...projectWhere, OR: [{ depositStatus: { not: "not_required" } }, { depositAmount: { gt: 0 } }] } }),
       ]);
       const previous = await tx.siteSetting.findUnique({ where: { key: jobKey(id) } });
       const completed = JSON.parse(previous?.value || "null") as { completed?: boolean; retainedScopes?: string[]; retainUntil?: string } | null;
@@ -53,6 +54,7 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       // retention and a new owner review plus separate execution confirmation.
       const review = privacyExecutionPlan(request.note, {
         financial: expired && completed?.retainedScopes?.includes("financial") ? 0 : financial,
+        visitDeposits: expired && completed?.retainedScopes?.includes("financial") ? 0 : visitDeposits,
         consents: expired && completed?.retainedScopes?.includes("consents") ? 0 : consents,
         futureAppointments, googleLinks,
       });
@@ -115,7 +117,11 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       await tx.pushSubscription.deleteMany({ where: { clientId: job.clientId } });
       await tx.clientNotification.deleteMany({ where: { clientId: job.clientId } });
       await tx.projectActivity.deleteMany({ where: projects });
-      if (!keep.has("appointments")) await tx.appointment.deleteMany({ where: projects });
+      if (!keep.has("appointments")) {
+        if (keep.has("financial") && await tx.appointment.count({ where: { ...projects, OR: [{ depositStatus: { not: "not_required" } }, { depositAmount: { gt: 0 } }] } })) throw new Error("Zachowane zadatki wymagają zachowania powiązanych wizyt.");
+        await tx.tattooProject.updateMany({ where: { clientId: job.clientId }, data: { depositAssignedAppointmentId: null } });
+        await tx.appointment.deleteMany({ where: projects });
+      }
       if (!keep.has("profile")) {
         await tx.client.update({ where: { id: job.clientId }, data: { firstName: "Usunięty", lastName: "profil", email: `erased-${job.clientId}@privacy.invalid`, phone: null, avatarUrl: null, leadSource: null, birthDate: null, notes: null, tags: "", bookingDraft: Prisma.DbNull, supabaseUserId: keep.has("auth") ? job.authId : null } });
         await tx.tattooProject.updateMany({ where: { clientId: job.clientId }, data: { title: "Zamknięty projekt", description: "", styles: "", placement: null, size: null, colorPreference: null, preferredDateNote: null, internalNotes: null, nextAction: null, nextActionDueAt: null, leadSource: null, status: "closed", clientArchivedAt: new Date() } });

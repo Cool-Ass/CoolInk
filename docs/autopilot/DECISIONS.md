@@ -1,5 +1,22 @@
 # Decyzje i ADR
 
+## VISIT-DEPOSITS-20261013
+
+- Właściciel zatwierdził podgląd: „okej jest super. wdrażamy” w bieżącym czacie.
+  Gotówka pierwsza, BLIK drugi, równorzędne nagłówki/ikony, ikony kopiowania.
+- HIGH: addytywne pola zadatku wizyty i jawne jednorazowe przypisanie starego
+  zadatku projektu. Bez automatycznego przenoszenia płatności między sesjami.
+  Stare kwoty, statusy i daty wpłat pozostają w projekcie jako historia.
+- Instrukcje edytuje settings.manage; zadatki finance.manage; bez nowych ról,
+  bank API, kodów BLIK, automatycznego paid ani zmiany rozliczania pieczątek.
+- Kompatybilność prywatności: zadatki wymagają jawnej retencji rozliczeń
+  i powiązanych wizyt przed wykonaniem wniosku; istniejący mechanizm
+  właścicielskiej zgody/backup/quarantine zachowany. Bez wykonania wniosku.
+- Final SHA, zakres migracji/przypisania i zabezpieczenie retencji wymagają
+  potwierdzenia właściciela przed merge/produkcyjnym buildem. Nie uznawać
+  akceptacji makiety za zgodę na nieznany commit lub automatyczny backfill.
+
+
 ## BLIK-PHONE-20261012
 
 - Właściciel zlecił opcję zadatku BLIK, wybrał „telefon” i podał numer odbiorcy.
