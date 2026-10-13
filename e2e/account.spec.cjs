@@ -456,7 +456,14 @@ test("session consents support handwritten signatures, immutable PDFs and appoin
   const saved = page.waitForResponse(response => response.url().includes(`/documents/${consent.id}/sign`) && response.request().method() === "POST");
   await page.getByRole("button", { name: "PRZECZYTAŁEM(-AM) I AKCEPTUJĘ", exact: true }).click(); expect((await saved).status()).toBe(201);
   const signature = await prisma.sessionDocumentSignature.findFirstOrThrow({ where: { appointmentId: visit.id, clientId: client.id } });
-  const pdf = await page.request.get(`/api/client/documents/signatures/${signature.id}/pdf`); expect(pdf.status()).toBe(200); expect(pdf.headers()["content-type"]).toContain("application/pdf"); expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
+  // Use the real browser download. APIRequestContext does not share Chromium's
+  // localhost exception for Secure session cookies on the isolated HTTP server.
+  const pdfResponse = page.waitForResponse(response => response.url().endsWith(`/api/client/documents/signatures/${signature.id}/pdf`));
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Pobierz PDF", exact: true }).click();
+  const pdf = await pdfResponse; expect(pdf.status()).toBe(200); expect(pdf.headers()["content-type"]).toContain("application/pdf");
+  const pdfPath = await (await download).path(); expect(pdfPath).toBeTruthy();
+  expect((await require("node:fs/promises").readFile(pdfPath)).subarray(0, 4).toString()).toBe("%PDF");
   const outsider = await browser.newContext(); const denied = await outsider.request.get(`http://127.0.0.1:3120/api/client/documents/signatures/${signature.id}/pdf`); expect(denied.status()).toBe(401); await outsider.close();
   await expect(prisma.sessionDocumentSignature.update({ where: { id: signature.id }, data: { signature: "tampered" } })).rejects.toThrow();
   await prisma.appointment.delete({ where: { id: visit.id } });

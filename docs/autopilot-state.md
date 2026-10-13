@@ -65,6 +65,12 @@
 - Unique-design review: project cancellation no longer overrides an active or
   completed appointment claim. Added DB/browser regression and retained release
   only for cancelled empty briefs or entirely cancelled/no-show visits.
+- CI25fe6f6: 610 unit tests/build/lint0errors/audit/CodeQL/RLS/HTTP/backup PASS;
+  desktop Flash (including status-history), business reports, marketing and
+  assistant full flows PASS. Signature creation201 PASS; PDF APIRequestContext
+  lacked browser localhost Secure-cookie handling (401). Test now uses actual
+  client download link, still asserts HTTP200, PDF MIME/magic and outsider401.
+  No authentication changes. Aftercare and mobile flows remain to be verified.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;
