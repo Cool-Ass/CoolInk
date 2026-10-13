@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { bookingConflict, lockBookingCalendar } from "@/lib/bookingRules";
+import { lockBookingCalendar } from "@/lib/bookingRules";
+import { verifyExplicitAppointmentAvailability } from "@/lib/appointmentAvailability";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { waitlistDateMatches } from "@/lib/waitlist";
 import { sendPushToClient } from "@/lib/webPush";
@@ -7,24 +8,24 @@ import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 
 /** Offers a newly released range to the oldest matching active waitlist entry. */
 export async function offerReleasedRange(startsAt: Date, endsAt: Date, excludeWaitlistEntryId?: string) {
-  if (!(startsAt < endsAt) || endsAt <= new Date()) return null;
+  if (!(startsAt < endsAt) || startsAt <= new Date()) return null;
   const candidates = await prisma.waitlistEntry.findMany({
-    where: { status: "active", ...(excludeWaitlistEntryId ? { id: { not: excludeWaitlistEntryId } } : {}) },
+    where: { status: "active", project: { clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } }, ...(excludeWaitlistEntryId ? { id: { not: excludeWaitlistEntryId } } : {}) },
     include: { project: { select: { id: true, title: true } } },
     orderBy: { createdAt: "asc" },
     take: 100,
   });
   const matching = candidates.filter((entry) => waitlistDateMatches(entry, startsAt, endsAt));
   for (const entry of matching) {
-    const targetEndsAt = new Date(startsAt.getTime() + entry.durationMinutes * 60_000);
-    if (targetEndsAt > endsAt) continue;
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
     const appointment = await prisma.$transaction(async (tx) => {
       await lockBookingCalendar(tx);
-      const current = await tx.waitlistEntry.findFirst({ where: { id: entry.id, status: "active" }, select: { id: true } });
-      if (!current) return null;
-      const conflict = await bookingConflict(startsAt, targetEndsAt, undefined, true, tx, { serviceType: "tattoo" });
-      if (conflict.appointment || conflict.block) return null;
+      const current = await tx.waitlistEntry.findFirst({ where: { id: entry.id, status: "active" }, include: { project: { select: { status: true, clientArchivedAt: true } } } });
+      if (!current || current.project.clientArchivedAt || ["cancelled", "completed"].includes(current.project.status) || startsAt <= new Date() || !waitlistDateMatches(current, startsAt, endsAt)) return null;
+      const targetEndsAt = new Date(startsAt.getTime() + current.durationMinutes * 60_000);
+      if (targetEndsAt > endsAt) return null;
+      const availability = await verifyExplicitAppointmentAvailability(startsAt, targetEndsAt, undefined, tx, { serviceType: "tattoo" });
+      if (!availability.ok) return null;
       const created = await tx.appointment.create({ data: { projectId: entry.projectId, startsAt, endsAt: targetEndsAt, status: "proposed", serviceType: "tattoo", notes: "[LISTA REZERWOWA] Oferta automatyczna po zwolnieniu terminu." } });
       const claimed = await tx.waitlistEntry.updateMany({ where: { id: entry.id, status: "active" }, data: { status: "offered", offeredAppointmentId: created.id, offeredAt: new Date(), offerExpiresAt: expiresAt } });
       if (!claimed.count) throw new Error("WAITLIST_ALREADY_CLAIMED");

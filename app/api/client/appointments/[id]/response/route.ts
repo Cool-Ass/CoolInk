@@ -33,18 +33,21 @@ export async function POST(request: Request, { params }: Params) {
 
   const nextAppointment = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
-    const current = await tx.appointment.findUnique({ where: { id }, select: { status: true, startsAt: true, endsAt: true, depositStatus: true } });
+    const current = await tx.appointment.findFirst({ where: { id, project: { clientId: client.id, clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } } }, include: { waitlistOffer: true } });
     if (!current || current.status !== "proposed") throw new Error("STALE_PROPOSAL");
+    const offer = current.waitlistOffer;
+    if (offer && (offer.status !== "offered" || !offer.offerExpiresAt || offer.offerExpiresAt <= new Date())) throw new Error("STALE_PROPOSAL");
     if (accepted) {
-      const conflict = await bookingConflict(current.startsAt, current.endsAt, id, true, tx);
+      if (current.startsAt <= new Date()) throw new Error("STALE_PROPOSAL");
+      const conflict = await bookingConflict(current.startsAt, current.endsAt, id, true, tx, { serviceType: current.serviceType, workstation: current.workstation });
       if (conflict.appointment || conflict.block) throw new Error("BOOKING_CONFLICT");
     }
     const updated = await tx.appointment.update({ where: { id }, data: { status: accepted ? "confirmed" : "cancelled" } });
     const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true, depositStatus: true } });
     const derivedStatus = projectStatusAfterAppointmentChange(sessions, "not_required", accepted ? "confirmed" : "awaiting_client");
     const nextProjectStatus = !accepted && derivedStatus === "cancelled" ? "awaiting_client" : derivedStatus;
-    await tx.tattooProject.update({ where: { id: appointment.projectId }, data: { status: nextProjectStatus, ...(appointment.waitlistOffer ? { nextAction: accepted ? "Przygotuj potwierdzoną wizytę" : "Zaproponuj kolejny termin z listy rezerwowej", nextActionDueAt: null } : {}) } });
-    if (appointment.waitlistOffer) await tx.waitlistEntry.update({ where: { id: appointment.waitlistOffer.id }, data: accepted ? { status: "booked" } : { status: "active", offeredAppointmentId: null, offeredAt: null, offerExpiresAt: null } });
+    await tx.tattooProject.update({ where: { id: current.projectId }, data: { status: nextProjectStatus, ...(offer ? { nextAction: accepted ? "Przygotuj potwierdzoną wizytę" : "Zaproponuj kolejny termin z listy rezerwowej", nextActionDueAt: null } : {}) } });
+    if (offer) await tx.waitlistEntry.update({ where: { id: offer.id }, data: accepted ? { status: "booked" } : { status: "active", offeredAppointmentId: null, offeredAt: null, offerExpiresAt: null } });
     await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: accepted ? "appointment_confirmed" : "appointment_cancelled", message: activityMessage(accepted ? "appointment_confirmed" : "appointment_cancelled", formatCoolinkDateTime(updated.startsAt)), visibility: "admin" } });
     return updated;
   }).catch((error: unknown) => {
@@ -55,6 +58,6 @@ export async function POST(request: Request, { params }: Params) {
   await recordWorkflowEvent({ projectId: appointment.projectId, type: accepted ? "APPOINTMENT_ACCEPTED" : "APPOINTMENT_REJECTED", notification: accepted ? { title: "Termin potwierdzony", body: `Potwierdzony termin: ${formatCoolinkDateTime(nextAppointment.startsAt)}. Szczegóły wizyty są widoczne na koncie.`, appointmentId: id } : undefined });
   await sendPushToAdmins({ title: accepted ? "Klient zaakceptował termin" : "Klient odrzucił termin", body: `${client.firstName} ${client.lastName} odpowiedział na propozycję: ${formatCoolinkDateTime(nextAppointment.startsAt)}.`, url: `/admin/clients/${client.id}`, tag: `client-response-${id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(id).catch(() => undefined);
-  if (!accepted) await offerReleasedRange(appointment.startsAt, appointment.endsAt, appointment.waitlistOffer?.id).catch(() => undefined);
+  if (!accepted) await offerReleasedRange(nextAppointment.startsAt, nextAppointment.endsAt, appointment.waitlistOffer?.id).catch(() => undefined);
   return NextResponse.json({ appointment: nextAppointment });
 }

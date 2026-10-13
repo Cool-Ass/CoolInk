@@ -20,7 +20,7 @@ export type WaitlistTimePreference = keyof typeof WAITLIST_TIME_LABEL;
 
 export function normalizeWaitlistWeekdays(value: unknown) {
   const source = Array.isArray(value) ? value : String(value ?? "").split(",");
-  const days = Array.from(new Set(source.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort();
+  const days = Array.from(new Set(source.filter((day) => typeof day === "number" || typeof day === "string" && day.trim() !== "").map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort();
   return days.length ? days : [1, 2, 3, 4, 5];
 }
 
@@ -32,14 +32,14 @@ export function normalizeWaitlistDuration(value: unknown) {
 
 export function normalizeWaitlistTime(value: unknown): WaitlistTimePreference {
   const time = String(value ?? "any");
-  return time in WAITLIST_TIME_LABEL ? time as WaitlistTimePreference : "any";
+  return Object.hasOwn(WAITLIST_TIME_LABEL, time) ? time as WaitlistTimePreference : "any";
 }
 
 export function parseWaitlistDate(value: unknown) {
   const source = String(value ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(source)) return null;
   const parsed = new Date(`${source}T12:00:00.000Z`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== source ? null : parsed;
 }
 
 function warsawDateParts(value: Date) {

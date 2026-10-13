@@ -218,6 +218,57 @@ test("client login, own project navigation and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/app(?:\?|$)/);
 });
 
+test("waitlist concurrent offers, acceptance, leaving and archived project safety", async ({ page, browser }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Waitlist race fixture", description: "Disposable isolated waitlist regression" } });
+  const entry = await prisma.waitlistEntry.create({ data: { clientId: client.id, projectId: project.id, durationMinutes: 60 } });
+  const slots = [];
+  const context = await browser.newContext();
+  try {
+    for (let day = 1; day <= 4; day++) {
+      const startsAt = new Date(`2032-01-0${day}T10:00:00Z`);
+      slots.push(await prisma.availableSlot.create({ data: { startsAt, endsAt: new Date(+startsAt + 60 * 60_000), isPublic: true, title: "Waitlist isolated free slot" } }));
+    }
+    await page.goto("/admin/login");
+    await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`);
+    await page.getByLabel("HASŁO", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    const statuses = await page.evaluate(async ({ id, starts }) => Promise.all(starts.map(async startsAt => {
+      const response = await fetch(`/api/admin/waitlist/${id}/offer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ startsAt, durationMinutes: 60 }) });
+      return response.status;
+    })), { id: entry.id, starts: slots.map(item => item.startsAt.toISOString()) });
+    expect(statuses.sort()).toEqual([201, 409, 409, 409]);
+    const offered = await prisma.waitlistEntry.findUniqueOrThrow({ where: { id: entry.id } });
+    expect(await prisma.appointment.count({ where: { projectId: project.id } })).toBe(1);
+    expect(offered.status).toBe("offered");
+    expect(offered.offeredAppointmentId).toBeTruthy();
+
+    const clientPage = await context.newPage();
+    await clientPage.goto("http://127.0.0.1:3120/app");
+    await clientPage.getByLabel("E-MAIL", { exact: true }).fill(email);
+    await clientPage.getByLabel("HASŁO", { exact: true }).fill(password);
+    await clientPage.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
+    await expect(clientPage).toHaveURL(/\/app\/portal/);
+    const accepted = await clientPage.evaluate(async id => (await fetch(`/api/client/appointments/${id}/response`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ response: "accept" }) })).status, offered.offeredAppointmentId);
+    expect(accepted).toBe(200);
+    expect((await prisma.waitlistEntry.findUniqueOrThrow({ where: { id: entry.id } })).status).toBe("booked");
+    const left = await clientPage.evaluate(async id => (await fetch("/api/client/waitlist", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })).status, entry.id);
+    expect(left).toBe(200);
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: offered.offeredAppointmentId } })).status).toBe("confirmed");
+
+    await prisma.waitlistEntry.update({ where: { id: entry.id }, data: { status: "active" } });
+    await prisma.tattooProject.update({ where: { id: project.id }, data: { clientArchivedAt: new Date() } });
+    const archived = await page.evaluate(async ({ id, startsAt }) => (await fetch(`/api/admin/waitlist/${id}/offer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ startsAt, durationMinutes: 60 }) })).status, { id: entry.id, startsAt: slots[1].startsAt.toISOString() });
+    expect(archived).toBe(409);
+    expect(await prisma.appointment.count({ where: { projectId: project.id } })).toBe(1);
+  } finally {
+    await context.close();
+    await prisma.tattooProject.delete({ where: { id: project.id } });
+    await prisma.availableSlot.deleteMany({ where: { id: { in: slots.map(item => item.id) } } });
+  }
+});
+
 test("visit deposits, explicit legacy assignment and editable client instructions", async ({ page, browser }) => {
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Visit deposit fixture", description: "Disposable isolated payment instructions", depositStatus: "paid", depositAmount: 250, depositPaidAt: new Date("2026-10-01T10:00:00Z"), depositPaymentMethod: "gotówka" } });
