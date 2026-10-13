@@ -13,7 +13,13 @@
   i health receipt (bez wpływu na przypomnienia), opt-in harmonogram, idempotentne
   obecne powiadomienia, prywatne zdjęcia gojenia przez dotychczasowy upload,
   konsultacja/obsłużenie i panel admina. Lokalnie15 nowych testów/typecheck PASS.
-  Nowe hooki/constraint dołączone do izolowanego setupu; E2E pending. C–F pending.
+  Nowe hooki/constraint dołączone do izolowanego setupu; E2E pending.
+- C IMPLEMENTED, walidacja w toku: podpis odręczny dla sesji, zachowane globalne
+  akceptacje, niezmienny snapshot + digest, prywatny PDF (lokalna font OFL),
+  QR i lista brakujących zgód admina, archiwum klienta. Nowa tabela z RLS,
+  privacy guard i zakazem modyfikacji; usunięcie sesji zachowuje archiwum.
+  Lokalnie18 nowych testów/typecheck PASS, lint0errors; E2E dodane, pending.
+  D–F pending. Migracje nieuruchomione; brak merge/publikacji nowych modułów.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

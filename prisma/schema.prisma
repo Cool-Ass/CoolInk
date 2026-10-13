@@ -258,8 +258,26 @@ model DocumentAcceptance {
   version    Int
   answers    String         @default("{}")
   acceptedAt DateTime       @default(now())
+  sessionSignatures SessionDocumentSignature[]
 
   @@unique([clientId, documentId, version])
+  @@unique([id, clientId])
+}
+
+/// Immutable session-specific evidence. The original global acceptance is preserved.
+model SessionDocumentSignature {
+  id String @id @default(cuid())
+  clientId String
+  acceptanceId String
+  acceptance DocumentAcceptance @relation(fields: [acceptanceId, clientId], references: [id, clientId], onDelete: Cascade)
+  appointmentId String?
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  signature String
+  snapshot String
+  digest String
+  acceptedAt DateTime @default(now())
+  @@unique([acceptanceId, appointmentId])
+  @@index([clientId, acceptedAt])
 }
 
 /// A tattoo brief is the central operational record. Appointments, deposits,
@@ -326,6 +344,7 @@ model Appointment {
   aftercareConsultationRequestedAt DateTime?
   aftercareConsultationResolvedAt DateTime?
   aftercareImages ProjectImage[]
+  documentSignatures SessionDocumentSignature[]
   price              Int?
   serviceType        String?
   loyaltyRequested   Boolean @default(false)

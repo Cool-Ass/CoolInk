@@ -1,0 +1,21 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const m = vi.hoisted(() => ({ client: vi.fn(), origin: vi.fn(), rate: vi.fn(), visit: vi.fn(), document: vi.fn(), acceptance: vi.fn(), existing: vi.fn(), create: vi.fn(), pdfRecord: vi.fn() }));
+vi.mock("@/lib/clientAuth", () => ({ getCurrentClient: m.client }));
+vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: m.origin, rateLimit: m.rate, tooManyRequests: () => new Response(null, { status: 429 }) }));
+vi.mock("@/lib/clientMediaWrite", () => ({ withClientMediaWrite: (_id: string, work: (tx: unknown) => unknown) => work({ appointment: { findFirst: m.visit }, studioDocument: { findFirst: m.document }, documentAcceptance: { upsert: m.acceptance }, sessionDocumentSignature: { findUnique: m.existing, create: m.create } }) }));
+vi.mock("@/lib/prisma", () => ({ prisma: { sessionDocumentSignature: { findFirst: m.pdfRecord } } }));
+import { POST } from "../app/api/client/documents/[id]/sign/route";
+import { GET } from "../app/api/client/documents/signatures/[id]/pdf/route";
+const valid = { version: 2, appointmentId: "visit", acknowledged: true, signature: [[[0, 0], [.3, .4], [1, 1]]], answers: {} };
+const call = (body: unknown = valid) => POST(new Request("https://coolink.test/api/client/documents/doc/sign", { method: "POST", body: JSON.stringify(body) }), { params: Promise.resolve({ id: "doc" }) });
+beforeEach(() => { vi.resetAllMocks(); m.origin.mockReturnValue(true); m.rate.mockResolvedValue({ allowed: true }); m.client.mockResolvedValue({ id: "client", firstName: "Jan", lastName: "Test" }); m.visit.mockResolvedValue({ id: "visit", startsAt: new Date(0), project: { title: "Tattoo" } }); m.document.mockResolvedValue({ id: "doc", version: 2, title: "Zgoda", content: "Treść", formFields: "[]" }); m.acceptance.mockResolvedValue({ id: "acceptance" }); m.existing.mockResolvedValue(null); m.create.mockResolvedValue({ id: "signed" }); });
+describe("session signing ownership and immutable evidence", () => {
+  it("rejects cross-origin before auth or writes", async () => { m.origin.mockReturnValue(false); expect((await call()).status).toBe(403); expect(m.client).not.toHaveBeenCalled(); });
+  it("requires an authenticated client", async () => { m.client.mockResolvedValue(null); expect((await call()).status).toBe(401); expect(m.visit).not.toHaveBeenCalled(); });
+  it("requires an explicit acknowledgement", async () => { expect((await call({ ...valid, acknowledged: false })).status).toBe(400); expect(m.create).not.toHaveBeenCalled(); });
+  it("cannot sign a foreign or cancelled session", async () => { m.visit.mockResolvedValue(null); expect((await call()).status).toBe(404); expect(m.create).not.toHaveBeenCalled(); expect(m.visit.mock.calls[0][0].where.project.clientId).toBe("client"); });
+  it("rejects stale versions before acceptance", async () => { expect((await call({ ...valid, version: 1 })).status).toBe(409); expect(m.acceptance).not.toHaveBeenCalled(); });
+  it("preserves global acceptance and stores server-authoritative snapshot", async () => { expect((await call()).status).toBe(201); expect(m.acceptance.mock.calls[0][0].update).toEqual({}); const saved = m.create.mock.calls[0][0].data; expect(saved.clientId).toBe("client"); expect(JSON.parse(saved.snapshot).clientName).toBe("Jan Test"); expect(saved.digest).toMatch(/^[a-f0-9]{64}$/); });
+  it("retries never replace an existing signature", async () => { m.existing.mockResolvedValue({ id: "original" }); expect(await (await call()).json()).toEqual({ accepted: true, signatureId: "original" }); expect(m.create).not.toHaveBeenCalled(); });
+  it("does not leak a different client's PDF", async () => { m.pdfRecord.mockResolvedValue(null); expect((await GET(new Request("https://coolink.test/pdf"), { params: Promise.resolve({ id: "foreign" }) })).status).toBe(404); expect(m.pdfRecord).toHaveBeenCalledWith({ where: { id: "foreign", clientId: "client" } }); });
+});

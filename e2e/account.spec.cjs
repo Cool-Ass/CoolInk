@@ -384,6 +384,27 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test("session consents support handwritten signatures, immutable PDFs and appointment ownership", async ({ page, browser }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Signature fixture", description: "Isolated consent flow" } });
+  const startsAt = new Date(Date.now() + 45 * 86400000);
+  const visit = await prisma.appointment.create({ data: { projectId: project.id, startsAt, endsAt: new Date(startsAt.getTime() + 3600000), status: "confirmed" } });
+  await page.goto("/app"); await page.getByLabel("E-MAIL", { exact: true }).fill(email); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click(); await expect(page).toHaveURL(/\/app\/portal/);
+  await page.goto(`/app/portal/documents?appointment=${visit.id}`);
+  await page.getByRole("button").filter({ hasText: consent.title }).click();
+  const pad = page.getByLabel("Pole podpisu odręcznego"), box = await pad.boundingBox(); expect(box).toBeTruthy();
+  await page.mouse.move(box.x + box.width * .1, box.y + box.height * .4); await page.mouse.down(); await page.mouse.move(box.x + box.width * .3, box.y + box.height * .7, { steps: 8 }); await page.mouse.move(box.x + box.width * .6, box.y + box.height * .2, { steps: 8 }); await page.mouse.up();
+  await page.getByLabel("Potwierdzam przeczytanie dokumentu", { exact: false }).check();
+  const saved = page.waitForResponse(response => response.url().includes(`/documents/${consent.id}/sign`) && response.request().method() === "POST");
+  await page.getByRole("button", { name: "PRZECZYTAŁEM(-AM) I AKCEPTUJĘ", exact: true }).click(); expect((await saved).status()).toBe(201);
+  const signature = await prisma.sessionDocumentSignature.findFirstOrThrow({ where: { appointmentId: visit.id, clientId: client.id } });
+  const pdf = await page.request.get(`/api/client/documents/signatures/${signature.id}/pdf`); expect(pdf.status()).toBe(200); expect(pdf.headers()["content-type"]).toContain("application/pdf"); expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
+  const outsider = await browser.newContext(); const denied = await outsider.request.get(`http://127.0.0.1:3120/api/client/documents/signatures/${signature.id}/pdf`); expect(denied.status()).toBe(401); await outsider.close();
+  await expect(prisma.sessionDocumentSignature.update({ where: { id: signature.id }, data: { signature: "tampered" } })).rejects.toThrow();
+  await prisma.appointment.delete({ where: { id: visit.id } });
+  const archived = await prisma.sessionDocumentSignature.findUniqueOrThrow({ where: { id: signature.id } }); expect(archived.appointmentId).toBeNull(); expect(JSON.parse(archived.snapshot).appointmentId).toBe(visit.id); expect(archived.digest).toBe(signature.digest);
+});
+
 test("aftercare starts on completion, notifies once, stores private healing photos and requests consultation", async ({ page, browser }) => {
   if (!process.env.CRON_SECRET) throw Error("Isolated runtime cron credential required");
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });

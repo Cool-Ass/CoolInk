@@ -13,6 +13,7 @@ const remoteMediaPatterns = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/api/**/signatures/**": ["./assets/fonts/NotoSans-Regular.ttf"] },
   async headers() {
     return [{
       source: "/(.*)",
