@@ -71,6 +71,12 @@
   lacked browser localhost Secure-cookie handling (401). Test now uses actual
   client download link, still asserts HTTP200, PDF MIME/magic and outsider401.
   No authentication changes. Aftercare and mobile flows remain to be verified.
+- CI8886c2d: all six new modules' desktop flows PASS, including real PDF download,
+  QR/consent completeness and private aftercare. Existing media test then hit
+  the real 8-logins/15min limit of the shared fixture account (artifact confirms).
+  New modules now get independent disposable owner fixtures with actual UI login
+  and exact cleanup; no rate reset, cookie injection or production auth changes.
+  Final whole-suite/mobile verification still required.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;
