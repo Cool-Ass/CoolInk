@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Sprawdź formularz." }, { status: 400 }); }
   try {
     const result = await withClientMediaWrite(client.id, async tx => {
-      const visit = await tx.appointment.findFirst({ where: { id: body.appointmentId, status: { notIn: ["cancelled", "no_show"] }, project: { clientId: client.id } }, include: { project: { select: { title: true } } } });
+      const visit = await tx.appointment.findFirst({ where: { id: body.appointmentId, status: "confirmed", OR: [{ serviceType: null }, { serviceType: "tattoo" }], project: { clientId: client.id, kind: "tattoo" } }, include: { project: { select: { title: true } } } });
       const document = await tx.studioDocument.findFirst({ where: { id, published: true, category: "consent" } });
       if (!visit || !document) return { status: 404, error: "Dokument lub sesja nie są dostępne." };
       if (body.version !== document.version) return { status: 409, error: "Dokument zmienił się. Odśwież stronę i przeczytaj nową wersję." };

@@ -119,3 +119,12 @@
 - Next: exact-head isolated CI/browser/RLS/security, review; no merge/deployment. Code-only rollback. Optional modules above are unimplemented, not production defects proven by this run.
 - CI38342933533 / 5daabc3: CodeQL, backup-snapshot, all unit/build/audit/gitleaks, isolated DB/RLS/IDOR/roles and HTTP smoke PASS; browser concurrency FAIL (201/409/500/500). The 2-connection pool and Prisma's default 2s acquisition/5s interactive transaction budgets are the suspected cause; no claim of confirmed Prisma error code. Manual offers now have bounded 10s acquisition / 15s transaction budgets; the 4-request assertion is unchanged. Failure diagnostics expose only fixed Prisma error codes. Rerun required before review. Both Vercel previews passed the initial head. No promotion.
 - Final review: expiry also handles offers changed through the general admin appointment API: accepted/completed visits reconcile to booked; cancelled/no-show offers return to active. Reoffering uses the current range read under the lock. Two additional regression cases cover these transitions.
+
+## 2026-10-14 — Client journey and vouchers (implementation)
+- Branch ai/client-journey-vouchers-20261014 from production main 023760a.
+- Owner rules: voucher single-use, unused value forfeited, no stamp reward stacking; expiry is the validity date.
+- Added receipt states, grouped settings/aftercare module, focused booking and visit-bound documents, contextual aftercare, voucher issuance/link/QR/private photo/code reservation and automatic settlement.
+- Additive migrations: nullable message delivery, voucher model and appointment reward snapshots, DB financial/privacy guards. No historical payment rewrite or production fixture.
+- Local: 685 unit tests / 116 files PASS, typecheck PASS, lint 0 errors / 19 image warnings, production build PASS with database overridden to unreachable local build-only URL. Browser spec/script syntax PASS.
+- Isolated CI now includes actual voucher migration/concurrent reservation/immutability checks and desktop/mobile voucher/receipt/settlement flow.
+- Pending: exact-head CI, UI evidence review, final publication approval, verified production backup/restore, production promotion and bounded verification. Production unchanged by this package. Details: CLIENT_JOURNEY_VOUCHERS.md.

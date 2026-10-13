@@ -49,6 +49,7 @@ async function main() {
       () => prisma.projectImage.create({ data: { projectId: id, url: "test-path" } }),
       () => prisma.assistantDraft.create({ data: { projectId: id, clientId: id, adminUserId: "fixture", body: "Quarantined draft" } }),
       () => prisma.sessionDocumentSignature.create({ data: { clientId: id, acceptanceId: id, appointmentId: id, signature: "[]", snapshot: "{}", digest: "fixture" } }),
+      () => prisma.voucher.create({ data: { issueKey: id, code: "CI-" + "E".repeat(32), recipientName: "Privacy Fixture", amountCents: 10000, validUntil: new Date("2030-01-01"), createdById: "fixture", clientId: id } }),
       () => prisma.directMessage.create({ data: { clientId: id, author: "client", body: "Changed" } }),
       () => prisma.loyaltyEntry.create({ data: { clientId: id, key: id, kind: "paper", stamps: 1, note: "test", adminId: "fixture" } }),
       () => prisma.accountDeletionRequest.delete({ where: { id } }),

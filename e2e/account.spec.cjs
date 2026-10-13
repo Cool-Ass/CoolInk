@@ -20,6 +20,7 @@ const mediaLayoutIds = [];
 const flashIds = [], flashSlotIds = [];
 const campaignIds = [];
 const featureAdminIds = [];
+const voucherCodes = [];
 
 // Each new feature has an independent disposable operator. Log in through the
 // actual form; never reset rate buckets, raise limits or inject session cookies.
@@ -99,6 +100,14 @@ test.afterAll(async () => {
   await prisma.availabilityBlock.deleteMany({ where: { id: { in: blockIds } } });
   await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
   if (fixture) await prisma.tattooProject.updateMany({ where: { clientId: fixture.id }, data: { depositAssignedAppointmentId: null } });
+  if (fixture && await prisma.voucher.count({ where: { clientId: fixture.id } })) await prisma.$transaction(async tx => {
+    const requestId = "browser-voucher-cleanup-" + randomUUID();
+    await tx.accountDeletionRequest.create({ data: { id: requestId, clientId: fixture.id, status: "executing" } });
+    await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${requestId}, true)`;
+    await tx.voucher.deleteMany({ where: { clientId: fixture.id, code: { in: voucherCodes } } });
+    await tx.accountDeletionRequest.delete({ where: { id: requestId } });
+  });
+  await prisma.voucher.deleteMany({ where: { code: { in: voucherCodes }, clientId: null, redeemedAt: null } });
   await prisma.client.deleteMany({ where: { email } });
   await prisma.promotion.deleteMany({ where: { id: { in: campaignIds } } });
   await prisma.portfolioItem.deleteMany({ where: { id: { in: flashIds } } });
@@ -208,7 +217,6 @@ test("client login, own project navigation and logout", async ({ page }) => {
   expect(await bookingDialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await page.getByLabel("NAZWA / KRÓTKI TEMAT (OPCJONALNIE)", { exact: true }).fill("Browser booked project");
   await page.getByLabel("OPIS / POMYSŁ", { exact: true }).fill("A complete isolated browser booking scenario.");
-  await page.getByRole("button", { name: "DALEJ", exact: true }).click();
   await page.getByRole("button", { name: "DALEJ", exact: true }).click();
   await page.getByRole("checkbox", { name: new RegExp(consent.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).check();
   await page.getByRole("button", { name: "DALEJ", exact: true }).click();
@@ -323,7 +331,7 @@ test("visit deposits, explicit legacy assignment and editable client instruction
   const original = await prisma.siteSetting.findUnique({ where: { key: "deposit_instructions" } });
   const context = await browser.newContext();
   try {
-    await page.goto("/admin/settings");
+    await page.goto("/admin/settings?category=payments");
     await page.locator("summary").filter({ hasText: "Instrukcje BLIK, gotówka i podgląd klienta" }).click();
     // The wrapping label includes the SSR textarea value in its text content.
     // Match the stable label prefix, not the editable initial instructions.
@@ -397,10 +405,13 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   const uiSlot = await prisma.availableSlot.create({ data: { startsAt: uiStart, endsAt: new Date(uiStart.getTime() + 3600000), isPublic: true, title: "Flash UI fixture" } }); flashSlotIds.push(uiSlot.id);
   await page.goto(`/app/portal/calendar?flash=${uiFlash.id}&booking=${encodeURIComponent(uiStart.toISOString())}`);
   await expect(page.getByRole("region", { name: "Wybrany wzór Flash", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "DALEJ", exact: true }).click(); await page.getByRole("button", { name: "DALEJ", exact: true }).click();
-  const required = page.getByRole("dialog", { name: "Umów wizytę", exact: true }).getByRole("group", { name: "WYMAGANE ZGODY", exact: true }).getByRole("checkbox");
-  for (const checkbox of await required.all()) if (await checkbox.isEnabled() && !await checkbox.isChecked()) await checkbox.check();
   await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  const required = page.getByRole("dialog", { name: "Umów wizytę", exact: true }).getByRole("group", { name: "WYMAGANE ZGODY", exact: true });
+  if (await required.count()) {
+    for (const checkbox of await required.getByRole("checkbox").all()) if (await checkbox.isEnabled() && !await checkbox.isChecked()) await checkbox.check();
+    await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  }
+  await expect(page.getByRole("list", { name: "Etapy rezerwacji" })).not.toContainText("TERMIN");
   await page.getByRole("checkbox", { name: "Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.", exact: true }).check();
   const created = page.waitForResponse(response => response.url().endsWith("/api/client/appointments") && response.request().method() === "POST");
   await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click(); expect((await created).status()).toBe(201);
@@ -473,6 +484,7 @@ test("session consents support handwritten signatures, immutable PDFs and appoin
   const signature = await prisma.sessionDocumentSignature.findFirstOrThrow({ where: { appointmentId: visit.id, clientId: client.id } });
   // Use the real browser download. APIRequestContext does not share Chromium's
   // localhost exception for Secure session cookies on the isolated HTTP server.
+  await page.getByText(/Archiwum podpisanych zgód ·/).click();
   const pdfResponse = page.waitForResponse(response => response.url().endsWith(`/api/client/documents/signatures/${signature.id}/pdf`));
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Pobierz PDF", exact: true }).click();
@@ -903,4 +915,111 @@ test("admin login, client card rendering and logout", async ({ page }) => {
   if (test.info().project.name === "mobile") await page.getByRole("button", { name: "Otwórz nawigację administratora", exact: true }).click();
   await page.getByRole("button", { name: "WYLOGUJ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
+});
+
+test("voucher issuance, focused booking, automatic settlement and truthful message receipts", async ({ page, browser }) => {
+  test.setTimeout(180000);
+  const adminContext = await browser.newContext();
+  const adminPage = await adminContext.newPage();
+  const api = (surface, path, method, body) => surface.evaluate(async ({ path, method, body }) => { const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { status: res.status, data: await res.json() }; }, { path, method, body });
+  try {
+    const operator = await loginFeatureAdmin(adminPage);
+    await adminPage.goto("/admin/settings?category=care");
+    await expect(adminPage.getByRole("heading", { name: /Aftercare|Opieka/ }).first()).toBeVisible();
+    await expect(adminPage.getByRole("navigation").getByRole("link", { name: "Aftercare", exact: true })).toHaveCount(0);
+    await adminPage.goto("/admin/vouchers");
+    await adminPage.getByLabel("Wartość (zł)", { exact: true }).fill("300");
+    await adminPage.getByLabel("Imię i nazwisko", { exact: true }).fill("Browser Fixture");
+    const expiry = new Date(); expiry.setUTCFullYear(expiry.getUTCFullYear() + 1);
+    await adminPage.getByLabel("Ważny do", { exact: true }).fill(expiry.toISOString().slice(0, 10));
+    const issued = adminPage.waitForResponse(r => r.url().endsWith("/api/admin/vouchers") && r.request().method() === "POST");
+    await adminPage.getByRole("button", { name: "Wygeneruj voucher i QR", exact: true }).click();
+    const issuedResponse = await issued; expect(issuedResponse.status()).toBe(201);
+    const voucher = await issuedResponse.json(); voucherCodes.push(voucher.code);
+    await expect(adminPage.getByRole("button", { name: "Wygeneruj voucher i QR", exact: true })).toBeDisabled();
+    await page.goto(voucher.href);
+    await expect(page.getByText("Browser Fixture", { exact: true })).toBeVisible();
+    await expect(page.getByRole("img", { name: /QR/ })).toBeVisible();
+    expect(await page.getByRole("img", { name: /QR/ }).evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expect(page.getByText(/Niewykorzystana kwota przepada/)).toBeVisible();
+    await page.goto("/app");
+    await page.getByLabel("E-MAIL", { exact: true }).fill(email);
+    await page.getByLabel("HASŁO", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/portal/);
+    await expect(page.getByRole("navigation").getByRole("link", { name: "Aftercare", exact: true })).toHaveCount(0);
+    const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+    await prisma.loyaltyEntry.create({ data: { clientId: client.id, key: "voucher-browser-reward-" + randomUUID(), kind: "paper", stamps: 5, note: "Isolated booking eligibility fixture", adminId: operator } });
+    const start = new Date(); start.setUTCDate(start.getUTCDate() + 18); start.setUTCHours(10, 0, 0, 0);
+    const available = await prisma.availableSlot.create({ data: { startsAt: start, endsAt: new Date(start.getTime() + 3600000), isPublic: true, title: "Voucher browser slot" } }); flashSlotIds.push(available.id);
+    await page.goto("/app/portal/calendar?booking=" + encodeURIComponent(start.toISOString()) + "&voucher=" + voucher.code);
+    const booking = page.getByRole("dialog").last();
+    await expect(booking.getByText("Zapisz szkic", { exact: true })).not.toBeVisible();
+    await expect(booking.getByRole("checkbox", { name: /nagrodę lojalnościową/ })).toHaveCount(0);
+    await page.getByLabel("NAZWA / KRÓTKI TEMAT (OPCJONALNIE)", { exact: true }).fill("Browser voucher tattoo");
+    await page.getByLabel("OPIS / POMYSŁ", { exact: true }).fill("Disposable end-to-end voucher booking.");
+    await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+    const pending = booking.locator("fieldset input[type=checkbox]");
+    if (await pending.count()) { for (const checkbox of await pending.all()) await checkbox.check(); await page.getByRole("button", { name: "DALEJ", exact: true }).click(); }
+    await expect(booking.getByRole("button", { name: "DALEJ", exact: true })).toHaveCount(0);
+    const reward = booking.getByRole("checkbox", { name: /nagrodę lojalnościową/ });
+    await expect(reward).toBeVisible(); await reward.check();
+    const useVoucher = booking.getByRole("checkbox", { name: "Wykorzystaj voucher", exact: true });
+    await useVoucher.check(); await expect(reward).not.toBeChecked();
+    await booking.getByLabel("Kod vouchera", { exact: true }).fill(voucher.code);
+    await booking.getByRole("button", { name: "Sprawdź voucher", exact: true }).click();
+    await expect(booking.getByRole("status")).toContainText("300");
+    await test.info().attach("voucher-summary-" + test.info().project.name, { body: await page.screenshot(), contentType: "image/png" });
+    const pixels = await require("sharp")({ create: { width: 2, height: 2, channels: 4, background: "#c49b47" } }).png().toBuffer();
+    await booking.getByLabel("Zdjęcie vouchera (opcjonalnie)", { exact: true }).setInputFiles({ name: "voucher.png", mimeType: "image/png", buffer: pixels });
+    await booking.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click();
+    await expect(booking.getByRole("alert")).toContainText("Potwierdź poprawność");
+    await booking.getByRole("checkbox", { name: "Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.", exact: true }).check();
+    await expect(booking.getByRole("alert")).toHaveCount(0);
+    const created = page.waitForResponse(r => r.url().endsWith("/api/client/appointments") && r.request().method() === "POST");
+    await booking.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click();
+    const result = await created; expect(result.status()).toBe(201);
+    const booked = await result.json();
+    await expect(booking.getByText("PROŚBA O WIZYTĘ WYSŁANA", { exact: true })).toBeVisible();
+    await expect.poll(() => prisma.projectImage.count({ where: { appointmentId: booked.appointment.id, kind: "voucher" } })).toBe(1);
+    expect(await prisma.voucher.findUniqueOrThrow({ where: { code: voucher.code } })).toMatchObject({ clientId: client.id, appointmentId: booked.appointment.id, redeemedAt: null });
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: booked.appointment.id } })).loyaltyReserved).toBe(false);
+    await prisma.appointment.update({ where: { id: booked.appointment.id }, data: { status: "confirmed" } });
+    await page.goto("/app/portal/documents?appointment=" + booked.appointment.id);
+    await expect(page.getByText("Browser voucher tattoo", { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole("combobox")).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Dokumenty umówionej sesji", exact: true })).toBeVisible();
+    await page.goto("/app/portal/calendar");
+    const sent = await api(adminPage, "/api/admin/clients/" + client.id + "/messages", "POST", { body: "Voucher receipt regression " + voucher.code });
+    expect(sent.status).toBe(201); const message = sent.data.message;
+    await adminPage.goto("/admin/clients/" + client.id + "?view=messages");
+    const own = adminPage.locator("article").filter({ hasText: "Voucher receipt regression " + voucher.code });
+    await expect(own.getByRole("img", { name: "Wysłano", exact: true })).toBeVisible();
+    const delivered = await api(page, "/api/client/messages", "PATCH", { state: "delivered", ids: [message.id] });
+    expect(delivered.status).toBe(200);
+    await adminPage.reload(); await expect(own.getByRole("img", { name: "Dostarczono do rozmówcy", exact: true })).toBeVisible();
+    expect((await prisma.directMessage.findUniqueOrThrow({ where: { id: message.id } })).readAt).toBeNull();
+    await page.goto("/app/portal/messages");
+    await page.getByRole("button").filter({ hasText: "Wiadomość ogólna" }).first().click();
+    await expect.poll(async () => Boolean((await prisma.directMessage.findUniqueOrThrow({ where: { id: message.id } })).readAt)).toBe(true);
+    await adminPage.reload(); await expect(own.getByRole("img", { name: "Odczytano", exact: true })).toHaveClass(/text-emerald/);
+    // Move only this disposable visit into the past. No bank payment or production data is involved.
+    await prisma.appointment.update({ where: { id: booked.appointment.id }, data: { startsAt: new Date("2020-01-01T10:00:00Z"), endsAt: new Date("2020-01-01T11:00:00Z"), price: 700 } });
+    await adminPage.goto("/admin/clients/" + client.id + "?view=appointments&settle=" + booked.appointment.id);
+    const settlement = adminPage.getByRole("dialog", { name: "Zakończ i rozlicz wizytę", exact: true });
+    await expect(settlement.getByText(/Do zapłaty łącznie:.*400/)).toBeVisible();
+    await expect(settlement.getByRole("checkbox", { name: /Wykorzystaj.*pieczątek/ })).toBeDisabled();
+    await settlement.getByLabel("Potwierdzam odbiór całej należności", { exact: false }).check();
+    const settled = adminPage.waitForResponse(r => r.url().endsWith("/loyalty") && r.request().method() === "POST");
+    await settlement.getByRole("button", { name: "Zakończ i zapisz rozliczenie", exact: true }).click();
+    expect((await settled).status()).toBe(200);
+    expect(await prisma.loyaltyEntry.findUniqueOrThrow({ where: { appointmentId: booked.appointment.id } })).toMatchObject({ voucherCents: 30000, paidCents: 40000, discountCents: 0 });
+    expect((await prisma.voucher.findUniqueOrThrow({ where: { code: voucher.code } })).redeemedAt).not.toBeNull();
+    const reuse = await api(page, "/api/client/vouchers/preview", "POST", { code: voucher.code, startsAt: start.toISOString() });
+    expect(reuse.status).toBe(409);
+    await page.goto("/app/portal/aftercare?appointment=" + booked.appointment.id);
+    await expect(page.getByRole("heading", { name: "Pielęgnacja po sesji", exact: true })).toBeVisible();
+    await adminPage.goto("/admin/settings?category=payments");
+    await expect(adminPage.getByRole("link", { name: /Vouchery/ }).first()).toBeVisible();
+  } finally { await adminContext.close(); }
 });

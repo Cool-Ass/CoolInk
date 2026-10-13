@@ -13,10 +13,11 @@ export async function GET(request: Request) {
     include: {
       projects: { include: { appointments: true, activities: true, messages: { select: { id: true, author: true, body: true, readAt: true, createdAt: true, attachmentId: true } }, images: { select: { id: true, caption: true, order: true, createdAt: true } }, waitlistEntry: true } },
       acceptances: { include: { document: { select: { id: true, title: true, category: true, version: true } }, sessionSignatures: { select: { id: true, appointmentId: true, snapshot: true, signature: true, digest: true, acceptedAt: true } } } },
+      vouchers: { select: { code: true, amountCents: true, recipientName: true, validUntil: true, appointmentId: true, redeemedAt: true, appliedCents: true, cancelledAt: true } },
       notifications: true,
       directMessages: { select: { id: true, author: true, body: true, readAt: true, createdAt: true } },
       deletionRequest: true,
-      loyaltyEntries: { select: { kind: true, stamps: true, grossCents: true, discountCents: true, paidCents: true, createdAt: true, voidedAt: true } },
+      loyaltyEntries: { select: { kind: true, stamps: true, grossCents: true, discountCents: true, voucherCents: true, paidCents: true, createdAt: true, voidedAt: true } },
     },
   });
   if (!data) return NextResponse.json({ error: "Profil nie istnieje." }, { status: 404 });

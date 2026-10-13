@@ -11,7 +11,7 @@ const tables = [
   "AdminUser", "AdminAuditLog", "AdminPushSubscription", "Appointment", "AvailabilityBlock", "Client", "ClientNotification",
   "AccountDeletionRequest", "AvailableSlot", "CalendarEvent",
   "GoogleCalendarConnection", "GoogleCalendarSelection", "GoogleCalendarEventSync",
-  "ContactMessage", "DocumentAcceptance", "SessionDocumentSignature", "AssistantDraft", "Media", "NavItem", "Page", "PageRevision", "PortfolioItem",
+  "ContactMessage", "DocumentAcceptance", "SessionDocumentSignature", "AssistantDraft", "Voucher", "Media", "NavItem", "Page", "PageRevision", "PortfolioItem",
   "ProjectActivity", "ProjectImage", "ProjectMessage", "DirectMessage", "Promotion", "SiteSetting", "StudioDocument", "StudioDocumentVersion",
   "TattooProject", "WebhookReceipt", "WaitlistEntry", "PushSubscription", "ReminderDelivery", "InventoryItem", "InventoryMovement",
   "RateLimitBucket", "WorkingHours", "WorkingHoursOverride",

@@ -1,6 +1,7 @@
 import { hideDirectMessages, messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
 import { withClientMediaWrite } from "@/lib/clientMediaWrite";
+import { parseMessageReceipt } from "@/lib/messageReceipt";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -24,7 +25,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   if (!(await prisma.client.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
-  const result = await prisma.directMessage.updateMany({ where: { clientId: id, author: "client", readAt: null }, data: { readAt: new Date() } });
+  let receipt;
+  try { receipt = await parseMessageReceipt(request); } catch { return NextResponse.json({ error: "Nieprawidłowe potwierdzenie." }, { status: 400 }); }
+  const now = new Date();
+  const scope = { clientId: id, author: "client", ...(receipt.ids ? { id: { in: receipt.ids } } : {}) };
+  const result = await prisma.$transaction(async tx => {
+    const delivered = await tx.directMessage.updateMany({ where: { ...scope, deliveredAt: null }, data: { deliveredAt: now } });
+    if (receipt.state === "read") return tx.directMessage.updateMany({ where: { ...scope, readAt: null }, data: { readAt: now } });
+    return delivered;
+  });
   return NextResponse.json({ ok: true, updated: result.count });
 }
 

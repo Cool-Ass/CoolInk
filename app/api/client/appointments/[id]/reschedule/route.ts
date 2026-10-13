@@ -1,3 +1,4 @@
+import { assertVoucherVisitChange, VoucherError } from "@/lib/vouchers";
 import { NextResponse } from "next/server";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { canClientRescheduleAppointment } from "@/lib/clientAppointment";
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: Params) {
     await lockBookingCalendar(tx);
     const current = await tx.appointment.findFirst({ where: { id, project: { clientId: client.id } }, include: { project: { select: { kind: true } } } });
     if (!current || !canClientRescheduleAppointment(current)) return null;
+    await assertVoucherVisitChange(tx, id, startsAt, "requested", current.serviceType);
     const lockedAvailability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, id, tx);
     if (!lockedAvailability.ok) return null;
     const lockedSlot = await tx.availableSlot.findFirst({ where: { isPublic: true, startsAt: { lte: startsAt }, endsAt: { gte: endsAt } }, select: { title: true } });
@@ -45,7 +47,8 @@ export async function POST(request: Request, { params }: Params) {
     await tx.projectActivity.create({ data: { projectId: current.projectId, type: "appointment_rescheduled_by_client", message: `Klient poprosił o przełożenie wizyty na ${formatCoolinkDateTime(startsAt)}.`, visibility: "admin" } });
     await tx.clientNotification.create({ data: { clientId: client.id, projectId: current.projectId, appointmentId: id, type: "APPOINTMENT_RESCHEDULE_REQUESTED", title: "Prośba o przełożenie wysłana", body: `Studio sprawdzi nowy termin: ${formatCoolinkDateTime(startsAt)}.`, href: "/app/portal/projects" } });
     return item;
-  });
+  }).catch(error => { if (error instanceof VoucherError) return NextResponse.json({ error: error.message }, { status: 409 }); throw error; });
+  if (updated instanceof NextResponse) return updated;
   if (!updated) return NextResponse.json({ error: "Termin właśnie się zmienił lub został zajęty. Wybierz inny." }, { status: 409 });
   await sendPushToAdmins({ title: "Klient chce przełożyć wizytę", body: `${client.firstName} ${client.lastName}: ${formatCoolinkDateTime(startsAt)}`, url: "/admin", tag: `client-reschedule-${id}` }).catch(() => undefined);
   await syncAppointmentToGoogle(id).catch(() => undefined);

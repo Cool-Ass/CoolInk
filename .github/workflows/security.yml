@@ -63,6 +63,7 @@ jobs:
           node scripts/verifyMessageVisibilityMigration.cjs
           node scripts/verifyClientAcquisitionMigration.cjs
           node scripts/verifyVisitDepositMigration.cjs
+          node scripts/verifyVoucherIntegrity.cjs
           node scripts/verifyClientRegistrationStats.cjs
           node scripts/verifyGoogleOutbox.cjs
           node scripts/verifyPrivacyExecutionGuard.cjs

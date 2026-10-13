@@ -4,6 +4,7 @@ import type { DepositInstructions } from "@/lib/depositInstructions";
 import { blikDepositDetails } from "@/lib/blikDeposit";
 
 import { useRef, useState } from "react";
+import { appointmentStatusLabel } from "@/lib/workflowStatus";
 import { sessionEstimateLabel } from "@/lib/sessionEstimate";
 import { clientProjectStage } from "@/lib/projectWorkflow";
 import Link from "next/link";
@@ -26,6 +27,10 @@ type Appointment = {
   price: number | null;
   depositStatus: string;
   depositAmount: number | null;
+  voucherAmountCents?: number;
+  voucherAppliedCents?: number;
+  voucherRequested?: boolean;
+  settlement?: { paidCents: number; discountCents: number; voucherCents: number } | null;
   createdAt: string;
   confirmationRequestedAt?: string | null;
   clientConfirmedAt?: string | null;
@@ -64,7 +69,7 @@ function projectTimeline(project: Project) {
     ...project.activities.map((item) => ({ id: `activity-${item.id}`, at: item.createdAt, label: item.type === "consents_accepted" ? "DOKUMENTY" : "HISTORIA", text: item.message })),
     ...project.messages.map((item) => ({ id: `message-${item.id}`, at: item.createdAt, label: "CZAT", text: item.body || (item.attachment ? "Dodano zdjęcie do rozmowy." : "Wiadomość") })),
     ...project.images.map((item) => ({ id: `image-${item.id}`, at: item.createdAt, label: "INSPIRACJA", text: item.caption || "Dodano inspirację." })),
-    ...project.appointments.map((item) => ({ id: `appointment-${item.id}`, at: item.createdAt, label: "TERMIN", text: `${formatCoolinkDateTime(item.startsAt)} · ${item.status}` })),
+    ...project.appointments.map((item) => ({ id: `appointment-${item.id}`, at: item.createdAt, label: "TERMIN", text: `${formatCoolinkDateTime(item.startsAt)} · ${appointmentStatusLabel(item.status)}` })),
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 30);
 }
 
@@ -240,10 +245,9 @@ export default function ClientProjectCards({
               <div className="mt-2">
                 <StatusBadge status={selected.status}>{clientProjectStage(selected.status)}</StatusBadge>
               </div>
-              {editingDetails ? <div className="mt-3 grid gap-3"><label className="text-[10px] tracking-[.1em] text-ink-grey">TYTUŁ<input value={details.title} maxLength={160} onChange={(event) => setDetails({ ...details, title: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><label className="text-[10px] tracking-[.1em] text-ink-grey">OPIS<textarea value={details.description} maxLength={5000} rows={3} onChange={(event) => setDetails({ ...details, description: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><div className="flex items-center gap-3"><AppButton type="button" disabled={savingDetails} onClick={() => void saveDetails()}>{savingDetails ? "ZAPISYWANIE…" : "ZAPISZ"}</AppButton><button type="button" onClick={() => { setEditingDetails(false); setDetails({ title: selected.title, description: selected.description }); }} className="text-xs text-ink-grey">ANULUJ</button></div>{detailsError && <p role="alert" className="text-xs text-red-300">{detailsError}</p>}</div> : <><p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-grey">{selected.description}</p><p className="mt-2 text-xs text-ink-gold">{selected.next}</p></>}
+              {editingDetails ? <div className="mt-3 grid gap-3"><label className="text-[10px] tracking-[.1em] text-ink-grey">TYTUŁ<input value={details.title} maxLength={160} onChange={(event) => setDetails({ ...details, title: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><label className="text-[10px] tracking-[.1em] text-ink-grey">OPIS<textarea value={details.description} maxLength={5000} rows={3} onChange={(event) => setDetails({ ...details, description: event.target.value })} className="mt-1.5 w-full border border-ink-white/20 bg-ink-black px-3 py-2 text-sm text-ink-white" /></label><div className="flex items-center gap-3"><AppButton type="button" disabled={savingDetails} onClick={() => void saveDetails()}>{savingDetails ? "ZAPISYWANIE…" : "ZAPISZ"}</AppButton><button type="button" onClick={() => { setEditingDetails(false); setDetails({ title: selected.title, description: selected.description }); }} className="text-xs text-red-200">ANULUJ</button></div>{detailsError && <p role="alert" className="text-xs text-red-300">{detailsError}</p>}</div> : <><p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-grey">{selected.description}</p></>}
             </section>
             {selected.kind !== "consultation" && <section className="border-y border-ink-white/10 py-4"><p className="text-xs tracking-widest text-ink-gold">FINANSE</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><p className="text-xs text-ink-grey">WYCENA</p><p className="mt-1 text-sm text-ink-white">{sessionEstimateLabel(selected) || (selected.estimatedPrice && selected.estimatedPriceMax ? `${selected.estimatedPrice}–${selected.estimatedPriceMax} zł` : selected.estimatedPrice ? `od ${selected.estimatedPrice} zł` : selected.estimatedPriceMax ? `do ${selected.estimatedPriceMax} zł` : "W trakcie ustalania")}</p></div><div><p className="text-xs text-ink-grey">CENA KOŃCOWA</p><p className="mt-1 text-sm text-ink-white">{selected.finalPrice ? `${selected.finalPrice} zł` : "Jeszcze nieustalona"}</p></div></div></section>}
-            <p className="text-sm text-ink-grey">Zadatki znajdziesz w szczegółach poszczególnych wizyt.</p>
             {!selected.depositAssignedAppointmentId && selected.depositStatus !== "not_required" && selected.depositAmount !== null && <p className="text-sm text-ink-grey">Wcześniejszy zadatek: {selected.depositAmount} zł. Studio przypisze go do właściwej wizyty. Nie wpłacaj go ponownie.</p>}
             <section>
               <p className="text-xs tracking-widest text-ink-gold">{selected.kind === "consultation" ? "TERMIN KONSULTACJI" : "SESJE"}</p>

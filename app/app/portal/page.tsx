@@ -1,3 +1,4 @@
+import VisitJourney from "@/components/client/VisitJourney";
 import { clientNextAction } from "@/lib/clientNextAction";
 import { getDepositInstructions } from "@/lib/depositSettings";
 import BlikDeposit from "@/components/client/BlikDeposit";
@@ -5,7 +6,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentClient } from "@/lib/clientAuth";
 import { prisma } from "@/lib/prisma";
-import StatusBadge from "@/components/ui/StatusBadge";
+
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { CalendarDays, Images, MessageCircle, ArrowUpRight } from "lucide-react";
 import LoyaltyCard from "@/components/client/LoyaltyCard";
@@ -20,7 +21,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
   if (!current) redirect("/app");
   const { booking } = await searchParams;
   const now = new Date();
-  const [client, projects, nextVisit, documents, pendingDeposits, depositInstructions] = await Promise.all([
+  const [client, projects, nextVisit, documents, pendingDeposits, depositInstructions, latestCompleted] = await Promise.all([
     prisma.client.findUniqueOrThrow({ where: { id: current.id }, select: { firstName: true } }),
     prisma.tattooProject.findMany({
       where: { clientId: current.id, clientArchivedAt: null, status: { not: "cancelled" } },
@@ -28,17 +29,17 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
       orderBy: { updatedAt: "desc" },
       take: 30,
     }),
-    prisma.appointment.findFirst({ where: { project: { clientId: current.id, clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } }, endsAt: { gte: now }, status: { in: ["requested", "proposed", "confirmed"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: now } } } } }, include: { project: { select: { id: true, title: true, status: true } } }, orderBy: { startsAt: "asc" } }),
-    prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { version: true, acceptances: { where: { clientId: current.id }, select: { version: true } } } }),
+    prisma.appointment.findFirst({ where: { project: { clientId: current.id, clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } }, endsAt: { gte: now }, status: { in: ["requested", "proposed", "confirmed"] }, NOT: { status: "proposed", waitlistOffer: { is: { offerExpiresAt: { lte: now } } } } }, include: { project: { select: { id: true, title: true, status: true, kind: true } } }, orderBy: { startsAt: "asc" } }),
+    prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { version: true, acceptances: { where: { clientId: current.id }, select: { version: true, sessionSignatures: { select: { appointmentId: true } } } } } }),
     prisma.appointment.findMany({ where: { project: { clientId: current.id, clientArchivedAt: null, kind: "tattoo", status: { notIn: ["completed", "cancelled"] } }, status: { in: ["requested", "proposed", "confirmed"] }, depositStatus: "awaiting", depositAmount: { gt: 0 } }, include: { project: { select: { id: true, title: true, kind: true, status: true } } }, orderBy: [{ startsAt: "asc" }, { id: "asc" }] }),
     getDepositInstructions(),
+    prisma.appointment.findFirst({ where: { project: { clientId: current.id, kind: "tattoo" }, status: "completed", OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, orderBy: { endsAt: "desc" }, include: { project: { select: { id: true, title: true } }, loyaltyEntry: { select: { voidedAt: true } } } }),
   ]);
   const primary = projects.find(project => project.id === nextVisit?.project.id) ?? projects.find(project => project.status === "awaiting_client") ?? projects.find(project => !["completed", "cancelled"].includes(project.status)) ?? projects[0];
-  const missingConsents = documents.filter(doc => !doc.acceptances.some(a => a.version === doc.version)).length;
+  const missingConsents = nextVisit?.status === "confirmed" && nextVisit.project.kind === "tattoo" && (!nextVisit.serviceType || nextVisit.serviceType === "tattoo") ? documents.filter(doc => !doc.acceptances.some(a => a.version === doc.version && a.sessionSignatures.some(signature => signature.appointmentId === nextVisit.id))).length : 0;
   const focusProject = nextVisit?.project ?? primary;
   const action = clientNextAction(focusProject?.status, nextVisit?.status, missingConsents);
   const projectHref = `/app/portal/projects?project=${focusProject?.id ?? ""}`;
-  const visitHref = nextVisit ? `/app/portal/projects?project=${nextVisit.project.id}&appointment=${nextVisit.id}` : projectHref;
   const loyalty = await getLoyaltyCard(current.id);
   const announcements = await getClientAnnouncements(current.id);
 
@@ -47,12 +48,8 @@ export default async function ClientPortalPage({ searchParams }: { searchParams:
       <p className="studio-eyebrow">STREFA KLIENTA</p>
       <h1 className="studio-page-title">Cześć, {client.firstName}.</h1>
     </header>
-    {nextVisit && <section className="studio-hero grid items-center gap-5 sm:grid-cols-[1fr_auto]">
-      <div><p className="studio-eyebrow">TWOJA NAJBLIŻSZA WIZYTA</p><h2 className="mt-3 text-2xl font-semibold sm:text-3xl">{formatCoolinkDateTime(nextVisit.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</h2><p className="mb-3 mt-2 text-sm text-ink-grey">{nextVisit.project.title}</p><StatusBadge status={nextVisit.status} /></div>
-      <Link href={`/app/portal/projects?project=${nextVisit.project.id}&appointment=${nextVisit.id}`} className="studio-primary-link">Szczegóły wizyty <ArrowUpRight aria-hidden className="h-4 w-4" /></Link>
-    </section>}
-    {action && <section aria-label="Twój następny krok" className="studio-panel flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">{action.label}</h2>{focusProject && <p className="mt-1 text-sm text-ink-grey">{focusProject.title}</p>}</div><Link className="studio-primary-link" href={action.destination === "documents" ? "/app/portal/documents" : action.destination === "visit" ? visitHref : projectHref}>{action.destination === "documents" ? "Otwórz formularze" : action.destination === "visit" ? "Sprawdź propozycję" : "Otwórz tatuaż"} <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}
-    {nextVisit?.status === "requested" && <p role="status" className="text-sm text-ink-grey">Twoje zgłoszenie czeka na odpowiedź studia. Proponowany termin nie jest jeszcze potwierdzony.</p>}
+    {(nextVisit || latestCompleted) && <VisitJourney visit={(nextVisit ?? latestCompleted)!} missingSignatures={missingConsents} settled={Boolean(!nextVisit && latestCompleted?.loyaltyEntry && !latestCompleted.loyaltyEntry.voidedAt)} />}
+    {action?.destination === "project" && <section aria-label="Twój następny krok" className="studio-panel flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">{action.label}</h2>{focusProject && <p className="mt-1 text-sm text-ink-grey">{focusProject.title}</p>}</div><Link className="studio-primary-link" href={projectHref}>Otwórz tatuaż <ArrowUpRight aria-hidden className="h-4 w-4" /></Link></section>}
     {pendingDeposits.map(visit => <div key={visit.id} className="space-y-2"><Link href={`/app/portal/projects?project=${visit.projectId}&appointment=${visit.id}`} className="text-sm text-ink-gold">Zadatek · {visit.project.title} · {formatCoolinkDateTime(visit.startsAt)} →</Link><BlikDeposit visit={{ ...visit, projectKind: visit.project.kind, projectStatus: visit.project.status }} instructions={depositInstructions} /></div>)}
     {announcements.length > 0 && <ClientAnnouncements initial={announcements} />}
 

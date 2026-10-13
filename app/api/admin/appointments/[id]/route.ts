@@ -1,3 +1,5 @@
+import { assertLoyaltyVisitReactivation } from "@/lib/loyalty";
+import { assertVoucherVisitChange, VoucherError } from "@/lib/vouchers";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,6 +36,8 @@ export async function PATCH(request: Request, { params }: Params) {
   const changed = timeChanged || status !== appointment.status;
   const updated = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
+    await assertVoucherVisitChange(tx, id, startsAt, status, serviceType, price);
+    await assertLoyaltyVisitReactivation(tx, id, appointment.project.clientId, status);
     const settled = await tx.loyaltyEntry.findFirst({ where: { appointmentId: id, voidedAt: null } });
     if (settled && (status !== "completed" || timeChanged || price !== appointment.price || serviceType !== appointment.serviceType)) throw new Error("LOYALTY_LOCKED");
     const lockedConflict = await bookingConflict(startsAt, endsAt, id, !Boolean(body?.ignoreBuffer), tx, { serviceType, workstation });
@@ -52,7 +56,9 @@ export async function PATCH(request: Request, { params }: Params) {
     else if (["confirmed", "completed", "no_show"].includes(status)) await tx.clientNotification.create({ data: { clientId: appointment.project.clientId, projectId: appointment.projectId, appointmentId: id, type: "APPOINTMENT_UPDATED", title: status === "confirmed" ? "Wizyta potwierdzona" : "Aktualizacja wizyty", body: message, href: "/app/portal/visits" } });
     return item;
   }).catch((error: unknown) => {
-    if (error instanceof Error && error.message === "LOYALTY_LOCKED") return NextResponse.json({ error: "Wizyta jest rozliczona. Najpierw wycofaj rozliczenie w karcie lojalnościowej klienta." }, { status: 409 });
+    if (error instanceof VoucherError) return NextResponse.json({ error: error.message }, { status: 409 });
+    if (error instanceof Error && error.message === "LOYALTY_RESERVATION_UNAVAILABLE") return NextResponse.json({ error: "Pieczątki zostały już wykorzystane lub zarezerwowane w innej wizycie. Nie można przywrócić tej rezerwacji nagrody." }, { status: 409 });
+    if (error instanceof Error && error.message === "LOYALTY_LOCKED") return NextResponse.json({ error: "Wizyta jest rozliczona. Najpierw wyjaśnij rozliczenie i ewentualnie wykorzystany voucher tej wizyty." }, { status: 409 });
     if (error instanceof Error && error.message === "BOOKING_CONFLICT") return null;
     throw error;
   });
@@ -71,6 +77,7 @@ export async function DELETE(request: Request, { params }: Params) {
   const cancelled = await prisma.$transaction(async (tx) => {
     await lockBookingCalendar(tx);
     if (await tx.loyaltyEntry.findFirst({ where: { appointmentId: id, voidedAt: null } })) return false;
+    if ((await tx.voucher.findUnique({ where: { appointmentId: id }, select: { redeemedAt: true } }))?.redeemedAt) return false;
     await tx.appointment.update({ where: { id }, data: { status: "cancelled" } });
     await tx.projectActivity.create({ data: { projectId: appointment.projectId, type: "appointment_cancelled", message: "Wizyta została anulowana przez studio.", visibility: "admin" } });
     const sessions = await tx.appointment.findMany({ where: { projectId: appointment.projectId }, select: { status: true, depositStatus: true } });

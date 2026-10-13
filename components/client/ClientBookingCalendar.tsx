@@ -90,6 +90,8 @@ interface Props {
   rescheduleServiceType?: "tattoo" | "consultation";
   consents?: BookingConsent[];
   formIntro?: ReactNode;
+  loyaltyReward?: { discountPercent: number; maxDiscountCents: number };
+  initialVoucherCode?: string;
 }
 
 export default function ClientBookingCalendar({
@@ -113,6 +115,8 @@ export default function ClientBookingCalendar({
   rescheduleServiceType,
   consents = [],
   formIntro,
+  loyaltyReward,
+  initialVoucherCode,
 }: Props) {
   const router = useRouter();
   const today = dayStart(new Date());
@@ -280,6 +284,6 @@ export default function ClientBookingCalendar({
     </div>
 
     {mode === "client" && dayDetailsOpen && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle={ranges.length > 0 ? "Wybierz dostępny termin lub zobacz szczegóły wydarzenia." : "Szczegóły wydarzenia."} size={selectedEvents.some((item) => item.imageUrls?.length) ? "lg" : "sm"} onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
-    {bookingRange && <BookingRequestForm flash={flash} startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+    {bookingRange && <BookingRequestForm initialVoucherCode={initialVoucherCode} loyaltyReward={loyaltyReward} flash={flash} startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
   </>;
 }

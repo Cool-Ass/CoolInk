@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import BlikDeposit from "@/components/client/BlikDeposit";
 import type { DepositInstructions } from "@/lib/depositInstructions";
 import { depositStatusLabel } from "@/lib/workflowStatus";
@@ -21,6 +22,10 @@ type Appointment = {
   price: number | null;
   depositStatus: string;
   depositAmount: number | null;
+  voucherAmountCents?: number;
+  voucherAppliedCents?: number;
+  voucherRequested?: boolean;
+  settlement?: { paidCents: number; discountCents: number; voucherCents: number } | null;
   confirmationRequestedAt?: string | null;
   clientConfirmedAt?: string | null;
 };
@@ -109,7 +114,10 @@ export default function ClientAppointmentModal({
             )}
           </div>
         </div>
-        {projectKind === "tattoo" && <section className="mt-4 space-y-3"><p className="text-sm text-ink-grey">Zadatek: {depositStatusLabel(appointment.depositStatus)}{appointment.depositAmount !== null ? ` · ${appointment.depositAmount} zł` : ""}</p><BlikDeposit visit={{ ...appointment, projectKind, projectStatus }} instructions={depositInstructions} /></section>}
+        {!["cancelled", "no_show"].includes(appointment.status) && Boolean(appointment.voucherAmountCents) && <p className="mt-4 rounded-lg border border-emerald-400/30 p-4 text-sm text-emerald-200">Voucher: do {(appointment.voucherAmountCents! / 100).toLocaleString("pl-PL")} zł. {appointment.settlement ? `Odjęto ${(appointment.settlement.voucherCents / 100).toLocaleString("pl-PL")} zł.` : "Zostanie odjęty automatycznie przy rozliczeniu."}</p>}
+        {!["cancelled", "no_show"].includes(appointment.status) && appointment.voucherRequested && !appointment.voucherAmountCents && <p className="mt-4 text-sm text-amber-200">Studio potwierdzi voucher papierowy przed rozliczeniem.</p>}
+        {appointment.settlement && <section className="studio-panel mt-4"><h2 className="font-semibold">Rozliczenie</h2><p className="mt-2 text-sm">Opłacono: {appointment.settlement.paidCents / 100} zł{appointment.settlement.discountCents > 0 ? ` · rabat: ${appointment.settlement.discountCents / 100} zł` : ""}</p></section>}
+        {projectKind === "tattoo" && appointment.depositStatus !== "not_required" && <section className="mt-4 space-y-3"><p className="text-sm text-ink-grey">Zadatek: {depositStatusLabel(appointment.depositStatus)}{appointment.depositAmount !== null ? ` · ${appointment.depositAmount} zł` : ""}</p><BlikDeposit visit={{ ...appointment, projectKind, projectStatus }} instructions={depositInstructions} /></section>}
         <p className="mt-5 text-sm leading-relaxed text-ink-grey">
           {waitingForStudio
             ? "Studio sprawdzi szczegóły i potwierdzi termin."
@@ -127,6 +135,8 @@ export default function ClientAppointmentModal({
             endsAt={appointment.endsAt}
           />{appointment.confirmationRequestedAt && <div className="mt-4 border border-emerald-400/30 bg-emerald-400/5 p-4"><p className="text-sm text-ink-white">{attendanceConfirmed ? "Obecność potwierdzona." : "Potwierdź, że termin jest aktualny."}</p>{!attendanceConfirmed && <AppButton className="mt-3" type="button" disabled={confirmingAttendance} onClick={() => void confirmAttendance()}>{confirmingAttendance ? "POTWIERDZANIE…" : "POTWIERDZAM OBECNOŚĆ"}</AppButton>}</div>}</>
         )}
+        {appointment.status === "confirmed" && projectKind === "tattoo" && <Link className="studio-primary-link mt-4" href={`/app/portal/documents?appointment=${appointment.id}`}>Dokumenty i przygotowanie do sesji</Link>}
+        {appointment.status === "completed" && projectKind === "tattoo" && <Link className="studio-primary-link mt-4" href={`/app/portal/aftercare?appointment=${appointment.id}`}>Pielęgnacja po tej sesji</Link>}
         {canCancel && (
           <div className="mt-6 border-t border-ink-white/10 pt-5">
             <div className="flex flex-wrap gap-3">{canReschedule && <AppButton type="button" variant="secondary" onClick={() => { onClose(); router.push(`/app/portal/calendar?reschedule=${encodeURIComponent(appointment.id)}`); }}>PRZEŁÓŻ WIZYTĘ</AppButton>}<AppButton

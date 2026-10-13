@@ -1,3 +1,4 @@
+import { parseMessageReceipt } from "@/lib/messageReceipt";
 import { hideProjectMessages, messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth";
@@ -18,6 +19,7 @@ function serialize(message: {
   body: string;
   createdAt: Date;
   readAt: Date | null;
+  deliveredAt?: Date | null;
   attachment: { id: string; caption: string | null } | null;
 }, adminId: string) {
   return {
@@ -26,6 +28,7 @@ function serialize(message: {
     body: message.body,
     createdAt: message.createdAt.toISOString(),
     readAt: message.readAt?.toISOString() ?? null,
+    deliveredAt: message.deliveredAt?.toISOString() ?? null,
     attachment: message.attachment
       ? { id: message.attachment.id, caption: message.attachment.caption, url: privateImageUrl(message.attachment.id, "admin", adminId) }
       : null,
@@ -82,9 +85,14 @@ export async function PATCH(
       { error: "Projekt nie istnieje." },
       { status: 404 },
     );
-  const result = await prisma.projectMessage.updateMany({
-    where: { projectId: id, author: "client", readAt: null },
-    data: { readAt: new Date() },
+  let receipt;
+  try { receipt = await parseMessageReceipt(request); } catch { return NextResponse.json({ error: "Nieprawidłowe potwierdzenie." }, { status: 400 }); }
+  const now = new Date();
+  const scope = { ...{ projectId: id, author: "client" }, ...(receipt.ids ? { id: { in: receipt.ids } } : {}) };
+  const result = await prisma.$transaction(async tx => {
+    const delivered = await tx.projectMessage.updateMany({ where: { ...scope, deliveredAt: null }, data: { deliveredAt: now } });
+    if (receipt.state === "read") return tx.projectMessage.updateMany({ where: { ...scope, readAt: null }, data: { readAt: now } });
+    return delivered;
   });
   return NextResponse.json({ ok: true, updated: result.count });
 }
