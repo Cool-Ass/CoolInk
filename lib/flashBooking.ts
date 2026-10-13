@@ -23,4 +23,7 @@ export function validateFlashConfiguration(body: Record<string, unknown>, previo
   if (value.flashEnabled && (!size || !price)) throw Error("Dostępny Flash wymaga rozmiaru i ceny.");
   return { flashEnabled: value.flashEnabled, flashUnique: value.flashUnique, flashSize: size, flashPrice: price, flashDurationMinutes: duration, flashDepositAmount: deposit };
 }
-export const flashClaimWhere = { status: { not: "cancelled" }, OR: [{ appointments: { none: {} } }, { appointments: { some: { status: { notIn: ["cancelled", "no_show"] } } } }] };
+// A project label must never release an existing or completed tattoo claim.
+// Only a cancelled empty brief, or a brief with entirely cancelled/no-show
+// visits, can release a unique design.
+export const flashClaimWhere = { OR: [{ status: { not: "cancelled" }, appointments: { none: {} } }, { appointments: { some: { status: { notIn: ["cancelled", "no_show"] } } } }] };

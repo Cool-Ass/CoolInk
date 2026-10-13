@@ -370,6 +370,13 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   await page.goto(`/app/portal/projects?project=${booked.projectId}&appointment=${visit.id}`);
   await expect(page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true }).getByText("100 zł", { exact: true })).toBeVisible();
   await page.goto("/app/portal/flash"); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toHaveCount(0);
+  // A cancelled project label cannot make an already used unique design bookable.
+  await prisma.appointment.update({ where: { id: visit.id }, data: { status: "completed" } });
+  await prisma.tattooProject.update({ where: { id: booked.projectId }, data: { status: "cancelled" } });
+  await page.reload(); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toHaveCount(0);
+  // Restore only this disposable fixture before testing other independent flows.
+  await prisma.tattooProject.update({ where: { id: booked.projectId }, data: { status: "awaiting_confirmation" } });
+  await prisma.appointment.update({ where: { id: visit.id }, data: { status: "requested" } });
   const uiFlash = await prisma.portfolioItem.create({ data: { title: `UI Flash ${randomUUID()}`, description: "Gotowy wzór rezerwowany w kreatorze", imageUrl: "/images/logo-white.jpg", published: true, flashEnabled: true, flashUnique: true, flashPrice: 600, flashSize: "8 cm", flashDurationMinutes: 60 } }); flashIds.push(uiFlash.id);
   const uiStart = new Date(when.getTime() + 5 * 86400000);
   const uiSlot = await prisma.availableSlot.create({ data: { startsAt: uiStart, endsAt: new Date(uiStart.getTime() + 3600000), isPublic: true, title: "Flash UI fixture" } }); flashSlotIds.push(uiSlot.id);

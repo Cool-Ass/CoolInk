@@ -12,7 +12,8 @@ describe("Flash configuration", () => {
     expect(() => validateFlashConfiguration({ ...config, ...patch })).toThrow();
   });
   it("leaves claimed and completed projects unavailable, but releases entirely cancelled sessions", () => {
-    expect(flashClaimWhere).toEqual({ status: { not: "cancelled" }, OR: [{ appointments: { none: {} } }, { appointments: { some: { status: { notIn: ["cancelled", "no_show"] } } } }] });
+    expect(flashClaimWhere).toEqual({ OR: [{ status: { not: "cancelled" }, appointments: { none: {} } }, { appointments: { some: { status: { notIn: ["cancelled", "no_show"] } } } }] });
+    expect(flashClaimWhere.OR[1]).not.toHaveProperty("status");
   });
 });
 describe("Flash claim within canonical booking transaction", () => {

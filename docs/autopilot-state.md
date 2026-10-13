@@ -62,6 +62,9 @@
   error-context proves it stayed on the login screen, not a SQL/page failure.
   Added URL/session completion assertion after login in new F/E/D cases.
   No auth bypass or relaxed assertions. Final CI must cover the corrected head.
+- Unique-design review: project cancellation no longer overrides an active or
+  completed appointment claim. Added DB/browser regression and retained release
+  only for cancelled empty briefs or entirely cancelled/no-show visits.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;
