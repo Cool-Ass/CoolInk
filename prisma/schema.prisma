@@ -349,6 +349,7 @@ model AssistantDraft {
 model Appointment {
   promotionId String?
   promotion Promotion? @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  @@index([promotionId])
   id                 String                   @id @default(cuid())
   projectId          String
   project            TattooProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)

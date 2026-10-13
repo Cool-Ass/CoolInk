@@ -386,17 +386,32 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test("business reports execute historical return, hourly receipts, promotion attribution and forecasts", async ({ page }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Report fixture", description: "Isolated business reporting" } });
+  const startsAt = new Date(Date.now() - 10 * 86400000), endsAt = new Date(startsAt.getTime() + 7200000);
+  const promotion = await prisma.promotion.create({ data: { title: `Report promotion ${randomUUID()}`, startsAt, endsAt, active: false, isPublic: false } }); campaignIds.push(promotion.id);
+  const visit = await prisma.appointment.create({ data: { projectId: project.id, promotionId: promotion.id, startsAt, endsAt, status: "completed", price: 1400 } });
+  await prisma.loyaltyEntry.create({ data: { appointmentId: visit.id, clientId: client.id, key: `report-${randomUUID()}`, kind: "visit", stamps: 0, paidCents: 140000, grossCents: 140000, note: "Disposable reporting fixture", adminId } });
+  const old = new Date(Date.now() - 200 * 86400000);
+  await prisma.appointment.create({ data: { projectId: project.id, startsAt: old, endsAt: new Date(old.getTime() + 7200000), status: "completed" } });
+  const future = new Date(Date.now() + 20 * 86400000);
+  await prisma.appointment.create({ data: { projectId: project.id, startsAt: future, endsAt: new Date(future.getTime() + 7200000), status: "confirmed", price: 1400, depositStatus: "paid", depositAmount: 300 } });
+  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await page.goto("/admin/statistics?period=90"); await expect(page.getByRole("heading", { name: "Statystyki operacyjne", exact: true })).toBeVisible();
+  await expect(page.getByText("WPŁYW NA GODZINĘ SESJI", { exact: true })).toBeVisible(); await expect(page.getByText("PROGNOZA DOPŁAT · 30 DNI", { exact: true })).toBeVisible();
+  const row = page.getByRole("row").filter({ hasText: promotion.title }); await expect(row).toContainText("100%"); await expect(row).toContainText(/1\s?400/);
+});
+
 test("marketing prepares editable dated campaigns and approval never publishes or broadcasts", async ({ page }) => {
   const startsAt = new Date(); startsAt.setUTCDate(startsAt.getUTCDate() + 55); startsAt.setUTCHours(10, 0, 0, 0);
   const endsAt = new Date(startsAt.getTime() + 7200000);
   const free = await prisma.availableSlot.create({ data: { startsAt, endsAt, isPublic: true, title: "Marketing fixture" } }); flashSlotIds.push(free.id);
-  await page.goto("/admin/login"); await page.getByLabel("E-MAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO PANELU", exact: true }).click();
+  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
   await page.goto("/admin/marketing");
-  const local = value => { const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
   const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   // Browser context timezone is used for datetime-local, not the worker's zone.
   const inputDate = value => new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(value).replace(" ", "T");
-  void local;
   await page.getByLabel("Tytuł oferty", { exact: true }).fill("Marketing isolated campaign");
   await page.getByLabel("Początek terminu", { exact: true }).fill(inputDate(startsAt)); await page.getByLabel("Koniec terminu", { exact: true }).fill(inputDate(endsAt)); await page.getByLabel("Proponowany rabat (%)", { exact: true }).fill("10");
   await page.getByRole("button", { name: "Wygeneruj i zapisz szkic kampanii", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Nic nie opublikowano");
@@ -411,7 +426,7 @@ test("assistant tools persist private drafts without delivering client messages"
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Assistant isolated fixture", description: "Unsent draft test" } });
   const before = await prisma.projectMessage.count({ where: { projectId: project.id } });
-  await page.goto("/admin/login"); await page.getByLabel("E-MAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO PANELU", exact: true }).click();
+  await page.goto("/admin/login"); await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
   await page.goto("/admin/assistant"); await expect(page.getByRole("heading", { name: "Asystent AI", exact: true })).toBeVisible();
   await page.getByLabel("Narzędzie", { exact: true }).selectOption("message_draft"); await page.getByLabel("ID projektu", { exact: true }).fill(project.id); await page.getByRole("button", { name: "Uruchom narzędzie", exact: true }).click();
   await expect(page.getByLabel("Szkic — sprawdź przed użyciem", { exact: true })).toHaveValue(/Assistant isolated fixture/);

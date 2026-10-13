@@ -28,14 +28,14 @@ export async function assistantFreeDates(now: Date, until: Date, durationMinutes
     if (slot.title?.toLocaleUpperCase("pl-PL") === "KONSULTACJA") continue;
     const first = Math.ceil(Math.max(slot.startsAt.getTime(), now.getTime() + 1) / 1800000) * 1800000;
     for (let time = first; time + durationMinutes * 60000 <= Math.min(slot.endsAt.getTime(), until.getTime()); time += 1800000) {
-      if (probes >= 96 || results.length >= 20) break;
+      if (probes >= 24 || results.length >= 20) break;
       if (seen.has(time)) continue; seen.add(time); probes++;
       const startsAt = new Date(time), endsAt = new Date(time + durationMinutes * 60000);
       if ((await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, prisma, { serviceType: "tattoo", durationMinutes })).ok) { results.push({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), label: formatCoolinkDateTime(startsAt) }); break; }
     }
-    if (probes >= 96 || results.length >= 20) break;
+    if (probes >= 24 || results.length >= 20) break;
   }
-  return { dates: results, partial: probes >= 96 || slots.length === 32 || results.length >= 20 };
+  return { dates: results, partial: probes >= 24 || slots.length === 32 || results.length >= 20 };
 }
 export async function runAssistantTool(role: string, value: unknown) {
   const input = assistantInput(value);

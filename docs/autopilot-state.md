@@ -30,7 +30,16 @@
   rabatów; edycja/approval z optimistic lock i audytem. Reużycie Promotion,
   draft/rejected prywatne i nieaktywne także w DB; approval nie publikuje.
   Kod promocji przypisuje nowe zgłoszenie do istniejącej oferty bez zmiany ceny.
-  Lokalnie16 testów/typecheck PASS; E2E dodane, pending. F pending.
+  Lokalnie16 testów/typecheck PASS; E2E dodane, pending.
+- F IMPLEMENTED: rozszerzone istniejące statystyki o kodowe przypisanie promocji,
+  wpływ na godzinę rozliczonej sesji, prognozę dopłat (bez podwójnego zadatku);
+  powracający uwzględniają wcześniejsze wizyty poza okresem. Obłożenie już było
+  dostępne — bez duplikatu. Brak powodów anulowania/wyświetleń/kosztów reklam
+  jawnie oznaczony, bez domyślnych atrybucji/ROI. Lokalnie4 testy PASS.
+- Końcowa walidacja w toku: pełne602 testy/106 plików, typecheck i Turbopack
+  build PASS. Font PDF obecny w trace. Lint0errors/19warnings (głównie istniejące
+  obrazy). Review ograniczył sondowanie terminów i agreguje segmenty w SQL;
+  nowy index promotionId. Izolowane CI/HTTP/RLS/browser pending.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

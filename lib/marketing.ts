@@ -9,17 +9,23 @@ export function marketingSegment(visits: number, lastVisit: Date | null, now: Da
   return visits >= 2 ? "returning" : "first_visit";
 }
 export async function marketingSegments(now = new Date()) {
-  const rows = await prisma.$queryRaw<{ visits: number; lastVisit: Date | null }[]>`
-    SELECT count(a.id)::int AS visits, max(a."startsAt") AS "lastVisit"
-    FROM "Client" c
-    LEFT JOIN "TattooProject" p ON p."clientId" = c.id AND p.kind = 'tattoo'
-    LEFT JOIN "Appointment" a ON a."projectId" = p.id AND a.status = 'completed' AND a."startsAt" <= ${now}
-    WHERE NOT EXISTS (SELECT 1 FROM "AccountDeletionRequest" r WHERE r."clientId" = c.id)
-    GROUP BY c.id
+  const cutoff = new Date(now.getTime() - 180 * 86400000);
+  const rows = await prisma.$queryRaw<{ no_visits: number; first_visit: number; returning: number; dormant: number }[]>`
+    WITH history AS (
+      SELECT c.id, count(a.id)::int AS visits, max(a."startsAt") AS last_visit
+      FROM "Client" c
+      LEFT JOIN "TattooProject" p ON p."clientId" = c.id AND p.kind = 'tattoo'
+      LEFT JOIN "Appointment" a ON a."projectId" = p.id AND a.status = 'completed' AND a."startsAt" <= ${now}
+      WHERE NOT EXISTS (SELECT 1 FROM "AccountDeletionRequest" r WHERE r."clientId" = c.id)
+      GROUP BY c.id
+    )
+    SELECT count(*) FILTER (WHERE visits = 0)::int AS no_visits,
+      count(*) FILTER (WHERE visits = 1 AND last_visit >= ${cutoff})::int AS first_visit,
+      count(*) FILTER (WHERE visits >= 2 AND last_visit >= ${cutoff})::int AS returning,
+      count(*) FILTER (WHERE visits > 0 AND last_visit < ${cutoff})::int AS dormant
+    FROM history
   `;
-  const segments = { no_visits: 0, first_visit: 0, returning: 0, dormant: 0 };
-  rows.forEach(row => segments[marketingSegment(row.visits, row.lastVisit, now)]++);
-  return segments;
+  return rows[0] || { no_visits: 0, first_visit: 0, returning: 0, dormant: 0 };
 }
 export function campaignInput(value: unknown, now = new Date()) {
   if (!value || typeof value !== "object") throw Error("Sprawdź ofertę.");
