@@ -19,7 +19,12 @@
   QR i lista brakujących zgód admina, archiwum klienta. Nowa tabela z RLS,
   privacy guard i zakazem modyfikacji; usunięcie sesji zachowuje archiwum.
   Lokalnie18 nowych testów/typecheck PASS, lint0errors; E2E dodane, pending.
-  D–F pending. Migracje nieuruchomione; brak merge/publikacji nowych modułów.
+  Migracje nieuruchomione; brak merge/publikacji nowych modułów.
+- D IMPLEMENTED, walidacja w toku: zakładka Asystent AI, typowana allowlista
+  readonly narzędzi (wspólna bramka dostępności), per-tool RBAC i limity,
+  stan bez providera, lokalne szablony bez zewnętrznego AI. Prywatne szkice
+  poza strumieniem wiadomości, RLS/privacy guard i kasowanie przy erasure.
+  Lokalnie10 testów/typecheck PASS; E2E dodane, pending. E–F pending.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

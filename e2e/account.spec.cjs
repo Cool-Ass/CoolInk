@@ -384,6 +384,19 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test("assistant tools persist private drafts without delivering client messages", async ({ page }) => {
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Assistant isolated fixture", description: "Unsent draft test" } });
+  const before = await prisma.projectMessage.count({ where: { projectId: project.id } });
+  await page.goto("/admin/login"); await page.getByLabel("E-MAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO PANELU", exact: true }).click();
+  await page.goto("/admin/assistant"); await expect(page.getByRole("heading", { name: "Asystent AI", exact: true })).toBeVisible();
+  await page.getByLabel("Narzędzie", { exact: true }).selectOption("message_draft"); await page.getByLabel("ID projektu", { exact: true }).fill(project.id); await page.getByRole("button", { name: "Uruchom narzędzie", exact: true }).click();
+  await expect(page.getByLabel("Szkic — sprawdź przed użyciem", { exact: true })).toHaveValue(/Assistant isolated fixture/);
+  await page.getByRole("button", { name: "Zapisz szkic bez wysyłania", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Nic nie wysłano");
+  expect(await prisma.assistantDraft.count({ where: { projectId: project.id, adminUserId: adminId } })).toBe(1); expect(await prisma.projectMessage.count({ where: { projectId: project.id } })).toBe(before);
+  await page.reload(); await expect(page.getByText(project.title, { exact: true })).toBeVisible();
+});
+
 test("session consents support handwritten signatures, immutable PDFs and appointment ownership", async ({ page, browser }) => {
   const client = await prisma.client.findUniqueOrThrow({ where: { email } });
   const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: "Signature fixture", description: "Isolated consent flow" } });

@@ -283,6 +283,7 @@ model SessionDocumentSignature {
 /// A tattoo brief is the central operational record. Appointments, deposits,
 /// client messages and documents will attach to this entity in later phases.
 model TattooProject {
+  assistantDrafts AssistantDraft[]
   clientArchivedAt     DateTime?
   id                   String            @id @default(cuid())
   clientId             String
@@ -328,6 +329,19 @@ model TattooProject {
   @@index([clientId, clientArchivedAt])
   @@index([leadSource, createdAt])
   @@index([nextActionDueAt])
+}
+
+/// Private, unsent staff drafts. Never part of the client message stream.
+model AssistantDraft {
+  id String @id @default(cuid())
+  projectId String
+  project TattooProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId String
+  adminUserId String
+  body String
+  createdAt DateTime @default(now())
+  @@index([adminUserId, createdAt])
+  @@index([clientId])
 }
 
 /// Appointments are kept separately from a project because a larger tattoo

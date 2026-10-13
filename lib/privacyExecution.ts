@@ -102,6 +102,8 @@ export async function executePrivacyRequest(id: string, ownerId: string | null, 
       const stored = await tx.siteSetting.findUnique({ where: { key: jobKey(id) } });
       if ((JSON.parse(stored?.value || "null") as Job)?.lease !== lease) throw new Error("Zmieniony dziennik wykonania.");
       const projects = { project: { clientId: job.clientId } };
+      // Unsent assistant text is operational, never retained legal evidence.
+      await tx.assistantDraft.deleteMany({ where: { clientId: job.clientId } });
       if (!keep.has("chat")) {
         await tx.projectMessage.deleteMany({ where: projects });
         if (keep.has("inspirations")) {
