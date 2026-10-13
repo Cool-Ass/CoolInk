@@ -999,6 +999,7 @@ test("voucher issuance, focused booking, automatic settlement and truthful messa
     expect(delivered.status).toBe(200);
     await adminPage.reload(); await expect(own.getByRole("img", { name: "Dostarczono do rozmówcy", exact: true })).toBeVisible();
     expect((await prisma.directMessage.findUniqueOrThrow({ where: { id: message.id } })).readAt).toBeNull();
+    await page.bringToFront();
     await page.goto("/app/portal/messages");
     await page.getByRole("button").filter({ hasText: "Wiadomość ogólna" }).first().click();
     await expect.poll(async () => Boolean((await prisma.directMessage.findUniqueOrThrow({ where: { id: message.id } })).readAt)).toBe(true);

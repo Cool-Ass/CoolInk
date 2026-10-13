@@ -5,6 +5,9 @@ ALTER TABLE "Voucher" ADD CONSTRAINT "Voucher_values_check" CHECK (
  "amountCents" BETWEEN 1 AND 100000000 AND "appliedCents" BETWEEN 0 AND "amountCents"
  AND (("redeemedAt" IS NULL AND "appliedCents" = 0) OR ("redeemedAt" IS NOT NULL AND "appointmentId" IS NOT NULL AND "clientId" IS NOT NULL AND "appliedCents" > 0))
 );
+-- Existing paid = gross - discount settlements remain valid with voucherCents = 0.
+ALTER TABLE "LoyaltyEntry" DROP CONSTRAINT IF EXISTS "LoyaltyEntry_amounts_check";
+ALTER TABLE "LoyaltyEntry" ADD CONSTRAINT "LoyaltyEntry_amounts_check" CHECK ("grossCents" >= 0 AND "discountCents" BETWEEN 0 AND "grossCents" AND "paidCents" >= 0 AND "paidCents" = "grossCents" - "discountCents" - "voucherCents");
 ALTER TABLE "LoyaltyEntry" ADD CONSTRAINT "LoyaltyEntry_voucher_check" CHECK ("voucherCents" >= 0 AND "voucherCents" <= "grossCents" AND ("voucherCents" = 0 OR "discountCents" = 0));
 CREATE TRIGGER coolink_privacy_guard BEFORE INSERT OR UPDATE OR DELETE ON "Voucher" FOR EACH ROW EXECUTE FUNCTION public.coolink_privacy_write_guard();
 CREATE OR REPLACE FUNCTION public.coolink_voucher_guard() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$

@@ -21,12 +21,12 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
   if (!admin) redirect("/admin/login");
   const visible = visibleMessages(messageRecipient("admin", admin.id));
   const [client, messageTemplates] = await Promise.all([
-    prisma.client.findUnique({ where: { id }, include: { directMessages: { where: visible, orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, images: { orderBy: { createdAt: "asc" } }, messages: { where: visible, include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
+    prisma.client.findUnique({ where: { id }, include: { directMessages: { where: visible, orderBy: { createdAt: "asc" }, take: 200 }, projects: { orderBy: { updatedAt: "desc" }, include: { appointments: { orderBy: { startsAt: "asc" } }, activities: { orderBy: { createdAt: "desc" }, take: 100 }, images: { where: { kind: "inspiration" }, orderBy: { createdAt: "asc" } }, messages: { where: visible, include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 200 } } } } }),
     getMessageTemplates(),
   ]);
   if (!client) notFound();
   const loyalty = await getLoyaltyCard(id);
-  const unsettled = await prisma.appointment.findMany({ where: { project: { clientId: id, kind: { not: "consultation" } }, status: { in: ["confirmed", "completed"] }, startsAt: { lte: new Date() }, loyaltyEntry: null, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { voucher: { select: { amountCents: true } }, project: { select: { title: true } } }, orderBy: { startsAt: "desc" } });
+  const unsettled = hasAdminPermission(admin.role, "finance.manage") ? await prisma.appointment.findMany({ where: { project: { clientId: id, kind: { not: "consultation" } }, status: { in: ["confirmed", "completed"] }, startsAt: { lte: new Date() }, loyaltyEntry: null, OR: [{ serviceType: null }, { serviceType: "tattoo" }] }, include: { voucher: { select: { amountCents: true } }, project: { select: { title: true } } }, orderBy: { startsAt: "desc" } }) : [];
 
   const projects = client.projects.map((project) => ({
     id: project.id,

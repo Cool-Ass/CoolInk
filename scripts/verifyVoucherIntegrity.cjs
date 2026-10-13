@@ -19,20 +19,28 @@ async function migration() {
     await tx.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${schema}"`);
     for (const sql of ['CREATE TABLE "Client" (id TEXT PRIMARY KEY)', 'CREATE TABLE "Appointment" (id TEXT PRIMARY KEY, price INTEGER)',
-      'CREATE TABLE "LoyaltyEntry" (id TEXT PRIMARY KEY, "paidCents" INTEGER)',
       'CREATE TABLE "ProjectMessage" (id TEXT PRIMARY KEY, "readAt" TIMESTAMP(3))',
       'CREATE TABLE "DirectMessage" (id TEXT PRIMARY KEY, "readAt" TIMESTAMP(3))']) await tx.$executeRawUnsafe(sql);
+    // Start from the real historical ledger constraints, not just Prisma db push.
+    for (const name of ["20260919180000_loyalty_ledger", "20260920090000_configurable_loyalty"]) for (const sql of readFileSync(`prisma/migrations/${name}/migration.sql`, "utf8").split(";").map(x => x.trim()).filter(Boolean)) await tx.$executeRawUnsafe(sql);
+    await tx.$executeRawUnsafe('INSERT INTO "Client" VALUES (\'old\')');
     await tx.$executeRawUnsafe('INSERT INTO "Appointment" VALUES (\'old\', 700)');
-    await tx.$executeRawUnsafe('INSERT INTO "LoyaltyEntry" VALUES (\'old\', 70000)');
+    await tx.$executeRawUnsafe(`INSERT INTO "LoyaltyEntry" (id, "clientId", key, kind, stamps, "grossCents", "paidCents", note, "adminId") VALUES ('old', 'old', 'old', 'visit', 1, 70000, 70000, 'Historical payment', 'fixture')`);
     await tx.$executeRawUnsafe('INSERT INTO "ProjectMessage" VALUES (\'old\', \'2026-01-01\')');
     for (const name of ["20261014010000_message_delivery", "20261014020000_vouchers"]) {
       const sql = readFileSync(`prisma/migrations/${name}/migration.sql`, "utf8");
       for (const statement of sql.split(";").map(x => x.trim()).filter(Boolean)) await tx.$executeRawUnsafe(statement);
     }
+    const guards = readFileSync("prisma/migrations/20261014020500_voucher_guards/migration.sql", "utf8");
+    for (const statement of guards.split(";").map(x => x.trim()).filter(x => /ALTER TABLE "LoyaltyEntry"/.test(x))) await tx.$executeRawUnsafe(statement);
     const [visit] = await tx.$queryRawUnsafe('SELECT * FROM "Appointment"');
     assert.deepEqual(visit, { id: "old", price: 700, voucherRequested: false, loyaltyReserved: false, loyaltyReservation: null });
-    const [entry] = await tx.$queryRawUnsafe('SELECT * FROM "LoyaltyEntry"');
-    assert.deepEqual(entry, { id: "old", paidCents: 70000, voucherCents: 0 });
+    const [entry] = await tx.$queryRawUnsafe('SELECT id, "grossCents", "discountCents", "paidCents", "voucherCents" FROM "LoyaltyEntry"');
+    assert.deepEqual(entry, { id: "old", grossCents: 70000, discountCents: 0, paidCents: 70000, voucherCents: 0 });
+    await tx.$executeRawUnsafe('UPDATE "LoyaltyEntry" SET "voucherCents" = 30000, "paidCents" = 40000');
+    await tx.$executeRawUnsafe("SAVEPOINT invalid_receipt");
+    let invalid = false; try { await tx.$executeRawUnsafe('UPDATE "LoyaltyEntry" SET "paidCents" = 70000'); } catch { invalid = true; }
+    await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT invalid_receipt"); assert(invalid, "Voucher credit must not be counted as cash received");
     const [message] = await tx.$queryRawUnsafe('SELECT * FROM "ProjectMessage"');
     assert.equal(message.deliveredAt, null); assert.equal(message.readAt.toISOString(), "2026-01-01T00:00:00.000Z");
     throw rollback;
@@ -97,4 +105,3 @@ async function main() {
   }
 }
 main().catch(() => { console.error("Voucher integrity verification failed at " + stage); process.exitCode = 1; }).finally(() => prisma.$disconnect());
-
