@@ -18,6 +18,7 @@ const announcementIds = [];
 const announcementMedia = [];
 const mediaLayoutIds = [];
 const flashIds = [], flashSlotIds = [];
+const campaignIds = [];
 
 async function verifyCalendarPresentation(page) {
   const monthSwitch = page.getByRole("button", { name: "Miesiąc", exact: true });
@@ -85,6 +86,7 @@ test.afterAll(async () => {
   await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
   if (fixture) await prisma.tattooProject.updateMany({ where: { clientId: fixture.id }, data: { depositAssignedAppointmentId: null } });
   await prisma.client.deleteMany({ where: { email } });
+  await prisma.promotion.deleteMany({ where: { id: { in: campaignIds } } });
   await prisma.portfolioItem.deleteMany({ where: { id: { in: flashIds } } });
   await prisma.availableSlot.deleteMany({ where: { id: { in: flashSlotIds } } });
   for (const id of announcementIds) {
@@ -382,6 +384,27 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click(); expect((await created).status()).toBe(201);
   expect(await prisma.tattooProject.count({ where: { flashPortfolioId: uiFlash.id } })).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("marketing prepares editable dated campaigns and approval never publishes or broadcasts", async ({ page }) => {
+  const startsAt = new Date(); startsAt.setUTCDate(startsAt.getUTCDate() + 55); startsAt.setUTCHours(10, 0, 0, 0);
+  const endsAt = new Date(startsAt.getTime() + 7200000);
+  const free = await prisma.availableSlot.create({ data: { startsAt, endsAt, isPublic: true, title: "Marketing fixture" } }); flashSlotIds.push(free.id);
+  await page.goto("/admin/login"); await page.getByLabel("E-MAIL", { exact: true }).fill(`admin-${email}`); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO PANELU", exact: true }).click();
+  await page.goto("/admin/marketing");
+  const local = value => { const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+  const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  // Browser context timezone is used for datetime-local, not the worker's zone.
+  const inputDate = value => new Intl.DateTimeFormat("sv-SE", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(value).replace(" ", "T");
+  void local;
+  await page.getByLabel("Tytuł oferty", { exact: true }).fill("Marketing isolated campaign");
+  await page.getByLabel("Początek terminu", { exact: true }).fill(inputDate(startsAt)); await page.getByLabel("Koniec terminu", { exact: true }).fill(inputDate(endsAt)); await page.getByLabel("Proponowany rabat (%)", { exact: true }).fill("10");
+  await page.getByRole("button", { name: "Wygeneruj i zapisz szkic kampanii", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Nic nie opublikowano");
+  const campaign = await prisma.promotion.findFirstOrThrow({ where: { title: "Marketing isolated campaign" } }); campaignIds.push(campaign.id); expect(campaign.campaignStatus).toBe("draft"); expect(campaign.active).toBe(false); expect(campaign.isPublic).toBe(false);
+  await page.getByRole("button", { name: "Edytuj szkic", exact: true }).click(); await page.getByLabel("Treść promocji", { exact: true }).fill("Zredagowany post testowy"); await page.getByRole("button", { name: "Zapisz zmiany szkicu", exact: true }).click(); await expect.poll(async () => (await prisma.promotion.findUniqueOrThrow({ where: { id: campaign.id } })).campaignCaption).toBe("Zredagowany post testowy");
+  page.once("dialog", dialog => dialog.accept()); await page.getByRole("button", { name: "Zatwierdź bez publikacji", exact: true }).click(); await expect(page.getByRole("status")).toContainText("Zatwierdzono");
+  const approved = await prisma.promotion.findUniqueOrThrow({ where: { id: campaign.id } }); expect(approved.campaignStatus).toBe("approved"); expect(approved.active).toBe(false); expect(approved.isPublic).toBe(false); expect(approved.campaignApprovedBy).toBe(adminId);
+  expect(await prisma.clientNotification.count({ where: { type: { contains: campaign.id } } })).toBe(0);
 });
 
 test("assistant tools persist private drafts without delivering client messages", async ({ page }) => {

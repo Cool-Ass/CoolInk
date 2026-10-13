@@ -18,7 +18,7 @@ export async function GET() {
   const [hours, blocks, promotions, buffer] = await Promise.all([
     prisma.workingHours.findMany({ orderBy: { weekday: "asc" } }),
     prisma.availabilityBlock.findMany({ where: { endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }),
-    prisma.promotion.findMany({ where: { endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }),
+    prisma.promotion.findMany({ where: { OR: [{ campaignStatus: null }, { campaignStatus: "approved" }], endsAt: { gte: new Date() } }, orderBy: { startsAt: "asc" } }),
     prisma.siteSetting.findUnique({ where: { key: "booking_buffer_minutes" }, select: { value: true } }),
   ]);
   return NextResponse.json({ hours: hours.length ? hours : defaultHours, blocks, promotions, bufferMinutes: Number(buffer?.value) || 30 });

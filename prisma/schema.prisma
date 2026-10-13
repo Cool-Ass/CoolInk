@@ -347,6 +347,8 @@ model AssistantDraft {
 /// Appointments are kept separately from a project because a larger tattoo
 /// can require several sessions. Availability blocks use the same time range model.
 model Appointment {
+  promotionId String?
+  promotion Promotion? @relation(fields: [promotionId], references: [id], onDelete: Restrict)
   id                 String                   @id @default(cuid())
   projectId          String
   project            TattooProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -611,6 +613,14 @@ model WorkingHoursOverride {
 /// deliberately independent from appointments so they can be safely shown
 /// to the client without exposing any appointment data.
 model Promotion {
+  appointments Appointment[]
+  campaignStatus String?
+  campaignAudience String?
+  campaignCaption String?
+  campaignStory String?
+  suggestedDiscountPercent Int?
+  campaignApprovedAt DateTime?
+  campaignApprovedBy String?
   id          String   @id @default(cuid())
   title       String
   description String?

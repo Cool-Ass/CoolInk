@@ -24,7 +24,13 @@
   readonly narzędzi (wspólna bramka dostępności), per-tool RBAC i limity,
   stan bez providera, lokalne szablony bez zewnętrznego AI. Prywatne szkice
   poza strumieniem wiadomości, RLS/privacy guard i kasowanie przy erasure.
-  Lokalnie10 testów/typecheck PASS; E2E dodane, pending. E–F pending.
+  Lokalnie10 testów/typecheck PASS; E2E dodane, pending.
+- E IMPLEMENTED, walidacja w toku: wykrywanie dostępnych terminów przez wspólną
+  bramkę, rozłączne segmenty historii, szkice ofert/posta/relacji i propozycje
+  rabatów; edycja/approval z optimistic lock i audytem. Reużycie Promotion,
+  draft/rejected prywatne i nieaktywne także w DB; approval nie publikuje.
+  Kod promocji przypisuje nowe zgłoszenie do istniejącej oferty bez zmiany ceny.
+  Lokalnie16 testów/typecheck PASS; E2E dodane, pending. F pending.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;
