@@ -15,6 +15,18 @@ import { resolveBookingPromotion } from "@/lib/marketing";
 import { resolveFlashBooking } from "@/lib/flashBookingServer";
 
 export async function POST(request: Request) {
+  try { return await bookAppointment(request); }
+  catch (error) {
+    // Never return/log ORM messages: they can contain client data or URLs.
+    const raw = error && typeof error === "object" && "code" in error ? error.code : null;
+    const code = typeof raw === "string" && /^P\d{4}$/.test(raw) ? raw : "WITHHELD";
+    const errorCode = code === "P2028" ? "BOOKING_TRANSACTION_TIMEOUT" : code === "P2024" ? "BOOKING_POOL_TIMEOUT" : ["P1001", "P1017"].includes(code) ? "BOOKING_DATABASE_UNAVAILABLE" : "BOOKING_SAVE_FAILED";
+    console.error("appointment_booking_failed", { code });
+    return NextResponse.json({ error: "Nie udało się zapisać rezerwacji. Odśwież kalendarz i spróbuj ponownie.", errorCode }, { status: 503 });
+  }
+}
+
+async function bookAppointment(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const limit = await rateLimit(request, "appointment-request", 20, 60 * 60 * 1000);
   if (!limit.allowed) return tooManyRequests(limit);

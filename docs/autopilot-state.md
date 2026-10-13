@@ -77,6 +77,12 @@
   New modules now get independent disposable owner fixtures with actual UI login
   and exact cleanup; no rate reset, cookie injection or production auth changes.
   Final whole-suite/mobile verification still required.
+- CI2a4a0fb: all12 desktop scenarios PASS; first mobile booking returned an
+  unclassified500 (no server log artifact). Cause not yet established; no
+  assertion bypass or retry. Added safe booking failure classification/503
+  boundary (ORM codes only, never messages/URLs/PII) and six passing unit tests.
+  Browser assertion now records only the fixed error code on failure.
+  Next exact-head CI must establish whether timeout/pool/provider failure repeats.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

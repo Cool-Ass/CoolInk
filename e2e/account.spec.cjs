@@ -216,8 +216,8 @@ test("client login, own project navigation and logout", async ({ page }) => {
   const bookedResponse = page.waitForResponse((response) => response.url().endsWith("/api/client/appointments") && response.request().method() === "POST");
   await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click();
   const booked = await bookedResponse;
-  expect(booked.status()).toBe(201);
-  const booking = await booked.json();
+  const booking = await booked.json().catch(() => ({ errorCode: "BOOKING_NON_JSON_RESPONSE" }));
+  expect(booked.status(), booking.errorCode || "BOOKING_HTTP_STATUS").toBe(201);
   await page.goto(`/app/portal/projects?project=${booking.projectId}&appointment=${booking.appointment.id}`);
   await page.getByRole("button", { name: "ANULUJ TĘ WIZYTĘ", exact: true }).click();
   await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
