@@ -119,6 +119,13 @@ model PortfolioItem {
   tags        String? // comma-separated
   order       Int      @default(0)
   published   Boolean  @default(true)
+  flashEnabled Boolean @default(false)
+  flashUnique Boolean @default(true)
+  flashSize String?
+  flashPrice Int?
+  flashDurationMinutes Int @default(120)
+  flashDepositAmount Int?
+  flashProjects TattooProject[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -261,6 +268,8 @@ model TattooProject {
   clientArchivedAt     DateTime?
   id                   String            @id @default(cuid())
   clientId             String
+  flashPortfolioId     String?
+  flashPortfolio       PortfolioItem? @relation(fields: [flashPortfolioId], references: [id], onDelete: Restrict)
   client               Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
   title                String
   description          String
@@ -297,6 +306,7 @@ model TattooProject {
   waitlistEntry        WaitlistEntry?
 
   @@index([kind, status, updatedAt])
+  @@index([flashPortfolioId])
   @@index([clientId, clientArchivedAt])
   @@index([leadSource, createdAt])
   @@index([nextActionDueAt])

@@ -1,5 +1,24 @@
 # Autopilot — 2026-10-13
 
+## FEATURE DELIVERY — aktualny run
+
+- Zlecenie: tekst FEATURE DELIVERY od właściciela,13Oct2026. Branch
+  ai/feature-delivery-20261013, baseacd7cb1. Bez automatycznego merge,
+  produkcyjnych migracji, zmian rozliczeń i aktywacji płatnych usług.
+- A IMPLEMENTING: rozszerzenie PortfolioItem; TattooProject wskazuje wzór.
+  Jeden kalendarz, obecne zgody/zadatki, wspólny lock rezerwacji/edycji wzoru,
+  version check ceny, blokada unikatów i zachowanie historii. B–F pending.
+- Granice: B proces po Appointment.completed z obecnymi powiadomieniami
+  i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
+  D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;
+  F agregaty obecnych rozliczeń. Kolejność A→B→C→D→E→F.
+  Skalowanie: batch/idempotency automatyzacji i paginacja; MCP/provider później,
+  bez własnego frameworka. Addytywne migracje wyłącznie przygotowane lokalnie.
+- PR54 DONE: produkcjaacd7cb1 zawiera zadatki wizyt; smoke/obserwacja
+  07:50–08:05UTC PASS, Error0%/Timeout0%. Dowody1767d56 na evidence branchu.
+
+## Historyczny run listy oczekujących (zakończony PR55)
+
 - Run: przeprowad-audyt-ui-ux-aplikacji / 01a1334a-fc98-7bc2-ad41-7a20cdb15d13.
 - Base: ab52372dcca198f9f0c56859e892b2d66057abbf; initial code d24b0c0e563216ce4eb9d55e0a896afc06a4eb14; branch ai/waitlist-integrity-20261013, PR55.
 - VERIFYING PR55: WAITLIST-INTEGRITY-20261013, MEDIUM (existing booking behavior; no schema/auth/finance changes).

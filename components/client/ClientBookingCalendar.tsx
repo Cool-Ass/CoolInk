@@ -10,6 +10,7 @@ import AppModal from "@/components/ui/AppModal";
 import { sanitizeRichText } from "@/lib/richText";
 import { imageSource } from "@/lib/imageSource";
 import { publicCalendarBlockLabel } from "@/lib/publicCalendarBlock";
+import type { FlashSelection } from "@/lib/flashBooking";
 
 type Project = { id: string; title: string };
 type Busy = { startsAt: string; endsAt: string };
@@ -69,6 +70,7 @@ const formatRangeTime = (item: { startsAt: string | Date; endsAt: string | Date 
 };
 
 interface Props {
+  flash?: FlashSelection;
   projects?: Project[];
   busy: Busy[];
   blocks: Block[];
@@ -92,6 +94,7 @@ interface Props {
 
 export default function ClientBookingCalendar({
   projects = [],
+  flash,
   busy,
   blocks,
   hours,
@@ -169,11 +172,13 @@ export default function ClientBookingCalendar({
       setRestoredOpened(true);
       if (match) {
         const sourceSlot = availableSlots.find((slot) => slot.isPublic && new Date(slot.startsAt) <= match.startsAt && new Date(slot.endsAt) >= match.endsAt);
-        setBookingRange({ startsAt: match.startsAt.toISOString(), endsAt: match.endsAt.toISOString(), serviceType: isConsultationSlot(sourceSlot ?? {}) ? "consultation" : "tattoo" });
+        const serviceType = isConsultationSlot(sourceSlot ?? {}) ? "consultation" : "tattoo";
+        const endsAt = flash ? new Date(match.startsAt.getTime() + flash.flashDurationMinutes * 60000) : match.endsAt;
+        if (!flash || (serviceType === "tattoo" && endsAt <= match.endsAt)) setBookingRange({ startsAt: match.startsAt.toISOString(), endsAt: endsAt.toISOString(), serviceType });
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [availableSlots, initialStartsAt, mode, ranges, restoredOpened]);
+  }, [availableSlots, flash, initialStartsAt, mode, ranges, restoredOpened]);
 
   const selectedPromotions = promotions.filter((item) => overlapsDay(item, selected));
   const selectedEvents = events.filter((item) => overlapsDay(item, selected));
@@ -182,8 +187,9 @@ export default function ClientBookingCalendar({
 
   function propose(range: { startsAt: Date; endsAt: Date }) {
     const startsAt = range.startsAt;
-    const endsAt = range.endsAt;
+    const endsAt = flash ? new Date(startsAt.getTime() + flash.flashDurationMinutes * 60000) : range.endsAt;
     const serviceType = isConsultationSlot(slotForRange(range) ?? {}) ? "consultation" : "tattoo";
+    if (flash && (serviceType !== "tattoo" || endsAt > range.endsAt)) return;
     if (mode === "public") {
       router.push(`/app?returnTo=${encodeURIComponent(`/app/portal?booking=${encodeURIComponent(startsAt.toISOString())}&service=${serviceType}`)}`);
       return;
@@ -237,7 +243,7 @@ export default function ClientBookingCalendar({
           <p className="text-xs text-emerald-300">{consultation ? copy.consultationLabel : copy.freeLabel}</p>
           <p className="mt-1 font-display text-xl min-[400px]:text-2xl">{formatCoolinkTime(range.startsAt)}–{formatCoolinkTime(range.endsAt)}</p>
           {sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
-          <button type="button" disabled={Boolean(rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo"))} onClick={() => propose(range)} className="mt-3 min-h-11 w-full border border-emerald-400/70 px-3 py-2.5 text-xs text-emerald-300 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto">{rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo") ? "INNY RODZAJ TERMINU" : rescheduleAppointmentId ? "WYBIERZ NOWY TERMIN" : consultation ? copy.consultationButtonLabel : copy.bookingButtonLabel}</button>
+          <button type="button" disabled={Boolean(flash && (consultation || range.endsAt.getTime() - range.startsAt.getTime() < flash.flashDurationMinutes * 60000)) || Boolean(rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo"))} onClick={() => propose(range)} className="mt-3 min-h-11 w-full border border-emerald-400/70 px-3 py-2.5 text-xs text-emerald-300 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto">{rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo") ? "INNY RODZAJ TERMINU" : rescheduleAppointmentId ? "WYBIERZ NOWY TERMIN" : consultation ? copy.consultationButtonLabel : copy.bookingButtonLabel}</button>
         </div>;
       })}
     </div>
@@ -274,6 +280,6 @@ export default function ClientBookingCalendar({
     </div>
 
     {mode === "client" && dayDetailsOpen && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle={ranges.length > 0 ? "Wybierz dostępny termin lub zobacz szczegóły wydarzenia." : "Szczegóły wydarzenia."} size={selectedEvents.some((item) => item.imageUrls?.length) ? "lg" : "sm"} onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
-    {bookingRange && <BookingRequestForm startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+    {bookingRange && <BookingRequestForm flash={flash} startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
   </>;
 }

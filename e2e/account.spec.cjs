@@ -17,6 +17,7 @@ let cmsPage;
 const announcementIds = [];
 const announcementMedia = [];
 const mediaLayoutIds = [];
+const flashIds = [], flashSlotIds = [];
 
 async function verifyCalendarPresentation(page) {
   const monthSwitch = page.getByRole("button", { name: "Miesiąc", exact: true });
@@ -84,6 +85,8 @@ test.afterAll(async () => {
   await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
   if (fixture) await prisma.tattooProject.updateMany({ where: { clientId: fixture.id }, data: { depositAssignedAppointmentId: null } });
   await prisma.client.deleteMany({ where: { email } });
+  await prisma.portfolioItem.deleteMany({ where: { id: { in: flashIds } } });
+  await prisma.availableSlot.deleteMany({ where: { id: { in: flashSlotIds } } });
   for (const id of announcementIds) {
     await prisma.clientNotification.deleteMany({ where: { type: { in: [`announcement:${id}`, `announcement-dismissed:${id}`] } } });
     await prisma.siteSetting.deleteMany({ where: { key: `client-announcement:${id}` } });
@@ -335,6 +338,50 @@ test("visit deposits, explicit legacy assignment and editable client instruction
     if (original) await prisma.siteSetting.upsert({ where: { key: original.key }, create: { key: original.key, value: original.value }, update: { value: original.value } });
     else await prisma.siteSetting.deleteMany({ where: { key: "deposit_instructions" } });
   }
+});
+
+test("Flash gallery, booking, visit deposit and unique concurrent claims", async ({ page }) => {
+  const when = new Date(); when.setUTCDate(when.getUTCDate() + 30); when.setUTCHours(10, 0, 0, 0);
+  const flash = await prisma.portfolioItem.create({ data: { title: `Flash ${randomUUID()}`, description: "Gotowy wzór testowy Flash", imageUrl: "/images/logo-white.jpg", published: true, flashEnabled: true, flashUnique: true, flashPrice: 700, flashSize: "10 cm", flashDurationMinutes: 60, flashDepositAmount: 100 } });
+  flashIds.push(flash.id);
+  const ranges = [];
+  for (let day = 0; day < 4; day++) {
+    const startsAt = new Date(when.getTime() + day * 86400000), endsAt = new Date(startsAt.getTime() + 3600000);
+    const free = await prisma.availableSlot.create({ data: { startsAt, endsAt, isPublic: true, title: "Flash fixture" } }); flashSlotIds.push(free.id); ranges.push({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
+  }
+  await page.goto("/app"); await page.getByLabel("E-MAIL", { exact: true }).fill(email); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click(); await expect(page).toHaveURL(/\/app\/portal/);
+  await page.goto("/app/portal/flash"); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toBeVisible();
+  await page.getByRole("heading", { name: flash.title, exact: true }).locator("xpath=../..").getByRole("link", { name: "Wybierz termin", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`flash=${flash.id}`));
+  // The actual four-step booking form is shared with normal appointments.
+  await page.goto(`/app/portal/calendar?flash=${flash.id}`);
+  const consentVersions = (await prisma.studioDocument.findMany({ where: { published: true, category: "consent" }, select: { id: true, version: true } })).map(item => ({ ...item, answers: {} }));
+  const claims = await page.evaluate(async ({ ranges, flash, consents }) => Promise.all(ranges.map(async range => {
+    const response = await fetch("/api/client/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...range, flashId: flash.id, flashUpdatedAt: flash.updatedAt, confirmationAcknowledged: true, consents, description: "Wybrany gotowy wzór Flash", price: 1, depositAmount: 1 }) });
+    return { status: response.status, data: await response.json() };
+  })), { ranges, flash: { id: flash.id, updatedAt: flash.updatedAt.toISOString() }, consents: consentVersions });
+  expect(claims.map(result => result.status).sort()).toEqual([201, 409, 409, 409]);
+  const booked = claims.find(result => result.status === 201).data;
+  expect(await prisma.tattooProject.count({ where: { flashPortfolioId: flash.id } })).toBe(1);
+  const visit = await prisma.appointment.findUniqueOrThrow({ where: { id: booked.appointment.id } });
+  expect(visit.price).toBe(700); expect(visit.depositAmount).toBe(100); expect(visit.depositStatus).toBe("awaiting");
+  await page.goto(`/app/portal/projects?project=${booked.projectId}&appointment=${visit.id}`);
+  await expect(page.getByRole("region", { name: "Zadatek BLIK na telefon", exact: true }).getByText("100 zł", { exact: true })).toBeVisible();
+  await page.goto("/app/portal/flash"); await expect(page.getByRole("heading", { name: flash.title, exact: true })).toHaveCount(0);
+  const uiFlash = await prisma.portfolioItem.create({ data: { title: `UI Flash ${randomUUID()}`, description: "Gotowy wzór rezerwowany w kreatorze", imageUrl: "/images/logo-white.jpg", published: true, flashEnabled: true, flashUnique: true, flashPrice: 600, flashSize: "8 cm", flashDurationMinutes: 60 } }); flashIds.push(uiFlash.id);
+  const uiStart = new Date(when.getTime() + 5 * 86400000);
+  const uiSlot = await prisma.availableSlot.create({ data: { startsAt: uiStart, endsAt: new Date(uiStart.getTime() + 3600000), isPublic: true, title: "Flash UI fixture" } }); flashSlotIds.push(uiSlot.id);
+  await page.goto(`/app/portal/calendar?flash=${uiFlash.id}&booking=${encodeURIComponent(uiStart.toISOString())}`);
+  await expect(page.getByRole("region", { name: "Wybrany wzór Flash", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click(); await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  const required = page.getByRole("checkbox").filter({ visible: true });
+  for (const checkbox of await required.all()) if (await checkbox.isEnabled() && !await checkbox.isChecked()) await checkbox.check();
+  await page.getByRole("button", { name: "DALEJ", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.", exact: true }).check();
+  const created = page.waitForResponse(response => response.url().endsWith("/api/client/appointments") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "WYŚLIJ PROŚBĘ O WIZYTĘ", exact: true }).click(); expect((await created).status()).toBe(201);
+  expect(await prisma.tattooProject.count({ where: { flashPortfolioId: uiFlash.id } })).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
 test("announcements lifecycle and consistent CMS workspace", async ({ page, browser }) => {
