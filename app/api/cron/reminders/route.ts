@@ -36,8 +36,15 @@ async function runReminders() {
   for (const entry of expiredOffers) {
     const released = await prisma.$transaction(async (tx) => {
       await lockBookingCalendar(tx);
-      const current = await tx.waitlistEntry.findUnique({ where: { id: entry.id }, include: { offeredAppointment: { select: { id: true, status: true } } } });
-      if (!current || current.status !== "offered" || current.offeredAppointmentId !== entry.offeredAppointmentId || !current.offerExpiresAt || current.offerExpiresAt > now || (current.offeredAppointment && current.offeredAppointment.status !== "proposed")) return false;
+      const current = await tx.waitlistEntry.findUnique({ where: { id: entry.id }, include: { offeredAppointment: { select: { id: true, status: true, startsAt: true, endsAt: true } } } });
+      if (!current || current.status !== "offered" || current.offeredAppointmentId !== entry.offeredAppointmentId || !current.offerExpiresAt || current.offerExpiresAt > now) return false;
+      // A studio confirmation can use the general appointment endpoint. Keep
+      // that visit and reconcile its waitlist status without expiring it.
+      if (current.offeredAppointment && ["confirmed", "completed"].includes(current.offeredAppointment.status)) {
+        await tx.waitlistEntry.update({ where: { id: current.id }, data: { status: "booked" } });
+        return false;
+      }
+      if (current.offeredAppointment && !["proposed", "cancelled", "no_show"].includes(current.offeredAppointment.status)) return false;
       const claimed = await tx.waitlistEntry.updateMany({ where: { id: entry.id, status: "offered", offeredAppointmentId: entry.offeredAppointmentId, offerExpiresAt: { lte: now } }, data: { status: "active", offeredAppointmentId: null, offeredAt: null, offerExpiresAt: null } });
       if (!claimed.count) return false;
       if (entry.offeredAppointment) await tx.appointment.updateMany({ where: { id: entry.offeredAppointment.id, status: "proposed" }, data: { status: "cancelled" } });
@@ -46,13 +53,13 @@ async function runReminders() {
       await tx.tattooProject.update({ where: { id: entry.project.id }, data: { status: status === "cancelled" ? "awaiting_client" : status, nextAction: "Zaproponuj kolejny termin z listy rezerwowej", nextActionDueAt: null } });
       await tx.projectActivity.create({ data: { projectId: entry.project.id, type: "waitlist_offer_expired", message: "Oferta terminu z listy rezerwowej wygasła i wpis ponownie oczekuje.", visibility: "client" } });
       await tx.clientNotification.create({ data: { clientId: entry.project.clientId, projectId: entry.project.id, type: "WAITLIST_OFFER_EXPIRED", title: "Oferta terminu wygasła", body: "Nie szkodzi — Twój projekt nadal jest na liście rezerwowej.", href: "/app/portal/calendar#lista-rezerwowa" } });
-      return true;
+      return { appointment: current.offeredAppointment };
     });
     if (released) {
       expired += 1;
       await sendPushToClient(entry.project.clientId, { title: "Oferta terminu wygasła", body: "Twój projekt nadal czeka na liście rezerwowej.", url: "/app/portal/calendar#lista-rezerwowa", tag: `waitlist-expired-${entry.id}` }).catch(() => undefined);
-      if (entry.offeredAppointment) await syncAppointmentToGoogle(entry.offeredAppointment.id).catch(() => undefined);
-      if (entry.offeredAppointment) await offerReleasedRange(entry.offeredAppointment.startsAt, entry.offeredAppointment.endsAt, entry.id).catch(() => undefined);
+      if (released.appointment) await syncAppointmentToGoogle(released.appointment.id).catch(() => undefined);
+      if (released.appointment) await offerReleasedRange(released.appointment.startsAt, released.appointment.endsAt, entry.id).catch(() => undefined);
     }
   }
 

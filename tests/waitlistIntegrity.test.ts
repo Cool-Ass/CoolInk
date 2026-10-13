@@ -179,6 +179,22 @@ describe("released ranges", () => {
     await reminders(new Request("https://coolink.test/api/cron/reminders", { headers: { authorization: "Bearer fixture" } }));
     expect(m.entryUpdateMany).not.toHaveBeenCalled(); expect(m.visitUpdateMany).not.toHaveBeenCalled();
   });
+
+  it("reconciles a studio-confirmed offer without cancelling or reopening it", async () => {
+    const expired = { ...entry, status: "offered", offerExpiresAt: new Date("2026-10-13T09:00:00Z"), offeredAppointment: { ...visit, status: "confirmed" } };
+    m.candidates.mockResolvedValue([expired]); m.insideEntry.mockResolvedValue(expired);
+    await reminders(new Request("https://coolink.test/api/cron/reminders", { headers: { authorization: "Bearer fixture" } }));
+    expect(m.entryUpdate).toHaveBeenCalledWith({ where: { id: "entry" }, data: { status: "booked" } });
+    expect(m.visitUpdateMany).not.toHaveBeenCalled(); expect(m.projectUpdate).not.toHaveBeenCalled(); expect(m.notification).not.toHaveBeenCalled();
+  });
+
+  it("returns an already cancelled studio offer to the active list", async () => {
+    const expired = { ...entry, status: "offered", offerExpiresAt: new Date("2026-10-13T09:00:00Z"), offeredAppointment: { ...visit, status: "cancelled" } };
+    m.candidates.mockResolvedValueOnce([expired]).mockResolvedValue([]); m.insideEntry.mockResolvedValue(expired);
+    const result = await reminders(new Request("https://coolink.test/api/cron/reminders", { headers: { authorization: "Bearer fixture" } }));
+    expect((await result.json()).expiredWaitlistOffers).toBe(1);
+    expect(m.entryUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "active", offeredAppointmentId: null }) }));
+  });
 });
 
 describe("waitlist access boundaries", () => {
