@@ -45,6 +45,12 @@
   obejmuje podpisane snapshoty; rozszerzone testy kwarantanny/erasure szkiców
   i endpointów zatwierdzania kampanii. Lokalnie609 testów/107 plików PASS,
   typecheck PASS; smoke zbudowanego serwera10/10 auth/CSRF PASS (serwer zatrzymany).
+- CI17b1bf7: RLS/IDOR/HTTP PASS; Flash race/authoritative price/deposit checks
+  passed, UI test stopped at background calendar checkbox (test selector defect).
+  Scoped selector to consent fieldset inside booking dialog, no test bypass.
+  Review also fixed assistant date links to open the actual calendar week and
+  distinguishes resolved aftercare consultations. CI7cc1242 already running;
+  keep serialized test DB jobs; final exact-head CI still required.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

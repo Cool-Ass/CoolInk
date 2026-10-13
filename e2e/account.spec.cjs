@@ -376,7 +376,7 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   await page.goto(`/app/portal/calendar?flash=${uiFlash.id}&booking=${encodeURIComponent(uiStart.toISOString())}`);
   await expect(page.getByRole("region", { name: "Wybrany wzór Flash", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "DALEJ", exact: true }).click(); await page.getByRole("button", { name: "DALEJ", exact: true }).click();
-  const required = page.getByRole("checkbox").filter({ visible: true });
+  const required = page.getByRole("dialog", { name: "Umów wizytę", exact: true }).getByRole("group", { name: "WYMAGANE ZGODY", exact: true }).getByRole("checkbox");
   for (const checkbox of await required.all()) if (await checkbox.isEnabled() && !await checkbox.isChecked()) await checkbox.check();
   await page.getByRole("button", { name: "DALEJ", exact: true }).click();
   await page.getByRole("checkbox", { name: "Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.", exact: true }).check();
