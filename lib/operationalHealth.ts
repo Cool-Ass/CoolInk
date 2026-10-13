@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
-export type OperationalModule = "google_calendar_sync" | "reminders_worker" | "recovery_monitor";
-export const HEALTH_CODES = ["GOOGLE_SYNC_FAILED", "GOOGLE_EXPORT_PENDING", "GOOGLE_SYNC_CONFLICT", "GOOGLE_BUSY_REFRESH_FAILED", "GOOGLE_EXPORT_QUEUE_STALE", "GOOGLE_EXPORT_WORKER_FAILED", "REMINDERS_WORKER_FAILED", "RECOVERY_UNHEALTHY"] as const;
+export type OperationalModule = "google_calendar_sync" | "reminders_worker" | "recovery_monitor" | "aftercare_worker";
+export const HEALTH_CODES = ["GOOGLE_SYNC_FAILED", "GOOGLE_EXPORT_PENDING", "GOOGLE_SYNC_CONFLICT", "GOOGLE_BUSY_REFRESH_FAILED", "GOOGLE_EXPORT_QUEUE_STALE", "GOOGLE_EXPORT_WORKER_FAILED", "REMINDERS_WORKER_FAILED", "RECOVERY_UNHEALTHY", "AFTERCARE_WORKER_FAILED"] as const;
 export type HealthCode = typeof HEALTH_CODES[number];
 export function healthEvent(module: OperationalModule, errorCode: HealthCode | null, source: string) {
   return { action: `operational.${module}.${errorCode ? "failure" : "success"}`, targetType: "OperationalHealth", summary: `${module}: ${errorCode ?? "SUCCESS"}`, metadata: JSON.stringify({ errorCode, source }) };

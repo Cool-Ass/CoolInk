@@ -322,6 +322,10 @@ model Appointment {
   endsAt             DateTime
   status             String                   @default("requested") // requested | confirmed | deposit_required | deposit_paid | completed | cancelled | no_show
   notes              String?
+  aftercareStartedAt DateTime?
+  aftercareConsultationRequestedAt DateTime?
+  aftercareConsultationResolvedAt DateTime?
+  aftercareImages ProjectImage[]
   price              Int?
   serviceType        String?
   loyaltyRequested   Boolean @default(false)
@@ -682,9 +686,13 @@ model ProjectImage {
   project   TattooProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   url       String
   caption   String?
+  kind      String @default("inspiration")
+  appointmentId String?
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   order     Int             @default(0)
   createdAt DateTime        @default(now())
   message   ProjectMessage? @relation("ProjectMessageAttachment")
+  @@index([projectId, kind, appointmentId])
 }
 
 /// Private conversation connected to one tattoo project. Messages are served

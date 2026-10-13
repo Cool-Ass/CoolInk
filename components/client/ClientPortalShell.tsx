@@ -17,6 +17,7 @@ const links = [
   { href: "/app/portal/documents", label: "Dokumenty", icon: FileText, exact: false },
   { href: "/app/portal/profile", label: "Profil", icon: User, exact: false },
   { href: "/app/portal/flash", label: "Flash", icon: FileText, exact: false },
+  { href: "/app/portal/aftercare", label: "Aftercare", icon: FileText, exact: false },
 ] as const;
 const primaryLinks = links.slice(0, 4);
 const secondaryLinks = links.slice(4);

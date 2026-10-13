@@ -15,6 +15,7 @@ export const ADMIN_SECTIONS = [
       { href: "/admin/calendar", label: "Kalendarz", icon: CalendarDays },
       { href: "/admin/clients", label: "Klienci", icon: Users },
       { href: "/admin/messages", label: "Skrzynka", icon: MessageSquare },
+      { href: "/admin/aftercare", label: "Aftercare", icon: FileText },
       { href: "/admin/finance", label: "Finanse", icon: Wallet, roles: ["owner", "manager"] },
     ],
   },

@@ -384,6 +384,40 @@ test("Flash gallery, booking, visit deposit and unique concurrent claims", async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test("aftercare starts on completion, notifies once, stores private healing photos and requests consultation", async ({ page, browser }) => {
+  if (!process.env.CRON_SECRET) throw Error("Isolated runtime cron credential required");
+  const client = await prisma.client.findUniqueOrThrow({ where: { email } });
+  const project = await prisma.tattooProject.create({ data: { clientId: client.id, title: `Healing ${randomUUID()}`, description: "Disposable aftercare fixture" } });
+  const visit = await prisma.appointment.create({ data: { projectId: project.id, startsAt: new Date(Date.now() - 5 * 86400000), endsAt: new Date(Date.now() - 5 * 86400000 + 3600000), status: "confirmed" } });
+  const completed = await prisma.appointment.update({ where: { id: visit.id }, data: { status: "completed" } });
+  expect(completed.aftercareStartedAt).toBeTruthy();
+  const original = await prisma.siteSetting.findUnique({ where: { key: "aftercare_settings" } });
+  const staff = await browser.newContext();
+  try {
+    await prisma.siteSetting.upsert({ where: { key: "aftercare_settings" }, create: { key: "aftercare_settings", value: JSON.stringify({ enabled: true, checkInDay: 2, photoDay: 21, reviewDay: 30, reviewUrl: "https://g.page/test/review" }) }, update: { value: JSON.stringify({ enabled: true, checkInDay: 2, photoDay: 21, reviewDay: 30, reviewUrl: "https://g.page/test/review" }) } });
+    const cron = () => page.request.get("/api/cron/aftercare", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+    const results = await Promise.all([cron(), cron()]); expect(results.every(result => result.status() === 200)).toBe(true);
+    expect(await prisma.clientNotification.count({ where: { appointmentId: visit.id, type: "AFTERCARE_instructions" } })).toBe(1);
+    await page.goto("/app"); await page.getByLabel("E-MAIL", { exact: true }).fill(email); await page.getByLabel("HASŁO", { exact: true }).fill(password); await page.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click(); await expect(page).toHaveURL(/\/app\/portal/);
+    await page.goto(`/app/portal/aftercare?appointment=${visit.id}`); await expect(page.getByRole("heading", { name: project.title, exact: true })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser"); await page.getByRole("button", { name: "+ DODAJ ZDJĘCIE GOJENIA", exact: true }).click();
+    const uploaded = page.waitForResponse(response => response.url().endsWith(`/api/client/projects/${project.id}/images`) && response.request().method() === "POST");
+    const png = await require("sharp")({ create: { width: 64, height: 64, channels: 3, background: "#777777" } }).png().toBuffer();
+    await (await chooser).setFiles({ name: "healing.png", mimeType: "image/png", buffer: png }); expect((await uploaded).status()).toBe(201);
+    const image = page.getByRole("img", { name: "Prywatne zdjęcie gojenia", exact: true }); await expect(image).toBeVisible(); await expect.poll(() => image.evaluate(element => element.naturalWidth)).toBeGreaterThan(0);
+    expect(await prisma.projectImage.count({ where: { projectId: project.id, appointmentId: visit.id, kind: "healing" } })).toBe(1);
+    await page.getByRole("button", { name: "Poproś studio o konsultację", exact: true }).click(); await page.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Konsultacja zgłoszona", exact: true })).toBeDisabled();
+    expect(await prisma.projectMessage.count({ where: { projectId: project.id } })).toBe(1);
+    const admin = await staff.newPage(); await admin.goto("http://127.0.0.1:3120/admin/login"); await admin.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`); await admin.getByLabel("HASŁO", { exact: true }).fill(password); await admin.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click(); await expect(admin).toHaveURL(/\/admin$/);
+    await admin.goto("http://127.0.0.1:3120/admin/aftercare"); await admin.getByRole("button", { name: "Oznacz konsultację jako obsłużoną", exact: true }).click(); await admin.getByRole("dialog", { name: "Potwierdź akcję", exact: true }).getByRole("button", { name: "Potwierdź", exact: true }).click();
+    await expect.poll(async () => Boolean((await prisma.appointment.findUniqueOrThrow({ where: { id: visit.id } })).aftercareConsultationResolvedAt)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  } finally {
+    await staff.close(); if (original) await prisma.siteSetting.upsert({ where: { key: original.key }, create: { key: original.key, value: original.value }, update: { value: original.value } }); else await prisma.siteSetting.deleteMany({ where: { key: "aftercare_settings" } });
+  }
+});
+
 test("announcements lifecycle and consistent CMS workspace", async ({ page, browser }) => {
   await page.goto("/admin/login");
   await page.getByLabel("EMAIL", { exact: true }).fill(`admin-${email}`);

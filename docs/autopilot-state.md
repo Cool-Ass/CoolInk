@@ -7,7 +7,13 @@
   produkcyjnych migracji, zmian rozliczeń i aktywacji płatnych usług.
 - A IMPLEMENTING: rozszerzenie PortfolioItem; TattooProject wskazuje wzór.
   Jeden kalendarz, obecne zgody/zadatki, wspólny lock rezerwacji/edycji wzoru,
-  version check ceny, blokada unikatów i zachowanie historii. B–F pending.
+  version check ceny, blokada unikatów i zachowanie historii. A lokalnie19 testów
+  PASS, pełna regresja539/typecheck/lint0errors PASS. Izolowane E2E dodane, pending.
+- B IMPLEMENTED, walidacja w toku: timestamp zakończenia z triggera, osobny cron
+  i health receipt (bez wpływu na przypomnienia), opt-in harmonogram, idempotentne
+  obecne powiadomienia, prywatne zdjęcia gojenia przez dotychczasowy upload,
+  konsultacja/obsłużenie i panel admina. Lokalnie15 nowych testów/typecheck PASS.
+  Nowe hooki/constraint dołączone do izolowanego setupu; E2E pending. C–F pending.
 - Granice: B proces po Appointment.completed z obecnymi powiadomieniami
   i prywatnymi obrazami; C DocumentAcceptance z sesją/podpisem/QR/PDF;
   D readonly RBAC narzędzia, jawny brak provider; E szkice bez wysyłki;

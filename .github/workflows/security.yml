@@ -87,6 +87,7 @@ jobs:
             echo "::error::Brak konfiguracji testów HTTP."
             exit 1
           fi
+          export CRON_SECRET=$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))")
           npm start -- --hostname 127.0.0.1 --port 3120 > /tmp/coolink-app.log 2>&1 &
           APP_PID=$!
           trap 'kill $APP_PID 2>/dev/null || true' EXIT

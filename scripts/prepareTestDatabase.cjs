@@ -36,6 +36,8 @@ for (const migration of [
   "20261002010000_google_export_outbox",
   "20261003050000_privacy_execution_guard",
   "20261003081000_privacy_guard_correction",
+  "20261013103500_flash_guards",
+  "20261013110500_aftercare_hooks",
 ]) {
   run([
     "db",
