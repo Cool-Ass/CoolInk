@@ -101,12 +101,13 @@ test.afterAll(async () => {
   await prisma.media.deleteMany({ where: { id: { in: mediaLayoutIds } } });
   if (fixture) await prisma.tattooProject.updateMany({ where: { clientId: fixture.id }, data: { depositAssignedAppointmentId: null } });
   if (fixture && await prisma.voucher.count({ where: { clientId: fixture.id } })) await prisma.$transaction(async tx => {
-    const requestId = "browser-voucher-cleanup-" + randomUUID();
-    await tx.accountDeletionRequest.create({ data: { id: requestId, clientId: fixture.id, status: "executing" } });
+    const existingRequest = await tx.accountDeletionRequest.findUnique({ where: { clientId: fixture.id } });
+    const requestId = existingRequest?.id ?? "browser-voucher-cleanup-" + randomUUID();
     await tx.$executeRaw`SELECT set_config('coolink.privacy_execution', ${requestId}, true)`;
+    await tx.accountDeletionRequest.upsert({ where: { clientId: fixture.id }, create: { id: requestId, clientId: fixture.id, status: "executing" }, update: { status: "executing" } });
     await tx.voucher.deleteMany({ where: { clientId: fixture.id, code: { in: voucherCodes } } });
     await tx.accountDeletionRequest.delete({ where: { id: requestId } });
-  });
+  }, { maxWait: 10000, timeout: 30000 });
   await prisma.voucher.deleteMany({ where: { code: { in: voucherCodes }, clientId: null, redeemedAt: null } });
   await prisma.client.deleteMany({ where: { email } });
   await prisma.promotion.deleteMany({ where: { id: { in: campaignIds } } });
