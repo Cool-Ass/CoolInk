@@ -700,7 +700,12 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await expect(editor).toHaveClass(/studio-drawer/);
     await expect(editor).toContainText("Browser queue dates");
     await editor.getByRole("button", { name: "Dokumenty", exact: true }).click();
-    await expect(editor.getByText(consent.title, { exact: true })).toBeVisible();
+    const visitReturnUrl = page.url();
+    await editor.getByRole("link", { name: "Podpisy sesji i kod QR", exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/appointments\/[^/]+\/documents$/);
+    await expect(page.getByText(consent.title, { exact: false })).toBeVisible();
+    await expect(page.getByRole("img", { name: "Kod QR formularza tej sesji", exact: true })).toBeVisible();
+    await page.goto(visitReturnUrl);
     await editor.getByRole("button", { name: "Rozmowa", exact: true }).click();
     await expect(editor.getByRole("textbox").first()).toBeVisible();
     await editor.getByRole("button", { name: "Wizyta", exact: true }).click();
