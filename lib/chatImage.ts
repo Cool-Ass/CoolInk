@@ -33,8 +33,8 @@ export async function readChatInput(request: Request, owner: string, track?: (lo
   }
   return { body, imageUrl };
 }
-export function serializeDirectMessage(message: { id: string; author: string; body: string; imageUrl?: string | null; createdAt: Date; readAt: Date | null }, role: "admin" | "client", subject: string) {
-  return { id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: message.imageUrl ? { id: message.id, caption: "Zdjęcie", url: privateImageUrl(message.id, role, subject).replace("/images/", "/chat-images/") } : null };
+export function serializeDirectMessage(message: { id: string; author: string; body: string; imageUrl?: string | null; createdAt: Date; readAt: Date | null; deliveredAt?: Date | null }, role: "admin" | "client", subject: string) {
+  return { id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, deliveredAt: message.deliveredAt?.toISOString() ?? null, attachment: message.imageUrl ? { id: message.id, caption: "Zdjęcie", url: privateImageUrl(message.id, role, subject).replace("/images/", "/chat-images/") } : null };
 }
 export async function streamChatImage(location: string) {
   const headers = { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };

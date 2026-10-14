@@ -15,10 +15,10 @@ export const ADMIN_SECTIONS = [
       { href: "/admin/calendar", label: "Kalendarz", icon: CalendarDays },
       { href: "/admin/clients", label: "Klienci", icon: Users },
       { href: "/admin/messages", label: "Skrzynka", icon: MessageSquare },
-      { href: "/admin/aftercare", label: "Aftercare", icon: FileText },
       { href: "/admin/assistant", label: "Asystent AI", icon: MessageSquare },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone, roles: ["owner", "manager"] },
       { href: "/admin/finance", label: "Finanse", icon: Wallet, roles: ["owner", "manager"] },
+      { href: "/admin/vouchers", label: "Vouchery", icon: FileText, roles: ["owner", "manager"] },
     ],
   },
   {
@@ -32,7 +32,7 @@ export const ADMIN_SECTIONS = [
   { label: "NARZĘDZIA", links: [{ href: "/admin/waitlist", label: "Lista rezerwowa", icon: CalendarClock }, { href: "/admin/statistics", label: "Statystyki", icon: BarChart3, roles: ["owner", "manager"] }, { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen, roles: ["owner", "manager"] }, { href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/announcements", label: "Komunikaty", icon: Megaphone, roles: ["owner", "manager"] }] },
   {
     label: "USTAWIENIA",
-    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }],
+    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }, { href: "/admin/settings?category=care", label: "Ustawienia ogólne", icon: Settings, roles: ["manager", "artist", "receptionist"] }],
   },
 ] as const;
 

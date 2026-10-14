@@ -12,6 +12,8 @@ import { LEAD_SOURCES } from "@/lib/leadSource";
 import { formatCoolinkDateTime, formatCoolinkTime } from "@/lib/dateTime";
 import { sanitizeRichText } from "@/lib/richText";
 import type { FlashSelection } from "@/lib/flashBooking";
+import BookingVoucher, { emptyVoucher, type BookingVoucherValue } from "@/components/client/BookingVoucher";
+import { bookingSteps } from "@/lib/clientJourney";
 
 const styles = ["Realizm", "Black & Grey", "Fine Line", "Lettering", "Neo Traditional", "Inny"];
 const placements = ["Ramię", "Przedramię", "Bark", "Klatka piersiowa", "Plecy", "Żebra", "Udo", "Łydka", "Dłoń", "Szyja", "Inne"];
@@ -30,6 +32,8 @@ export default function BookingRequestForm({
   tattooStyles = styles,
   consents = [],
   intro,
+  loyaltyReward,
+  initialVoucherCode,
 }: {
   startsAt: string;
   flash?: FlashSelection;
@@ -42,6 +46,8 @@ export default function BookingRequestForm({
   tattooStyles?: string[];
   consents?: BookingConsent[];
   intro?: ReactNode;
+  loyaltyReward?: { discountPercent: number; maxDiscountCents: number };
+  initialVoucherCode?: string;
 }) {
   const router = useRouter();
   const consultation = serviceType === "consultation";
@@ -55,15 +61,18 @@ export default function BookingRequestForm({
   const [consentAnswers, setConsentAnswers] = useState<Record<string, DocumentAnswers>>(() => Object.fromEntries(consents.map((item) => [item.id, item.answers ?? {}])));
   const [acceptedConsentIds, setAcceptedConsentIds] = useState(() => new Set(consents.filter((item) => item.accepted).map((item) => item.id)));
   const [confirmationAcknowledged, setConfirmationAcknowledged] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 3 | 4>(1);
   const inspirationInput = useRef<HTMLInputElement>(null);
   const [data, setData] = useState({ title: flash?.title || "", description: flash ? `${flash.title} — ${flash.description || "Wybrany gotowy wzór Flash"}` : "", placement: "", size: flash?.flashSize || "", styles: [] as string[], notes: "", consultationMode: "studio", leadSource: "" });
   const [promotionCode, setPromotionCode] = useState("");
   const [loyaltyRequested, setLoyaltyRequested] = useState(false);
+  const [voucher, setVoucher] = useState<BookingVoucherValue>(() => ({ ...emptyVoucher, code: initialVoucherCode || "", enabled: Boolean(initialVoucherCode) }));
+  const pendingConsents = consents.filter(item => !item.accepted);
+  const steps = bookingSteps(pendingConsents.length > 0);
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftMessage, setDraftMessage] = useState("");
   const [savedData, setSavedData] = useState(JSON.stringify(data));
-  const dirty = !done && (JSON.stringify(data) !== savedData || inspirations.length > 0 || loyaltyRequested);
+  const dirty = !done && (JSON.stringify(data) !== savedData || inspirations.length > 0 || loyaltyRequested || voucher.enabled);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -100,7 +109,7 @@ export default function BookingRequestForm({
     if (step === 1 && (!projectId || consultation) && data.description.trim().length < (consultation ? 5 : 12)) { setError(consultation ? "Napisz krótko, co chcesz omówić." : "Opisz swój pomysł w co najmniej 12 znakach."); return; }
     if (step === 3 && consents.some((item) => !acceptedConsentIds.has(item.id))) { setError("Zaakceptuj aktualne zgody wymagane do wysłania prośby."); return; }
     if (step === 3) { try { for (const consent of consents.filter((item) => !item.accepted)) validateDocumentAnswers(parseDocumentFields(consent.formFields), consentAnswers[consent.id] ?? {}); } catch (error) { setError(error instanceof Error ? error.message : "Uzupełnij formularz."); return; } }
-    setStep((current) => Math.min(4, current + 1) as 1 | 2 | 3 | 4);
+    setStep(steps[Math.min(steps.length - 1, steps.indexOf(step) + 1)]);
   }
 
   function selectInspirations(event: ChangeEvent<HTMLInputElement>) {
@@ -115,13 +124,14 @@ export default function BookingRequestForm({
     if ((!projectId || consultation) && data.description.trim().length < minimum) return setError(consultation ? "Napisz krótko, co chcesz omówić." : "Opisz swój pomysł w co najmniej 12 znakach.");
     if (consents.some((item) => !acceptedConsentIds.has(item.id))) return setError("Zaakceptuj aktualne zgody wymagane do wysłania prośby.");
     if (!confirmationAcknowledged) return setError("Potwierdź poprawność projektu, terminu i zgód.");
+    if (voucher.enabled && ((voucher.code && voucher.amountCents === null) || (!voucher.code && !voucher.file))) return setError("Sprawdź kod vouchera albo dodaj jego zdjęcie.");
     setSaving(true);
     setError("");
     try {
       const response = await fetch("/api/client/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flashId: flash?.id, flashUpdatedAt: flash?.updatedAt, projectId: consultation ? undefined : projectId || undefined, startsAt, endsAt, serviceType, consents: consents.map(({ id, version }) => ({ id, version, answers: consentAnswers[id] ?? {} })), confirmationAcknowledged, loyaltyRequested, promotionCode, ...data }),
+        body: JSON.stringify({ flashId: flash?.id, flashUpdatedAt: flash?.updatedAt, projectId: consultation ? undefined : projectId || undefined, startsAt, endsAt, serviceType, consents: consents.map(({ id, version }) => ({ id, version, answers: consentAnswers[id] ?? {} })), confirmationAcknowledged, loyaltyRequested, loyaltyExpected: loyaltyReward, promotionCode, voucherRequested: voucher.enabled, voucherCode: voucher.enabled ? voucher.code : undefined, ...data }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Nie udało się wysłać prośby.");
@@ -134,6 +144,10 @@ export default function BookingRequestForm({
           if (!uploaded.ok) throw new Error("upload_failed");
         }));
         if (uploads.some((upload) => upload.status === "rejected")) setCompletionWarning("Prośba została wysłana, ale części zdjęć nie udało się dodać. Możesz przesłać je ponownie poniżej bez tworzenia drugiej wizyty.");
+      }
+      if (nextProjectId && result.appointment?.id && voucher.enabled && voucher.file) {
+        try { const upload = new FormData(); upload.set("file", await prepareBrowserImage(voucher.file)); upload.set("kind", "voucher"); upload.set("appointmentId", result.appointment.id); const saved = await fetch(`/api/client/projects/${nextProjectId}/images`, { method: "POST", body: upload }); if (!saved.ok) throw Error("upload"); }
+        catch { setCompletionWarning("Wizyta została zgłoszona, ale zdjęcie vouchera nie dotarło. Prześlij je w rozmowie ze studiem — nie twórz drugiej wizyty."); }
       }
       setCreatedProjectId(nextProjectId);
       setDone(true);
@@ -170,12 +184,12 @@ export default function BookingRequestForm({
 
   return <AppModal title={consultation ? "Umów konsultację" : "Umów wizytę"} subtitle={consultation ? "Krótka rozmowa przed podjęciem decyzji o projekcie." : "Studio najpierw sprawdzi szczegóły i potwierdzi termin."} size="lg" onClose={closeForm}>
     {done ? <div className="py-7 text-center"><p className="text-sm tracking-[.16em] text-ink-gold">{consultation ? "KONSULTACJA ZGŁOSZONA" : "PROŚBA O WIZYTĘ WYSŁANA"}</p><h2 className="mt-3 font-display text-3xl">Dziękujemy.</h2><p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-grey">{consultation ? "Studio potwierdzi termin konsultacji. Wszystkie informacje znajdziesz w swoim koncie." : "Studio odpowie po sprawdzeniu szczegółów oraz terminu."}</p>{completionWarning && <p role="alert" className="mx-auto mt-4 max-w-md border border-amber-400/40 bg-amber-400/10 p-3 text-left text-sm text-amber-200">{completionWarning}</p>}{createdProjectId && (inspirations.length === 0 || completionWarning) && <div className="mx-auto mt-5 max-w-md text-left"><p className="text-sm text-ink-grey">Zdjęcia możesz uzupełnić później:</p><InspirationUpload projectId={createdProjectId} /></div>}<AppButton className="mt-6" onClick={closeForm}>PRZEJDŹ DO PROJEKTÓW</AppButton></div> : <form onSubmit={submit} className="space-y-5">
-      <div hidden={Boolean(flash)} className="flex flex-wrap gap-3 text-xs"><button type="button" disabled={draftBusy || saving} onClick={() => void draftAction("save")}>Zapisz szkic</button><button type="button" disabled={draftBusy || saving} onClick={() => void draftAction("load")}>Wczytaj szkic</button><button type="button" disabled={draftBusy || saving} onClick={() => void draftAction("delete")}>Usuń zapisany szkic</button></div>
+      <details hidden={Boolean(flash) || step !== 1} className="text-xs text-ink-grey"><summary className="cursor-pointer">Szkic formularza</summary><div className="mt-3 flex flex-wrap gap-4"><button type="button" disabled={draftBusy || saving} onClick={() => void draftAction("save")}>Zapisz szkic</button><button type="button" disabled={draftBusy || saving} onClick={() => void draftAction("load")}>Wczytaj szkic</button><button type="button" disabled={draftBusy || saving} onClick={() => void draftAction("delete")}>Usuń zapisany szkic</button></div></details>
       {draftMessage && <p role="status" className="text-xs text-ink-gold">{draftMessage}</p>}
       {flash && <section aria-label="Wybrany wzór Flash" className="studio-panel border-ink-gold/40"><h2 className="font-semibold">Flash · {flash.title}</h2><p className="mt-2 text-sm">{flash.flashSize} · {flash.flashPrice} zł · {flash.flashDurationMinutes} min{flash.flashDepositAmount ? ` · zadatek ${flash.flashDepositAmount} zł` : ""}</p><p className="mt-1 text-xs text-ink-grey">Warunki wzoru są ustalone przez studio. Dodatkowe ustalenia wpisz w informacjach.</p></section>}
-      {!consultation && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={loyaltyRequested} onChange={(event) => setLoyaltyRequested(event.target.checked)} /><span>Chcę wykorzystać nagrodę lojalnościową<span className="block text-xs text-ink-grey">To tylko zgłoszenie. Studio sprawdzi pieczątki i potwierdzi rabat przy rozliczeniu.</span></span></label>}
-      {intro && <div className="mb-5">{intro}</div>}
-      <ol aria-label="Etapy rezerwacji" className="grid grid-cols-4 gap-1 text-center text-[9px] tracking-[.08em] text-ink-grey sm:text-[10px]">{["PROJEKT", "TERMIN", "ZGODY", "POTWIERDZENIE"].map((label, index) => { const number = index + 1; return <li key={label} aria-current={number === step ? "step" : undefined} className={`border-b pb-2 ${number === step ? "border-ink-gold text-ink-gold" : number < step ? "border-emerald-400 text-emerald-300" : "border-ink-white/20"}`}>{number} {label}</li>; })}</ol>
+      {step === 4 && !consultation && loyaltyReward && <label className="flex items-start gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/5 p-4 text-sm"><input type="checkbox" checked={loyaltyRequested} onChange={(event) => { setLoyaltyRequested(event.target.checked); if (event.target.checked) setVoucher(emptyVoucher); }} /><span>Chcę wykorzystać nagrodę lojalnościową<span className="block text-xs text-ink-grey">Dostępny rabat −{loyaltyReward.discountPercent}%, do {loyaltyReward.maxDiscountCents / 100} zł. Zostanie uwzględniony automatycznie przy rozliczeniu tej wizyty.</span></span></label>}
+      {intro && step === 1 && <details className="text-xs text-ink-grey"><summary className="cursor-pointer">Informacje studia</summary><div className="mt-3">{intro}</div></details>}
+      <ol aria-label="Etapy rezerwacji" className="flex gap-2 [&>li]:flex-1 text-center text-[9px] tracking-[.08em] text-ink-grey sm:text-[10px]">{steps.map((number, index) => { const label = number === 1 ? "PROJEKT" : number === 3 ? "ZGODY" : "PODSUMOWANIE"; return <li key={label} aria-current={number === step ? "step" : undefined} className={`border-b pb-2 ${number === step ? "border-ink-gold text-ink-gold" : number < step ? "border-emerald-400 text-emerald-300" : "border-ink-white/20"}`}>{index + 1} {label}</li>; })}</ol>
 
       {step === 1 && <div className="space-y-5">
         {!consultation && !flash && <label className="block text-sm text-ink-grey">PROJEKT<select value={projectId} onChange={(event) => { setProjectId(event.target.value); setError(""); }} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white"><option value="">+ Utwórz nowy projekt dla tej wizyty</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select><span className="mt-2 block text-xs leading-relaxed text-ink-grey/80">Utwórz nowy projekt albo dopisz wizytę do istniejącego — bez opuszczania kreatora.</span></label>}
@@ -183,14 +197,13 @@ export default function BookingRequestForm({
         {!projectId && <label className="block text-sm text-ink-grey">SKĄD O MNIE WIESZ? (OPCJONALNIE)<select value={data.leadSource} onChange={(event) => setData({ ...data, leadSource: event.target.value })} className="mt-2 w-full border border-ink-white/20 bg-ink-black px-3 py-3 text-sm text-ink-white"><option value="">Nie podano</option>{LEAD_SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
       </div>}
 
-      {step === 2 && <section className="border border-emerald-500/35 bg-emerald-500/5 p-4"><p className="text-sm tracking-[.12em] text-emerald-300">{consultation ? "WYBRANA KONSULTACJA" : "WYBRANY TERMIN"}</p><p className="mt-2 font-display text-2xl">{range}</p><p className="mt-2 text-sm text-ink-grey">{consultation ? "Po konsultacji notatki i zdjęcia można zachować jako projekt tatuażu." : "Studio sprawdzi zakres projektu i ostatecznie potwierdzi długość sesji."}</p></section>}
 
-      {step === 3 && (consents.length > 0 ? <fieldset className="border border-ink-white/15 p-4"><legend className="px-2 text-xs tracking-[.12em] text-ink-gold">WYMAGANE ZGODY</legend><div className="space-y-3">{consents.map((consent) => <div key={consent.id} className="border border-ink-white/10 p-3"><label className="flex cursor-pointer items-start gap-3 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={acceptedConsentIds.has(consent.id)} disabled={consent.accepted} onChange={(event) => setAcceptedConsentIds((current) => { const next = new Set(current); if (event.target.checked) next.add(consent.id); else next.delete(consent.id); return next; })} /><span>{consent.title} <span className="text-xs text-ink-grey">· wersja {consent.version}{consent.accepted ? " · zaakceptowana" : ""}</span></span></label><details className="mt-2 text-xs text-ink-grey"><summary className="cursor-pointer text-ink-gold">Pokaż treść</summary><div className="document-rich-text mt-3 max-h-48 overflow-y-auto pr-2" dangerouslySetInnerHTML={{ __html: sanitizeRichText(consent.content) }} /></details><DocumentFields fields={consent.formFields ?? "[]"} answers={consentAnswers[consent.id] ?? {}} onChange={(answers) => setConsentAnswers({ ...consentAnswers, [consent.id]: answers })} disabled={consent.accepted} /></div>)}</div></fieldset> : <p className="border border-ink-white/15 p-5 text-sm text-ink-grey">Studio nie wymaga obecnie dodatkowych zgód na tym etapie.</p>)}
+      {step === 3 && (consents.length > 0 ? <fieldset className="border border-ink-white/15 p-4"><legend className="px-2 text-xs tracking-[.12em] text-ink-gold">WYMAGANE ZGODY</legend><div className="space-y-3">{pendingConsents.map((consent) => <div key={consent.id} className="border border-ink-white/10 p-3"><label className="flex cursor-pointer items-start gap-3 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={acceptedConsentIds.has(consent.id)} disabled={consent.accepted} onChange={(event) => setAcceptedConsentIds((current) => { const next = new Set(current); if (event.target.checked) next.add(consent.id); else next.delete(consent.id); return next; })} /><span>{consent.title} <span className="text-xs text-ink-grey">· wersja {consent.version}{consent.accepted ? " · zaakceptowana" : ""}</span></span></label><details className="mt-2 text-xs text-ink-grey"><summary className="cursor-pointer text-ink-gold">Pokaż treść</summary><div className="document-rich-text mt-3 max-h-48 overflow-y-auto pr-2" dangerouslySetInnerHTML={{ __html: sanitizeRichText(consent.content) }} /></details><DocumentFields fields={consent.formFields ?? "[]"} answers={consentAnswers[consent.id] ?? {}} onChange={(answers) => setConsentAnswers({ ...consentAnswers, [consent.id]: answers })} disabled={consent.accepted} /></div>)}</div></fieldset> : <p className="border border-ink-white/15 p-5 text-sm text-ink-grey">Studio nie wymaga obecnie dodatkowych zgód na tym etapie.</p>)}
 
-      {step === 4 && <div className="space-y-4"><label className="block text-sm">Kod promocji (opcjonalnie)<input className="studio-input mt-2" value={promotionCode} maxLength={80} onChange={event => setPromotionCode(event.target.value)} /><span className="mt-2 block text-xs text-ink-grey">Służy do przypisania zgłoszenia do promocji. Studio potwierdza warunki i cenę; wpisanie kodu nie nalicza automatycznie rabatu.</span></label><section className="grid gap-3 border border-ink-white/15 p-4 sm:grid-cols-2"><div><p className="text-[10px] tracking-[.12em] text-ink-gold">PROJEKT</p><p className="mt-1 text-sm text-ink-white">{consultation ? data.title || "Konsultacja tatuażu" : projectId ? projects.find((project) => project.id === projectId)?.title : data.title || "Nowy projekt tatuażu"}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">TERMIN</p><p className="mt-1 text-sm text-ink-white">{range}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">ZGODY</p><p className="mt-1 text-sm text-ink-white">{consents.length ? `${consents.length} zaakceptowane` : "Brak wymaganych"}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">STATUS</p><p className="mt-1 text-sm text-ink-white">Oczekuje na potwierdzenie studia</p></div></section><label className="flex cursor-pointer items-start gap-3 border border-ink-gold/30 bg-ink-gold/5 p-4 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={confirmationAcknowledged} onChange={(event) => setConfirmationAcknowledged(event.target.checked)} /><span>Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.</span></label></div>}
+      {step === 4 && <div className="space-y-4">{!consultation && <BookingVoucher value={voucher} startsAt={startsAt} disabled={saving} onChange={value => { setVoucher(value); if (value.enabled) setLoyaltyRequested(false); setError(""); }} />}<label className="block text-sm">Kod promocji (opcjonalnie)<input className="studio-input mt-2" value={promotionCode} maxLength={80} onChange={event => setPromotionCode(event.target.value)} /><span className="mt-2 block text-xs text-ink-grey">Służy do przypisania zgłoszenia do promocji. Studio potwierdza warunki i cenę; wpisanie kodu nie nalicza automatycznie rabatu.</span></label><section className="grid gap-3 border border-ink-white/15 p-4 sm:grid-cols-2"><div><p className="text-[10px] tracking-[.12em] text-ink-gold">PROJEKT</p><p className="mt-1 text-sm text-ink-white">{consultation ? data.title || "Konsultacja tatuażu" : projectId ? projects.find((project) => project.id === projectId)?.title : data.title || "Nowy projekt tatuażu"}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">TERMIN</p><p className="mt-1 text-sm text-ink-white">{range}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">ZGODY</p><p className="mt-1 text-sm text-ink-white">{consents.length ? `${consents.length} zaakceptowane` : "Brak wymaganych"}</p></div><div><p className="text-[10px] tracking-[.12em] text-ink-gold">STATUS</p><p className="mt-1 text-sm text-ink-white">Oczekuje na potwierdzenie studia</p></div></section><label className="flex cursor-pointer items-start gap-3 border border-ink-gold/30 bg-ink-gold/5 p-4 text-sm text-ink-white"><input type="checkbox" className="mt-1" checked={confirmationAcknowledged} onChange={(event) => { setConfirmationAcknowledged(event.target.checked); if (event.target.checked) setError(""); }} /><span>Potwierdzam poprawność projektu, terminu i zaakceptowanych wersji zgód.</span></label></div>}
 
       {error && <p role="alert" className="border border-red-400/40 bg-red-400/10 p-3 text-sm text-red-300">{error}</p>}
-      <div className="flex flex-wrap justify-between gap-3"><AppButton type="button" variant="ghost" onClick={closeForm} disabled={saving}>ANULUJ</AppButton><div className="flex gap-3">{step > 1 && <AppButton type="button" variant="ghost" onClick={() => { setError(""); setStep((current) => Math.max(1, current - 1) as 1 | 2 | 3 | 4); }} disabled={saving}>WSTECZ</AppButton>}{step < 4 ? <AppButton type="button" variant="primary" onClick={advance}>DALEJ</AppButton> : <AppButton type="submit" variant="primary" disabled={saving}>{saving ? "WYSYŁANIE…" : consultation ? "WYŚLIJ PROŚBĘ O KONSULTACJĘ" : "WYŚLIJ PROŚBĘ O WIZYTĘ"}</AppButton>}</div></div>
+      <div className="flex flex-wrap justify-between gap-3"><AppButton type="button" variant="ghost" onClick={closeForm} disabled={saving}>ANULUJ</AppButton><div className="flex gap-3">{step > 1 && <AppButton type="button" variant="ghost" onClick={() => { setError(""); setStep(steps[Math.max(0, steps.indexOf(step) - 1)]); }} disabled={saving}>WSTECZ</AppButton>}{step < 4 ? <AppButton type="button" variant="primary" onClick={advance}>DALEJ</AppButton> : <AppButton type="submit" variant="primary" disabled={saving}>{saving ? "WYSYŁANIE…" : consultation ? "WYŚLIJ PROŚBĘ O KONSULTACJĘ" : "WYŚLIJ PROŚBĘ O WIZYTĘ"}</AppButton>}</div></div>
     </form>}
   </AppModal>;
 }

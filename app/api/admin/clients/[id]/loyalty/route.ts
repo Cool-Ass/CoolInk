@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity";
 import { lockBookingCalendar } from "@/lib/bookingRules";
 import { loyaltyBalance } from "@/lib/loyalty";
-import { loyaltySettlement } from "@/lib/loyaltyRules";
+import { visitSettlement, reservedLoyaltyRules, reservedStampCost } from "@/lib/voucherRules";
 
 import { getLoyaltyRules } from "@/lib/loyaltySettings";
 import { projectStatusAfterAppointmentChange } from "@/lib/projectLifecycle";
@@ -59,14 +59,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
       if (body.action === "settle" && (body.paid !== true || typeof body.redeem !== "boolean")) throw new LoyaltyError("Potwierdź opłacenie wizyty i wybierz sposób rozliczenia.");
       const appointmentId = String(body.appointmentId ?? "");
-      const visit = await tx.appointment.findFirst({ where: { id: appointmentId, project: { clientId } }, include: { project: { select: { kind: true, title: true, status: true, depositStatus: true } } } });
+      const visit = await tx.appointment.findFirst({ where: { id: appointmentId, project: { clientId } }, include: { voucher: true, project: { select: { kind: true, title: true, status: true, depositStatus: true } } } });
       if (!visit || !["completed", "confirmed"].includes(visit.status) || visit.startsAt > new Date()) throw new LoyaltyError("Wybierz rozpoczętą, potwierdzoną lub zrealizowaną wizytę klienta.");
       if (visit.project.kind === "consultation" || (visit.serviceType && visit.serviceType !== "tattoo")) throw new LoyaltyError("Program dotyczy wyłącznie wizyt z tatuażem.");
+      if (visit.voucher && body.redeem) throw new LoyaltyError("Wybierz voucher albo rabat za pieczątki.");
+      const settlementRules = visit.loyaltyReserved ? reservedLoyaltyRules(visit.loyaltyReservation) ?? rules : rules;
+      const redeem = visit.voucher ? false : visit.loyaltyReserved || body.redeem;
+
       const prior = await tx.loyaltyEntry.findUnique({ where: { key: `visit:${appointmentId}` } });
       if (prior) {
         if (body.action === "complete") throw new LoyaltyError("Ta wizyta została już rozliczona.");
-        if (!prior.voidedAt && prior.grossCents === body.grossCents && (prior.stamps < 0) === body.redeem) return;
+        if (!prior.voidedAt && prior.grossCents === body.grossCents && (prior.stamps < 0) === redeem) return;
         throw new LoyaltyError("Ta wizyta została już rozliczona. Nie można naliczyć pieczątki ponownie.");
+      }
+      if (redeem && !visit.loyaltyReserved) {
+        const reserved = await tx.appointment.findMany({ where: { id: { not: appointmentId }, loyaltyReserved: true, status: { in: ["requested", "proposed", "confirmed", "completed"] }, project: { clientId }, loyaltyEntry: { is: null } }, select: { loyaltyReservation: true } });
+        if (balance < reservedStampCost(reserved, rules) + rules.stampsRequired) throw new LoyaltyError("Pieczątki są już przypisane do innych wizyt lub nagroda jest niedostępna.");
       }
       const completeVisit = async () => {
         if (visit.status !== "completed") await tx.appointment.update({ where: { id: appointmentId }, data: { status: "completed" } });
@@ -84,12 +92,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return;
       }
       let settlement;
-      try { settlement = loyaltySettlement(body.grossCents, body.redeem, balance, rules); } catch (error) { throw new LoyaltyError((error as Error).message); }
+      try { settlement = visitSettlement(body.grossCents, redeem, balance, settlementRules, visit.voucher?.amountCents ?? 0); } catch (error) { throw new LoyaltyError((error as Error).message); }
+      if (visit.depositStatus === "paid" && (visit.depositAmount || 0) * 100 > settlement.paidCents) throw new LoyaltyError("Wpłacony zadatek przekracza należność po rabacie lub voucherze. Najpierw rozlicz nadpłatę w zadatku wizyty.");
+      if (visit.voucherRequested && !visit.voucher) throw new LoyaltyError("Najpierw potwierdź voucher papierowy i przypisz jego kod do wizyty.");
+      if (visit.voucher) {
+        if (!settlement.voucherCents) throw new LoyaltyError("Voucher można wykorzystać tylko przy dodatniej należności za wizytę.");
+        if (visit.voucher.redeemedAt || visit.voucher.cancelledAt || visit.voucher.clientId !== clientId || visit.voucher.validUntil < visit.startsAt) throw new LoyaltyError("Voucher wymaga sprawdzenia przed rozliczeniem.");
+        await tx.voucher.update({ where: { id: visit.voucher.id }, data: { redeemedAt: new Date(), appliedCents: settlement.voucherCents } });
+      }
       await completeVisit();
       await tx.loyaltyEntry.create({ data: { clientId, appointmentId, key: `visit:${appointmentId}`, kind: "visit", ...settlement, note: visit.project.title, adminId: admin.id } });
-      await tx.projectActivity.create({ data: { projectId: visit.projectId, type: "appointment_settled", message: `Rozliczono wizytę: ${(settlement.paidCents / 100).toFixed(2)} zł. Rabat: ${(settlement.discountCents / 100).toFixed(2)} zł.`, visibility: "both" } });
+      await tx.projectActivity.create({ data: { projectId: visit.projectId, type: "appointment_settled", message: `Rozliczono wizytę: ${(settlement.paidCents / 100).toFixed(2)} zł. Rabat: ${(settlement.discountCents / 100).toFixed(2)} zł. Voucher: ${(settlement.voucherCents / 100).toFixed(2)} zł.`, visibility: "both" } });
       const rewardEarned = Math.floor((balance + settlement.stamps) / rules.stampsRequired) > Math.floor(balance / rules.stampsRequired);
-      await tx.clientNotification.create({ data: { clientId, projectId: visit.projectId, appointmentId, type: "LOYALTY_SETTLED", title: rewardEarned ? `Masz rabat −${rules.discountPercent}% na tatuaż!` : body.redeem ? "Rabat lojalnościowy wykorzystany" : settlement.stamps ? "Nowa pieczątka na Twojej karcie" : "Wizyta rozliczona", body: rewardEarned ? `Wykorzystaj nagrodę na wybranej kolejnej wizycie. Maksymalna zniżka: ${rules.maxDiscountCents / 100} zł.` : "Sprawdź rozliczenie i stan karty w swoim panelu.", href: "/app/portal" } });
+      await tx.clientNotification.create({ data: { clientId, projectId: visit.projectId, appointmentId, type: "LOYALTY_SETTLED", title: rewardEarned ? `Masz rabat −${rules.discountPercent}% na tatuaż!` : redeem ? "Rabat lojalnościowy wykorzystany" : settlement.stamps ? "Nowa pieczątka na Twojej karcie" : "Wizyta rozliczona", body: rewardEarned ? `Wykorzystaj nagrodę na wybranej kolejnej wizycie. Maksymalna zniżka: ${rules.maxDiscountCents / 100} zł.` : "Sprawdź rozliczenie i stan karty w swoim panelu.", href: "/app/portal" } });
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

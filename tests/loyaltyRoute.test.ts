@@ -3,7 +3,7 @@ import { DEFAULT_LOYALTY_RULES } from "../lib/loyaltyRules";
 
 const mock = vi.hoisted(() => ({
   admin: vi.fn(), origin: vi.fn(), limit: vi.fn(), balance: vi.fn(),
-  tx: { $queryRaw: vi.fn(), adminAuditLog: { findFirst: vi.fn(), create: vi.fn() }, appointment: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() }, tattooProject: { update: vi.fn() }, loyaltyEntry: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }, clientNotification: { create: vi.fn() }, projectActivity: { create: vi.fn() } },
+  tx: { voucher: { update: vi.fn() }, $queryRaw: vi.fn(), adminAuditLog: { findFirst: vi.fn(), create: vi.fn() }, appointment: { count: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() }, tattooProject: { update: vi.fn() }, loyaltyEntry: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }, clientNotification: { create: vi.fn() }, projectActivity: { create: vi.fn() } },
 }));
 vi.mock("@/lib/auth", () => ({ getCurrentAdmin: mock.admin }));
 vi.mock("@/lib/requestSecurity", () => ({ isSameOrigin: mock.origin, rateLimit: mock.limit, tooManyRequests: () => new Response(null, { status: 429 }) }));
@@ -20,12 +20,37 @@ beforeEach(() => {
   vi.resetAllMocks();
   mock.admin.mockResolvedValue({ id: "admin", role: "owner" });
   mock.origin.mockReturnValue(true); mock.limit.mockResolvedValue({ allowed: true });
+  mock.tx.appointment.count.mockResolvedValue(0);
   mock.balance.mockResolvedValue(4); mock.tx.$queryRaw.mockResolvedValue([{ id: "client" }]);
-  mock.tx.appointment.findMany.mockResolvedValue([{ status: "completed" }]);
+  mock.tx.appointment.findMany.mockImplementation(async input => input?.where?.loyaltyReserved ? [] : [{ status: "completed" }]);
   mock.tx.appointment.findFirst.mockResolvedValue({ id: "visit", projectId: "project", status: "completed", serviceType: "tattoo", startsAt: new Date("2025-01-01"), project: { kind: "tattoo", title: "Tatuaż" } });
 });
 
 describe("loyalty route security and lifecycle", () => {
+  it("automatically redeems a reserved reward without an admin checkbox", async () => {
+    mock.balance.mockResolvedValue(5);
+    mock.tx.appointment.findFirst.mockResolvedValue({ ...(await mock.tx.appointment.findFirst()), loyaltyReserved: true });
+    expect((await call(settle)).status).toBe(200);
+    expect(mock.tx.loyaltyEntry.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ stamps: -5, paidCents: 70000 }) }));
+  });
+  it("automatically consumes the linked voucher once and records only the remaining cash", async () => {
+    mock.tx.appointment.findFirst.mockResolvedValue({ ...(await mock.tx.appointment.findFirst()), voucherRequested: true, voucher: { id: "voucher", clientId: "client", amountCents: 50000, validUntil: new Date("2030-01-01") } });
+    expect((await call(settle)).status).toBe(200);
+    expect(mock.tx.voucher.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ appliedCents: 50000 }) }));
+    expect(mock.tx.loyaltyEntry.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ voucherCents: 50000, paidCents: 90000, discountCents: 0 }) }));
+  });
+  it("refuses to turn an unverified voucher photo into money", async () => {
+    mock.tx.appointment.findFirst.mockResolvedValue({ ...(await mock.tx.appointment.findFirst()), voucherRequested: true });
+    expect((await call(settle)).status).toBe(409); expect(mock.tx.loyaltyEntry.create).not.toHaveBeenCalled();
+  });
+  it("does not silently discard a paid deposit exceeding net voucher price", async () => {
+    mock.tx.appointment.findFirst.mockResolvedValue({ ...(await mock.tx.appointment.findFirst()), depositStatus: "paid", depositAmount: 300, voucher: { id: "voucher", clientId: "client", amountCents: 140000, validUntil: new Date("2030-01-01") } });
+    expect((await call(settle)).status).toBe(409); expect(mock.tx.voucher.update).not.toHaveBeenCalled();
+  });
+  it("does not let a manual reward consume stamps promised to another booking", async () => {
+    mock.balance.mockResolvedValue(5); mock.tx.appointment.findMany.mockResolvedValue([{ loyaltyReservation: JSON.stringify(DEFAULT_LOYALTY_RULES) }]);
+    expect((await call({ ...settle, redeem: true })).status).toBe(409); expect(mock.tx.loyaltyEntry.create).not.toHaveBeenCalled();
+  });
   it("records a correction resolution without changing paid amounts or stamps", async () => {
     mock.tx.loyaltyEntry.findFirst.mockResolvedValue({ id: "entry", kind: "visit", voidedAt: new Date() });
     expect((await call({ action: "resolve_void", entryId: "entry", note: "Zwrot potwierdzony" })).status).toBe(200);

@@ -200,6 +200,7 @@ model Client {
   waitlistEntries   WaitlistEntry[]
   deletionRequest   AccountDeletionRequest?
   loyaltyEntries    LoyaltyEntry[]
+  vouchers Voucher[]
 }
 
 /// Client-initiated privacy request. CRM and statutory records are not
@@ -332,6 +333,26 @@ model TattooProject {
 }
 
 /// Private, unsent staff drafts. Never part of the client message stream.
+model Voucher {
+  id String @id @default(cuid())
+  issueKey String @unique
+  code String @unique
+  recipientName String
+  amountCents Int
+  validUntil DateTime
+  clientId String?
+  client Client? @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  appointmentId String? @unique
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  redeemedAt DateTime?
+  appliedCents Int @default(0)
+  cancelledAt DateTime?
+  createdById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([clientId])
+}
+
 model AssistantDraft {
   id String @id @default(cuid())
   projectId String
@@ -347,6 +368,10 @@ model AssistantDraft {
 /// Appointments are kept separately from a project because a larger tattoo
 /// can require several sessions. Availability blocks use the same time range model.
 model Appointment {
+  voucherRequested Boolean @default(false)
+  loyaltyReserved Boolean @default(false)
+  loyaltyReservation String?
+  voucher Voucher?
   promotionId String?
   promotion Promotion? @relation(fields: [promotionId], references: [id], onDelete: Restrict)
   @@index([promotionId])
@@ -384,6 +409,7 @@ model Appointment {
 
 /// Auditable paid visits and paper-card imports. A deleted project does not erase loyalty history.
 model LoyaltyEntry {
+  voucherCents Int @default(0)
   id             String   @id @default(cuid())
   clientId       String
   client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -742,6 +768,7 @@ model ProjectImage {
 /// Private conversation connected to one tattoo project. Messages are served
 /// only by authenticated Next.js endpoints, never through the public Data API.
 model ProjectMessage {
+  deliveredAt DateTime?
   hiddenFor    String[]      @default([])
   id           String        @id @default(cuid())
   projectId    String
@@ -761,6 +788,7 @@ model ProjectMessage {
 /// tattoo project: the studio may start it at any time, while a client may
 /// reply only after the studio has opened the conversation.
 model DirectMessage {
+  deliveredAt DateTime?
   hiddenFor String[] @default([])
   id        String   @id @default(cuid())
   clientId  String

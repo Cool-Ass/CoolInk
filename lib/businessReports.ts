@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
-export type ForecastVisit = { price: number | null; depositStatus: string; depositAmount: number | null };
+export type ForecastVisit = { price: number | null; depositStatus: string; depositAmount: number | null; voucher?: { amountCents: number; cancelledAt: Date | null; redeemedAt: Date | null } | null };
 export function forecastReceipts(visits: ForecastVisit[]) {
   return visits.reduce((total, visit) => {
     if (visit.price === null) { total.unpriced++; return total; }
     total.priced++;
     total.grossCents += visit.price * 100;
-    total.remainingCents += Math.max(0, visit.price * 100 - (visit.depositStatus === "paid" ? (visit.depositAmount || 0) * 100 : 0));
+    total.remainingCents += Math.max(0, visit.price * 100 - (visit.voucher && !visit.voucher.cancelledAt && !visit.voucher.redeemedAt ? visit.voucher.amountCents : 0) - (visit.depositStatus === "paid" ? (visit.depositAmount || 0) * 100 : 0));
     return total;
   }, { grossCents: 0, remainingCents: 0, priced: 0, unpriced: 0 });
 }
@@ -40,7 +40,7 @@ export async function businessReports(from: Date, now: Date) {
       WHERE a."createdAt" >= ${from} AND a."createdAt" <= ${now}
       GROUP BY p.id, p.title ORDER BY count(a.id) DESC, p.id LIMIT 50
     `,
-    prisma.appointment.findMany({ where: { startsAt: { gt: now, lte: new Date(now.getTime() + 30 * 86400000) }, status: { in: ["confirmed", "deposit_required", "deposit_paid"] }, loyaltyEntry: { is: null }, OR: [{ serviceType: null }, { serviceType: "tattoo" }], project: { kind: "tattoo" } }, select: { price: true, depositStatus: true, depositAmount: true } }),
+    prisma.appointment.findMany({ where: { startsAt: { gt: now, lte: new Date(now.getTime() + 30 * 86400000) }, status: { in: ["confirmed", "deposit_required", "deposit_paid"] }, loyaltyEntry: { is: null }, OR: [{ serviceType: null }, { serviceType: "tattoo" }], project: { kind: "tattoo" } }, select: { price: true, depositStatus: true, depositAmount: true, voucher: { select: { amountCents: true, cancelledAt: true, redeemedAt: true } } } }),
   ]);
   const hours = (work[0]?.minutes || 0) / 60;
   return { returningClients: returning[0]?.clients || 0, workHours: hours, hourlyCents: hours ? Math.round(work[0].paidCents / hours) : null, missingSessions: work[0]?.missingSessions || 0, promotions, forecast: forecastReceipts(forecast) };

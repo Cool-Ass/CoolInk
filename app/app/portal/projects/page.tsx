@@ -18,7 +18,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
 
   const projects = await prisma.tattooProject.findMany({
     where: { clientId: current.id, clientArchivedAt: query.archive === "1" ? { not: null } : null },
-    include: { appointments: { orderBy: { startsAt: "asc" } }, images: { orderBy: { createdAt: "asc" } }, activities: { where: { visibility: { in: ["client", "both"] } }, orderBy: { createdAt: "asc" }, take: 100 }, messages: { where: visible, include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 100 } },
+    include: { appointments: { include: { voucher: { select: { amountCents: true, appliedCents: true, redeemedAt: true } }, loyaltyEntry: { select: { grossCents: true, paidCents: true, discountCents: true, voucherCents: true, voidedAt: true } } }, orderBy: { startsAt: "asc" } }, images: { where: { kind: "inspiration" }, orderBy: { createdAt: "asc" } }, activities: { where: { visibility: { in: ["client", "both"] } }, orderBy: { createdAt: "asc" }, take: 100 }, messages: { where: visible, include: { attachment: { select: { id: true, caption: true } } }, orderBy: { createdAt: "asc" }, take: 100 } },
     orderBy: { updatedAt: "desc" },
   });
 
@@ -39,9 +39,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     depositStatus: project.depositStatus,
     depositAmount: project.depositAmount,
     depositAssignedAppointmentId: project.depositAssignedAppointmentId,
-    appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, price: item.price, depositStatus: item.depositStatus, depositAmount: item.depositAmount, createdAt: item.createdAt.toISOString(), confirmationRequestedAt: item.confirmationRequestedAt?.toISOString() ?? null, clientConfirmedAt: item.clientConfirmedAt?.toISOString() ?? null })),
+    appointments: project.appointments.map((item) => ({ id: item.id, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), status: item.status, serviceType: item.serviceType, price: item.price, voucherAmountCents: item.voucher?.amountCents ?? 0, voucherAppliedCents: item.voucher?.appliedCents ?? 0, voucherRequested: item.voucherRequested, settlement: item.loyaltyEntry && !item.loyaltyEntry.voidedAt ? { paidCents: item.loyaltyEntry.paidCents, discountCents: item.loyaltyEntry.discountCents, voucherCents: item.loyaltyEntry.voucherCents } : null, depositStatus: item.depositStatus, depositAmount: item.depositAmount, createdAt: item.createdAt.toISOString(), confirmationRequestedAt: item.confirmationRequestedAt?.toISOString() ?? null, clientConfirmedAt: item.clientConfirmedAt?.toISOString() ?? null })),
     images: project.images.map((image) => ({ id: image.id, url: privateImageUrl(image.id, "client", current.id), caption: image.caption, createdAt: image.createdAt.toISOString() })),
-    messages: project.messages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, attachment: message.attachment ? { id: message.attachment.id, caption: message.attachment.caption, url: privateImageUrl(message.attachment.id, "client", current.id) } : null })),
+    messages: project.messages.map((message) => ({ id: message.id, author: message.author, body: message.body, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null, deliveredAt: message.deliveredAt?.toISOString() ?? null, attachment: message.attachment ? { id: message.attachment.id, caption: message.attachment.caption, url: privateImageUrl(message.attachment.id, "client", current.id) } : null })),
     activities: project.activities.map((activity) => ({ id: activity.id, type: activity.type, message: activity.message, createdAt: activity.createdAt.toISOString() })),
   }))} /></>;
 }

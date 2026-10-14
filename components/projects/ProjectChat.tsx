@@ -3,6 +3,7 @@ import { prepareBrowserImage } from "@/lib/prepareBrowserImage";
 
 import { useEffect, useRef, useState } from "react";
 import { Paperclip, Send, Smile, Trash2 } from "lucide-react";
+import MessageReceipt from "@/components/projects/MessageReceipt";
 import ChatStickers from "@/components/projects/ChatStickers";
 import AppModal from "@/components/ui/AppModal";
 import EmptyState from "@/components/ui/EmptyState";
@@ -17,6 +18,7 @@ type Message = {
   body: string;
   createdAt: string;
   readAt: string | null;
+  deliveredAt?: string | null;
   attachment: { id: string; caption: string | null; url?: string } | null;
 };
 const EMOJI = [
@@ -73,8 +75,13 @@ export default function ProjectChat({
         const result = await response.json();
         if (alive && !signal.aborted && Array.isArray(result.messages)) {
           setMessages(result.messages);
-          if (result.messages.some((message: Message) => message.author !== role && !message.readAt)) {
-            await fetch(api, { method: "PATCH", signal });
+          const incoming = result.messages.filter((message: Message) => message.author !== role);
+          if (incoming.length) {
+            const stream = streamRef.current?.getBoundingClientRect();
+            const reading = document.visibilityState === "visible" && document.hasFocus() && stream && stream.bottom > 0 && stream.top < window.innerHeight;
+            const state = reading ? "read" : "delivered";
+            const ids = incoming.filter((message: Message) => state === "read" ? !message.readAt : !message.deliveredAt).map((message: Message) => message.id);
+            if (ids.length) await fetch(api, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, ids }), signal });
           }
         }
     }
@@ -171,11 +178,9 @@ export default function ProjectChat({
       <div className="flex items-center justify-between gap-3 border-b border-ink-white/10 px-3 py-2.5 sm:px-4">
         <div>
           <p className="font-display text-lg">{title}</p>
-          <p className="text-[9px] tracking-[.12em] text-ink-grey">{subtitle}</p>
+          {subtitle !== "PRYWATNA ROZMOWA" && <p className="text-xs text-ink-grey">{subtitle}</p>}
         </div>
-        <div className="flex items-center gap-2"><span className="flex items-center gap-1.5 text-[10px] text-emerald-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{role === "client" ? "STUDIO" : "KLIENT"}
-        </span>{role === "admin" && messages.length > 0 && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeConversation()} title="Ukryj rozmowę u mnie" aria-label="Ukryj rozmowę u mnie" className="flex h-8 w-8 items-center justify-center border border-red-400/40 text-red-300 hover:bg-red-400/10 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>}</div>
+        <div className="flex items-center gap-2">{role === "admin" && messages.length > 0 && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeConversation()} title="Ukryj rozmowę u mnie" aria-label="Ukryj rozmowę u mnie" className="flex h-8 w-8 items-center justify-center border border-red-400/40 text-red-300 hover:bg-red-400/10 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>}</div>
       </div>
       <div
         ref={streamRef}
@@ -224,8 +229,9 @@ export default function ProjectChat({
                   </p>
                 </div>
               )}
-              <p className={`mt-1.5 text-right text-[9px] ${message.author === role ? "text-ink-black/55" : "text-ink-grey"}`}>
+              <p className={`mt-1.5 flex items-center justify-end gap-1.5 text-[9px] ${message.author === role ? "text-ink-black/55" : "text-ink-grey"}`}>
                 {formatCoolinkDateTime(new Date(message.createdAt), { dateStyle: "short", timeStyle: "short" })}
+                {message.author === role && <MessageReceipt readAt={message.readAt} deliveredAt={message.deliveredAt} />}
               </p>
             </article>;
           })

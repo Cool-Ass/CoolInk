@@ -11,7 +11,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.access.mockResolvedValue({ ok: true, admin: { id: "a", role: "owner" } });
   m.permission.mockReturnValue(true);
-  m.visit.mockResolvedValue({ id: "v", projectId: "p", updatedAt: new Date("2026-01-01T00:00:00Z"), depositStatus: "awaiting", depositAmount: 300, depositPaymentMethod: "BLIK", startsAt: new Date("2026-01-01T10:00:00Z"), status: "confirmed", price: 1400, loyaltyRequested: false, loyaltyEntry: null, serviceType: "tattoo", project: { id: "p", clientId: "c", kind: "tattoo", title: "Tattoo", depositStatus: "paid", depositAmount: 200, depositPaymentMethod: "gotówka", depositAssignedAppointmentId: null } });
+  m.visit.mockResolvedValue({ id: "v", projectId: "p", updatedAt: new Date("2026-01-01T00:00:00Z"), depositStatus: "awaiting", depositAmount: 300, depositPaymentMethod: "BLIK", startsAt: new Date("2026-01-01T10:00:00Z"), status: "confirmed", price: 1400, loyaltyRequested: false, voucherRequested: false, voucher: null, aftercareImages: [], loyaltyEntry: null, serviceType: "tattoo", project: { id: "p", clientId: "c", kind: "tattoo", title: "Tattoo", depositStatus: "paid", depositAmount: 200, depositPaymentMethod: "gotówka", depositAssignedAppointmentId: null } });
   m.messages.mockResolvedValue([]); m.documents.mockResolvedValue([{ id: "d", title: "Consent", category: "consent", version: 2, acceptances: [{ version: 1 }] }]); m.card.mockResolvedValue({ progress: 1 });
 });
 describe("visit workspace read boundary", () => {

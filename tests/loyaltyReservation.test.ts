@@ -1,0 +1,12 @@
+import { beforeEach, expect, it, vi } from "vitest";
+import { DEFAULT_LOYALTY_RULES } from "../lib/loyaltyRules";
+const m = vi.hoisted(() => ({ aggregate: vi.fn(), visit: vi.fn(), reservations: vi.fn() }));
+vi.mock("@/lib/prisma", () => ({ prisma: {} }));
+vi.mock("@/lib/loyaltySettings", () => ({ getLoyaltyRules: async () => DEFAULT_LOYALTY_RULES, getLoyaltyDescription: vi.fn() }));
+import { assertLoyaltyVisitReactivation } from "../lib/loyalty";
+import type { Prisma } from "@prisma/client";
+const db = { loyaltyEntry: { aggregate: m.aggregate }, appointment: { findUnique: m.visit, findMany: m.reservations } } as unknown as Prisma.TransactionClient;
+beforeEach(() => { vi.resetAllMocks(); m.visit.mockResolvedValue({ status: "cancelled", loyaltyReserved: true, loyaltyReservation: JSON.stringify(DEFAULT_LOYALTY_RULES) }); m.aggregate.mockResolvedValue({ _sum: { stamps: 5 } }); m.reservations.mockResolvedValue([]); });
+it("can reclaim the cancelled reservation only if stamps remain available", async () => { await expect(assertLoyaltyVisitReactivation(db, "a", "client", "confirmed")).resolves.toBeUndefined(); m.aggregate.mockResolvedValue({ _sum: { stamps: 4 } }); await expect(assertLoyaltyVisitReactivation(db, "a", "client", "confirmed")).rejects.toThrow("LOYALTY_RESERVATION_UNAVAILABLE"); });
+it("subtracts other bookings using their historical rule snapshot", async () => { m.aggregate.mockResolvedValue({ _sum: { stamps: 10 } }); m.reservations.mockResolvedValue([{ loyaltyReservation: JSON.stringify({ ...DEFAULT_LOYALTY_RULES, stampsRequired: 6 }) }]); await expect(assertLoyaltyVisitReactivation(db, "a", "client", "confirmed")).rejects.toThrow(); expect(m.reservations).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { not: "a" }, project: { clientId: "client" } }) })); });
+it("does not claim stamps for a visit staying cancelled or an already active reservation", async () => { await assertLoyaltyVisitReactivation(db, "a", "client", "cancelled"); expect(m.visit).not.toHaveBeenCalled(); m.visit.mockResolvedValue({ status: "confirmed", loyaltyReserved: true }); await assertLoyaltyVisitReactivation(db, "a", "client", "confirmed"); expect(m.aggregate).not.toHaveBeenCalled(); });

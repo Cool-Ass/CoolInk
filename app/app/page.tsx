@@ -13,7 +13,7 @@ export const metadata = {
 export default async function ClientAppEntryPage({ searchParams }: { searchParams: Promise<{ error?: string; returnTo?: string }> }) {
   const { error, returnTo } = await searchParams;
   const safeReturnTo = returnTo?.startsWith("/app/") ? returnTo : "/app/portal";
-  if (await getCurrentClient()) redirect("/app/portal");
+  if (await getCurrentClient()) redirect(safeReturnTo);
   const content = await getSiteContent();
   const navLinks = await getPublicNavLinks(content.navigation);
   const modules = await getPublishedSystemModules("clientLogin", content, navLinks);

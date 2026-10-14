@@ -113,7 +113,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     return result;
   }, {})).map(([source, values]) => ({ source, label: source === "unknown" ? "Nie podano" : LEAD_SOURCE_LABEL[source as LeadSource] ?? source, ...values })).sort((a, b) => b.all - a.all);
 
-  const revenue = await prisma.loyaltyEntry.aggregate({ where: { kind: "visit", voidedAt: null, createdAt: dateWindow }, _sum: { paidCents: true, discountCents: true }, _count: true });
+  const revenue = await prisma.loyaltyEntry.aggregate({ where: { kind: "visit", voidedAt: null, createdAt: dateWindow }, _sum: { paidCents: true, discountCents: true, voucherCents: true }, _count: true });
   const money = (cents: number) => (cents / 100).toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
   const cards = [
     { label: "WPŁYW NA GODZINĘ SESJI", value: reports.hourlyCents === null ? "—" : money(reports.hourlyCents), hint: `${Math.round(reports.workHours * 10) / 10} godz. rozliczonych sesji · nie zysk` },
@@ -123,6 +123,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     { label: "KONTA BEZ PROJEKTU", value: String(registrations.withoutProject), hint: "Z nowych kont · żadnego projektu w historii" },
     { label: "ROZLICZONE WPŁYWY", value: money(revenue._sum.paidCents ?? 0), hint: `${revenue._count} opłaconych wizyt · po rabatach` },
     { label: "RABATY LOJALNOŚCIOWE", value: money(revenue._sum.discountCents ?? 0), hint: "W wybranym okresie rozliczeń" },
+    { label: "WYKORZYSTANE VOUCHERY", value: money(revenue._sum.voucherCents ?? 0), hint: "Wartość odjęta od wizyt — nie dodatkowy wpływ gotówki" },
     { label: "ŚREDNIA WPŁATA", value: revenue._count ? money(Math.round((revenue._sum.paidCents ?? 0) / revenue._count)) : "—", hint: "Na jedną rozliczoną wizytę" },
     { label: "NOWE ZGŁOSZENIA", value: String(tattooProjects.length), hint: `${consultations.length} konsultacji` },
     { label: "KONWERSJA NA WIZYTĘ", value: `${conversion}%`, hint: `${converted} z ${tattooProjects.length || 0} zgłoszeń` },

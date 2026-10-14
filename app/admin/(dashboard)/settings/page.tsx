@@ -1,68 +1,38 @@
-import DepositInstructionsSettings from "@/components/admin/DepositInstructionsSettings";
-import { getDepositInstructions } from "@/lib/depositSettings";
-import AdminSections from "@/components/admin/AdminSections";
+import Link from "next/link";
+import { requireAdminPage } from "@/lib/adminPage";
+import { hasAdminPermission } from "@/lib/adminPermissions";
+import { prisma } from "@/lib/prisma";
+import CompactDisclosure from "@/components/ui/CompactDisclosure";
 import SystemHealth from "@/components/admin/SystemHealth";
 import GoogleSyncRetry from "@/components/admin/GoogleSyncRetry";
-import GoogleReviewsSettings from "@/components/admin/GoogleReviewsSettings";
-import { getGoogleReviewsSettings } from "@/lib/googleReviewsSettings";
-import { getAdminSectionLayout } from "@/lib/adminSectionSettings";
-import { requireAdminPage } from "@/lib/adminPage";
-import ChangePasswordForm from "@/components/admin/ChangePasswordForm";
 import GoogleCalendarIntegration from "@/components/admin/GoogleCalendarIntegration";
-import TattooStylesSettings from "@/components/admin/TattooStylesSettings";
-import { getTattooStyles } from "@/lib/tattooStyles";
+import GoogleReviewsSettings from "@/components/admin/GoogleReviewsSettings";
+import DepositInstructionsSettings from "@/components/admin/DepositInstructionsSettings";
 import AdminAppSettings from "@/components/admin/AdminAppSettings";
-import { prisma } from "@/lib/prisma";
-import { ADMIN_ROLE_LABEL, normalizeAdminRole } from "@/lib/adminPermissions";
-import CompactDisclosure from "@/components/ui/CompactDisclosure";
 import AdminMfaSettings from "@/components/admin/AdminMfaSettings";
+import ChangePasswordForm from "@/components/admin/ChangePasswordForm";
+import TattooStylesSettings from "@/components/admin/TattooStylesSettings";
 import LoyaltySettings from "@/components/admin/LoyaltySettings";
+import AftercareModule from "@/components/admin/AftercareModule";
+import { getGoogleReviewsSettings } from "@/lib/googleReviewsSettings";
+import { getDepositInstructions } from "@/lib/depositSettings";
+import { getTattooStyles } from "@/lib/tattooStyles";
 import { getLoyaltyRules, getLoyaltyDescription } from "@/lib/loyaltySettings";
-
 export const dynamic = "force-dynamic";
-
-export default async function SettingsPage() {
-  const admin = await requireAdminPage("settings.manage");
-  const [tattooStyles, auditLogs] = await Promise.all([getTattooStyles(), prisma.adminAuditLog.findMany({ include: { adminUser: { select: { email: true } } }, orderBy: { createdAt: "desc" }, take: 30 })]);
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="mb-1 text-[11px] font-medium tracking-[0.22em] text-ink-gold">USTAWIENIA</p>
-        <h1 className="font-display text-3xl text-ink-white">Konto</h1>
-      </div>
-      <SystemHealth />
-      <AdminSections scope="settings" initial={await getAdminSectionLayout(admin.id, "settings")} sections={[{ id: "settings-0", title: "GOOGLE CALENDAR", content: (<CompactDisclosure title="GOOGLE CALENDAR" summary="Automatyczny eksport wizyt i prywatne blokady zajętości" bodyClassName="[&>section]:border-0">
-        <GoogleCalendarIntegration />
-        <GoogleSyncRetry />
-      </CompactDisclosure>) },
-{ id: "google-reviews", title: "OPINIE GOOGLE", content: (<CompactDisclosure title="OPINIE GOOGLE" summary="Klucz API i wizytówka studia"><GoogleReviewsSettings initial={await getGoogleReviewsSettings()} /></CompactDisclosure>) },
-{ id: "deposit-instructions", title: "ZADATKI", content: (<CompactDisclosure title="ZADATKI" summary="Instrukcje BLIK, gotówka i podgląd klienta"><DepositInstructionsSettings initial={await getDepositInstructions()} /></CompactDisclosure>) },
-{ id: "settings-1", title: "Aplikacja", content: (<AdminAppSettings />) },
-{ id: "settings-2", title: "PROGRAM LOJALNOŚCIOWY", content: (<CompactDisclosure title="PROGRAM LOJALNOŚCIOWY" summary="Cena sesji, próg pieczątki i zasady rabatu">
-        <LoyaltySettings initial={await getLoyaltyRules()} initialDescription={await getLoyaltyDescription()} />
-      </CompactDisclosure>) },
-{ id: "settings-3", title: "BEZPIECZEŃSTWO LOGOWANIA", content: (<CompactDisclosure title="BEZPIECZEŃSTWO LOGOWANIA" summary="MFA i jednorazowe kody awaryjne">
-        <AdminMfaSettings />
-      </CompactDisclosure>) },
-{ id: "settings-4", title: "STYLE TATUAŻU", content: (<CompactDisclosure title="STYLE TATUAŻU" summary={`${tattooStyles.filter((style) => style.active).length} aktywnych opcji w formularzu klienta`} bodyClassName="[&>section]:border-0 [&>section]:p-0">
-        <TattooStylesSettings initialStyles={tattooStyles} />
-      </CompactDisclosure>) },
-{ id: "settings-5", title: "KONTO ADMINISTRATORA", content: (<CompactDisclosure title="KONTO ADMINISTRATORA" summary={`${ADMIN_ROLE_LABEL[normalizeAdminRole(admin.role)]} · ${admin.email}`}><div>
-        <p className="text-[12px] tracking-[0.1em] text-ink-grey">ZALOGOWANO JAKO</p>
-        <p className="mt-2 text-[15px] text-ink-white">{admin?.email}</p>
-        {admin?.name && <p className="mt-1 text-[13px] text-ink-grey">{admin.name}</p>}
-        <p className="mt-2 text-sm text-ink-gold">Rola: {ADMIN_ROLE_LABEL[normalizeAdminRole(admin.role)]}</p>
-        <p className="mt-4 text-[12px] text-ink-grey/70">
-          Aby utworzyć dodatkowe konta administratora lub zresetować hasło z poziomu terminala,
-          uruchom <code className="text-ink-gold">npm run db:seed</code> po zaktualizowaniu
-          ADMIN_EMAIL / ADMIN_PASSWORD w pliku .env.
-        </p>
-      </div></CompactDisclosure>) },
-{ id: "settings-6", title: "DZIENNIK BEZPIECZEŃSTWA", content: (<CompactDisclosure title="DZIENNIK BEZPIECZEŃSTWA" summary={`${auditLogs.length} ostatnich działań administratorów`}><section><p className="text-sm text-ink-grey">Najważniejsze zmiany danych i ustawień są zapisywane wraz z kontem wykonującym operację.</p><div className="mt-3 max-h-80 divide-y divide-ink-white/10 overflow-y-auto">{auditLogs.map((log) => <article key={log.id} className="grid gap-1.5 py-2.5 text-sm sm:grid-cols-[180px_1fr_auto]"><p className="text-ink-grey">{log.adminUser?.email || "Usunięte konto"}</p><p>{log.summary}</p><time className="text-xs text-ink-grey">{log.createdAt.toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" })}</time></article>)}{auditLogs.length === 0 && <p className="py-4 text-sm text-ink-grey">Dziennik zacznie się wypełniać po kolejnych zmianach.</p>}</div></section></CompactDisclosure>) },
-{ id: "settings-7", title: "ZMIEŃ HASŁO", content: (<CompactDisclosure title="ZMIEŃ HASŁO" summary="Aktualizacja danych logowania">
-        <ChangePasswordForm />
-      </CompactDisclosure>) }]} />
+const categories = [{ id: "studio", title: "Studio i rezerwacje" }, { id: "payments", title: "Płatności i nagrody" }, { id: "care", title: "Opieka po sesji" }, { id: "integrations", title: "Integracje" }, { id: "security", title: "Konto i bezpieczeństwo" }];
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const input = await searchParams;
+  const selected = categories.some(item => item.id === input.category) ? input.category! : "studio";
+  const admin = await requireAdminPage(selected === "care" ? "operations.manage" : "settings.manage");
+  const visible = hasAdminPermission(admin.role, "settings.manage") ? categories : categories.filter(item => item.id === "care");
+  return <div className="studio-page"><header><h1 className="studio-page-title">Ustawienia</h1></header>
+    <nav aria-label="Kategorie ustawień" className="flex flex-wrap gap-2">{visible.map(item => <Link key={item.id} href={`/admin/settings?category=${item.id}`} aria-current={selected === item.id ? "page" : undefined} className={selected === item.id ? "studio-primary-link" : "studio-secondary-link"}>{item.title}</Link>)}</nav>
+    <div className="space-y-4">
+      {selected === "studio" && <><AdminAppSettings /><CompactDisclosure title="STYLE TATUAŻU"><TattooStylesSettings initialStyles={await getTattooStyles()} /></CompactDisclosure></>}
+      {selected === "payments" && <><CompactDisclosure title="ZADATKI" summary="Gotówka, BLIK i podgląd klienta"><DepositInstructionsSettings initial={await getDepositInstructions()} /></CompactDisclosure><CompactDisclosure title="KARTA LOJALNOŚCIOWA"><LoyaltySettings initial={await getLoyaltyRules()} initialDescription={await getLoyaltyDescription()} /></CompactDisclosure><Link className="studio-secondary-link" href="/admin/vouchers">Vouchery</Link></>}
+      {selected === "care" && <AftercareModule admin={admin} />}
+      {selected === "integrations" && <><CompactDisclosure title="GOOGLE CALENDAR"><GoogleCalendarIntegration /><GoogleSyncRetry /></CompactDisclosure><CompactDisclosure title="OPINIE GOOGLE"><GoogleReviewsSettings initial={await getGoogleReviewsSettings()} /></CompactDisclosure></>}
+      {selected === "security" && <><CompactDisclosure title="LOGOWANIE I MFA"><AdminMfaSettings /></CompactDisclosure><CompactDisclosure title="ZMIEŃ HASŁO"><ChangePasswordForm /></CompactDisclosure><CompactDisclosure title="STAN SYSTEMU"><SystemHealth /></CompactDisclosure><CompactDisclosure title="HISTORIA DZIAŁAŃ"><div className="max-h-96 divide-y divide-ink-white/10 overflow-y-auto">{(await prisma.adminAuditLog.findMany({ include: { adminUser: { select: { email: true } } }, orderBy: { createdAt: "desc" }, take: 30 })).map(log => <article key={log.id} className="py-3 text-sm"><p>{log.summary}</p><p className="mt-1 text-xs text-ink-grey">{log.adminUser?.email} · {log.createdAt.toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })}</p></article>)}</div></CompactDisclosure></>}
     </div>
-  );
+  </div>;
 }

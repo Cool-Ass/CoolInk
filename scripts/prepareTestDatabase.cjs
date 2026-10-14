@@ -41,6 +41,7 @@ for (const migration of [
   "20261013113500_session_signature_guards",
   "20261013120500_assistant_draft_guards",
   "20261013130500_marketing_guards",
+  "20261014020500_voucher_guards",
 ]) {
   run([
     "db",
