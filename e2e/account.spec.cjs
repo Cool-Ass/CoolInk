@@ -332,7 +332,7 @@ test("visit deposits, explicit legacy assignment and editable client instruction
   const context = await browser.newContext();
   try {
     await page.goto("/admin/settings?category=payments");
-    await page.locator("summary").filter({ hasText: "Instrukcje BLIK, gotówka i podgląd klienta" }).click();
+    await page.locator("summary").filter({ hasText: /^ZADATKI/ }).click();
     // The wrapping label includes the SSR textarea value in its text content.
     // Match the stable label prefix, not the editable initial instructions.
     await page.getByLabel(/^Instrukcja BLIK/).fill("Instrukcja testowa: sprawdź numer i kwotę.");
