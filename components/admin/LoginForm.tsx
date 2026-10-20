@@ -1,10 +1,9 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 function LoginFormInner({ preview = false }: { preview?: boolean }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedNext = searchParams.get("next");
   const next = requestedNext?.startsWith("/admin") && !requestedNext.startsWith("//") ? requestedNext : "/admin";
@@ -30,8 +29,7 @@ function LoginFormInner({ preview = false }: { preview?: boolean }) {
       const data = await res.json();
       if (data.mfaRequired) setMfaRequired(true);
       if (!res.ok) throw new Error(data.error || "Logowanie nie powiodło się.");
-      router.push(next);
-      router.refresh();
+      window.location.assign(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Logowanie nie powiodło się.");
     } finally {
@@ -51,7 +49,7 @@ function LoginFormInner({ preview = false }: { preview?: boolean }) {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
+                className="border border-ink-white/20 bg-transparent px-4 py-3 text-base text-ink-white outline-none transition-colors focus:border-ink-gold"
                 placeholder="Twój e-mail administratora"
               />
             </label>
@@ -65,7 +63,7 @@ function LoginFormInner({ preview = false }: { preview?: boolean }) {
                 autoComplete="one-time-code"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
-                className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] tracking-[.2em] text-ink-white outline-none transition-colors focus:border-ink-gold"
+                className="border border-ink-white/20 bg-transparent px-4 py-3 text-base tracking-[.2em] text-ink-white outline-none transition-colors focus:border-ink-gold"
                 placeholder="000000"
               />
             </label>}
@@ -78,7 +76,7 @@ function LoginFormInner({ preview = false }: { preview?: boolean }) {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border border-ink-white/20 bg-transparent px-4 py-3 text-[14px] text-ink-white outline-none transition-colors focus:border-ink-gold"
+                className="border border-ink-white/20 bg-transparent px-4 py-3 text-base text-ink-white outline-none transition-colors focus:border-ink-gold"
                 placeholder="••••••••"
               />
             </label>

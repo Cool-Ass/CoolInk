@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 
 type Mode = "login" | "register";
 const oauthMessages: Record<string, string> = {
@@ -16,7 +15,6 @@ export default function ClientAccountForm({ oauthError, returnTo = "/app/portal"
   const [mode, setMode] = useState<Mode>("login"); const [recovering, setRecovering] = useState(false);
   const [loading, setLoading] = useState(false); const [message, setMessage] = useState("");
   const [error, setError] = useState(oauthError ? (oauthMessages[oauthError] ?? "Nie udało się dokończyć logowania przez Google.") : "");
-  const router = useRouter();
 
   function choose(next: Mode) { setMode(next); setRecovering(false); setError(""); setMessage(""); }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -30,7 +28,8 @@ export default function ClientAccountForm({ oauthError, returnTo = "/app/portal"
       const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Nie udało się wykonać tej operacji.");
       if (recovering) { setMessage(result.message); return; }
       if (result.needsEmailConfirmation) { setMessage("Sprawdź skrzynkę e-mail i potwierdź adres. Potem zaloguj się tutaj."); return; }
-      router.push(returnTo); router.refresh();
+      // Cross the authentication boundary with a fresh request using the new cookies.
+      window.location.assign(returnTo);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Wystąpił nieoczekiwany błąd."); }
     finally { setLoading(false); }
   }
@@ -55,5 +54,5 @@ export default function ClientAccountForm({ oauthError, returnTo = "/app/portal"
 }
 
 function Input({ name, label, type = "text", autoComplete, hint }: { name: string; label: string; type?: string; autoComplete?: string; hint?: string }) {
-  return <label className="flex flex-col gap-2 text-[11px] tracking-[.1em] text-ink-grey">{label.toUpperCase()}<input required name={name} type={type} autoComplete={autoComplete} minLength={name === "password" ? 12 : undefined} maxLength={name === "password" ? 128 : undefined} className="border border-ink-white/20 bg-transparent px-3 py-3 text-sm normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" />{hint && <span className="normal-case tracking-normal text-ink-grey/75">{hint}</span>}</label>;
+  return <label className="flex flex-col gap-2 text-[11px] tracking-[.1em] text-ink-grey">{label.toUpperCase()}<input required name={name} type={type} autoComplete={autoComplete} minLength={name === "password" ? 12 : undefined} maxLength={name === "password" ? 128 : undefined} className="border border-ink-white/20 bg-transparent px-3 py-3 text-base normal-case tracking-normal text-ink-white outline-none focus:border-ink-gold" />{hint && <span className="normal-case tracking-normal text-ink-grey/75">{hint}</span>}</label>;
 }
