@@ -1,4 +1,4 @@
-import { bookingConflict, bookingConflictMessage, validAppointmentRange, type BookingContext } from "@/lib/bookingRules";
+import { bookingConflict, validAppointmentRange, type BookingContext } from "@/lib/bookingRules";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
@@ -10,6 +10,8 @@ export async function verifyExplicitAppointmentAvailability(startsAt: Date, ends
   const available = await db.availableSlot.findFirst({ where: { isPublic: true, startsAt: { lte: startsAt }, endsAt: { gte: endsAt } }, select: { id: true } });
   if (!available) return { ok: false, status: 409, error: "Ten zakres nie mieści się w jawnie ustawionym wolnym terminie." };
   const conflict = await bookingConflict(startsAt, endsAt, excludeAppointmentId, true, db, context);
-  if (conflict.appointment || conflict.block) return { ok: false, status: 409, error: `${bookingConflictMessage(conflict)} Uwzględniony bufor: ${conflict.bufferMinutes} min.` };
+  // This gate is also called by client APIs: private project titles and block
+  // reasons must never leave the staff-only booking context.
+  if (conflict.appointment || conflict.block) return { ok: false, status: 409, error: "Termin jest już niedostępny. Wybierz inny." };
   return { ok: true };
 }

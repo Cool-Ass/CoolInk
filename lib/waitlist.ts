@@ -25,6 +25,8 @@ export function normalizeWaitlistWeekdays(value: unknown) {
 }
 
 export function normalizeWaitlistDuration(value: unknown) {
+  // Zero means the studio must estimate the duration before making an offer.
+  if (value === 0) return 0;
   const duration = Number(value);
   if (!Number.isInteger(duration) || duration < 30 || duration > 720 || duration % 30 !== 0) return null;
   return duration;
@@ -50,6 +52,7 @@ function warsawDateParts(value: Date) {
 }
 
 export function waitlistDateMatches(entry: { earliestDate: Date | null; latestDate: Date | null; preferredWeekdays: string; timePreference: string; durationMinutes: number }, startsAt: Date, endsAt: Date) {
+  if (!normalizeWaitlistDuration(entry.durationMinutes)) return false;
   const local = warsawDateParts(startsAt);
   if (entry.earliestDate && local.key < entry.earliestDate.toISOString().slice(0, 10)) return false;
   if (entry.latestDate && local.key > entry.latestDate.toISOString().slice(0, 10)) return false;

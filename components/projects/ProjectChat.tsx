@@ -11,6 +11,7 @@ import { imageSource } from "@/lib/imageSource";
 import type { MessageTemplate } from "@/lib/messageTemplates";
 import { formatCoolinkDateTime } from "@/lib/dateTime";
 import { startVisiblePolling } from "@/lib/visiblePolling";
+import { CHAT_PAGE_SIZE, chatCursor, mergeChat } from "@/lib/chatPagination";
 
 type Message = {
   id: string;
@@ -59,6 +60,13 @@ export default function ProjectChat({
   const [showEmoji, setShowEmoji] = useState(false);
   const [attachmentReady, setAttachmentReady] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(initial.length >= CHAT_PAGE_SIZE);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const loadedOlder = useRef(false);
+  const latestMessages = useRef(initial);
+  const revision = useRef(0);
+  const followBottom = useRef(true);
+  const restoreScroll = useRef<{ height: number; top: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const api = apiPath ?? (role === "admin"
@@ -66,19 +74,38 @@ export default function ProjectChat({
     : `/api/client/projects/${projectId}/messages`);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { if (autoFocus) composerRef.current?.focus(); }, [autoFocus]);
-  useEffect(() => { streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" }); }, [messages.length]);
+  useEffect(() => {
+    latestMessages.current = messages;
+    const stream = streamRef.current;
+    if (!stream) return;
+    if (restoreScroll.current) {
+      stream.scrollTop = restoreScroll.current.top + stream.scrollHeight - restoreScroll.current.height;
+      restoreScroll.current = null;
+    } else if (followBottom.current) stream.scrollTop = stream.scrollHeight;
+  }, [messages]);
   useEffect(() => {
     let alive = true;
     async function refreshConversation(signal: AbortSignal) {
+        const startedAt = revision.current;
         const response = await fetch(api, { cache: "no-store", signal });
         if (!response.ok) throw new Error("Conversation refresh failed");
         const result = await response.json();
-        if (alive && !signal.aborted && Array.isArray(result.messages)) {
-          setMessages(result.messages);
+        if (alive && !signal.aborted && startedAt === revision.current && Array.isArray(result.messages)) {
+          const latest: Message[] = result.messages;
+          const items = latestMessages.current;
+          const oldest = latest[0];
+          // A long offline interval can span multiple pages. Restart from the
+          // newest page so "older" traverses the gap instead of skipping it.
+          const overlaps = latest.some(item => items.some(previous => previous.id === item.id));
+          const restart = !overlaps && Boolean(result.hasMore);
+          if (restart) loadedOlder.current = false;
+          const previous = oldest && !restart ? items.filter(item => item.createdAt < oldest.createdAt || (item.createdAt === oldest.createdAt && item.id < oldest.id)) : [];
+          setMessages(mergeChat(previous, latest));
+          if (!loadedOlder.current) setHasMore(Boolean(result.hasMore));
           const incoming = result.messages.filter((message: Message) => message.author !== role);
           if (incoming.length) {
             const stream = streamRef.current?.getBoundingClientRect();
-            const reading = document.visibilityState === "visible" && document.hasFocus() && stream && stream.bottom > 0 && stream.top < window.innerHeight;
+            const reading = followBottom.current && document.visibilityState === "visible" && document.hasFocus() && stream && stream.bottom > 0 && stream.top < window.innerHeight;
             const state = reading ? "read" : "delivered";
             const ids = incoming.filter((message: Message) => state === "read" ? !message.readAt : !message.deliveredAt).map((message: Message) => message.id);
             if (ids.length) await fetch(api, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state, ids }), signal });
@@ -89,7 +116,29 @@ export default function ProjectChat({
     return () => { alive = false; stop(); };
   }, [api, role]);
 
-  const add = (message: Message) => setMessages((items) => [...items, message]);
+  const add = (message: Message) => {
+    revision.current++;
+    followBottom.current = true;
+    setMessages(items => mergeChat(items, [message]));
+  };
+  async function loadOlder() {
+    if (loadingOlder || !messages[0]) return;
+    setLoadingOlder(true); setError("");
+    const startedAt = revision.current;
+    try {
+      const response = await fetch(`${api}?${new URLSearchParams({ before: chatCursor(messages[0]) })}`, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Nie udało się wczytać historii.");
+      if (startedAt !== revision.current) return;
+      revision.current++;
+      loadedOlder.current = true;
+      const stream = streamRef.current;
+      if (stream) restoreScroll.current = { height: stream.scrollHeight, top: stream.scrollTop };
+      setMessages(items => mergeChat(result.messages, items));
+      setHasMore(Boolean(result.hasMore));
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Nie udało się wczytać historii."); }
+    finally { setLoadingOlder(false); }
+  }
   async function removeMessage(messageId: string) {
     if (role !== "admin" || deleting || !window.confirm("Ukryć tę wiadomość tylko w Twoim widoku? Historia i załączniki pozostaną dostępne pozostałym uczestnikom.")) return;
     setDeleting(messageId); setError("");
@@ -97,6 +146,7 @@ export default function ProjectChat({
       const response = await fetch(`${api}?messageId=${encodeURIComponent(messageId)}`, { method: "DELETE" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Nie udało się usunąć wiadomości.");
+      revision.current++;
       setMessages((items) => items.filter((message) => message.id !== messageId));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Nie udało się usunąć wiadomości."); }
     finally { setDeleting(null); }
@@ -108,6 +158,8 @@ export default function ProjectChat({
       const response = await fetch(`${api}?all=true`, { method: "DELETE" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Nie udało się usunąć rozmowy.");
+      revision.current++;
+      setHasMore(false);
       setMessages([]);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Nie udało się usunąć rozmowy."); }
     finally { setDeleting(null); }
@@ -184,9 +236,11 @@ export default function ProjectChat({
       </div>
       <div
         ref={streamRef}
+        onScroll={() => { const stream = streamRef.current; if (stream) followBottom.current = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 64; }}
         className="max-h-[440px] min-h-56 space-y-2 overflow-y-auto px-3 py-4 sm:px-4"
         aria-live="polite"
       >
+        {hasMore && <button type="button" disabled={loadingOlder} onClick={() => void loadOlder()} className="min-h-11 w-full border border-ink-white/20 px-3 text-sm text-ink-gold disabled:opacity-50">{loadingOlder ? "Wczytywanie historii…" : "Wczytaj starsze wiadomości"}</button>}
         {messages.length === 0 ? (
           <EmptyState
             title="Zacznij rozmowę"
@@ -201,7 +255,7 @@ export default function ProjectChat({
               className={`group relative w-fit max-w-[88%] rounded-[16px] px-3 py-2.5 text-sm shadow-[0_8px_24px_rgba(0,0,0,.16)] sm:max-w-[72%] ${message.author === role ? "ml-auto rounded-br-[4px] bg-ink-gold text-ink-black" : "rounded-bl-[4px] bg-ink-white/[.09] text-ink-white"}`}
             >
               {role === "admin" && <button type="button" disabled={Boolean(deleting)} onClick={() => void removeMessage(message.id)} aria-label="Ukryj wiadomość u mnie" title="Ukryj wiadomość u mnie" className={`absolute -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-red-400/50 bg-ink-black text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 ${message.author === role ? "-left-8" : "-right-8"}`}><Trash2 className="h-3 w-3" /></button>}
-              <p className={`text-[9px] font-semibold tracking-wider ${message.author === role ? "text-ink-black/65" : "text-ink-gold"}`}>
+              <p className={`text-[11px] font-semibold tracking-wider ${message.author === role ? "text-ink-black/65" : "text-ink-gold"}`}>
                 {message.author === role ? "TY" : message.author === "admin" ? "STUDIO" : "KLIENT"}
               </p>
               {message.body && (
@@ -224,12 +278,12 @@ export default function ProjectChat({
                       Klient przesłał inspirację.
                     </p>
                   )}
-                  <p className={`px-2 py-1 text-[9px] ${message.author === role ? "text-ink-black/60" : "text-ink-grey"}`}>
+                  <p className={`px-2 py-1 text-[11px] ${message.author === role ? "text-ink-black/60" : "text-ink-grey"}`}>
                     {message.attachment.caption || "Inspiracja"}
                   </p>
                 </div>
               )}
-              <p className={`mt-1.5 flex items-center justify-end gap-1.5 text-[9px] ${message.author === role ? "text-ink-black/55" : "text-ink-grey"}`}>
+              <p className={`mt-1.5 flex items-center justify-end gap-1.5 text-[11px] ${message.author === role ? "text-ink-black/55" : "text-ink-grey"}`}>
                 {formatCoolinkDateTime(new Date(message.createdAt), { dateStyle: "short", timeStyle: "short" })}
                 {message.author === role && <MessageReceipt readAt={message.readAt} deliveredAt={message.deliveredAt} />}
               </p>
@@ -238,7 +292,7 @@ export default function ProjectChat({
         )}
       </div>
       <div className="border-t border-ink-white/10 bg-ink-black/35 p-3 sm:p-4">
-        {role === "admin" && templates.length > 0 && <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">{templates.map((template) => <button key={template.id} type="button" onClick={() => setText((value) => value.trim() ? `${value.trim()}\n\n${template.body}` : template.body)} className="shrink-0 rounded-full border border-ink-white/15 px-3 py-1.5 text-[10px] text-ink-grey hover:border-ink-gold hover:text-ink-gold">{template.label}</button>)}</div>}
+        {role === "admin" && templates.length > 0 && <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">{templates.map((template) => <button key={template.id} type="button" onClick={() => setText((value) => value.trim() ? `${value.trim()}\n\n${template.body}` : template.body)} className="shrink-0 rounded-full border border-ink-white/15 px-3 py-1.5 text-xs text-ink-grey hover:border-ink-gold hover:text-ink-gold">{template.label}</button>)}</div>}
         {showEmoji && <div className="mb-2 grid max-h-48 overflow-y-auto max-w-sm grid-cols-8 gap-1 rounded-[14px] border border-ink-white/10 bg-ink-black/45 p-2">
           {EMOJI.map((emoji) => (
             <button
@@ -267,7 +321,7 @@ export default function ProjectChat({
         </label>
         {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
         <div className="mt-2 flex items-center gap-2">
-          <button type="button" onClick={() => setShowEmoji((value) => !value)} aria-label="Emoji" aria-expanded={showEmoji} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Smile className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setShowEmoji((value) => !value)} aria-label="Emoji" aria-expanded={showEmoji} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Smile className="h-4 w-4" /></button>
           {allowAttachments && (
             <>
               <input
@@ -277,11 +331,11 @@ export default function ProjectChat({
                 onChange={(event) => setAttachmentReady(Boolean(event.target.files?.[0]))}
                 className="sr-only"
               />
-              <button type="button" disabled={sending} onClick={() => inputRef.current?.click()} aria-label="Dodaj zdjęcie" title="Dodaj zdjęcie" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Paperclip className="h-4 w-4" /></button>
-              {attachmentReady && <button type="button" disabled={sending} onClick={() => void upload()} className="rounded-full border border-ink-gold/50 px-3 py-2 text-[10px] text-ink-gold">WYŚLIJ ZDJĘCIE</button>}
+              <button type="button" disabled={sending} onClick={() => inputRef.current?.click()} aria-label="Dodaj zdjęcie" title="Dodaj zdjęcie" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-grey hover:bg-ink-white/[.06] hover:text-ink-gold"><Paperclip className="h-4 w-4" /></button>
+              {attachmentReady && <button type="button" disabled={sending} onClick={() => void upload()} className="rounded-full border border-ink-gold/50 px-3 py-2 text-xs text-ink-gold">WYŚLIJ ZDJĘCIE</button>}
             </>
           )}
-          <button type="button" disabled={sending || !text.trim()} onClick={send} className="ml-auto flex h-9 items-center gap-2 rounded-full bg-ink-gold px-4 text-[10px] font-semibold text-ink-black disabled:opacity-40"><Send className="h-3.5 w-3.5" />{sending ? "WYSYŁANIE…" : "WYŚLIJ"}</button>
+          <button type="button" disabled={sending || !text.trim()} onClick={send} className="ml-auto flex h-11 items-center gap-2 rounded-full bg-ink-gold px-4 text-xs font-semibold text-ink-black disabled:opacity-40"><Send className="h-3.5 w-3.5" />{sending ? "WYSYŁANIE…" : "WYŚLIJ"}</button>
         </div>
       </div>
       {preview && <AppModal title={preview.caption || "Inspiracja"} onClose={() => setPreview(null)} size="lg"><div className="max-h-[75vh] overflow-auto">{imageSource(preview.url) ? <img src={imageSource(preview.url)!} alt={preview.caption || "Inspiracja"} className="mx-auto max-h-[70vh] w-auto max-w-full object-contain" /> : <p className="text-sm text-ink-grey">Podgląd pliku jest niedostępny.</p>}</div></AppModal>}

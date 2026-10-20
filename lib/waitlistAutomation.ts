@@ -10,7 +10,7 @@ import { syncAppointmentToGoogle } from "@/lib/googleCalendarSyncEngine";
 export async function offerReleasedRange(startsAt: Date, endsAt: Date, excludeWaitlistEntryId?: string) {
   if (!(startsAt < endsAt) || startsAt <= new Date()) return null;
   const candidates = await prisma.waitlistEntry.findMany({
-    where: { status: "active", project: { clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } }, ...(excludeWaitlistEntryId ? { id: { not: excludeWaitlistEntryId } } : {}) },
+    where: { status: "active", durationMinutes: { gte: 30 }, project: { clientArchivedAt: null, status: { notIn: ["cancelled", "completed"] } }, ...(excludeWaitlistEntryId ? { id: { not: excludeWaitlistEntryId } } : {}) },
     include: { project: { select: { id: true, title: true } } },
     orderBy: { createdAt: "asc" },
     take: 100,

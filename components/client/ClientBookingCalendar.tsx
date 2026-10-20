@@ -246,7 +246,7 @@ export default function ClientBookingCalendar({
         return <div key={range.startsAt.toISOString()} className="border border-emerald-400/40 bg-emerald-500/5 p-3">
           <p className="text-xs text-emerald-300">{consultation ? copy.consultationLabel : copy.freeLabel}</p>
           <p className="mt-1 font-display text-xl min-[400px]:text-2xl">{formatCoolinkTime(range.startsAt)}–{formatCoolinkTime(range.endsAt)}</p>
-          {sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
+          <p className="mt-2 text-sm text-ink-grey">To okno dostępności studia. Dokładny czas sesji i wycenę ustalimy po sprawdzeniu opisu. Wysłanie zgłoszenia nie potwierdza wizyty.</p>{sourceSlot?.description && <p className="mt-2 text-xs text-ink-grey">{sourceSlot.description}</p>}
           <button type="button" disabled={Boolean(flash && (consultation || range.endsAt.getTime() - range.startsAt.getTime() < flash.flashDurationMinutes * 60000)) || Boolean(rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo"))} onClick={() => propose(range)} className="mt-3 min-h-11 w-full border border-emerald-400/70 px-3 py-2.5 text-xs text-emerald-300 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto">{rescheduleServiceType && rescheduleServiceType !== (consultation ? "consultation" : "tattoo") ? "INNY RODZAJ TERMINU" : rescheduleAppointmentId ? "WYBIERZ NOWY TERMIN" : consultation ? copy.consultationButtonLabel : copy.bookingButtonLabel}</button>
         </div>;
       })}
@@ -280,10 +280,11 @@ export default function ClientBookingCalendar({
           compact={compact}
         />
       </section>
+      {mode === "client" && <section className="space-y-2 md:hidden" aria-label="Wolne terminy w wybranym miesiącu"><h2 className="text-base font-semibold">Wolne terminy</h2>{dates.filter(date => date.getMonth() === cursor.getMonth() && rangesFor(date).length > 0).map(date => <button type="button" key={localDateKey(date)} onClick={() => selectClientDay(date)} className="min-h-12 w-full border border-ink-white/20 p-3 text-left text-sm"><span className="block text-ink-gold">{date.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</span><span className="mt-1 block">{rangesFor(date).map(range => `${formatCoolinkTime(range.startsAt)}–${formatCoolinkTime(range.endsAt)}`).join(", ")}</span></button>)}{!dates.some(date => date.getMonth() === cursor.getMonth() && rangesFor(date).length > 0) && <p className="text-sm text-ink-grey">Brak wolnych terminów w tym miesiącu. Sprawdź kolejny miesiąc lub napisz do studia.</p>}</section>}
       {mode === "public" && <aside className="min-w-0 border border-ink-white/10 bg-ink-charcoal/30 p-3 sm:p-4"><p className="mb-4 text-[10px] tracking-[0.16em] text-ink-gold">{selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</p>{bookingDetails}</aside>}
     </div>
 
     {mode === "client" && dayDetailsOpen && <AppModal title={selected.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })} subtitle={ranges.length > 0 ? "Wybierz dostępny termin lub zobacz szczegóły wydarzenia." : "Szczegóły wydarzenia."} size={selectedEvents.some((item) => item.imageUrls?.length) ? "lg" : "sm"} onClose={() => setDayDetailsOpen(false)}>{bookingDetails}</AppModal>}
-    {bookingRange && <BookingRequestForm initialVoucherCode={initialVoucherCode} loyaltyReward={loyaltyReward} flash={flash} startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); router.push("/app/portal/projects"); }} />}
+    {bookingRange && <BookingRequestForm initialVoucherCode={initialVoucherCode} loyaltyReward={loyaltyReward} flash={flash} startsAt={bookingRange.startsAt} endsAt={bookingRange.endsAt} projects={projects} serviceType={bookingRange.serviceType} rescheduleAppointmentId={bookingRange.rescheduleAppointmentId} tattooStyles={tattooStyles} consents={consents} intro={formIntro} onClose={() => { setBookingRange(null); setDayDetailsOpen(true); }} />}
   </>;
 }

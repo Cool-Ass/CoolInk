@@ -132,7 +132,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: S
     { label: "OBŁOŻENIE TERMINÓW", value: utilization === null ? "—" : `${utilization}%`, hint: utilization === null ? "Brak historycznych wolnych terminów" : `${Math.round(occupiedMinutes / 60)} z ${Math.round(availableMinutes / 60)} godz.` },
     { label: "ANULOWANIA", value: `${cancellationRate}%`, hint: `${cancelled} wizyt` },
     { label: "NIEOBECNOŚCI", value: `${noShowRate}%`, hint: `${noShows} wizyt` },
-    { label: "LISTA REZERWOWA", value: `${waitlistEffectiveness}%`, hint: `${waitlistBooked} rezerwacji z ${waitlistOffered} ofert` },
+    { label: "LISTA REZERWOWA", value: waitlistOffered ? `${waitlistEffectiveness}%` : "Brak ofert", hint: `${waitlistBooked} rezerwacji z ${waitlistOffered} ofert` },
     { label: "NOWI KLIENCI", value: String(newClients), hint: `${allClients} łącznie` },
     { label: "NADCHODZĄCE WIZYTY", value: String(upcoming), hint: "Potwierdzone i oczekujące" },
     { label: "NISKIE STANY", value: String(lowStock), hint: `${inventory.length} aktywnych pozycji` },

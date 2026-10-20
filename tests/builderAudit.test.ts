@@ -7,6 +7,17 @@ function module(id: string, type: string, data: Record<string, unknown>, style: 
 }
 
 describe("builder audit", () => {
+  it("flags template copy and missing local anchors without flagging built-in sections", () => {
+    const issues = auditBuilderPage([
+      module("cta", "button", { label: "Więcej", href: "#missing" }),
+      module("valid", "button", { label: "Portfolio", href: "#portfolio" }),
+      module("gallery", "portfolio", {}),
+      module("draft", "text", { text: "Dodaj własny opis, zdjęcie i przyciski…" }),
+    ]);
+    expect(issues.map(issue => issue.id)).toContain("cta-anchor-missing");
+    expect(issues.map(issue => issue.id)).toContain("draft-placeholder");
+    expect(issues.some(issue => issue.id === "valid-anchor-portfolio")).toBe(false);
+  });
   it("warns about performance budget overruns", () => {
     const modules = Array.from({ length: BUILDER_PERFORMANCE_BUDGET.maxActiveAnimations + 1 }, (_, index) =>
       module(`animated-${index}`, "spacer", {}, { animation: "fade-up", animationIteration: index < 3 ? "infinite" : "once" })

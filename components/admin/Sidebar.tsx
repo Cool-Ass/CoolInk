@@ -32,7 +32,7 @@ export const ADMIN_SECTIONS = [
   { label: "NARZĘDZIA", links: [{ href: "/admin/waitlist", label: "Lista rezerwowa", icon: CalendarClock }, { href: "/admin/statistics", label: "Statystyki", icon: BarChart3, roles: ["owner", "manager"] }, { href: "/admin/inventory", label: "Magazyn", icon: PackageOpen, roles: ["owner", "manager"] }, { href: "/admin/documents", label: "Dokumenty", icon: FileText }, { href: "/admin/announcements", label: "Komunikaty", icon: Megaphone, roles: ["owner", "manager"] }] },
   {
     label: "USTAWIENIA",
-    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }, { href: "/admin/settings?category=care", label: "Ustawienia ogólne", icon: Settings, roles: ["manager", "artist", "receptionist"] }],
+    links: [{ href: "/admin/settings", label: "Ustawienia ogólne", icon: Settings, roles: ["owner"] }, { href: "/admin/settings?category=security", label: "Ustawienia ogólne", icon: Settings, roles: ["manager", "artist", "receptionist"] }],
   },
 ] as const;
 
@@ -74,7 +74,7 @@ export default function Sidebar({
                 const Icon = link.icon;
                 const active = ("exact" in link && link.exact)
                   ? pathname === link.href
-                  : pathname.startsWith(link.href);
+                  : pathname.startsWith(link.href.split("?")[0]);
                 return (
                   <Link
                     key={link.href}

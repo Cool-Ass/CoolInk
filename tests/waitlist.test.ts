@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { normalizeWaitlistDuration, normalizeWaitlistTime, normalizeWaitlistWeekdays, parseWaitlistDate, waitlistDateMatches } from "@/lib/waitlist";
 
 describe("waitlist rules", () => {
+  it("accepts an explicit unknown duration but never automatically matches it", () => {
+    expect(normalizeWaitlistDuration(0)).toBe(0);
+    expect(normalizeWaitlistDuration(null)).toBeNull();
+    expect(normalizeWaitlistDuration("")).toBeNull();
+    const entry = { earliestDate: null, latestDate: null, preferredWeekdays: "1", timePreference: "any", durationMinutes: 0 };
+    expect(waitlistDateMatches(entry, new Date("2026-09-07T11:00:00Z"), new Date("2026-09-07T23:00:00Z"))).toBe(false);
+  });
   it("normalizes preferences without accepting invalid values", () => {
     expect(normalizeWaitlistWeekdays([5, 1, 1, 9])).toEqual([1, 5]);
     expect(normalizeWaitlistWeekdays([])).toEqual([1, 2, 3, 4, 5]);

@@ -1,3 +1,4 @@
+import { CHAT_PAGE_SIZE, chatOrder, chatBefore, chatPage } from "@/lib/chatPagination";
 import { parseMessageReceipt } from "@/lib/messageReceipt";
 import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { NextResponse } from "next/server";
@@ -47,7 +48,7 @@ function serialize(message: {
 }
 
 export async function GET(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const client = await getCurrentClient();
@@ -62,13 +63,15 @@ export async function GET(
       { error: "Nie znaleziono projektu." },
       { status: 404 },
     );
+  let before;
+  try { before = chatBefore(request); } catch { return NextResponse.json({ error: "Nieprawidłowy zakres historii." }, { status: 400 }); }
   const messages = await prisma.projectMessage.findMany({
-    where: { projectId: id, ...visibleMessages(messageRecipient("client", client.id)) },
+    where: { AND: [before], projectId: id, ...visibleMessages(messageRecipient("client", client.id)) },
     include: { attachment: { select: { id: true, caption: true } } },
-    orderBy: { createdAt: "asc" },
-    take: 200,
+    orderBy: chatOrder,
+    take: CHAT_PAGE_SIZE + 1,
   });
-  return NextResponse.json({ messages: messages.map((message) => serialize(message, client.id)) });
+  return NextResponse.json({ hasMore: messages.length > CHAT_PAGE_SIZE, messages: chatPage(messages).messages.map((message) => serialize(message, client.id)) });
 }
 
 export async function PATCH(
