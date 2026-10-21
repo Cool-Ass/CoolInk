@@ -1060,7 +1060,7 @@ test("staff can enable own MFA and save recovery codes before signing in again",
   await expect(recovery).toBeVisible();
   const codes = (await recovery.locator("pre").innerText()).trim().split(/\s+/);
   expect(codes.length).toBeGreaterThan(1);
-  expect((await page.request.get("/api/admin/mfa")).status()).toBe(401);
+  expect(await page.evaluate(async () => (await fetch("/api/admin/mfa")).status)).toBe(401);
   await expect(recovery).toBeVisible();
   await page.getByRole("button", { name: "Zapisałem kody — przejdź do logowania", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
@@ -1070,7 +1070,12 @@ test("staff can enable own MFA and save recovery codes before signing in again",
   await page.getByLabel("KOD MFA LUB AWARYJNY", { exact: true }).fill(codes[0]);
   await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
-  const status = await (await page.request.get("/api/admin/mfa")).json();
+  // Chromium sends Secure cookies on trusted loopback; APIRequestContext does not.
+  const status = await page.evaluate(async () => {
+    const response = await fetch("/api/admin/mfa");
+    if (!response.ok) throw new Error(`MFA status: ${response.status}`);
+    return response.json();
+  });
   expect(status.enabled).toBe(true);
   expect(status.recoveryCodesLeft).toBe(codes.length - 1);
 });
