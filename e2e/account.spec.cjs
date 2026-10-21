@@ -846,7 +846,10 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     if (await openTools.count()) await openTools.click();
     await page.getByRole("button", { name: /Hero · swobodny/ }).click();
     await expect(page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
+    const mobileTools = page.getByRole("button", { name: "Zamknij panel narzędzi", exact: true });
+    if (await mobileTools.isVisible()) await page.getByRole("button", { name: "Ukryj panel narzędzi", exact: true }).click();
     await page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true }).click();
+    if (await openTools.count()) await openTools.click();
     await page.getByRole("tab", { name: "STYL", exact: true }).click();
     const textEffects = page.getByRole("button", { name: "Ustawienia: Obrys i cień tekstu", exact: true });
     await expect(textEffects).toBeVisible();
