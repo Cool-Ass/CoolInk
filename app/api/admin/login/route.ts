@@ -33,10 +33,16 @@ export async function POST(request: Request) {
     const verified = verifyMfaCode(decryptMfaSecret(admin.mfaSecretEncrypted), admin.mfaRecoveryCodes, mfaCode);
     if (!verified.ok) return setRateLimitHeaders(NextResponse.json({ error: "Nieprawidłowy kod MFA.", mfaRequired: true }, { status: 401 }), limit);
     if (verified.remainingRecoveryCodes !== admin.mfaRecoveryCodes) {
-      await prisma.$transaction([
-        prisma.adminUser.update({ where: { id: admin.id }, data: { mfaRecoveryCodes: verified.remainingRecoveryCodes } }),
-        prisma.adminAuditLog.create({ data: { adminUserId: admin.id, action: "mfa.recovery.use", targetType: "AdminUser", targetId: admin.id, summary: "Użyto jednorazowego kodu awaryjnego MFA." } }),
-      ]);
+      const consumed = await prisma.$transaction(async tx => {
+        const updated = await tx.adminUser.updateMany({
+          where: { id: admin.id, mfaEnabled: true, sessionVersion: admin.sessionVersion, mfaSecretEncrypted: admin.mfaSecretEncrypted, mfaRecoveryCodes: admin.mfaRecoveryCodes },
+          data: { mfaRecoveryCodes: verified.remainingRecoveryCodes },
+        });
+        if (!updated.count) return false;
+        await tx.adminAuditLog.create({ data: { adminUserId: admin.id, action: "mfa.recovery.use", targetType: "AdminUser", targetId: admin.id, summary: "Użyto jednorazowego kodu awaryjnego MFA." } });
+        return true;
+      });
+      if (!consumed) return setRateLimitHeaders(NextResponse.json({ error: "Kod został już użyty lub konfiguracja MFA uległa zmianie. Spróbuj ponownie.", mfaRequired: true }, { status: 401 }), limit);
     }
   }
 
