@@ -21,11 +21,11 @@ jobs:
         shell: bash
         run: |
           node <<'JS'
-          const endpoint = 'https://www.coolinktattoo.pl/api/cron/google-exports';
+          const audience = 'https://www.coolinktattoo.pl/api/cron/google-exports';
           async function main() {
-            const { trustedWorkerHeaders } = await import('./scripts/trustedWorkerHeaders.mjs');
-            const identityHeaders = await trustedWorkerHeaders(endpoint, token => console.log('::add-mask::' + token));
-            const response = await fetch(endpoint, {
+            const { trustedWorkerHeaders, trustedWorkerEndpoint } = await import('./scripts/trustedWorkerHeaders.mjs');
+            const identityHeaders = await trustedWorkerHeaders(audience, token => console.log('::add-mask::' + token));
+            const response = await fetch(trustedWorkerEndpoint(audience), {
               method: 'POST', headers: identityHeaders, redirect: 'error',
               signal: AbortSignal.timeout(290000),
             });

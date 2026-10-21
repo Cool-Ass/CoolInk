@@ -52,3 +52,17 @@ Wcześniejszy własny opis lojalności pozostaje w ustawieniach do następnego z
 6. Zweryfikować backup przez próbę odtworzenia oraz rzeczywiste dostarczenie powiadomień i rozliczenia na izolowanych danych. Kod nie jest dowodem sprawności konfiguracji produkcyjnej.
 
 Nie wykonano wdrożenia ani zmian w danych produkcyjnych. Raport PDF z 15.10.2026 pozostaje zapisem stanu sprzed poprawek.
+
+
+## Uzupełnienie przed wdrożeniem — 21.10.2026
+
+- Pełne testy integracyjne uruchomiono w GitHub Actions na izolowanej bazie. Wcześniejsza uwaga o braku dostępu dotyczyła środowiska lokalnego, nie dostępności CI.
+- Naprawiono przejście po logowaniu klienta i administratora: nowy dokument korzysta z aktualnych ciasteczek sesji. Test ponownego logowania klienta przeszedł w przebiegu 270.
+- Dodano przeglądarkowe scenariusze aktywacji MFA przez artystę, odbioru kodów, unieważnienia starej sesji i logowania kodem awaryjnym oraz historii 205 wiadomości z identycznymi datami.
+- Kod awaryjny MFA jest zużywany atomowo. Przegrane równoległe żądanie nie dostaje nowej sesji i nie przywraca zużytych kodów.
+- Test interfejsu mobilnego edytora otwiera i zamyka panel narzędzi przed interakcją z podglądem.
+- Odczyt DNS 21.10.2026 potwierdził NXDOMAIN dla domeny coolinktattoo.pl; Vercel wskazał Invalid Configuration. To osobny problem od kodu aplikacji.
+- Monitoring odzyskiwania, eksport Google i kopia konfiguracji korzystają ze zweryfikowanego produkcyjnego adresu cool-ink.vercel.app, aby awaria własnej domeny nie zatrzymywała zadań. Odbiorcy tokenów OIDC, kontrola repozytorium, gałęzi, workflow i ochrona przed ponowieniem pozostają bez zmian. Kopia konfiguracji wymaga zgodności rewizji wdrożenia z main.
+- Pełna zaszyfrowana kopia produkcji: https://github.com/Cool-Ass/CoolInk/actions/runs/39570628651 — success. Pierwsza próba przez własną domenę zakończyła się błędem; udana próba użyła zweryfikowanego adresu aktualnego wdrożenia. Odtworzenie tej kopii uruchomiono osobno w izolacji: https://github.com/Cool-Ass/CoolInk/actions/runs/39570934447 .
+
+Końcowy wynik CI, rewizja produkcyjna i wynik weryfikacji po publikacji wymagają potwierdzenia po zakończeniu bieżącego wdrożenia. Nie publikowano niezatwierdzonych treści zgód ani danych fikcyjnych jako treści studia.

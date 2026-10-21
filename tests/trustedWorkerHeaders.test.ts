@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { trustedWorkerHeaders } from "../scripts/trustedWorkerHeaders.mjs";
+import { trustedWorkerHeaders, trustedWorkerEndpoint } from "../scripts/trustedWorkerHeaders.mjs";
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 it("masks two distinct identities and binds each to its independent audience", async () => {
   vi.stubEnv("ACTIONS_ID_TOKEN_REQUEST_URL", "https://identity.example.test/token");
@@ -17,4 +17,10 @@ it("rejects arbitrary audiences before requesting an identity", async () => {
   const calls = vi.fn(); vi.stubGlobal("fetch", calls);
   await expect(trustedWorkerHeaders("https://foreign.example.test", vi.fn())).rejects.toThrow();
   expect(calls).not.toHaveBeenCalled();
+});
+
+it("uses only the verified production alias without changing identity audiences", () => {
+  expect(trustedWorkerEndpoint("https://www.coolinktattoo.pl/api/cron/google-exports")).toBe("https://cool-ink.vercel.app/api/cron/google-exports");
+  expect(trustedWorkerEndpoint("https://www.coolinktattoo.pl/api/cron/recovery-health")).toBe("https://cool-ink.vercel.app/api/cron/recovery-health");
+  expect(() => trustedWorkerEndpoint("https://foreign.example.test/api/cron/recovery-health")).toThrow();
 });

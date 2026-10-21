@@ -23,7 +23,7 @@ describe("runtime configuration escrow", () => {
     });
   });
   it("restricts staged capture to the verified project hostname scope, without redirects or arbitrary URLs", () => {
-    expect(configurationDeploymentUrl(undefined).origin).toBe("https://www.coolinktattoo.pl");
+    expect(configurationDeploymentUrl(undefined).origin).toBe("https://cool-ink.vercel.app");
     expect(configurationDeploymentUrl("https://cool-fkcpob97r-cool-ass.vercel.app").origin).toBe("https://cool-fkcpob97r-cool-ass.vercel.app");
     for (const url of ["http://www.coolinktattoo.pl", "https://www.coolinktattoo.pl.evil.test", "https://cool-fkcpob97r-other.vercel.app", "https://cool-ink-git-main-cool-ass.vercel.app", "https://user:pass@www.coolinktattoo.pl", "https://www.coolinktattoo.pl:444", "https://www.coolinktattoo.pl/other", "https://www.coolinktattoo.pl?x=1"]) expect(() => configurationDeploymentUrl(url)).toThrow();
   });

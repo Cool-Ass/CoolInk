@@ -37,7 +37,7 @@ jobs:
           # Environment, not script interpolation: manual inputs are untrusted.
           script: |
             const { recoveryAgeHealth } = await import(process.env.GITHUB_WORKSPACE + "/scripts/recoveryAgeHealth.mjs");
-            const { trustedWorkerHeaders } = await import(process.env.GITHUB_WORKSPACE + "/scripts/trustedWorkerHeaders.mjs");
+            const { trustedWorkerHeaders, trustedWorkerEndpoint } = await import(process.env.GITHUB_WORKSPACE + "/scripts/trustedWorkerHeaders.mjs");
             const latest = async workflow_id => (await github.rest.actions.listWorkflowRuns({ ...context.repo, workflow_id, branch: "main", status: "success", per_page: 1 })).data.workflow_runs[0];
             const backup = await latest("backup.yml");
             const drill = await latest("restore-drill.yml");
@@ -55,7 +55,7 @@ jobs:
               const audience = "https://www.coolinktattoo.pl/api/cron/recovery-health";
               const deployment = process.env.RECOVERY_DEPLOYMENT_URL;
               if (deployment && !/^https:\/\/cool-[a-z0-9]+-cool-ass\.vercel\.app$/.test(deployment)) throw new Error("Invalid staged target");
-              const endpoint = deployment ? deployment + "/api/cron/recovery-health" : audience;
+              const endpoint = deployment ? deployment + "/api/cron/recovery-health" : trustedWorkerEndpoint(audience);
               const identityHeaders = await trustedWorkerHeaders(audience, token => core.setSecret(token));
               const response = await fetch(endpoint, { method: "POST", headers: { ...identityHeaders, "Content-Type": "application/json" }, body: JSON.stringify(health), signal: AbortSignal.timeout(30000), redirect: "error" });
               if (!response.ok) throw new Error("Monitor delivery HTTP " + response.status);
