@@ -23,3 +23,10 @@ export async function trustedWorkerHeaders(audience, mask) {
   const edge = await identity("https://github.com/Cool-Ass");
   return { Authorization: `Bearer ${application}`, "x-vercel-trusted-oidc-idp-token": edge };
 }
+
+/** The verified production alias stays reachable independently of custom DNS.
+ * Identity audiences remain unchanged and are validated by the application. */
+export function trustedWorkerEndpoint(audience) {
+  if (!audiences.has(audience)) throw new Error("Invalid worker audience");
+  return "https://cool-ink.vercel.app" + new URL(audience).pathname;
+}

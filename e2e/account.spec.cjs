@@ -1,6 +1,6 @@
 const { test, expect } = require("@playwright/test");
 const { PrismaClient } = require("@prisma/client");
-const { randomUUID } = require("node:crypto");
+const { randomUUID, createHmac } = require("node:crypto");
 const bcrypt = require("bcryptjs");
 const { loadDryRunEnvironment, requireTestProject, requireTestDatabase } = require("../scripts/dryRunTestEnv.cjs");
 const env = loadDryRunEnvironment();
@@ -24,8 +24,8 @@ const voucherCodes = [];
 
 // Each new feature has an independent disposable operator. Log in through the
 // actual form; never reset rate buckets, raise limits or inject session cookies.
-async function loginFeatureAdmin(page) {
-  const admin = await prisma.adminUser.create({ data: { email: `feature-${randomUUID()}@example.com`, name: "Browser feature fixture", role: "owner", passwordHash: await bcrypt.hash(password, 12) } });
+async function loginFeatureAdmin(page, role = "owner") {
+  const admin = await prisma.adminUser.create({ data: { email: `feature-${randomUUID()}@example.com`, name: "Browser feature fixture", role, passwordHash: await bcrypt.hash(password, 12) } });
   featureAdminIds.push(admin.id);
   await page.goto("http://127.0.0.1:3120/admin/login");
   await page.getByLabel("EMAIL", { exact: true }).fill(admin.email);
@@ -824,7 +824,9 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await ownPage.goto("http://127.0.0.1:3120/app");
     await ownPage.getByLabel("E-MAIL", { exact: true }).fill(email);
     await ownPage.getByLabel("HASŁO", { exact: true }).fill(password);
+    const ownLogin = ownPage.waitForResponse(response => response.url().endsWith("/api/client/auth/login") && response.request().method() === "POST");
     await ownPage.getByRole("button", { name: "WEJDŹ DO KONTA", exact: true }).click();
+    expect((await ownLogin).status()).toBe(200);
     await expect(ownPage).toHaveURL(/\/app\/portal/);
     await ownPage.goto("http://127.0.0.1:3120/app/portal/profile?clientId=not-own-client");
     await ownPage.getByText("TWÓJ WNIOSEK DOTYCZĄCY DANYCH", { exact: true }).click();
@@ -840,9 +842,14 @@ test("admin login, client card rendering and logout", async ({ page }) => {
     await page.goto(`/admin/pages/${cmsPage.id}`);
     await expect(page.locator(".builder-canvas").getByRole("img", { name: "Browser image fixture", exact: true }).locator("..")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     await expect(page.getByRole("complementary", { name: "Nawigator struktury strony" })).toHaveCount(0);
+    const openTools = page.getByRole("button", { name: "Pokaż panel narzędzi", exact: true });
+    if (await openTools.count()) await openTools.click();
     await page.getByRole("button", { name: /Hero · swobodny/ }).click();
     await expect(page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true })).toBeVisible();
+    const mobileTools = page.getByRole("button", { name: "Zamknij panel narzędzi", exact: true });
+    if (await mobileTools.isVisible()) await page.getByRole("button", { name: "Ukryj panel narzędzi", exact: true }).click();
     await page.locator(".builder-canvas").getByRole("heading", { name: "Twój pomysł. Twój styl.", exact: true }).click();
+    if (await openTools.count()) await openTools.click();
     await page.getByRole("tab", { name: "STYL", exact: true }).click();
     const textEffects = page.getByRole("button", { name: "Ustawienia: Obrys i cień tekstu", exact: true });
     await expect(textEffects).toBeVisible();
@@ -1029,4 +1036,69 @@ test("voucher issuance, focused booking, automatic settlement and truthful messa
     await adminPage.goto("/admin/settings?category=payments");
     await expect(adminPage.getByRole("link", { name: /Vouchery/ }).first()).toBeVisible();
   } finally { await adminContext.close(); }
+});
+
+
+function authenticatorCode(secret) {
+  const bits = [...secret].map(char => "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(char).toString(2).padStart(5, "0")).join("");
+  const key = Buffer.from(bits.match(/.{8}/g).map(byte => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+  const digest = createHmac("sha1", key).update(counter).digest();
+  return String((digest.readUInt32BE(digest[19] & 15) & 0x7fffffff) % 1000000).padStart(6, "0");
+}
+
+test("staff can enable own MFA and save recovery codes before signing in again", async ({ page }) => {
+  const id = await loginFeatureAdmin(page, "artist");
+  const admin = await prisma.adminUser.findUniqueOrThrow({ where: { id } });
+  await page.goto("/admin/settings?category=security");
+  await expect(page.getByText("STAN SYSTEMU", { exact: true })).toHaveCount(0);
+  await page.getByText("LOGOWANIE I MFA", { exact: true }).click();
+  const setupResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/mfa") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "SKONFIGURUJ MFA", exact: true }).click();
+  const setup = await (await setupResponse).json();
+  await page.getByLabel("KOD 6-CYFROWY", { exact: true }).fill(authenticatorCode(setup.secret));
+  await page.getByRole("button", { name: "WŁĄCZ I WYLOGUJ SESJE", exact: true }).click();
+  const recovery = page.getByRole("region", { name: "Zapisz kody awaryjne MFA" });
+  await expect(recovery).toBeVisible();
+  const codes = (await recovery.locator("pre").innerText()).trim().split(/\s+/);
+  expect(codes.length).toBeGreaterThan(1);
+  expect(await page.evaluate(async () => (await fetch("/api/admin/mfa")).status)).toBe(401);
+  await expect(recovery).toBeVisible();
+  await page.getByRole("button", { name: "Zapisałem kody — przejdź do logowania", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await page.getByLabel("EMAIL", { exact: true }).fill(admin.email);
+  await page.getByLabel("HASŁO", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await page.getByLabel("KOD MFA LUB AWARYJNY", { exact: true }).fill(codes[0]);
+  await page.getByRole("button", { name: "ZALOGUJ SIĘ", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  // Chromium sends Secure cookies on trusted loopback; APIRequestContext does not.
+  const status = await page.evaluate(async () => {
+    const response = await fetch("/api/admin/mfa");
+    if (!response.ok) throw new Error(`MFA status: ${response.status}`);
+    return response.json();
+  });
+  expect(status.enabled).toBe(true);
+  expect(status.recoveryCodesLeft).toBe(codes.length - 1);
+});
+
+test("chat opens on newest messages and loads all 205 messages without duplicates", async ({ page }) => {
+  await loginFeatureAdmin(page);
+  const client = await prisma.client.create({ data: { email: `history-${randomUUID()}@example.com`, firstName: "History", lastName: "Fixture" } });
+  try {
+    // Identical timestamps exercise the ID tie-breaker at every page boundary.
+    const createdAt = new Date();
+    await prisma.directMessage.createMany({ data: Array.from({ length: 205 }, (_, index) => ({ id: `${client.id}-${String(index).padStart(3, "0")}`, clientId: client.id, author: "client", body: `History fixture ${String(index).padStart(3, "0")}`, createdAt })) });
+    await page.goto(`/admin/clients/${client.id}?view=messages`);
+    await expect(page.getByText("History fixture 204", { exact: true })).toBeVisible();
+    await expect(page.getByText("History fixture 000", { exact: true })).toHaveCount(0);
+    for (let batch = 0; batch < 4; batch++) {
+      await page.getByRole("button", { name: "Wczytaj starsze wiadomości", exact: true }).click();
+      const oldest = Math.max(0, 155 - (batch + 1) * 50);
+      await expect(page.getByText(`History fixture ${String(oldest).padStart(3, "0")}`, { exact: true })).toHaveCount(1);
+    }
+    await expect(page.getByRole("button", { name: "Wczytaj starsze wiadomości", exact: true })).toHaveCount(0);
+    await expect(page.getByText(/^History fixture \d{3}$/)).toHaveCount(205);
+  } finally { await prisma.client.delete({ where: { id: client.id } }); }
 });

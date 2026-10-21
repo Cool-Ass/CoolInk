@@ -15,6 +15,7 @@ export default function AdminMfaSettings() {
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
 
   async function load() {
     const response = await fetch("/api/admin/mfa", { cache: "no-store" });
@@ -39,6 +40,10 @@ export default function AdminMfaSettings() {
       if (data.secret) { setSecret(data.secret); setUri(data.otpAuthUri); }
       if (data.recoveryCodes) setRecoveryCodes(data.recoveryCodes);
       setCode(""); setPassword("");
+      if (data.signedOut && data.recoveryCodes?.length) {
+        setSecret(""); setUri(""); setSignedOut(true);
+        return;
+      }
       if (data.signedOut) { router.replace("/admin/login"); router.refresh(); return; }
       await load();
       setMessage(actionName === "setup" ? "Dodaj konto w aplikacji uwierzytelniającej i potwierdź kodem." : "Zapisano.");
@@ -46,6 +51,13 @@ export default function AdminMfaSettings() {
     finally { setBusy(false); }
   }
 
+  if (signedOut) return <section className="max-w-2xl space-y-4 rounded-lg border border-ink-gold p-5" aria-label="Zapisz kody awaryjne MFA">
+    <h2 className="text-xl font-semibold" tabIndex={-1} ref={node => { node?.focus(); }}>MFA włączone. Zapisz kody awaryjne</h2>
+    <p>Poprzednie sesje zostały wylogowane. Zapisz te kody w bezpiecznym miejscu przed opuszczeniem strony. Każdy działa tylko raz.</p>
+    <pre className="whitespace-pre-wrap rounded bg-black/30 p-4">{recoveryCodes.join("\n")}</pre>
+    <p className="text-sm text-ink-grey">Po odświeżeniu strony kody nie będą ponownie widoczne.</p>
+    <button type="button" onClick={() => { router.replace("/admin/login"); router.refresh(); }} className="studio-primary-link">Zapisałem kody — przejdź do logowania</button>
+  </section>;
   return <div className="max-w-2xl text-sm">
     <p className="text-ink-grey">Kod z aplikacji uwierzytelniającej chroni panel także po wycieku hasła.</p>
     {!status?.enabled && !secret && <button type="button" disabled={busy} onClick={() => action("setup")} className="mt-4 border border-ink-gold px-4 py-3 text-xs text-ink-gold">SKONFIGURUJ MFA</button>}

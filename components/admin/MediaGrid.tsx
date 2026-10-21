@@ -129,10 +129,10 @@ export default function MediaGrid({ initialMedia }: { initialMedia: MediaItem[] 
                 {source ? <Image src={source} alt={item.alt ?? ""} fill className="object-cover" sizes="(max-width: 639px) 50vw, (max-width: 1279px) 33vw, 20vw" /> : <span className="flex h-full items-center justify-center text-xs text-ink-grey">Brak podglądu</span>}
                 <ConfirmButton
                   onConfirm={() => handleDelete(item.id)}
-                  label={<X className="h-4 w-4" />}
+                  label={<><X aria-hidden="true" className="h-4 w-4" /><span className="sr-only">Usuń plik {item.filename}</span></>}
                   confirmText={item.usedIn.length ? `Plik jest używany w: ${item.usedIn.join(", ")}. Usunięcie zostanie zablokowane do czasu usunięcia tych użyć.` : "Usunąć ten plik na stałe?"}
                   pendingLabel="USUWANIE…"
-                  className="absolute right-1.5 top-1.5 z-20 flex h-8 w-8 items-center justify-center border border-red-400/45 bg-ink-black/85 text-red-300 shadow-lg transition-colors hover:border-red-400 hover:bg-red-500/15"
+                  className="absolute right-1.5 top-1.5 z-20 flex h-11 w-11 items-center justify-center border border-red-400/45 bg-ink-black/85 text-red-300 shadow-lg transition-colors hover:border-red-400 hover:bg-red-500/15"
                 />
                 <span className={`pointer-events-none absolute bottom-1.5 right-1.5 z-20 flex h-7 w-7 items-center justify-center bg-ink-black/75 text-ink-white transition-transform ${expanded ? "rotate-180" : ""}`}><ChevronDown className="h-4 w-4" /></span>
               </div>

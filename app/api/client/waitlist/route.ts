@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const projectId = String(body?.projectId ?? "");
   const durationMinutes = normalizeWaitlistDuration(body?.durationMinutes);
-  if (!durationMinutes) return NextResponse.json({ error: "Wybierz prawidłowy czas wizyty." }, { status: 400 });
+  if (durationMinutes === null) return NextResponse.json({ error: "Wybierz prawidłowy czas wizyty." }, { status: 400 });
 
   const earliestDate = body?.earliestDate ? parseWaitlistDate(body.earliestDate) : null;
   const latestDate = body?.latestDate ? parseWaitlistDate(body.latestDate) : null;

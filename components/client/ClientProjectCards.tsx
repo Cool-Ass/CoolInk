@@ -291,6 +291,7 @@ export default function ClientProjectCards({
       {deleteProject && <ConfirmModal message={archivedView ? `Przywrócić projekt „${deleteProject.title}”?` : `Przenieść projekt „${deleteProject.title}” do archiwum? Wizyty, rozliczenia, rozmowa i inspiracje pozostaną zachowane.`} onConfirm={() => { void deleteSelectedProject(); }} onCancel={() => { if (!deleting) setDeleteProject(null); }} pending={deleting} pendingLabel="ZAPISYWANIE…" />}
       {appointment && (
         <ClientAppointmentModal
+          returnLabel={selected ? "Wróć do projektu" : undefined}
           appointment={appointment.item}
           projectTitle={appointment.title}
           projectKind={visibleProjects.find(project => project.appointments.some(visit => visit.id === appointment.item.id))?.kind ?? "consultation"}

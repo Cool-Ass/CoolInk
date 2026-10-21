@@ -5,7 +5,7 @@ import { isSameOrigin, rateLimit, tooManyRequests } from "@/lib/requestSecurity"
 import { lockBookingCalendar } from "@/lib/bookingRules";
 import { getLoyaltyRules, LOYALTY_SETTINGS_KEY } from "@/lib/loyaltySettings";
 import { validateLoyaltyRules } from "@/lib/loyaltyRules";
-import { LOYALTY_DESCRIPTION_KEY } from "@/lib/loyaltyDescription";
+import { DEFAULT_LOYALTY_DESCRIPTION, LOYALTY_DESCRIPTION_KEY } from "@/lib/loyaltyDescription";
 
 export async function PUT(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -20,7 +20,7 @@ export async function PUT(request: Request) {
     rules = validateLoyaltyRules(body);
     if (body.description !== undefined) {
       if (typeof body.description !== "string" || body.description.length > 2000) throw new Error("Invalid description");
-      description = body.description.trim();
+      description = DEFAULT_LOYALTY_DESCRIPTION;
     }
   }
   catch { return NextResponse.json({ error: "Sprawdź kwoty, liczbę pieczątek (1–50) i rabat (1–100%)." }, { status: 400 }); }

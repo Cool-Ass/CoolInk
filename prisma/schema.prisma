@@ -785,8 +785,7 @@ model ProjectMessage {
 }
 
 /// General studio-client conversation. It is deliberately separate from a
-/// tattoo project: the studio may start it at any time, while a client may
-/// reply only after the studio has opened the conversation.
+/// tattoo project: either the studio or the authenticated client may start it.
 model DirectMessage {
   deliveredAt DateTime?
   hiddenFor String[] @default([])

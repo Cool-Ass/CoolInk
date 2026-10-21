@@ -123,9 +123,9 @@ async function capture(directory) {
 }
 
 export function configurationDeploymentUrl(value) {
-  const deployment = new URL(value || "https://www.coolinktattoo.pl");
+  const deployment = new URL(value || "https://cool-ink.vercel.app");
   if (deployment.protocol !== "https:" || deployment.username || deployment.password || deployment.port || deployment.pathname !== "/" || deployment.search || deployment.hash
-    || !(deployment.hostname === "www.coolinktattoo.pl" || /^cool(?:-ink)?-[a-z0-9]{9}-cool-ass\.vercel\.app$/.test(deployment.hostname))) throw new Error("Untrusted deployment URL");
+    || !(deployment.hostname === "www.coolinktattoo.pl" || deployment.hostname === "cool-ink.vercel.app" || /^cool(?:-ink)?-[a-z0-9]{9}-cool-ass\.vercel\.app$/.test(deployment.hostname))) throw new Error("Untrusted deployment URL");
   return deployment;
 }
 

@@ -1,3 +1,4 @@
+import { CHAT_PAGE_SIZE, chatOrder, chatBefore, chatPage } from "@/lib/chatPagination";
 import { parseMessageReceipt } from "@/lib/messageReceipt";
 import { messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
@@ -11,13 +12,13 @@ import { sendPushToAdmins } from "@/lib/webPush";
 const MAX_MESSAGE_LENGTH = 2_000;
 
 
-export async function GET() {
+export async function GET(request: Request) {
   const client = await getCurrentClient();
   if (!client) return NextResponse.json({ error: "Zaloguj się ponownie." }, { status: 401 });
-  const opened = await prisma.directMessage.findFirst({ where: { clientId: client.id, author: "admin" }, select: { id: true } });
-  if (!opened) return NextResponse.json({ messages: [], canReply: false });
-  const messages = await prisma.directMessage.findMany({ where: { clientId: client.id, ...visibleMessages(messageRecipient("client", client.id)) }, orderBy: { createdAt: "asc" }, take: 200 });
-  return NextResponse.json({ messages: messages.map((message) => serializeDirectMessage(message, "client", client.id)), canReply: true });
+  let before;
+  try { before = chatBefore(request); } catch { return NextResponse.json({ error: "Nieprawidłowy zakres historii." }, { status: 400 }); }
+  const messages = await prisma.directMessage.findMany({ where: { AND: [before], clientId: client.id, ...visibleMessages(messageRecipient("client", client.id)) }, orderBy: chatOrder, take: CHAT_PAGE_SIZE + 1 });
+  return NextResponse.json({ hasMore: messages.length > CHAT_PAGE_SIZE, messages: chatPage(messages).messages.map((message) => serializeDirectMessage(message, "client", client.id)), canReply: true });
 }
 
 export async function PATCH(request: Request) {
@@ -42,8 +43,6 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const limit = await rateLimit(request, "client-direct-message", 20, 60_000, client.id);
   if (!limit.allowed) return tooManyRequests(limit);
-  const opened = await prisma.directMessage.findFirst({ where: { clientId: client.id, author: "admin" }, select: { id: true } });
-  if (!opened) return NextResponse.json({ error: "Rozmowę ogólną może rozpocząć studio. Wiadomość dotyczącą projektu wyślij z jego karty." }, { status: 403 });
   let message;
   try { message = await withClientMediaWrite(client.id, async (tx, track) => {
     const { body, imageUrl } = await readChatInput(request, client.id, track);

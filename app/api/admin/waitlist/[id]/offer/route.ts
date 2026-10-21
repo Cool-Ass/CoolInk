@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const availability = await verifyExplicitAppointmentAvailability(startsAt, endsAt, undefined, tx, { serviceType: "tattoo" });
     if (!availability.ok) throw new Error(`BOOKING_CONFLICT:${availability.error}`);
     const created = await tx.appointment.create({ data: { projectId: entry.projectId, startsAt, endsAt, status: "proposed", serviceType: "tattoo", notes: `[LISTA REZERWOWA]${note ? ` ${note}` : ""}` } });
-    await tx.waitlistEntry.update({ where: { id }, data: { status: "offered", offeredAppointmentId: created.id, offeredAt: new Date(), offerExpiresAt: expiresAt } });
+    await tx.waitlistEntry.update({ where: { id }, data: { status: "offered", durationMinutes, offeredAppointmentId: created.id, offeredAt: new Date(), offerExpiresAt: expiresAt } });
     await tx.tattooProject.update({ where: { id: entry.projectId }, data: { status: "date_proposed", nextAction: "Klient odpowiada na ofertę z listy rezerwowej", nextActionDueAt: expiresAt } });
     await tx.projectActivity.create({ data: { projectId: entry.projectId, type: "waitlist_offer_sent", message: `Wysłano ofertę terminu z listy rezerwowej: ${formatCoolinkDateTime(startsAt)}.`, visibility: "client" } });
     await tx.clientNotification.create({ data: { clientId: entry.clientId, projectId: entry.projectId, appointmentId: created.id, type: "WAITLIST_OFFER", title: "Zwolnił się pasujący termin", body: `Termin ${formatCoolinkDateTime(startsAt)} czeka na Twoją odpowiedź przez 24 godziny.`, href: "/app/portal/projects" } });

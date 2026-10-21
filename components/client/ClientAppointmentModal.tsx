@@ -39,6 +39,7 @@ export default function ClientAppointmentModal({
   depositInstructions,
   onClose,
   onCancelled,
+  returnLabel,
 }: {
   appointment: Appointment;
   projectTitle: string;
@@ -46,6 +47,7 @@ export default function ClientAppointmentModal({
   projectStatus: string;
   depositInstructions: DepositInstructions;
   onClose: () => void;
+  returnLabel?: string;
   onCancelled: (appointmentId: string, projectStatus: string) => void;
 }) {
   const router = useRouter();
@@ -98,7 +100,7 @@ export default function ClientAppointmentModal({
 
   return (
     <>
-      <AppModal presentation="drawer" title="Szczegóły wizyty" subtitle={projectTitle} onClose={onClose} size="md">
+      <AppModal presentation="drawer" title="Szczegóły wizyty" subtitle={projectTitle} headerAction={returnLabel ? <button type="button" onClick={onClose} className="min-h-11 px-3 text-sm text-ink-gold">← {returnLabel}</button> : undefined} onClose={onClose} size="md">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="border border-ink-white/10 p-4">
             <p className="text-[10px] tracking-widest text-ink-gold">TERMIN</p>
@@ -122,7 +124,7 @@ export default function ClientAppointmentModal({
         {tattooSession && appointment.depositStatus !== "not_required" && <section className="mt-4 space-y-3"><p className="text-sm text-ink-grey">Zadatek: {depositStatusLabel(appointment.depositStatus)}{appointment.depositAmount !== null ? ` · ${appointment.depositAmount} zł` : ""}</p><BlikDeposit visit={{ ...appointment, projectKind, projectStatus }} instructions={depositInstructions} /></section>}
         <p className="mt-5 text-sm leading-relaxed text-ink-grey">
           {waitingForStudio
-            ? "Studio sprawdzi szczegóły i potwierdzi termin."
+            ? "Studio sprawdzi szczegóły i potwierdzi termin albo zaproponuje inny."
             : appointment.status === "proposed"
               ? "Studio zaproponowało nowy termin. Wybierz odpowiedź poniżej."
               : "CoolInk Tattoo Studio · szczegóły organizacyjne otrzymasz przed wizytą."}

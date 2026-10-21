@@ -68,12 +68,29 @@ export function auditBuilderPage(modules: Module[]): BuilderAuditIssue[] {
   const animated = nodes.filter((node) => node.style?.animation && node.style.animation !== "none");
   const infinite = animated.filter((node) => node.style?.animationIteration === "infinite");
   const images = nodes.flatMap(mediaUrls);
+  const builtInAnchors: Record<string, string> = { hero: "home", about: "artists", portfolio: "portfolio", studio: "studio", contact: "contact", booking: "kalendarz" };
+  const anchors = new Set(nodes.flatMap(node => [node.style?.anchorId, builtInAnchors[node.type]]).filter(Boolean));
 
   if (animated.length > BUILDER_PERFORMANCE_BUDGET.maxActiveAnimations) issues.push({ id: "animation-budget", severity: "warning", message: `Aktywnych animacji: ${animated.length}. Budżet strony: ${BUILDER_PERFORMANCE_BUDGET.maxActiveAnimations}.` });
   if (infinite.length > BUILDER_PERFORMANCE_BUDGET.maxInfiniteAnimations) issues.push({ id: "infinite-animation-budget", severity: "warning", message: `Animacje w pętli: ${infinite.length}. Zalecane maksimum: ${BUILDER_PERFORMANCE_BUDGET.maxInfiniteAnimations}.` });
   if (images.length > BUILDER_PERFORMANCE_BUDGET.maxImagesPerPage) issues.push({ id: "image-count-budget", severity: "warning", message: `Obrazów na stronie: ${images.length}. Budżet: ${BUILDER_PERFORMANCE_BUDGET.maxImagesPerPage}.` });
 
   for (const node of nodes) {
+    const text = JSON.stringify(node.data);
+    if (/lorem ipsum|dodaj własny opis|przyciągnij uwagę odbiorcy|dodaj krótki opis tego/i.test(text)) {
+      issues.push({ id: `${node.id}-placeholder`, moduleId: node.id, severity: "warning", message: "Treść zawiera tekst szablonu. Uzupełnij go przed publikacją." });
+    }
+    // Only local fragment links: /#... may target a different page.
+    const links = Object.entries(node.data).filter(([key, value]) => /href$/i.test(key) && typeof value === "string").map(([, value]) => value as string);
+    for (const key of ["items", "navItems"]) {
+      const items = node.data[key];
+      if (Array.isArray(items)) for (const item of items) if (item && typeof item.href === "string") links.push(item.href);
+    }
+    for (const href of new Set(links.filter(link => link.startsWith("#")))) {
+      let target = href.slice(1);
+      try { target = decodeURIComponent(target); } catch { /* report the malformed fragment */ }
+      if (!target || !anchors.has(target)) issues.push({ id: `${node.id}-anchor-${target || "empty"}`, moduleId: node.id, severity: "warning", message: `Sprawdź link „${href}”: brak odpowiadającej mu kotwicy w modułach strony. Kotwice w kodzie własnym wymagają ręcznej weryfikacji.` });
+    }
     const visibleFrom = node.style?.visibleFrom ? Date.parse(node.style.visibleFrom) : Number.NEGATIVE_INFINITY;
     const visibleUntil = node.style?.visibleUntil ? Date.parse(node.style.visibleUntil) : Number.POSITIVE_INFINITY;
     if (Number.isNaN(visibleFrom) || Number.isNaN(visibleUntil) || visibleFrom >= visibleUntil) {

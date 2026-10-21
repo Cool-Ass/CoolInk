@@ -1,3 +1,4 @@
+import { CHAT_PAGE_SIZE, chatOrder, chatBefore, chatPage } from "@/lib/chatPagination";
 import { hideDirectMessages, messageRecipient, visibleMessages } from "@/lib/messageVisibility";
 import { readChatInput, serializeDirectMessage } from "@/lib/chatImage";
 import { withClientMediaWrite } from "@/lib/clientMediaWrite";
@@ -11,13 +12,15 @@ import { sendPushToClient } from "@/lib/webPush";
 const MAX_MESSAGE_LENGTH = 2_000;
 
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: "Brak dostępu administratora." }, { status: 401 });
   const { id } = await params;
   if (!(await prisma.client.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "Klient nie istnieje." }, { status: 404 });
-  const messages = await prisma.directMessage.findMany({ where: { clientId: id, ...visibleMessages(messageRecipient("admin", admin.id)) }, orderBy: { createdAt: "asc" }, take: 200 });
-  return NextResponse.json({ messages: messages.map((message) => serializeDirectMessage(message, "admin", admin.id)) });
+  let before;
+  try { before = chatBefore(request); } catch { return NextResponse.json({ error: "Nieprawidłowy zakres historii." }, { status: 400 }); }
+  const messages = await prisma.directMessage.findMany({ where: { AND: [before], clientId: id, ...visibleMessages(messageRecipient("admin", admin.id)) }, orderBy: chatOrder, take: CHAT_PAGE_SIZE + 1 });
+  return NextResponse.json({ hasMore: messages.length > CHAT_PAGE_SIZE, messages: chatPage(messages).messages.map((message) => serializeDirectMessage(message, "admin", admin.id)) });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
